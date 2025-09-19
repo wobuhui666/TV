@@ -27,16 +27,30 @@
             app:titleTextColor="?attr/colorOnSurface" />
 
         <!-- Search Bar -->
-        <com.google.android.material.search.SearchBar
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/searchBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
-            android:hint="@string/search_keyword"
-            app:searchIcon="@drawable/ic_search"
-            app:style="@style/Material3SearchBar" />
+            app:boxBackgroundMode="outline"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:startIconDrawable="@drawable/ic_search"
+            app:style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/searchEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/search_keyword"
+                android:inputType="text"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -68,7 +82,7 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <com.google.android.material.textview.MaterialTextView
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/search_record"
@@ -175,7 +189,7 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <com.google.android.material.textview.MaterialTextView
+                    <TextView
                         android:id="@+id/hint"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

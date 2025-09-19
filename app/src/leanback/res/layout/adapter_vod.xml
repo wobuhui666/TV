@@ -85,7 +85,7 @@
             tools:text="1080p" />
 
         <!-- Title -->
-        <com.google.android.material.textview.MaterialTextView
+        <TextView
             android:id="@+id/name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
