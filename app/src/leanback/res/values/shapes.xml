@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 Shape Styles -->
+    
+    <!-- Rounded corners for cards -->
+    <style name="ShapeAppearance.Material3.CardView" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <!-- Rounded corners for buttons -->
+    <style name="ShapeAppearance.Material3.Button" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerSize">24dp</item>
+    </style>
+    
+    <!-- Rounded corners for chips -->
+    <style name="ShapeAppearance.Material3.Chip" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <!-- Rounded corners for Vod cards -->
+    <style name="ShapeAppearance.Material3.VodCard" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">20dp</item>
+    </style>
+    
+    <!-- Rounded corners for home buttons -->
+    <style name="ShapeAppearance.Material3.HomeButton" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">20dp</item>
+    </style>
+    
+    <!-- Circle shape for icons -->
+    <style name="ShapeAppearance.Material3.Circle" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerSize">50%</item>
+    </style>
+    
+    <!-- Small rounded corners -->
+    <style name="ShapeAppearance.Material3.Small" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerSize">8dp</item>
+    </style>
+    
+    <!-- Medium rounded corners -->
+    <style name="ShapeAppearance.Material3.Medium" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <!-- Large rounded corners -->
+    <style name="ShapeAppearance.Material3.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <!-- Extra large rounded corners -->
+    <style name="ShapeAppearance.Material3.ExtraLarge" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">24dp</item>
+    </style>
+</resources>

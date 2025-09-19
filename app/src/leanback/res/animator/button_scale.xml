@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="@integer/motion_duration_short2"
+        android:valueFrom="@dimen/button_scale_normal"
+        android:valueTo="@dimen/button_scale_pressed"
+        android:interpolator="@string/motion_easing_emphasized" />
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="@integer/motion_duration_short2"
+        android:valueFrom="@dimen/button_scale_normal"
+        android:valueTo="@dimen/button_scale_pressed"
+        android:interpolator="@string/motion_easing_emphasized" />
+</set>

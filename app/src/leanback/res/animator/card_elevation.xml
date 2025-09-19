@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:propertyName="cardElevation"
+        android:duration="@integer/motion_duration_medium2"
+        android:valueFrom="@dimen/card_elevation_low"
+        android:valueTo="@dimen/card_elevation_high"
+        android:interpolator="@string/motion_easing_emphasized" />
+</set>

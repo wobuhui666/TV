@@ -1,27 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="100dp"
-    android:layout_height="100dp"
-    android:background="@drawable/selector_item"
+    android:layout_width="120dp"
+    android:layout_height="120dp"
     android:focusable="true"
     android:focusableInTouchMode="true"
-    android:gravity="center"
-    android:orientation="vertical">
+    style="@style/HomeButton"
+    app:cardBackgroundColor="@color/md_theme_surfaceContainer"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="8dp"
+    app:strokeColor="@color/md_theme_outline"
+    app:strokeWidth="1dp">
 
-    <ImageView
-        android:id="@+id/icon"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        tools:src="@drawable/ic_home_vod" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="@color/white"
-        android:textSize="18sp"
-        tools:text="點播" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@color/md_theme_primaryContainer"
+            android:padding="12dp"
+            android:scaleType="centerInside"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Circle"
+            tools:src="@drawable/ic_home_vod" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/md_theme_onSurface"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:maxLines="2"
+            android:ellipsize="end"
+            tools:text="點播" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

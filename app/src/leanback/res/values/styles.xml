@@ -1,54 +1,144 @@
 <resources>
+    <!-- Material 3 Theme for TV Leanback -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary Colors -->
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
         <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
         <item name="colorOnPrimaryContainer">@color/md_theme_onPrimaryContainer</item>
+        
+        <!-- Secondary Colors -->
         <item name="colorSecondary">@color/md_theme_secondary</item>
         <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
         <item name="colorSecondaryContainer">@color/md_theme_secondaryContainer</item>
         <item name="colorOnSecondaryContainer">@color/md_theme_onSecondaryContainer</item>
+        
+        <!-- Tertiary Colors -->
         <item name="colorTertiary">@color/md_theme_tertiary</item>
         <item name="colorOnTertiary">@color/md_theme_onTertiary</item>
         <item name="colorTertiaryContainer">@color/md_theme_tertiaryContainer</item>
         <item name="colorOnTertiaryContainer">@color/md_theme_onTertiaryContainer</item>
+        
+        <!-- Error Colors -->
         <item name="colorError">@color/md_theme_error</item>
         <item name="colorOnError">@color/md_theme_onError</item>
         <item name="colorErrorContainer">@color/md_theme_errorContainer</item>
         <item name="colorOnErrorContainer">@color/md_theme_onErrorContainer</item>
+        
+        <!-- Surface Colors -->
         <item name="android:colorBackground">@color/md_theme_background</item>
         <item name="colorOnBackground">@color/md_theme_onBackground</item>
         <item name="colorSurface">@color/md_theme_surface</item>
         <item name="colorOnSurface">@color/md_theme_onSurface</item>
         <item name="colorSurfaceVariant">@color/md_theme_surfaceVariant</item>
         <item name="colorOnSurfaceVariant">@color/md_theme_onSurfaceVariant</item>
+        
+        <!-- Outline Colors -->
         <item name="colorOutline">@color/md_theme_outline</item>
         <item name="colorOutlineVariant">@color/md_theme_outlineVariant</item>
+        
+        <!-- Inverse Colors -->
         <item name="colorSurfaceInverse">@color/md_theme_inverseSurface</item>
         <item name="colorOnSurfaceInverse">@color/md_theme_inverseOnSurface</item>
         <item name="colorPrimaryInverse">@color/md_theme_inversePrimary</item>
+        
+        <!-- Fixed Colors -->
         <item name="colorPrimaryFixed">@color/md_theme_primaryFixed</item>
         <item name="colorOnPrimaryFixed">@color/md_theme_onPrimaryFixed</item>
         <item name="colorPrimaryFixedDim">@color/md_theme_primaryFixedDim</item>
         <item name="colorOnPrimaryFixedVariant">@color/md_theme_onPrimaryFixedVariant</item>
-        <item name="colorSecondaryFixed">@color/md_theme_secondaryFixed</item>
-        <item name="colorOnSecondaryFixed">@color/md_theme_onSecondaryFixed</item>
-        <item name="colorSecondaryFixedDim">@color/md_theme_secondaryFixedDim</item>
-        <item name="colorOnSecondaryFixedVariant">@color/md_theme_onSecondaryFixedVariant</item>
-        <item name="colorTertiaryFixed">@color/md_theme_tertiaryFixed</item>
-        <item name="colorOnTertiaryFixed">@color/md_theme_onTertiaryFixed</item>
-        <item name="colorTertiaryFixedDim">@color/md_theme_tertiaryFixedDim</item>
-        <item name="colorOnTertiaryFixedVariant">@color/md_theme_onTertiaryFixedVariant</item>
-        <item name="colorSurfaceDim">@color/md_theme_surfaceDim</item>
-        <item name="colorSurfaceBright">@color/md_theme_surfaceBright</item>
+        
+        <!-- Surface Container Colors -->
         <item name="colorSurfaceContainerLowest">@color/md_theme_surfaceContainerLowest</item>
         <item name="colorSurfaceContainerLow">@color/md_theme_surfaceContainerLow</item>
         <item name="colorSurfaceContainer">@color/md_theme_surfaceContainer</item>
         <item name="colorSurfaceContainerHigh">@color/md_theme_surfaceContainerHigh</item>
         <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
+        
+        <!-- Scrim -->
+        <item name="colorScrim">@color/md_theme_scrim</item>
+        
+        <!-- TV-specific attributes -->
+        <item name="android:windowBackground">@color/md_theme_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
+    <!-- Material 3 Card Styles -->
+    <style name="MaterialCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">8dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardBackgroundColor">@color/md_theme_surfaceContainer</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:layout_margin">8dp</item>
+    </style>
+
+    <!-- Material 3 Button Styles -->
+    <style name="MaterialButton" parent="Widget.Material3.Button">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="MaterialButton.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Material 3 Text Styles -->
+    <style name="MaterialTextAppearance" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/md_theme_onSurface</item>
+    </style>
+
+    <style name="MaterialTextAppearance.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">@color/md_theme_onSurface</item>
+    </style>
+
+    <style name="MaterialTextAppearance.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/md_theme_onSurfaceVariant</item>
+    </style>
+
+    <!-- Vod Card Styles -->
+    <style name="VodCard" parent="MaterialCard">
+        <item name="cardElevation">12dp</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="android:layout_width">150dp</item>
+        <item name="android:layout_height">200dp</item>
+    </style>
+
+    <!-- Home Button Styles -->
+    <style name="HomeButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">120dp</item>
+        <item name="android:layout_height">120dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- Toolbar Style -->
+    <style name="MaterialToolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/md_theme_surfaceContainer</item>
+        <item name="android:elevation">4dp</item>
+        <item name="titleTextColor">@color/md_theme_onSurface</item>
+        <item name="subtitleTextColor">@color/md_theme_onSurfaceVariant</item>
+    </style>
+
+    <!-- Live Theme -->
     <style name="AppTheme.Live" parent="AppTheme">
         <item name="android:windowBackground">@color/black</item>
+    </style>
+
+    <!-- Vod Grid Shape -->
+    <style name="Vod.Grid" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">20dp</item>
     </style>
 </resources>

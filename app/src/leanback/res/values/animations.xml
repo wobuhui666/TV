@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 Animation Resources -->
+    
+    <!-- Card elevation animation -->
+    <item name="card_elevation_low" type="dimen">4dp</item>
+    <item name="card_elevation_high" type="dimen">12dp</item>
+    
+    <!-- Button scale animation -->
+    <item name="button_scale_normal" type="dimen">1.0</item>
+    <item name="button_scale_pressed" type="dimen">0.95</item>
+    
+    <!-- Fade animation durations -->
+    <item name="animation_duration_short" type="integer">150</item>
+    <item name="animation_duration_medium" type="integer">300</item>
+    <item name="animation_duration_long" type="integer">500</item>
+    
+    <!-- Material 3 motion durations -->
+    <item name="motion_duration_short1" type="integer">50</item>
+    <item name="motion_duration_short2" type="integer">100</item>
+    <item name="motion_duration_short3" type="integer">150</item>
+    <item name="motion_duration_short4" type="integer">200</item>
+    <item name="motion_duration_medium1" type="integer">250</item>
+    <item name="motion_duration_medium2" type="integer">300</item>
+    <item name="motion_duration_medium3" type="integer">350</item>
+    <item name="motion_duration_medium4" type="integer">400</item>
+    <item name="motion_duration_long1" type="integer">450</item>
+    <item name="motion_duration_long2" type="integer">500</item>
+    <item name="motion_duration_long3" type="integer">550</item>
+    <item name="motion_duration_long4" type="integer">600</item>
+    <item name="motion_duration_extra_long1" type="integer">700</item>
+    <item name="motion_duration_extra_long2" type="integer">800</item>
+    <item name="motion_duration_extra_long3" type="integer">900</item>
+    <item name="motion_duration_extra_long4" type="integer">1000</item>
+    
+    <!-- Material 3 easing curves -->
+    <item name="motion_easing_emphasized" type="string">cubic-bezier(0.2, 0, 0, 1)</item>
+    <item name="motion_easing_emphasized_decelerate" type="string">cubic-bezier(0.05, 0.7, 0.1, 1)</item>
+    <item name="motion_easing_emphasized_accelerate" type="string">cubic-bezier(0.3, 0, 0.8, 0.15)</item>
+    <item name="motion_easing_standard" type="string">cubic-bezier(0.2, 0, 0, 1)</item>
+    <item name="motion_easing_standard_decelerate" type="string">cubic-bezier(0, 0, 0, 1)</item>
+    <item name="motion_easing_standard_accelerate" type="string">cubic-bezier(0.3, 0, 1, 1)</item>
+    <item name="motion_easing_linear" type="string">cubic-bezier(0, 0, 1, 1)</item>
+</resources>

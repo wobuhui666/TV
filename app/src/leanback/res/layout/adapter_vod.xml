@@ -1,97 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="150dp"
     android:layout_height="200dp"
     android:focusable="true"
-    android:focusableInTouchMode="true">
+    android:focusableInTouchMode="true"
+    style="@style/VodCard"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="12dp"
+    app:strokeWidth="0dp">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/image"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black_20"
-        android:scaleType="center"
-        app:shapeAppearanceOverlay="@style/Vod.Grid"
-        tools:src="@drawable/ic_img_loading" />
+        android:layout_height="match_parent">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/delete"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black_50"
-        android:scaleType="center"
-        android:src="@drawable/ic_vod_delete"
-        android:visibility="gone"
-        app:shapeAppearanceOverlay="@style/Vod.Grid"
-        tools:visibility="visible" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/md_theme_surfaceContainer"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/Vod.Grid"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:src="@drawable/ic_img_loading" />
 
-    <TextView
-        android:id="@+id/year"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginLeft="4dp"
-        android:background="@drawable/round"
-        android:ellipsize="end"
-        android:padding="4dp"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        android:visibility="gone"
-        tools:text="2022"
-        tools:visibility="visible" />
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/delete"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/md_theme_scrim"
+            android:scaleType="center"
+            android:src="@drawable/ic_vod_delete"
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/Vod.Grid"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:visibility="visible" />
 
-    <TextView
-        android:id="@+id/site"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginLeft="4dp"
-        android:background="@drawable/round"
-        android:ellipsize="end"
-        android:padding="4dp"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        android:visibility="gone"
-        tools:text="泥巴"
-        tools:visibility="visible" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/year"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/md_theme_onPrimary"
+            android:textSize="10sp"
+            android:visibility="gone"
+            app:chipBackgroundColor="@color/md_theme_primary"
+            app:chipCornerRadius="12dp"
+            app:chipMinHeight="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="2022"
+            tools:visibility="visible" />
 
-    <TextView
-        android:id="@+id/remark"
-        android:layout_marginBottom="4dp"
-        android:layout_marginLeft="4dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/name"
-        android:background="@drawable/round"
-        android:ellipsize="end"
-        android:padding="4dp"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="12sp"
-        tools:text="1080p" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/site"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/md_theme_onSecondary"
+            android:textSize="10sp"
+            android:visibility="gone"
+            app:chipBackgroundColor="@color/md_theme_secondary"
+            app:chipCornerRadius="12dp"
+            app:chipMinHeight="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/year"
+            tools:text="泥巴"
+            tools:visibility="visible" />
 
-    <TextView
-        android:id="@+id/name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="@drawable/shape_vod_name"
-        android:ellipsize="marquee"
-        android:gravity="center"
-        android:padding="6dp"
-        android:singleLine="true"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        tools:text="蜘蛛人" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/remark"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp"
+            android:textColor="@color/md_theme_onTertiary"
+            android:textSize="10sp"
+            app:chipBackgroundColor="@color/md_theme_tertiary"
+            app:chipCornerRadius="12dp"
+            app:chipMinHeight="24dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/name"
+            tools:text="1080p" />
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/selector_vod"
-        android:duplicateParentState="true" />
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="8dp"
+            app:cardBackgroundColor="@color/md_theme_surfaceContainerHighest"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-</RelativeLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:padding="8dp"
+                android:singleLine="true"
+                android:textColor="@color/md_theme_onSurface"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="蜘蛛人" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

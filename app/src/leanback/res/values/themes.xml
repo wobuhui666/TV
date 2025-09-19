@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Material 3 Theme for TV Leanback -->
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary Colors -->
         <item name="colorPrimary">@color/md_theme_primary</item>
@@ -64,5 +65,71 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- Material 3 Card Styles -->
+    <style name="MaterialCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">8dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardBackgroundColor">@color/md_theme_surfaceContainer</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:layout_margin">8dp</item>
+    </style>
+
+    <!-- Material 3 Button Styles -->
+    <style name="MaterialButton" parent="Widget.Material3.Button">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="MaterialButton.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Material 3 Text Styles -->
+    <style name="MaterialTextAppearance" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">@color/md_theme_onSurface</item>
+    </style>
+
+    <style name="MaterialTextAppearance.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">@color/md_theme_onSurface</item>
+    </style>
+
+    <style name="MaterialTextAppearance.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/md_theme_onSurfaceVariant</item>
+    </style>
+
+    <!-- Vod Card Styles -->
+    <style name="VodCard" parent="MaterialCard">
+        <item name="cardElevation">12dp</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="android:layout_width">150dp</item>
+        <item name="android:layout_height">200dp</item>
+    </style>
+
+    <!-- Home Button Styles -->
+    <style name="HomeButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">120dp</item>
+        <item name="android:layout_height">120dp</item>
+        <item name="cornerRadius">20dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:drawablePadding">8dp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- Toolbar Style -->
+    <style name="MaterialToolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/md_theme_surfaceContainer</item>
+        <item name="android:elevation">4dp</item>
+        <item name="titleTextColor">@color/md_theme_onSurface</item>
+        <item name="subtitleTextColor">@color/md_theme_onSurfaceVariant</item>
     </style>
 </resources>
