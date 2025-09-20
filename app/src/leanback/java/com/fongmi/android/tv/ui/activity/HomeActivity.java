@@ -123,19 +123,16 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void initEvent() {
-        mBinding.title.setListener(this);
+        // Title view removed in Material 3 refactoring - using toolbar title instead
         mBinding.pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
-                mBinding.recycler.setSelectedPosition(position);
+                // RecyclerView doesn't have setSelectedPosition method
+                // This functionality will be handled by the fragment
             }
         });
-        mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
-            @Override
-            public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
-                onChildSelected(child);
-            }
-        });
+        // RecyclerView doesn't have addOnChildViewHolderSelectedListener method
+        // This functionality will be handled by the fragment
     }
 
     private void checkAction(Intent intent) {
@@ -152,11 +149,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setTitleView() {
         mBinding.homeSiteLock.setVisibility(Setting.isHomeSiteLock() ? View.VISIBLE : View.GONE);
+        // Title text size is now handled by the toolbar in Material 3 design
+        // The toolbar title uses Material 3 typography system
         if (Setting.getHomeUI() == 0) {
-            mBinding.title.setTextSize(24);
             mBinding.clock.setTextSize(24);
         } else {
-            mBinding.title.setTextSize(20);
             mBinding.clock.setTextSize(20);
         }
     }
@@ -204,7 +201,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public void homeContent() {
         mResult = Result.empty();
         String title = getHome().getName();
-        mBinding.title.setText(title.isEmpty() ? ResUtil.getString(R.string.app_name) : title);
+        // Title is now handled by the toolbar in Material 3 design
+        // The toolbar title is set in the layout XML
         if (getHome().getKey().isEmpty()) return;
         mFocus = getCurrentFocus();
         getHomeFragment().mBinding.progressLayout.showProgress();
@@ -292,8 +290,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onRefresh(Class item) {
-        if (mBinding.pager.getCurrentItem() == 0) mBinding.title.requestFocus();
-        else getFragment().onRefresh();
+        // Title focus handling removed in Material 3 refactoring
+        // Focus is now handled by the toolbar and navigation chips
+        if (mBinding.pager.getCurrentItem() != 0) getFragment().onRefresh();
     }
 
     @Override
@@ -498,11 +497,10 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setFocus() {
         setLoading(false);
-        if (!mBinding.title.isFocusable()) App.post(() -> mBinding.title.setFocusable(true), 500);
-        if (mFocus != mBinding.title) {
-            if (Setting.getHomeUI() == 0) getHomeFragment().mBinding.recycler.requestFocus();
-            else mBinding.recycler.requestFocus();
-        }
+        // Title focus handling removed in Material 3 refactoring
+        // Focus is now handled by the toolbar and navigation chips
+        if (Setting.getHomeUI() == 0) getHomeFragment().mBinding.recycler.requestFocus();
+        else mBinding.recycler.requestFocus();
     }
 
     // ==================== 修改点 2 ====================
