@@ -1,4 +1,5 @@
 <resources>
+    <!-- Night theme overrides - only include dark-specific color values -->
     <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/md_theme_primary</item>
         <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
@@ -46,92 +47,5 @@
         <item name="colorSurfaceContainer">@color/md_theme_surfaceContainer</item>
         <item name="colorSurfaceContainerHigh">@color/md_theme_surfaceContainerHigh</item>
         <item name="colorSurfaceContainerHighest">@color/md_theme_surfaceContainerHighest</item>
-        
-        <!-- Material 3 Typography -->
-        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Material3.HeadlineLarge</item>
-        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Material3.HeadlineMedium</item>
-        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Material3.HeadlineSmall</item>
-        <item name="textAppearanceTitleLarge">@style/TextAppearance.Material3.TitleLarge</item>
-        <item name="textAppearanceTitleMedium">@style/TextAppearance.Material3.TitleMedium</item>
-        <item name="textAppearanceTitleSmall">@style/TextAppearance.Material3.TitleSmall</item>
-        <item name="textAppearanceBodyLarge">@style/TextAppearance.Material3.BodyLarge</item>
-        <item name="textAppearanceBodyMedium">@style/TextAppearance.Material3.BodyMedium</item>
-        <item name="textAppearanceBodySmall">@style/TextAppearance.Material3.BodySmall</item>
-        <item name="textAppearanceLabelLarge">@style/TextAppearance.Material3.LabelLarge</item>
-        <item name="textAppearanceLabelMedium">@style/TextAppearance.Material3.LabelMedium</item>
-        <item name="textAppearanceLabelSmall">@style/TextAppearance.Material3.LabelSmall</item>
-        
-        <!-- Material 3 Shape -->
-        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.SmallComponent</item>
-        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.MediumComponent</item>
-        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.LargeComponent</item>
     </style>
-    
-    <!-- Custom Material 3 Card Style for TV -->
-    <style name="Material3Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">8dp</item>
-        <item name="android:layout_margin">8dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-        <item name="android:background">?attr/selectableItemBackground</item>
-    </style>
-    
-    <!-- Material 3 Button Style for TV -->
-    <style name="Material3Button" parent="Widget.Material3.Button">
-        <item name="android:minHeight">48dp</item>
-        <item name="android:paddingStart">24dp</item>
-        <item name="android:paddingEnd">24dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-    </style>
-    
-    <!-- Material 3 Chip Style for TV -->
-    <style name="Material3Chip" parent="Widget.Material3.Chip.Filter">
-        <item name="android:minHeight">40dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-    </style>
-    
-    <!-- Material 3 FAB Style for TV -->
-    <style name="Material3FAB" parent="Widget.Material3.FloatingActionButton.Primary">
-        <item name="android:minHeight">56dp</item>
-        <item name="android:minWidth">56dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-    </style>
-    
-    
-    <!-- Material 3 Bottom Sheet Style -->
-    <style name="Material3BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
-        <item name="android:background">@drawable/bottom_sheet_background</item>
-        <item name="android:stateListAnimator">@animator/bottom_sheet_slide</item>
-    </style>
-    
-    <!-- Custom Vod Grid Item Style -->
-    <style name="VodGridItem" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">4dp</item>
-        <item name="android:layout_margin">8dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-        <item name="android:background">?attr/selectableItemBackground</item>
-    </style>
-    
-    <!-- Custom Function Button Style -->
-    <style name="FunctionButton" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">6dp</item>
-        <item name="android:layout_margin">8dp</item>
-        <item name="android:focusable">true</item>
-        <item name="android:clickable">true</item>
-        <item name="android:background">?attr/selectableItemBackground</item>
-    </style>
-    
-    <!-- Custom Dialog Style -->
-    <style name="Material3Dialog" parent="ThemeOverlay.Material3.Dialog">
-        <item name="android:windowBackground">@drawable/dialog_background</item>
-        <item name="android:windowElevation">8dp</item>
-    </style>
-    
 </resources>
