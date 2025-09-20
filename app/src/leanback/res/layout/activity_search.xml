@@ -39,8 +39,7 @@
             app:boxCornerRadiusTopEnd="16dp"
             app:boxCornerRadiusBottomStart="16dp"
             app:boxCornerRadiusBottomEnd="16dp"
-            app:startIconDrawable="@drawable/ic_search"
-            app:style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+            app:startIconDrawable="@drawable/ic_keyboard_search">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/searchEditText"
