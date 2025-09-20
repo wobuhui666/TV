@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- 释放时的缩放动画 -->
+    <objectAnimator
+        android:duration="150"
+        android:propertyName="scaleX"
+        android:valueFrom="0.95"
+        android:valueTo="1.0"
+        android:valueType="floatType" />
+        
+    <objectAnimator
+        android:duration="150"
+        android:propertyName="scaleY"
+        android:valueFrom="0.95"
+        android:valueTo="1.0"
+        android:valueType="floatType" />
+        
+</set>

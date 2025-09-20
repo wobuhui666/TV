@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- 按下状态 -->
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <gradient
+                android:angle="90"
+                android:startColor="#FF00696A"
+                android:endColor="#E000696A"
+                android:type="linear" />
+            <stroke
+                android:width="3dp"
+                android:color="#FF80D4D5" />
+        </shape>
+    </item>
+    
+    <!-- 正常状态 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:angle="90"
+                android:startColor="#FF00696A"
+                android:endColor="#E000696A"
+                android:type="linear" />
+            <stroke
+                android:width="2dp"
+                android:color="#FF80D4D5" />
+        </shape>
+    </item>
+    
+</selector>
