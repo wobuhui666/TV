@@ -49,6 +49,9 @@ public class Config {
     @SerializedName("danmaku")
     private String danmaku;
     @Ignore
+    @SerializedName("assrt")
+    private String assrt;
+    @Ignore
     @SerializedName(value = "logvar", alternate = {"logvr"})
     private String logvar;
 
@@ -219,6 +222,14 @@ public class Config {
 
     public void setDanmaku(String danmaku) {
         this.danmaku = danmaku;
+    }
+
+    public String getAssrt() {
+        return assrt;
+    }
+
+    public void setAssrt(String assrt) {
+        this.assrt = assrt;
     }
 
     public String getLogvar() {

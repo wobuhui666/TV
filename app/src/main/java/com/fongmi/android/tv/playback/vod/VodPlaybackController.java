@@ -106,6 +106,7 @@ public class VodPlaybackController {
 
     public void selectEpisode(Episode item) {
         if (!state.hasFlags()) return;
+        saveCurrentHistory();
         Flag selected = state.getFlag();
         for (Flag flag : state.getFlags()) flag.toggle(flag == selected, item);
         historyPolicy.updateEpisode(state.getHistory(), state.getFlag(), item);
@@ -238,13 +239,16 @@ public class VodPlaybackController {
     }
 
     private void saveCurrentHistory() {
-        historyPolicy.save(currentHistory());
+        History history = currentHistory();
+        if (history == null) return;
+        long position = host.getPlayerPosition();
+        if (state.getPlayingRequest() == null || position < 0) historyPolicy.save(history);
+        else historyPolicy.saveProgress(history, false, System.currentTimeMillis(), position, host.getPlayerDuration());
     }
 
     public void saveHistory(boolean exit, long time, long position, long duration) {
         History history = exit ? historyForExit() : currentHistory();
-        if (position > 0 && duration > 0) historyPolicy.updateTime(history, time, position, duration);
-        historyPolicy.save(history, exit);
+        historyPolicy.saveProgress(history, exit, time, position, duration);
     }
 
     public void syncHistory() {
@@ -336,7 +340,7 @@ public class VodPlaybackController {
 
     private void seamless(Flag flag) {
         History history = state.getHistory();
-        Episode episode = history == null ? null : flag.find(history.getVodRemarks(), host.getVodMark().isEmpty());
+        Episode episode = history == null ? null : flag.find(history.getVodRemarks(), history.getEpisodeUrl(), host.getVodMark().isEmpty());
         host.renderQualityVisible(episode != null && episode.isSelected() && state.getQuality().getUrl().isMulti());
         if (episode == null || episode.isSelected()) return;
         history.setVodRemarks(episode.getName());

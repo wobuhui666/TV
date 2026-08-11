@@ -299,9 +299,9 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(LiveViewModel.class);
         mLive = mViewModel.createPlaybackController(this);
-        observeForever(mViewModel.url(), mObserveUrl);
+        observeWhenServiceReady(mViewModel.url(), mObserveUrl);
         mViewModel.xml().observe(this, this::setEpg);
-        observeForever(mViewModel.epg(), mObserveEpg);
+        observeWhenServiceReady(mViewModel.epg(), mObserveEpg);
         mViewModel.live().observe(this, live -> {
             mViewModel.parseXml(live);
             setGroup(live);

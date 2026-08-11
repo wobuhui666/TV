@@ -417,9 +417,9 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(VideoViewModel.class);
-        observeForever(mViewModel.getResult(), mObserveDetail);
-        observeForever(mViewModel.getPlayer(), mObservePlayer);
-        observeForever(mViewModel.getSearch(), mObserveSearch);
+        observeWhenServiceReady(mViewModel.getResult(), mObserveDetail);
+        observeWhenServiceReady(mViewModel.getPlayer(), mObservePlayer);
+        observeWhenServiceReady(mViewModel.getSearch(), mObserveSearch);
         mVod = mViewModel.createPlaybackController(this);
     }
 
@@ -487,6 +487,11 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     public long getPlayerPosition() {
         return player().getPosition();
+    }
+
+    @Override
+    public long getPlayerDuration() {
+        return player().getDuration();
     }
 
     @Override

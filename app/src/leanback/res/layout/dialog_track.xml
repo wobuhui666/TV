@@ -33,12 +33,34 @@
             tools:visibility="visible" />
 
         <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+            android:id="@+id/search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:contentDescription="@string/subtitle_search"
+            android:focusable="true"
+            android:src="@drawable/ic_action_search"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
             android:id="@+id/subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:focusable="true"
             android:src="@drawable/ic_action_subtitle"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+            android:id="@+id/audio_setting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:contentDescription="@string/player_audio_settings"
+            android:focusable="true"
+            android:src="@drawable/msr_settings"
             android:visibility="gone"
             tools:visibility="visible" />
 

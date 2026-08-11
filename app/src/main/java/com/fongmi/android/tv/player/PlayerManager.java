@@ -408,6 +408,11 @@ public class PlayerManager implements ParseCallback {
         startCurrent(position);
     }
 
+    public void applyAudioSettings() {
+        if (engine == null || player == null) return;
+        if (!engine.applyAudioSettings()) rebuildAudioPipeline();
+    }
+
     private void handleDecodeError(PlaybackException e) {
         if (++retry > 1) {
             callback.onError(engine.getErrorMessage(e));

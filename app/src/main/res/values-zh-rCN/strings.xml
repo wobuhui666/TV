@@ -49,6 +49,17 @@
     <string name="play_chapter">章节</string>
     <string name="play_scale">原始</string>
     <string name="play_subtitle">字幕设置</string>
+    <string name="subtitle_search">在线搜索字幕</string>
+    <string name="subtitle_search_api_title">Assrt 接口</string>
+    <string name="subtitle_search_token_hint">Assrt Token</string>
+    <string name="player_audio_settings">音频处理</string>
+    <string name="player_loudness_normalization">夜间音量标准化</string>
+    <string-array name="select_audio_channel_mode">
+        <item>原始声道</item>
+        <item>下混立体声</item>
+        <item>单声道</item>
+        <item>右声道</item>
+    </string-array>
     <string name="subtitle_adjust_hint">调整字幕大小与位置</string>
     <string name="subtitle_size_larger">字幕变大</string>
     <string name="subtitle_size_smaller">字幕变小</string>

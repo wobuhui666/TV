@@ -38,30 +38,51 @@ public class VodHistoryPolicy {
     }
 
     public void save(History history, boolean exit) {
-        if (history != null && history.canSave() && !Setting.isIncognito()) Task.execute(() -> {
-            history.merge().save();
+        if (history == null || !history.canSave() || Setting.isIncognito()) return;
+        History copy = copyForSave(history);
+        Task.executeSerial(() -> {
+            copy.merge().save();
             if (exit) RefreshEvent.history();
         });
     }
 
     public void sync(History history) {
-        if (history != null && !Setting.isIncognito()) Task.execute(history::save);
+        if (history == null || Setting.isIncognito()) return;
+        History copy = copyForSave(history);
+        Task.executeSerial(copy::save);
     }
 
     public void updateEpisode(History history, Flag flag, Episode episode) {
         if (history == null || flag == null || episode == null) return;
-        history.setPosition(episode.matchesName(history.getEpisode()) ? history.getPosition() : C.TIME_UNSET);
+        boolean match = episode.matchesName(history.getEpisode());
+        if (!match) history.setPosition(C.TIME_UNSET);
+        if (!match) history.setDuration(C.TIME_UNSET);
         history.setVodFlag(flag.getFlag());
         history.setVodRemarks(episode.getName());
         history.setEpisodeUrl(episode.getUrl());
     }
 
     public void updateTime(History history, long time, long position, long duration) {
-        if (history == null || position < 0 || duration <= 0) return;
+        if (!applyTime(history, time, position, duration)) return;
+        if (history.canSave() && history.canScheduleSave()) sync(history);
+    }
+
+    public void saveProgress(History history, boolean exit, long time, long position, long duration) {
+        applyTime(history, time, position, duration);
+        save(history, exit);
+    }
+
+    private boolean applyTime(History history, long time, long position, long duration) {
+        if (history == null || position < 0 || duration <= 0) return false;
         history.setCreateTime(time);
         history.setPosition(position);
         history.setDuration(duration);
-        if (history.canSave() && history.canSync()) sync(history);
+        return true;
+    }
+
+    private History copyForSave(History history) {
+        history.markSaveScheduled();
+        return history.copy();
     }
 
     public long startPositionMs(History history) {

@@ -49,6 +49,17 @@
     <string name="play_chapter">Chapter</string>
     <string name="play_scale">Default</string>
     <string name="play_subtitle">Subtitle</string>
+    <string name="subtitle_search">Search online subtitles</string>
+    <string name="subtitle_search_api_title">Assrt API</string>
+    <string name="subtitle_search_token_hint">Assrt token</string>
+    <string name="player_audio_settings">Audio processing</string>
+    <string name="player_loudness_normalization">Night volume normalization</string>
+    <string-array name="select_audio_channel_mode">
+        <item>Original channels</item>
+        <item>Downmix to stereo</item>
+        <item>Mono</item>
+        <item>Right channel</item>
+    </string-array>
     <string name="subtitle_adjust_hint">Adjust size and position</string>
     <string name="subtitle_size_larger">Larger text</string>
     <string name="subtitle_size_smaller">Smaller text</string>
