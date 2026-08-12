@@ -7,7 +7,7 @@ public class ErrorMsgProvider {
     public String get(PlaybackException e) {
         return switch (e.errorCode) {
             case PlaybackException.ERROR_CODE_TIMEOUT -> "Timeout";
-            case PlaybackException.ERROR_CODE_UNSPECIFIED -> "播放失败，请重试或更换线路";
+            case PlaybackException.ERROR_CODE_UNSPECIFIED -> "Unspecified";
             case PlaybackException.ERROR_CODE_FAILED_RUNTIME_CHECK -> "Failed Runtime Check";
             case PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> "IO Unspecified";
             case PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Bad HTTP Status";
