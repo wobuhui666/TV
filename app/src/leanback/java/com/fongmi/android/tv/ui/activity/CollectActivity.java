@@ -24,7 +24,6 @@ import com.fongmi.android.tv.bean.Collect;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.ActivityCollectBinding;
 import com.fongmi.android.tv.model.SiteViewModel;
-import com.fongmi.android.tv.model.SiteSearchSnapshot;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.adapter.CollectAdapter;
 import com.fongmi.android.tv.ui.base.BaseActivity;
@@ -42,8 +41,6 @@ public class CollectActivity extends BaseActivity {
     private SiteViewModel mViewModel;
     private List<Site> mSites;
     private View mOldView;
-    private String mAnchorSiteKey = "all";
-    private String mAnchorVodId = "";
 
     public static void start(Activity activity, String keyword) {
         Intent intent = new Intent(activity, CollectActivity.class);
@@ -119,46 +116,14 @@ public class CollectActivity extends BaseActivity {
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
-        mViewModel.getSearchSnapshot().observe(this, snapshot -> {
-            if (snapshot == null) return;
-            String selected = selectedSiteKey();
+        mViewModel.getSearch().observe(this, result -> {
+            if (result.getList().isEmpty()) return;
             CollectFragment fragment = getFragment();
-            if (fragment != null) {
-                String[] anchor = fragment.getAnchor();
-                if (anchor != null) {
-                    mAnchorSiteKey = anchor[0];
-                    mAnchorVodId = anchor[1];
-                }
-            }
-            if (fragment != null) fragment.replaceVideo(snapshot.all());
-            List<Collect> items = new ArrayList<>();
-            items.add(Collect.all());
-            for (SiteSearchSnapshot.Entry entry : snapshot.entries()) items.add(new Collect(entry.site(), new ArrayList<>(entry.items())).state(entry.state().name()));
-            mAdapter.setItems(items);
+            if (fragment == null) return;
+            fragment.addVideo(result.getList());
+            mAdapter.add(Collect.create(result.getList()));
             mBinding.pager.getAdapter().notifyDataSetChanged();
-            restoreSite(selected);
         });
-    }
-
-    private String selectedSiteKey() {
-        int position = clampPosition(mBinding.recycler.getSelectedPosition());
-        return position == RecyclerView.NO_POSITION ? "all" : mAdapter.get(position).getSite().getKey();
-    }
-
-    private void restoreSite(String key) {
-        for (int i = 0; i < mAdapter.getItemCount(); i++) {
-            if (!mAdapter.get(i).getSite().getKey().equals(key)) continue;
-            mBinding.recycler.setSelectedPosition(i);
-            mBinding.pager.setCurrentItem(i, false);
-            restoreResultAnchor(i);
-            return;
-        }
-    }
-
-    private void restoreResultAnchor(int sitePosition) {
-        if (mAnchorVodId.isEmpty()) return;
-        CollectFragment fragment = (CollectFragment) mBinding.pager.getAdapter().instantiateItem(mBinding.pager, sitePosition);
-        fragment.restoreAnchor(mAnchorSiteKey, mAnchorVodId);
     }
 
     private void saveKeyword() {
@@ -259,11 +224,6 @@ public class CollectActivity extends BaseActivity {
         @Override
         public int getCount() {
             return mAdapter.getItemCount();
-        }
-
-        @Override
-        public int getItemPosition(@NonNull Object object) {
-            return POSITION_NONE;
         }
 
         @Override

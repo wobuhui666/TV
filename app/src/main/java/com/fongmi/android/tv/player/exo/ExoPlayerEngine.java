@@ -8,8 +8,6 @@ import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
 import com.fongmi.android.tv.player.engine.PlayerEngine;
-import com.fongmi.android.tv.player.failure.PlaybackFailure;
-import com.fongmi.android.tv.player.failure.PlaybackFailureClassifier;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitleRuntime;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
@@ -19,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ExoPlayerEngine implements PlayerEngine {
 
+    private final ErrorMsgProvider provider;
     private final Player.Listener listener;
     private final PreCache preCache;
     private ExoPlayer player;
@@ -27,6 +26,7 @@ public class ExoPlayerEngine implements PlayerEngine {
 
     public ExoPlayerEngine(int decode, Player.Listener listener) {
         this.player = ExoUtil.buildPlayer(decode, listener);
+        this.provider = new ErrorMsgProvider();
         this.preCache = new PreCache();
         this.listener = listener;
         this.decode = decode;
@@ -87,8 +87,8 @@ public class ExoPlayerEngine implements PlayerEngine {
     }
 
     @Override
-    public PlaybackFailure classifyFailure(PlaybackException e) {
-        return PlaybackFailureClassifier.classifyExo(e, spec == null ? null : spec.getUrl());
+    public String getErrorMessage(PlaybackException e) {
+        return provider.get(e);
     }
 
     @Override

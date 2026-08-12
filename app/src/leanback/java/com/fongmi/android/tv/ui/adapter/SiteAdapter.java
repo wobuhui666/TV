@@ -15,7 +15,6 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.AdapterSiteHomeBinding;
 import com.fongmi.android.tv.databinding.AdapterSiteBinding;
 import com.fongmi.android.tv.setting.Setting;
-import com.fongmi.android.tv.setting.SiteHealthStore;
 import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 
 import java.util.ArrayList;
@@ -58,19 +57,11 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
     }
 
     private void addAll() {
-        List<Site> sites = VodConfig.get().getSites().stream().filter(site -> !site.isHide()).toList();
-        mItems.addAll(SiteHealthStore.getDisplayOrder(sites));
+        for (Site site : VodConfig.get().getSites()) if (!site.isHide()) mItems.add(site);
     }
 
     public List<Site> getItems() {
         return mItems;
-    }
-
-    public void move(int from, int to) {
-        if (from == to || from < 0 || to < 0 || from >= mItems.size() || to >= mItems.size()) return;
-        Site item = mItems.remove(from);
-        mItems.add(to, item);
-        notifyItemMoved(from, to);
     }
 
     @Override
@@ -93,7 +84,7 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Site item = mItems.get(position);
-        holder.text.setText(item.getName() + " · " + healthLabel(item));
+        holder.text.setText(item.getName());
         holder.check.setChecked(getChecked(item));
         holder.text.setSelected(item.isSelected());
         holder.check.setVisibility(type == 0 ? View.GONE : View.VISIBLE);
@@ -110,15 +101,6 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
 
     private boolean isValidPosition(int position) {
         return position >= 0 && position < mItems.size();
-    }
-
-    private String healthLabel(Site item) {
-        return switch (SiteHealthStore.status(VodConfig.getCid(), item.getKey())) {
-            case GOOD -> "良好";
-            case WARNING -> "警告";
-            case BAD -> "较差";
-            default -> "未知";
-        };
     }
 
     private boolean getChecked(Site item) {

@@ -184,8 +184,8 @@ public class Action implements Process {
         List<History> targets = History.arrayFrom(params.get("targets"));
         if (config.getUrl() == null) return;
         if (config.getUrl().equals(VodConfig.getUrl())) {
-            if (force) History.deleteSilently(config.getId());
-            History.syncSilently(targets);
+            if (force) History.delete(config.getId());
+            History.sync(targets);
             RefreshEvent.history();
         } else {
             VodConfig.load(config, getCallback(targets, force, config.getId()));
@@ -196,8 +196,8 @@ public class Action implements Process {
         return new Callback() {
             @Override
             public void success() {
-                if (force) History.deleteSilently(cid);
-                History.syncSilently(targets);
+                if (force) History.delete(cid);
+                History.sync(targets);
                 RefreshEvent.history();
             }
 

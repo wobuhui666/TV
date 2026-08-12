@@ -25,14 +25,12 @@ import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.player.engine.PlayerEngineFactory;
-import com.fongmi.android.tv.player.failure.PlaybackFailure;
 import com.fongmi.android.tv.player.media.MediaUrlGuard;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.player.parse.ParseJob;
 import com.fongmi.android.tv.player.track.TrackUtil;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
-import com.fongmi.android.tv.setting.SiteHealthStore;
 import com.fongmi.android.tv.utils.MpvLogCollector;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
@@ -59,12 +57,8 @@ public class PlayerManager implements ParseCallback {
     private boolean danmakuEnabled;
     private boolean initTrack;
     private boolean forcePlatformEngine;
-    private long healthSessionId;
-    private long healthPreparedSessionId = -1;
     private int retry;
     private int decode;
-    private boolean healthSuccessRecorded;
-    private boolean healthFailureRecorded;
 
     public PlayerManager(Callback callback) {
         this.callback = callback;
@@ -421,7 +415,7 @@ public class PlayerManager implements ParseCallback {
 
     private void handleDecodeError(PlaybackException e) {
         if (++retry > 1) {
-            dispatchFailure(e);
+            callback.onError(engine.getErrorMessage(e));
         } else {
             Notify.show(R.string.error_decode_fallback);
             toggleDecode();
@@ -452,16 +446,6 @@ public class PlayerManager implements ParseCallback {
     private void onPlayTimeout() {
         stop();
         callback.onError(ResUtil.getString(R.string.error_play_timeout));
-    }
-
-    private void dispatchFailure(PlaybackException error) {
-        PlaybackFailure failure = engine.classifyFailure(error);
-        MpvLogCollector.logError("PlayerManager", failure.technicalCode() + " category=" + failure.category() + " evidence=" + failure.evidence());
-        if (!healthFailureRecorded && failure.affectsSiteHealth()) {
-            healthFailureRecorded = true;
-            SiteHealthStore.recordPlayback(spec == null ? null : spec.getKey(), false, failure);
-        }
-        callback.onPlaybackFailure(failure);
     }
 
     private void ensureEngine(PlaySpec spec) {
@@ -515,7 +499,6 @@ public class PlayerManager implements ParseCallback {
     public void start(PlaySpec spec, long timeout, long startPositionMs) {
         forcePlatformEngine = false;
         this.spec = spec;
-        beginHealthSession();
         setMediaItem(timeout, startPositionMs);
     }
 
@@ -528,7 +511,6 @@ public class PlayerManager implements ParseCallback {
         forcePlatformEngine = false;
         pendingStartPositionMs = startPositionMs;
         spec = PlaySpec.fromParse(result, key, metadata);
-        beginHealthSession();
         parseJob = ParseJob.create(this).start(result, useParse);
     }
 
@@ -545,20 +527,11 @@ public class PlayerManager implements ParseCallback {
             return;
         }
         ensureEngine(spec.checkUa());
-        if (healthPreparedSessionId != healthSessionId) {
-            healthPreparedSessionId = healthSessionId;
-            healthSuccessRecorded = false;
-            healthFailureRecorded = false;
-        }
         engine.start(spec, startPositionMs);
         setDanmakus(spec.getDanmakus());
         App.post(runnable, timeout);
         callback.onPrepare();
         initTrack = false;
-    }
-
-    private void beginHealthSession() {
-        healthSessionId++;
     }
 
     private void rejectMediaItem(PlaySpec spec) {
@@ -628,10 +601,6 @@ public class PlayerManager implements ParseCallback {
 
         void onError(String msg);
 
-        default void onPlaybackFailure(PlaybackFailure failure) {
-            onError(failure.userMessage());
-        }
-
         void onPlayerRebuild(Player newPlayer);
 
         void onDanmakuSourceChanged(Uri uri);
@@ -648,10 +617,6 @@ public class PlayerManager implements ParseCallback {
         @Override
         public void onPlaybackStateChanged(int state) {
             if (state == Player.STATE_READY || state == Player.STATE_ENDED) App.removeCallbacks(runnable);
-            if (state == Player.STATE_READY && !healthSuccessRecorded) {
-                healthSuccessRecorded = true;
-                SiteHealthStore.recordPlayback(spec == null ? null : spec.getKey(), true, null);
-            }
         }
 
         @Override
@@ -687,7 +652,7 @@ public class PlayerManager implements ParseCallback {
                 case TUNNEL -> handleTunnelError(e);
                 case PLATFORM -> handlePlatformDecoderFallback(e);
                 case RECOVERED -> setDanmakus(spec.getDanmakus());
-                case FATAL -> dispatchFailure(e);
+                case FATAL -> callback.onError(engine.getErrorMessage(e));
             }
         }
     };

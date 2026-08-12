@@ -25,12 +25,6 @@ public class CollectAdapter extends RecyclerView.Adapter<CollectAdapter.ViewHold
         notifyItemInserted(mItems.size() - 1);
     }
 
-    public void setItems(List<Collect> items) {
-        mItems.clear();
-        mItems.addAll(items);
-        notifyDataSetChanged();
-    }
-
     public void clear() {
         mItems.clear();
         notifyDataSetChanged();
@@ -56,7 +50,7 @@ public class CollectAdapter extends RecyclerView.Adapter<CollectAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Collect item = mItems.get(position);
         holder.binding.getRoot().setOnClickListener(null);
-        holder.binding.text.setText(item.getDisplayName());
+        holder.binding.text.setText(item.getSite().getName());
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

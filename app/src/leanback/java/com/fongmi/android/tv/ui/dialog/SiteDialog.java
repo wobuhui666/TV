@@ -15,8 +15,6 @@ import com.fongmi.android.tv.databinding.DialogSiteHomeBinding;
 import com.fongmi.android.tv.databinding.DialogSiteBinding;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.Setting;
-import com.fongmi.android.tv.setting.SiteHealthStore;
-import com.fongmi.android.tv.setting.SiteSortMode;
 import com.fongmi.android.tv.ui.adapter.SiteAdapter;
 import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.custom.SpaceItemDecoration;
@@ -36,11 +34,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
     private View change;
     private View select;
     private View cancel;
-    private View sortUp;
-    private View sortDown;
-    private View sortSave;
-    private View sortSmart;
-    private View sortRestore;
     private View actionView;
     private boolean action;
     private boolean classic;
@@ -100,11 +93,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         select = binding.select;
         cancel = binding.cancel;
         mode = binding.mode;
-        sortUp = binding.sortUp;
-        sortDown = binding.sortDown;
-        sortSave = binding.sortSave;
-        sortSmart = binding.sortSmart;
-        sortRestore = binding.sortRestore;
         return binding;
     }
 
@@ -117,11 +105,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         select = binding.select;
         cancel = binding.cancel;
         mode = binding.mode;
-        sortUp = binding.sortUp;
-        sortDown = binding.sortDown;
-        sortSave = binding.sortSave;
-        sortSmart = binding.sortSmart;
-        sortRestore = binding.sortRestore;
         return binding;
     }
 
@@ -133,10 +116,9 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
     @Override
     protected void initView() {
         adapter = new SiteAdapter(this, classic);
-        if (action || type == 1) actionView.setVisibility(View.VISIBLE);
+        if (action) actionView.setVisibility(View.VISIBLE);
         setType(type);
         setRecyclerView();
-        rememberSitePosition();
         setMode();
         setAnimation();
     }
@@ -148,20 +130,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         cancel.setOnClickListener(v -> adapter.cancelAll());
         search.setOnClickListener(v -> setType(v.isSelected() ? 0 : 1));
         change.setOnClickListener(v -> setType(v.isSelected() ? 0 : 2));
-        sortUp.setOnClickListener(v -> moveFocused(-1));
-        sortDown.setOnClickListener(v -> moveFocused(1));
-        sortSave.setOnClickListener(v -> {
-            SiteHealthStore.saveManualOrder(adapter.getItems());
-            dismiss();
-        });
-        sortSmart.setOnClickListener(v -> {
-            SiteHealthStore.setMode(VodConfig.getCid(), SiteSortMode.SMART);
-            dismiss();
-        });
-        sortRestore.setOnClickListener(v -> {
-            SiteHealthStore.resetManualOrder();
-            dismiss();
-        });
     }
 
     private void setRecyclerView() {
@@ -209,28 +177,16 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
     private void updateActionFocusChain() {
         boolean enableBatch = type > 0;
         boolean enableMode = mode.isEnabled() && mode.isFocusable();
-        int afterChange = enableBatch ? select.getId() : enableMode ? mode.getId() : sortUp.getId();
-        int afterCancel = enableMode ? mode.getId() : sortUp.getId();
         search.setNextFocusUpId(search.getId());
         search.setNextFocusDownId(change.getId());
         change.setNextFocusUpId(search.getId());
-        change.setNextFocusDownId(afterChange);
+        change.setNextFocusDownId(enableBatch ? select.getId() : enableMode ? mode.getId() : change.getId());
         select.setNextFocusUpId(change.getId());
         select.setNextFocusDownId(cancel.getId());
         cancel.setNextFocusUpId(select.getId());
-        cancel.setNextFocusDownId(afterCancel);
+        cancel.setNextFocusDownId(enableMode ? mode.getId() : cancel.getId());
         mode.setNextFocusUpId(enableBatch ? cancel.getId() : change.getId());
-        mode.setNextFocusDownId(sortUp.getId());
-        sortUp.setNextFocusUpId(enableMode ? mode.getId() : enableBatch ? cancel.getId() : change.getId());
-        sortUp.setNextFocusDownId(sortDown.getId());
-        sortDown.setNextFocusUpId(sortUp.getId());
-        sortDown.setNextFocusDownId(sortSave.getId());
-        sortSave.setNextFocusUpId(sortDown.getId());
-        sortSave.setNextFocusDownId(sortSmart.getId());
-        sortSmart.setNextFocusUpId(sortSave.getId());
-        sortSmart.setNextFocusDownId(sortRestore.getId());
-        sortRestore.setNextFocusUpId(sortSmart.getId());
-        sortRestore.setNextFocusDownId(sortRestore.getId());
+        mode.setNextFocusDownId(mode.getId());
     }
 
     private void setAnimation() {
@@ -244,19 +200,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
         bindFocus(select);
         bindFocus(cancel);
         bindFocus(mode);
-        bindFocus(sortUp);
-        bindFocus(sortDown);
-        bindFocus(sortSave);
-        bindFocus(sortSmart);
-        bindFocus(sortRestore);
-    }
-
-    private void moveFocused(int offset) {
-        int from = recycler.getTag() instanceof Integer position ? position : VodConfig.getHomeIndex();
-        from = Math.clamp(from, 0, adapter.getItemCount() - 1);
-        int to = Math.clamp(from + offset, 0, adapter.getItemCount() - 1);
-        adapter.move(from, to);
-        focusRecycler(to);
     }
 
     private void bindFocus(View view) {
@@ -264,14 +207,6 @@ public class SiteDialog extends BaseAlertDialog implements SiteAdapter.OnClickLi
             boolean selected = target.isSelected();
             JetStreamAnimator.animateFocus(target, focused, JetStreamAnimator.FOCUS_SCALE_LIST, 8);
             target.setSelected(selected);
-        });
-    }
-
-    private void rememberSitePosition() {
-        recycler.getViewTreeObserver().addOnGlobalFocusChangeListener((oldFocus, newFocus) -> {
-            if (newFocus == null) return;
-            RecyclerView.ViewHolder holder = recycler.findContainingViewHolder(newFocus);
-            if (holder != null) recycler.setTag(holder.getBindingAdapterPosition());
         });
     }
 

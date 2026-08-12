@@ -49,16 +49,4 @@ public class Migrations {
             database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_Track_key_type` ON `Track` (`key`, `type`)");
         }
     };
-
-    public static final Migration MIGRATION_35_36 = new Migration(35, 36) {
-        @Override
-        public void migrate(@NonNull SupportSQLiteDatabase database) {
-            database.execSQL("CREATE TABLE IF NOT EXISTS PlaybackDeleteTombstone (`id` TEXT NOT NULL, `configKey` TEXT NOT NULL, `scope` TEXT NOT NULL, `historyKey` TEXT NOT NULL, `siteKey` TEXT NOT NULL, `vodId` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
-            database.execSQL("CREATE INDEX IF NOT EXISTS `index_PlaybackDeleteTombstone_deletedAt` ON `PlaybackDeleteTombstone` (`deletedAt`)");
-            database.execSQL("CREATE TABLE IF NOT EXISTS PlaybackWebhookDelivery (`deliveryId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `endpointId` TEXT NOT NULL, `endpointUrl` TEXT NOT NULL, `payload` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `maxRetries` INTEGER NOT NULL, `nextAttemptAt` INTEGER NOT NULL, `failedAt` INTEGER NOT NULL, `lastError` TEXT NOT NULL, PRIMARY KEY(`deliveryId`))");
-            database.execSQL("CREATE INDEX IF NOT EXISTS `index_PlaybackWebhookDelivery_eventId` ON `PlaybackWebhookDelivery` (`eventId`)");
-            database.execSQL("CREATE INDEX IF NOT EXISTS `index_PlaybackWebhookDelivery_nextAttemptAt` ON `PlaybackWebhookDelivery` (`nextAttemptAt`)");
-            database.execSQL("CREATE INDEX IF NOT EXISTS `index_PlaybackWebhookDelivery_failedAt` ON `PlaybackWebhookDelivery` (`failedAt`)");
-        }
-    };
 }

@@ -54,7 +54,7 @@ public class CollectAdapter extends BaseDiffAdapter<Collect, CollectAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Collect item = getItem(position);
         holder.binding.text.setSelected(item.isSelected());
-        holder.binding.text.setText(item.getDisplayName());
+        holder.binding.text.setText(item.getSite().getName());
         holder.binding.text.setOnClickListener(v -> listener.onItemClick(position, item));
     }
 

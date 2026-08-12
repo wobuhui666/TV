@@ -14,7 +14,6 @@ import androidx.core.os.HandlerCompat;
 
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ToastFilter;
-import com.fongmi.android.tv.playback.PlaybackSyncScheduler;
 import com.fongmi.hook.Hook;
 import com.github.catvod.Init;
 import com.google.gson.Gson;
@@ -89,7 +88,6 @@ public class App extends Application implements Application.ActivityLifecycleCal
         ToastFilter.install();
         Notify.createChannel();
         registerActivityLifecycleCallbacks(this);
-        PlaybackSyncScheduler.start();
     }
 
     @Override

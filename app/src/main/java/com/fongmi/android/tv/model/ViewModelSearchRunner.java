@@ -26,10 +26,10 @@ final class ViewModelSearchRunner {
         epoch = new AtomicInteger(0);
     }
 
-    void start(List<Site> sites, Function<Site, Callable<Result>> taskFactory, Consumer<SearchEvent> onResult) {
+    void start(List<Site> sites, Function<Site, Callable<Result>> taskFactory, Consumer<Result> onResult) {
         int current = nextEpoch();
         cancelFutures();
-        sites.forEach(site -> execute(site, taskFactory.apply(site), current, onResult));
+        sites.forEach(site -> execute(taskFactory.apply(site), current, onResult));
     }
 
     void stop() {
@@ -46,19 +46,13 @@ final class ViewModelSearchRunner {
         futures.clear();
     }
 
-    private void execute(Site site, Callable<Result> callable, int current, Consumer<SearchEvent> onResult) {
-        long start = System.currentTimeMillis();
+    private void execute(Callable<Result> callable, int current, Consumer<Result> onResult) {
         FluentFuture<Result> future = FluentFuture.from(Task.largeExecutor().submit(callable)).withTimeout(Constant.TIMEOUT_SEARCH, TimeUnit.MILLISECONDS, Task.scheduler());
         futures.add(future);
         future.addCallback(Task.callback(
                 result -> {
-                    if (epoch.get() == current) onResult.accept(new SearchEvent(site, result, true, System.currentTimeMillis() - start, null));
-                },
-                error -> {
-                    if (epoch.get() == current) onResult.accept(new SearchEvent(site, Result.empty(), false, System.currentTimeMillis() - start, error));
+                    if (epoch.get() == current) onResult.accept(result);
                 }
         ), MoreExecutors.directExecutor());
     }
-
-    record SearchEvent(Site site, Result result, boolean success, long elapsedMs, Throwable error) {}
 }

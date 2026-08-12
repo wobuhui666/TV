@@ -19,7 +19,6 @@ public class Collect implements Parcelable, Diffable<Collect> {
     private List<Vod> list;
     private Site site;
     private int page;
-    private String state;
 
     public Collect(Site site, List<Vod> list) {
         this.site = site;
@@ -31,7 +30,6 @@ public class Collect implements Parcelable, Diffable<Collect> {
         this.list = in.createTypedArrayList(Vod.CREATOR);
         this.site = in.readParcelable(Site.class.getClassLoader());
         this.page = in.readInt();
-        this.state = in.readString();
     }
 
     public static Collect all() {
@@ -64,19 +62,6 @@ public class Collect implements Parcelable, Diffable<Collect> {
         return Math.max(1, page);
     }
 
-    public String getDisplayName() {
-        String name = getSite().getName();
-        if ("LOADING".equals(state)) return name + " · 加载中";
-        if ("EMPTY".equals(state)) return name + " · 无结果";
-        if ("FAILURE".equals(state)) return name + " · 失败";
-        return name;
-    }
-
-    public Collect state(String state) {
-        this.state = state;
-        return this;
-    }
-
     public void setPage(int page) {
         this.page = page;
     }
@@ -104,7 +89,6 @@ public class Collect implements Parcelable, Diffable<Collect> {
         dest.writeTypedList(this.list);
         dest.writeParcelable(this.site, flags);
         dest.writeInt(this.page);
-        dest.writeString(this.state);
     }
 
     @Override
@@ -114,11 +98,7 @@ public class Collect implements Parcelable, Diffable<Collect> {
 
     @Override
     public boolean isSameContent(Collect other) {
-        return other != null
-                && isSelected() == other.isSelected()
-                && getPage() == other.getPage()
-                && getDisplayName().equals(other.getDisplayName())
-                && getList().equals(other.getList());
+        return equals(other);
     }
 
     public static final Creator<Collect> CREATOR = new Creator<>() {

@@ -702,8 +702,6 @@ class JetStreamSettingView @JvmOverloads constructor(
                 label = context.getString(R.string.setting_section_app),
                 rows = listOf(
                     RowSpec(KEY_INCOGNITO, context.getString(R.string.setting_incognito), toggle = true),
-                    RowSpec(KEY_PLAYBACK_SYNC, "观影记录同步"),
-                    RowSpec(KEY_SITE_HEALTH_CLEAR, "清空站点健康统计"),
                     RowSpec(KEY_DETAIL_FILTER, context.getString(R.string.setting_detail_filter)),
                     RowSpec(KEY_FLAG_FILTER, context.getString(R.string.setting_flag_filter)),
                     RowSpec(KEY_TOAST_FILTER, context.getString(R.string.setting_toast_filter), toggle = true),
@@ -778,8 +776,6 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_DANMAKU_SPIDER = "danmaku_spider"
 
         const val KEY_INCOGNITO = "incognito"
-        const val KEY_PLAYBACK_SYNC = "playback_sync"
-        const val KEY_SITE_HEALTH_CLEAR = "site_health_clear"
         const val KEY_DETAIL_FILTER = "detail_filter"
         const val KEY_FLAG_FILTER = "flag_filter"
         const val KEY_TOAST_FILTER = "toast_filter"

@@ -291,7 +291,7 @@ public class Config {
 
     public void delete() {
         AppDatabase.get().getConfigDao().delete(getUrl(), getType());
-        History.deleteSilently(getId());
+        History.delete(getId());
         Keep.delete(getId());
     }
 

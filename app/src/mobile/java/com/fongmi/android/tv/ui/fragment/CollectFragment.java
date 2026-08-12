@@ -23,7 +23,6 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.FragmentCollectBinding;
 import com.fongmi.android.tv.model.SiteViewModel;
-import com.fongmi.android.tv.model.SiteSearchSnapshot;
 import com.fongmi.android.tv.ui.activity.FolderActivity;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.fongmi.android.tv.ui.adapter.CollectAdapter;
@@ -42,8 +41,6 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     private CustomScroller mScroller;
     private SiteViewModel mViewModel;
     private List<Site> mSites;
-    private String mAnchorSiteKey = "";
-    private String mAnchorVodId = "";
 
     public static CollectFragment newInstance(String keyword) {
         Bundle args = new Bundle();
@@ -104,7 +101,7 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class).init();
-        mViewModel.getSearchSnapshot().observe(this, this::setCollect);
+        mViewModel.getSearch().observe(this, this::setCollect);
         mViewModel.getResult().observe(this, this::setSearch);
     }
 
@@ -136,41 +133,11 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
         return count;
     }
 
-    private void setCollect(SiteSearchSnapshot snapshot) {
-        if (snapshot == null) return;
-        rememberAnchor();
-        String selected = mCollectAdapter.getItemCount() == 0 ? "all" : mCollectAdapter.getActivated().getSite().getKey();
-        List<Collect> items = new java.util.ArrayList<>();
-        items.add(new Collect(Site.get("all", getString(com.fongmi.android.tv.R.string.all)), new java.util.ArrayList<>(snapshot.all())));
-        int selectedPosition = 0;
-        for (SiteSearchSnapshot.Entry entry : snapshot.entries()) {
-            items.add(new Collect(entry.site(), new java.util.ArrayList<>(entry.items())).state(entry.state().name()));
-            if (entry.site().getKey().equals(selected)) selectedPosition = items.size() - 1;
-        }
-        final int target = selectedPosition;
-        mCollectAdapter.setItems(items, () -> {
-            mCollectAdapter.setSelected(target);
-            mSearchAdapter.setItems(mCollectAdapter.getItem(target).getList(), this::restoreAnchor);
-        });
-    }
-
-    private void rememberAnchor() {
-        GridLayoutManager manager = (GridLayoutManager) mBinding.recycler.getLayoutManager();
-        int position = manager == null ? 0 : manager.findFirstVisibleItemPosition();
-        if (position < 0 || position >= mSearchAdapter.getItemCount()) return;
-        Vod item = mSearchAdapter.getItem(position);
-        mAnchorSiteKey = item.getSiteKey();
-        mAnchorVodId = item.getId();
-    }
-
-    private void restoreAnchor() {
-        if (mAnchorVodId.isEmpty()) return;
-        for (int i = 0; i < mSearchAdapter.getItemCount(); i++) {
-            Vod item = mSearchAdapter.getItem(i);
-            if (!mAnchorSiteKey.equals(item.getSiteKey()) || !mAnchorVodId.equals(item.getId())) continue;
-            mBinding.recycler.scrollToPosition(i);
-            return;
-        }
+    private void setCollect(Result result) {
+        if (result == null || result.getList().isEmpty()) return;
+        if (mCollectAdapter.getPosition() == 0) mSearchAdapter.addAll(result.getList());
+        mCollectAdapter.add(Collect.create(result.getList()));
+        mCollectAdapter.add(result.getList());
     }
 
     private void setSearch(Result result) {
