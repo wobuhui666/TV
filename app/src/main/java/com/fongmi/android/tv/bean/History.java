@@ -14,6 +14,7 @@ import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.db.AppDatabase;
+import com.fongmi.android.tv.playback.PlaybackEvents;
 import com.fongmi.android.tv.impl.Diffable;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
@@ -105,17 +106,35 @@ public class History implements Diffable<History> {
 
     public static void delete(int cid) {
         AppDatabase.get().getHistoryDao().delete(cid);
+        if (cid == VodConfig.getCid()) PlaybackEvents.deletedAll();
+    }
+
+    public static void deleteSilently(int cid) {
+        AppDatabase.get().getHistoryDao().delete(cid);
     }
 
     public static void sync(List<History> targets) {
+        syncInternal(targets, false);
+    }
+
+    public static void syncSilently(List<History> targets) {
+        syncInternal(targets, true);
+    }
+
+    private static void syncInternal(List<History> targets, boolean silent) {
         targets.forEach(target -> {
             List<History> items = findByName(target.getVodName());
-            if (items.isEmpty()) target.cid(VodConfig.getCid()).save();
+            if (items.isEmpty()) saveSynced(target.cid(VodConfig.getCid()), silent);
             else {
                 long latestTime = items.stream().mapToLong(History::getCreateTime).max().orElse(0L);
-                if (target.getCreateTime() > latestTime) target.cid(VodConfig.getCid()).mergeFrom(items, true).save();
+                if (target.getCreateTime() > latestTime) saveSynced(target.cid(VodConfig.getCid()).mergeFrom(items, true), silent);
             }
         });
+    }
+
+    private static void saveSynced(History history, boolean silent) {
+        history.save();
+        if (!silent) PlaybackEvents.progress(history, false);
     }
 
     @NonNull
@@ -349,7 +368,7 @@ public class History implements Diffable<History> {
         List<History> matches = items.stream().filter(item -> item.shouldMerge(this, force)).toList();
         if (matches.isEmpty()) return this;
         matches.get(0).copySettingsTo(this);
-        matches.forEach(History::delete);
+        matches.forEach(History::deleteSilently);
         return this;
     }
 
@@ -369,6 +388,14 @@ public class History implements Diffable<History> {
     }
 
     public History delete() {
+        History event = copy();
+        AppDatabase.get().getHistoryDao().delete(getCid(), getKey());
+        AppDatabase.get().getTrackDao().delete(getKey());
+        PlaybackEvents.deleted(event);
+        return this;
+    }
+
+    public History deleteSilently() {
         AppDatabase.get().getHistoryDao().delete(getCid(), getKey());
         AppDatabase.get().getTrackDao().delete(getKey());
         return this;

@@ -50,7 +50,7 @@ public class MediaSourceFactory implements MediaSource.Factory {
     static DataSource.Factory createUpstreamDataSourceFactory(Map<String, String> headers) {
         HttpDataSource.Factory factory = new OkHttpDataSource.Factory(OkHttp.player());
         factory.setDefaultRequestProperties(headers);
-        return new DefaultDataSource.Factory(App.get(), factory);
+        return new HttpEofRecoveryDataSource.Factory(new DefaultDataSource.Factory(App.get(), factory));
     }
 
     static synchronized Cache getCache() {
@@ -102,7 +102,10 @@ public class MediaSourceFactory implements MediaSource.Factory {
     }
 
     private DataSource.Factory getDataSourceFactory() {
-        if (dataSourceFactory == null) dataSourceFactory = () -> getCacheDataSource(new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory())).createDataSource();
+        if (dataSourceFactory == null) {
+            DataSource.Factory upstream = new HttpEofRecoveryDataSource.Factory(new DefaultDataSource.Factory(App.get(), getHttpDataSourceFactory()));
+            dataSourceFactory = () -> getCacheDataSource(upstream).createDataSource();
+        }
         return dataSourceFactory;
     }
 

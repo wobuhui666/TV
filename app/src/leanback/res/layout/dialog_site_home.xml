@@ -96,5 +96,56 @@
             app:tint="@color/white"
             tools:src="@drawable/ic_site_list" />
 
+        <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
+            android:id="@+id/sortUp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/msr_arrow_upward"
+            app:tint="@color/white" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
+            android:id="@+id/sortDown"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/msr_arrow_downward"
+            app:tint="@color/white" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
+            android:id="@+id/sortSave"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/msr_check"
+            app:tint="@color/white" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
+            android:id="@+id/sortSmart"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:contentDescription="智能排序"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/msr_auto_awesome_motion"
+            app:tint="@color/white" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
+            android:id="@+id/sortRestore"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="16dp"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/msr_refresh"
+            app:tint="@color/white" />
+
     </androidx.appcompat.widget.LinearLayoutCompat>
 </androidx.appcompat.widget.LinearLayoutCompat>

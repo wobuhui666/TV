@@ -9,9 +9,11 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.leanback.widget.ArrayObjectAdapter;
+import androidx.leanback.widget.HorizontalGridView;
 import androidx.leanback.widget.ItemBridgeAdapter;
 import androidx.leanback.widget.ListRow;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.Product;
@@ -47,6 +49,8 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     private SiteViewModel mViewModel;
     private Collect mCollect;
     private String mKeyword;
+    private String mPendingAnchorSiteKey;
+    private String mPendingAnchorVodId;
 
     public static CollectFragment newInstance(String keyword, Collect collect) {
         Bundle args = new Bundle();
@@ -75,6 +79,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
         setRecyclerView();
         setViewModel();
         addVideo(mCollect);
+        restorePendingAnchor();
     }
 
     private void setRecyclerView() {
@@ -118,6 +123,67 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
             rows.add(new ListRow(mLast));
         }
         mAdapter.addAll(mAdapter.size(), rows);
+    }
+
+    public void replaceVideo(List<Vod> items) {
+        mAdapter.clear();
+        mLast = null;
+        addVideo(items);
+    }
+
+    public String[] getAnchor() {
+        int row = mBinding.recycler.getSelectedPosition();
+        if (row < 0 || row >= mAdapter.size()) return null;
+        Object item = mAdapter.get(row);
+        if (!(item instanceof ListRow listRow) || listRow.getAdapter() == null || listRow.getAdapter().size() == 0) return null;
+        RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(row);
+        RecyclerView child = holder == null ? null : findChildRecycler(holder.itemView);
+        int column = child instanceof HorizontalGridView grid ? grid.getSelectedPosition() : 0;
+        column = Math.clamp(column, 0, listRow.getAdapter().size() - 1);
+        Object value = listRow.getAdapter().get(column);
+        return value instanceof Vod vod ? new String[]{vod.getSiteKey(), vod.getId()} : null;
+    }
+
+    public void restoreAnchor(String siteKey, String vodId) {
+        if (siteKey == null || vodId == null || vodId.isEmpty()) return;
+        if (mBinding == null || mAdapter == null) {
+            mPendingAnchorSiteKey = siteKey;
+            mPendingAnchorVodId = vodId;
+            return;
+        }
+        for (int row = 0; row < mAdapter.size(); row++) {
+            Object item = mAdapter.get(row);
+            if (!(item instanceof ListRow listRow) || listRow.getAdapter() == null) continue;
+            for (int column = 0; column < listRow.getAdapter().size(); column++) {
+                Object value = listRow.getAdapter().get(column);
+                if (!(value instanceof Vod vod) || !siteKey.equals(vod.getSiteKey()) || !vodId.equals(vod.getId())) continue;
+                int targetRow = row;
+                int targetColumn = column;
+                mBinding.recycler.post(() -> mBinding.recycler.setSelectedPosition(targetRow, holder -> {
+                    RecyclerView child = findChildRecycler(holder.itemView);
+                    if (child instanceof HorizontalGridView grid) grid.setSelectedPosition(targetColumn);
+                    else if (child != null) child.scrollToPosition(targetColumn);
+                }));
+                return;
+            }
+        }
+    }
+
+    private void restorePendingAnchor() {
+        if (mPendingAnchorVodId == null || mPendingAnchorVodId.isEmpty()) return;
+        restoreAnchor(mPendingAnchorSiteKey, mPendingAnchorVodId);
+        mPendingAnchorSiteKey = null;
+        mPendingAnchorVodId = null;
+    }
+
+    private RecyclerView findChildRecycler(View view) {
+        if (view instanceof RecyclerView recycler && recycler != mBinding.recycler) return recycler;
+        if (!(view instanceof ViewGroup group)) return null;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            RecyclerView recycler = findChildRecycler(group.getChildAt(i));
+            if (recycler != null) return recycler;
+        }
+        return null;
     }
 
     private int[] getPageSpec(Style style) {

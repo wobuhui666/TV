@@ -94,6 +94,52 @@
                 android:padding="8dp"
                 tools:src="@drawable/ic_site_list" />
 
+            <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+                android:id="@+id/sortUp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="16dp"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/msr_arrow_upward" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+                android:id="@+id/sortDown"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="16dp"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/msr_arrow_downward" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+                android:id="@+id/sortSave"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="16dp"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/msr_check" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+                android:id="@+id/sortSmart"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="16dp"
+                android:contentDescription="智能排序"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/msr_auto_awesome_motion" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamChipRoundIconView
+                android:id="@+id/sortRestore"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="16dp"
+                android:focusable="true"
+                android:padding="8dp"
+                android:src="@drawable/msr_refresh" />
+
         </com.fongmi.android.tv.ui.custom.JetStreamDialogActionRailLayout>
     </com.fongmi.android.tv.ui.custom.JetStreamDialogContentLayout>
 </com.fongmi.android.tv.ui.custom.JetStreamDialogSurfaceLayout>

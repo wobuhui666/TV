@@ -10,6 +10,7 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.event.RefreshEvent;
+import com.fongmi.android.tv.playback.PlaybackEvents;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.Task;
 
@@ -19,7 +20,7 @@ public class VodHistoryPolicy {
         History history = History.find(key);
         history = history == null ? create(key, item) : history;
         if (!TextUtils.isEmpty(mark)) history.setVodRemarks(mark);
-        if (Setting.isIncognito() && history.getKey().equals(key)) history.delete();
+        if (Setting.isIncognito() && history.getKey().equals(key)) history.deleteSilently();
         history.setVodName(item.getName());
         return history;
     }
@@ -42,6 +43,7 @@ public class VodHistoryPolicy {
         History copy = copyForSave(history);
         Task.executeSerial(() -> {
             copy.merge().save();
+            PlaybackEvents.progress(copy, copy.getDuration() > 0 && copy.getPosition() >= copy.getDuration() - 1000);
             if (exit) RefreshEvent.history();
         });
     }
@@ -49,7 +51,10 @@ public class VodHistoryPolicy {
     public void sync(History history) {
         if (history == null || Setting.isIncognito()) return;
         History copy = copyForSave(history);
-        Task.executeSerial(copy::save);
+        Task.executeSerial(() -> {
+            copy.save();
+            PlaybackEvents.progress(copy, false);
+        });
     }
 
     public void updateEpisode(History history, Flag flag, Episode episode) {

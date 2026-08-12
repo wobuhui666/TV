@@ -11,6 +11,7 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.databinding.AdapterSiteBinding;
+import com.fongmi.android.tv.setting.SiteHealthStore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,11 +53,19 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
     }
 
     private void addAll() {
-        for (Site site : VodConfig.get().getSites()) if (!site.isHide()) mItems.add(site);
+        List<Site> sites = VodConfig.get().getSites().stream().filter(site -> !site.isHide()).toList();
+        mItems.addAll(SiteHealthStore.getDisplayOrder(sites));
     }
 
     public List<Site> getItems() {
         return mItems;
+    }
+
+    public void move(int from, int to) {
+        if (from == to || from < 0 || to < 0 || from >= mItems.size() || to >= mItems.size()) return;
+        Site item = mItems.remove(from);
+        mItems.add(to, item);
+        notifyItemMoved(from, to);
     }
 
     @Override
@@ -74,7 +83,7 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Site item = mItems.get(position);
         boolean on = !search || change;
-        holder.binding.text.setText(item.getName());
+        holder.binding.text.setText(item.getName() + " · " + healthLabel(item));
         holder.binding.text.setEnabled(on);
         holder.binding.text.setFocusable(on);
         holder.binding.text.setSelected(on && item.isSelected());
@@ -91,6 +100,15 @@ public class SiteAdapter extends RecyclerView.Adapter<SiteAdapter.ViewHolder> {
 
     private int getSearchIcon(Site item) {
         return item.isSearchable() ? R.drawable.ic_site_search : R.drawable.ic_site_block;
+    }
+
+    private String healthLabel(Site item) {
+        return switch (SiteHealthStore.status(VodConfig.getCid(), item.getKey())) {
+            case GOOD -> "良好";
+            case WARNING -> "警告";
+            case BAD -> "较差";
+            default -> "未知";
+        };
     }
 
     private int getChangeIcon(Site item) {

@@ -43,6 +43,8 @@ import com.fongmi.android.tv.ai.subtitle.AiSubtitleSettingsActivity;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DohDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
+import com.fongmi.android.tv.ui.dialog.PlaybackSyncDialog;
+import com.fongmi.android.tv.setting.SiteHealthStore;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.MpvConfDialog;
 import com.fongmi.android.tv.ui.dialog.PreloadDialog;
@@ -298,6 +300,11 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_DANMAKU_AUTO -> setDanmakuAuto();
             case JetStreamSettingView.KEY_DANMAKU_SPIDER -> setDanmakuSpider();
             case JetStreamSettingView.KEY_INCOGNITO -> setIncognito();
+            case JetStreamSettingView.KEY_PLAYBACK_SYNC -> PlaybackSyncDialog.create().show(this);
+            case JetStreamSettingView.KEY_SITE_HEALTH_CLEAR -> {
+                SiteHealthStore.clear(com.fongmi.android.tv.api.config.VodConfig.getCid());
+                Notify.show("站点健康统计已清空");
+            }
             case JetStreamSettingView.KEY_DETAIL_FILTER -> setDetailFilter();
             case JetStreamSettingView.KEY_FLAG_FILTER -> setFlagFilter();
             case JetStreamSettingView.KEY_TOAST_FILTER -> setToastFilter();

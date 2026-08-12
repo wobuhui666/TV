@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ai.subtitle;
 
 import android.icu.text.Transliterator;
+import android.os.Build;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -363,6 +364,7 @@ public final class OpenAiSubtitleTranslator {
 
     static String toSimplified(String source) {
         if (source == null || source.isEmpty()) return "";
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return source;
         try {
             return Transliterator.getInstance("Traditional-Simplified").transliterate(source);
         } catch (Throwable ignored) {

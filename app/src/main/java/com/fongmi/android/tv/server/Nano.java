@@ -8,6 +8,7 @@ import com.fongmi.android.tv.server.process.Cache;
 import com.fongmi.android.tv.server.process.Local;
 import com.fongmi.android.tv.server.process.Media;
 import com.fongmi.android.tv.server.process.Parse;
+import com.fongmi.android.tv.server.process.PlaybackApi;
 import com.fongmi.android.tv.server.process.Proxy;
 import com.github.catvod.utils.Asset;
 
@@ -37,6 +38,7 @@ public class Nano extends NanoHTTPD {
         process.add(new Local());
         process.add(new Media());
         process.add(new Parse());
+        process.add(new PlaybackApi());
         process.add(new Proxy());
     }
 

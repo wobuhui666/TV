@@ -173,7 +173,7 @@ public class SyncDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     private void deleteLocal() {
         if (type.equals("keep")) Keep.deleteAll();
-        if (type.equals("history")) History.delete(VodConfig.getCid());
+        if (type.equals("history")) History.deleteSilently(VodConfig.getCid());
     }
 
     private Callback getCallback() {
