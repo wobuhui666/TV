@@ -788,17 +788,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 msgBuilder.append(" (错误码: ").append(fileError).append(")");
             }
 
-            int errorCode = PlaybackException.ERROR_CODE_IO_UNSPECIFIED;
-            String errorLower = errorMsg.toLowerCase(Locale.US);
-            if (errorLower.contains("decode") || errorLower.contains("codec")) {
-                errorCode = PlaybackException.ERROR_CODE_DECODING_FAILED;
-            } else if (errorLower.contains("format") || errorLower.contains("demux")) {
-                errorCode = PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED;
-            } else if (errorLower.contains("network") || errorLower.contains("connection") || errorLower.contains("http")) {
-                errorCode = PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED;
-            }
-
-            fail(new PlaybackException(msgBuilder.toString(), null, errorCode));
+            fail(new PlaybackException(msgBuilder.toString(), null, MpvEndFile.playbackErrorCode(fileError)));
             return;
         }
         // Only a genuine EOF may surface STATE_ENDED — upstream treats it as "auto play next".
