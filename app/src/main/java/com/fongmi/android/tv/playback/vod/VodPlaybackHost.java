@@ -35,8 +35,6 @@ public interface VodPlaybackHost {
 
     long getPlayerPosition();
 
-    long getPlayerDuration();
-
     void usePushId(String id);
 
     void requestDetail(String key, String id);

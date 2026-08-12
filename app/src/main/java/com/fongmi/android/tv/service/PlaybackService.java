@@ -58,12 +58,12 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private static volatile boolean running;
 
     private final List<PlayerCallback> playerCallbacks = new CopyOnWriteArrayList<>();
-    private final PlaybackBindingRegistry<NavigationCallback> activityBindings = new PlaybackBindingRegistry<>();
     private final MediaClients clients = new MediaClients();
     private final IBinder binder = new LocalBinder();
 
     private NavigationCallback navigationCallback;
     private MediaLibrarySession session;
+    private Runnable onNewBinding;
     private PlayerManager player;
     private String navigationKey;
     private Player sessionPlayer;
@@ -72,18 +72,9 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         return running;
     }
 
-    public void claimBinding(NavigationCallback owner, Runnable onReplaced) {
-        activityBindings.claim(owner, onReplaced);
-    }
-
-    public boolean ownsBinding(NavigationCallback owner) {
-        return activityBindings.owns(owner);
-    }
-
-    public boolean releaseBinding(NavigationCallback owner) {
-        if (!activityBindings.release(owner)) return false;
-        if (navigationCallback == owner) setNavigationCallback(null, null);
-        return true;
+    public void replaceBinding(Runnable callback) {
+        if (onNewBinding != null) onNewBinding.run();
+        onNewBinding = callback;
     }
 
     public PlayerManager player() {

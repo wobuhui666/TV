@@ -17,7 +17,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.C;
@@ -55,13 +54,11 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class PlaybackActivity extends BaseActivity implements MediaController.Listener, Player.Listener, ServiceConnection {
 
-    private final List<ServiceReadyObserver<?>> serviceReadyObservers = new ArrayList<>();
     private final List<Runnable> foreverObserverRemovers = new ArrayList<>();
     private ListenableFuture<MediaController> mControllerFuture;
     private MediaController mController;
     private PlaybackService mService;
     private TextView seekPreview;
-    private boolean initialized;
     private boolean audioOnly;
     private boolean scrubbing;
     private boolean redirect;
@@ -97,11 +94,11 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     protected void setRedirect(boolean redirect) {
         this.redirect = redirect;
-        if (isBindingOwner()) mService.setNavigationCallback(redirect ? null : getNavigationCallback(), getPlaybackKey());
+        if (mService != null) mService.setNavigationCallback(redirect ? null : getNavigationCallback(), getPlaybackKey());
     }
 
     protected void updateNavigationKey() {
-        if (isBindingOwner()) mService.setNavigationCallback(getNavigationCallback(), getPlaybackKey());
+        if (mService != null) mService.setNavigationCallback(getNavigationCallback(), getPlaybackKey());
     }
 
     protected boolean isAudioOnly() {
@@ -145,19 +142,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         return key == null || (mService != null && key.equals(player().getKey()));
     }
 
-    protected boolean isBindingOwner() {
-        return mService != null && mService.ownsBinding(getNavigationCallback());
-    }
-
     protected <T> void observeForever(LiveData<T> liveData, Observer<T> observer) {
         liveData.observeForever(observer);
         foreverObserverRemovers.add(() -> liveData.removeObserver(observer));
-    }
-
-    protected <T> void observeWhenServiceReady(LiveData<T> liveData, Observer<T> observer) {
-        ServiceReadyObserver<T> serviceObserver = new ServiceReadyObserver<>(observer);
-        serviceReadyObservers.add(serviceObserver);
-        observeForever(liveData, serviceObserver);
     }
 
     public boolean isDebugViewVisible() {
@@ -418,31 +405,6 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         return mService != null && !isOwner();
     }
 
-    private boolean canActivate() {
-        return mService != null && !isFinishing() && !isDestroyed() && getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED);
-    }
-
-    private boolean canDispatch() {
-        return canActivate() && isBindingOwner();
-    }
-
-    private void claimBinding() {
-        if (mService == null) return;
-        mService.claimBinding(getNavigationCallback(), this::closePiP);
-        mService.setSessionActivity(buildSessionIntent());
-    }
-
-    private void activateService() {
-        if (!canActivate()) return;
-        claimBinding();
-        if (!isRedirect()) updateNavigationKey();
-        dispatchPendingObservers();
-        if (initialized) return;
-        initialized = true;
-        onServiceConnected();
-        applyDanmaku();
-    }
-
     private void closePiP() {
         if (!isInPictureInPictureMode()) return;
         detach();
@@ -500,7 +462,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     private void releaseService(boolean owner) {
         mService.removePlayerCallback(mPlayerCallback);
-        if (!mService.releaseBinding(getNavigationCallback())) return;
+        if (owner) mService.setNavigationCallback(null, null);
         if (mService.hasMediaClient() || mService.hasPlayerCallback()) {
             if (owner) mService.suspend();
             mService.resetSessionActivity();
@@ -534,29 +496,18 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private void clearForeverObservers() {
         foreverObserverRemovers.forEach(Runnable::run);
         foreverObserverRemovers.clear();
-        serviceReadyObservers.clear();
-    }
-
-    private void dispatchPendingObservers() {
-        if (!canDispatch()) return;
-        serviceReadyObservers.forEach(ServiceReadyObserver::dispatch);
-    }
-
-    private void pausePlayback() {
-        if (mController != null) mController.pause();
-        else if (mService != null && !player().isReleased()) player().pause();
     }
 
     private final PlaybackService.PlayerCallback mPlayerCallback = new PlaybackService.PlayerCallback() {
 
         @Override
         public void onPrepare() {
-            if (canDispatch() && isOwner()) PlaybackActivity.this.onPrepare();
+            if (isOwner()) PlaybackActivity.this.onPrepare();
         }
 
         @Override
         public void onTracksChanged() {
-            if (canDispatch() && isOwner()) {
+            if (isOwner()) {
                 AiSubtitleRuntime.get().onTracksChanged(player().getCurrentTracks());
                 PlaybackActivity.this.onTracksChanged();
             }
@@ -564,44 +515,43 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
         @Override
         public void onDecodeChanged() {
-            if (canDispatch() && isOwner()) PlaybackActivity.this.onDecodeChanged();
+            if (isOwner()) PlaybackActivity.this.onDecodeChanged();
         }
 
         @Override
         public void onMediaOptionsChanged() {
-            if (canDispatch() && isOwner()) PlaybackActivity.this.onMediaOptionsChanged();
+            if (isOwner()) PlaybackActivity.this.onMediaOptionsChanged();
         }
 
         @Override
         public void onError(String msg) {
-            if (canDispatch() && isOwner()) PlaybackActivity.this.onError(msg);
+            if (isOwner()) PlaybackActivity.this.onError(msg);
         }
 
         @Override
         public void onPlayerRebuild(Player player) {
-            boolean owner = canDispatch() && isOwner();
-            MpvLogCollector.log("PlaybackActivity", "onPlayerRebuild: isOwner=" + owner + ", player=" + player.getClass().getSimpleName());
-            if (owner) setRender("onPlayerRebuild");
+            MpvLogCollector.log("PlaybackActivity", "onPlayerRebuild: isOwner=" + isOwner() + ", player=" + player.getClass().getSimpleName());
+            if (isOwner()) setRender("onPlayerRebuild");
         }
 
         @Override
         public void onDanmakuSourceChanged(Uri uri) {
-            if (canDispatch() && isOwner()) getPlayerView().setDanmakuSource(uri);
+            if (isOwner()) getPlayerView().setDanmakuSource(uri);
         }
 
         @Override
         public void onDanmakuConfigChanged(DanmakuConfig config) {
-            if (canDispatch() && isOwner()) getPlayerView().setDanmakuConfig(config);
+            if (isOwner()) getPlayerView().setDanmakuConfig(config);
         }
 
         @Override
         public void onDanmakuEnabledChanged(boolean enabled) {
-            if (canDispatch() && isOwner()) getPlayerView().setDanmakuEnabled(enabled);
+            if (isOwner()) getPlayerView().setDanmakuEnabled(enabled);
         }
 
         @Override
         public void onDanmakuSent(String text) {
-            if (canDispatch() && isOwner()) getPlayerView().sendDanmaku(text);
+            if (isOwner()) getPlayerView().sendDanmaku(text);
         }
     };
 
@@ -615,14 +565,13 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     public void onEvents(@NonNull Player player, @NonNull Player.Events events) {
-        if (!canDispatch() || !isOwner()) return;
         if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_AVAILABLE_COMMANDS_CHANGED)) updateKeyIncrement();
         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) AiSubtitleRuntime.get().onPlaybackPositionDiscontinuity();
     }
 
     @Override
     public void onIsPlayingChanged(boolean isPlaying) {
-        if (!canDispatch() || !isOwner()) return;
+        if (!isOwner()) return;
         if (isPlaying) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         else if (!isBuffering()) getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         onPlayingChanged(isPlaying);
@@ -630,39 +579,34 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     public void onPlaybackStateChanged(int state) {
-        if (canDispatch() && isOwner()) onStateChanged(state);
+        if (isOwner()) onStateChanged(state);
     }
 
     @Override
     public void onVideoSizeChanged(@NonNull VideoSize size) {
-        if (canDispatch() && isOwner()) onSizeChanged(size);
+        if (isOwner()) onSizeChanged(size);
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder binder) {
         mService = ((PlaybackService.LocalBinder) binder).getService();
+        mService.replaceBinding(this::closePiP);
+        mService.setSessionActivity(buildSessionIntent());
+        mService.setNavigationCallback(getNavigationCallback(), getPlaybackKey());
         mService.addPlayerCallback(mPlayerCallback);
-        activateService();
+        onServiceConnected();
+        applyDanmaku();
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        initialized = false;
         mService = null;
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        activateService();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        claimBinding();
         setRedirect(false);
-        dispatchPendingObservers();
         MpvLogCollector.log("PlaybackActivity", "onResume: shouldReclaim=" + shouldReclaim() + ", isOwner=" + isOwner());
         if (shouldReclaim()) {
             detachSurface("onResume:reclaim");
@@ -675,13 +619,13 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     @Override
     protected void onPause() {
         super.onPause();
-        if (isRedirect()) pausePlayback();
+        if (isRedirect() && mController != null) mController.pause();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (isBindingOwner() && isOwner() && (isFinishing() || PlayerSetting.isBackgroundOff())) pausePlayback();
+        if (isOwner() && PlayerSetting.isBackgroundOff() && mController != null) mController.pause();
     }
 
     @Override
@@ -689,35 +633,5 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         clearForeverObservers();
         super.onDestroy();
         releasePlaybackService();
-    }
-
-    private final class ServiceReadyObserver<T> implements Observer<T> {
-
-        private final Observer<T> observer;
-        private T pendingValue;
-        private boolean pending;
-
-        private ServiceReadyObserver(Observer<T> observer) {
-            this.observer = observer;
-        }
-
-        @Override
-        public void onChanged(T value) {
-            if (canDispatch()) deliver(value);
-            else {
-                pendingValue = value;
-                pending = true;
-            }
-        }
-
-        private void deliver(T value) {
-            pendingValue = null;
-            pending = false;
-            observer.onChanged(value);
-        }
-
-        private void dispatch() {
-            if (pending) deliver(pendingValue);
-        }
     }
 }

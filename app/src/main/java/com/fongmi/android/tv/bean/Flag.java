@@ -127,14 +127,7 @@ public class Flag implements Parcelable, Diffable<Flag> {
     }
 
     public Episode find(String remarks, boolean strict) {
-        return find(remarks, "", strict);
-    }
-
-    public Episode find(String remarks, String url, boolean strict) {
         if (getEpisodes().isEmpty()) return null;
-        if (!TextUtils.isEmpty(url)) {
-            for (Episode episode : getEpisodes()) if (url.equals(episode.getUrl())) return episode;
-        }
         if (getEpisodes().size() == 1) return getEpisodes().get(0);
         int number = Util.getNumber(remarks);
         return getEpisodes().stream()

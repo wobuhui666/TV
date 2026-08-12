@@ -143,10 +143,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         return command("sub-add", sub.getUrl(), "select", sub.getName(), sub.getLang());
     }
 
-    void applyAudioSettings() {
-        command("set", "af", MpvAudioSettings.buildFilter());
-    }
-
     void setSubtitleStyle() {
     }
 
@@ -457,7 +453,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             MpvOptions.applyPostInit(configDir);
             MPVLib.addObserver(this);
             observeProperties();
-            applyAudioSettings();
             initialized = true;
         } finally {
             if (!initialized && ownsNative) rollbackInitialization();
@@ -1208,7 +1203,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         dolbyPlatformFallbackRequested = false;
         try {
             MpvOptions.applyPlaybackDefaults(decode);
-            applyAudioSettings();
         } catch (Throwable e) {
             MpvLogCollector.logError("MpvPlayer", "恢复默认视频输出失败: " + e.getMessage());
         }

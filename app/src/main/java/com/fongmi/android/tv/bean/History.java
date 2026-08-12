@@ -62,7 +62,7 @@ public class History implements Diffable<History> {
     @SerializedName("cid")
     private int cid;
 
-    private transient long saveTime;
+    private transient long updateTime;
 
     public History() {
         this.speed = 1;
@@ -113,7 +113,7 @@ public class History implements Diffable<History> {
             if (items.isEmpty()) target.cid(VodConfig.getCid()).save();
             else {
                 long latestTime = items.stream().mapToLong(History::getCreateTime).max().orElse(0L);
-                if (target.getCreateTime() > latestTime) target.cid(VodConfig.getCid()).mergeFrom(items, true).save();
+                if (target.getCreateTime() > latestTime) target.cid(VodConfig.getCid()).merge(items, true).save();
             }
         });
     }
@@ -189,6 +189,10 @@ public class History implements Diffable<History> {
 
     public void setCreateTime(long createTime) {
         this.createTime = createTime;
+    }
+
+    public long getUpdateTime() {
+        return updateTime;
     }
 
     public long getOpening() {
@@ -286,70 +290,36 @@ public class History implements Diffable<History> {
 
     private boolean shouldMerge(History item, boolean force) {
         if (!force && getKey().equals(item.getKey())) return false;
-        if (getDuration() <= 0 || item.getDuration() <= 0) return false;
+        if (getDuration() <= 0 || item.getDuration() <= 0) return true;
         return Math.abs(getDuration() - item.getDuration()) <= TimeUnit.MINUTES.toMillis(10);
     }
 
-    private void copyProgressTo(History item) {
-        item.setCreateTime(getCreateTime());
-        item.setDuration(getDuration());
-        item.setPosition(getPosition());
-        copySettingsTo(item);
-    }
-
-    private void copySettingsTo(History item) {
-        if (getEnding() != C.TIME_UNSET) item.setEnding(getEnding());
-        if (getOpening() != C.TIME_UNSET) item.setOpening(getOpening());
-        if (getSpeed() > 0) item.setSpeed(getSpeed());
-        if (getScale() >= 0) item.setScale(getScale());
+    private History copyTo(History item) {
+        if (getOpening() > 0) item.setOpening(getOpening());
+        if (getEnding() > 0) item.setEnding(getEnding());
+        if (getSpeed() != 1) item.setSpeed(getSpeed());
+        return this;
     }
 
     public boolean canSave() {
-        return getPosition() >= 0 && getDuration() > 0;
+        return getPosition() > 0 && getDuration() > 0;
     }
 
-    public boolean canScheduleSave() {
-        return System.currentTimeMillis() - saveTime > TimeUnit.SECONDS.toMillis(5);
-    }
-
-    public void markSaveScheduled() {
-        saveTime = System.currentTimeMillis();
-    }
-
-    public History copy() {
-        History item = new History();
-        item.key = key;
-        item.vodPic = vodPic;
-        item.vodName = vodName;
-        item.vodFlag = vodFlag;
-        item.vodRemarks = vodRemarks;
-        item.episodeUrl = episodeUrl;
-        item.revSort = revSort;
-        item.revPlay = revPlay;
-        item.createTime = createTime;
-        item.opening = opening;
-        item.ending = ending;
-        item.position = position;
-        item.duration = duration;
-        item.speed = speed;
-        item.scale = scale;
-        item.cid = cid;
-        return item;
+    public boolean canSync() {
+        return System.currentTimeMillis() - getUpdateTime() > 5000;
     }
 
     public History merge() {
-        return merge(false);
+        merge(false);
+        return this;
     }
 
     private History merge(boolean force) {
-        return mergeFrom(findByName(getVodName()), force);
+        return merge(findByName(getVodName()), force);
     }
 
-    private History mergeFrom(List<History> items, boolean force) {
-        List<History> matches = items.stream().filter(item -> item.shouldMerge(this, force)).toList();
-        if (matches.isEmpty()) return this;
-        matches.get(0).copySettingsTo(this);
-        matches.forEach(History::delete);
+    private History merge(List<History> items, boolean force) {
+        for (History item : items) if (item.shouldMerge(this, force)) item.copyTo(this).delete();
         return this;
     }
 
@@ -363,13 +333,13 @@ public class History implements Diffable<History> {
     }
 
     public History save() {
-        saveTime = System.currentTimeMillis();
+        updateTime = System.currentTimeMillis();
         AppDatabase.get().getHistoryDao().insertOrUpdate(this);
         return this;
     }
 
     public History delete() {
-        AppDatabase.get().getHistoryDao().delete(getCid(), getKey());
+        AppDatabase.get().getHistoryDao().delete(VodConfig.getCid(), getKey());
         AppDatabase.get().getTrackDao().delete(getKey());
         return this;
     }
@@ -377,19 +347,15 @@ public class History implements Diffable<History> {
     public void findEpisode(List<Flag> flags) {
         if (flags.isEmpty()) return;
         setVodFlag(flags.get(0).getFlag());
-        if (!flags.get(0).getEpisodes().isEmpty()) {
-            Episode first = flags.get(0).getEpisodes().get(0);
-            setVodRemarks(first.getName());
-            setEpisodeUrl(first.getUrl());
-        }
+        if (!flags.get(0).getEpisodes().isEmpty()) setVodRemarks(flags.get(0).getEpisodes().get(0).getName());
         for (History item : findByName(getVodName())) {
-            if (getPosition() >= 0) break;
+            if (getPosition() > 0) break;
             for (Flag flag : flags) {
-                Episode episode = flag.find(item.getVodRemarks(), item.getEpisodeUrl(), true);
+                Episode episode = flag.find(item.getVodRemarks(), true);
                 if (episode == null) continue;
-                item.copyProgressTo(this);
+                item.copyTo(this);
                 setVodFlag(flag.getFlag());
-                setEpisodeUrl(episode.getUrl());
+                setPosition(item.getPosition());
                 setVodRemarks(episode.getName());
                 break;
             }

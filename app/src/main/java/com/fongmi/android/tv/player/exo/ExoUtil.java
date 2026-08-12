@@ -125,11 +125,10 @@ public class ExoUtil {
 
     private static AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams) {
         boolean aiSubtitle = AiSubtitleSettings.isEnabled();
-        boolean audioEffect = PlayerSetting.isLoudnessNormalization() || PlayerSetting.getAudioChannelMode() != 0;
         DefaultAudioSink.Builder builder = new DefaultAudioSink.Builder(context)
-                .setEnableFloatOutput(aiSubtitle || audioEffect ? false : enableFloatOutput)
+                .setEnableFloatOutput(aiSubtitle ? false : enableFloatOutput)
                 .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams);
-        if (aiSubtitle || audioEffect) builder.setAudioProcessors(new AudioProcessor[]{new PcmTapAudioProcessor(aiSubtitle ? AiSubtitleRuntime.get().createPcmSink() : null)});
+        if (aiSubtitle) builder.setAudioProcessors(new AudioProcessor[]{new PcmTapAudioProcessor(AiSubtitleRuntime.get().createPcmSink())});
         if (aiSubtitle) {
             // Match the reference application's audio-lookahead design: playback starts normally,
             // while the renderer is allowed to fill several seconds of decoded PCM ahead of the
@@ -141,7 +140,7 @@ public class ExoUtil {
                             .setAudioTrackBufferSizeProvider(new AiAudioTrackBufferSizeProvider())
                             .build(),
                     AiSubtitleRuntime.get().createAudioClockSink()));
-        } else if (audioEffect || !PlayerSetting.isAudioPassThrough()) {
+        } else if (!PlayerSetting.isAudioPassThrough()) {
             builder.setAudioOutputProvider(new AudioTrackAudioOutputProvider.Builder(null).build());
         }
         return builder.build();

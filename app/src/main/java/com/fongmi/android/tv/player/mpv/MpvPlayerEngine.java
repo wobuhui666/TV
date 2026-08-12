@@ -90,12 +90,6 @@ public class MpvPlayerEngine implements PlayerEngine {
     }
 
     @Override
-    public boolean applyAudioSettings() {
-        player.applyAudioSettings();
-        return true;
-    }
-
-    @Override
     public void start(PlaySpec spec, long startPositionMs) {
         this.spec = spec;
         this.recoverAttempts = 0;

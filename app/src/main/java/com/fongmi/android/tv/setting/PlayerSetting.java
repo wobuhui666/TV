@@ -182,22 +182,6 @@ public class PlayerSetting {
         Prefers.put("audio_pass_through", audioPassThrough);
     }
 
-    public static boolean isLoudnessNormalization() {
-        return Prefers.getBoolean("audio_loudness_normalization");
-    }
-
-    public static void putLoudnessNormalization(boolean enabled) {
-        Prefers.put("audio_loudness_normalization", enabled);
-    }
-
-    public static int getAudioChannelMode() {
-        return Math.clamp(Prefers.getInt("audio_channel_mode"), 0, 3);
-    }
-
-    public static void putAudioChannelMode(int mode) {
-        Prefers.put("audio_channel_mode", Math.clamp(mode, 0, 3));
-    }
-
     public static boolean isAudioPrefer() {
         return Prefers.getBoolean("audio_prefer");
     }

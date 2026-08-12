@@ -97,8 +97,6 @@ public final class TrackDialog extends BaseBottomSheetDialog implements TrackAda
         binding.recycler.setVisibility(adapter.getItemCount() == 0 ? View.GONE : View.VISIBLE);
         binding.offset.setVisibility(hasText() || hasAudio() ? View.VISIBLE : View.GONE);
         binding.choose.setVisibility(hasChoose() ? View.VISIBLE : View.GONE);
-        binding.search.setVisibility(hasChoose() ? View.VISIBLE : View.GONE);
-        binding.audioSetting.setVisibility(hasAudio() ? View.VISIBLE : View.GONE);
         binding.subtitle.setVisibility(hasText() ? View.VISIBLE : View.GONE);
         focusInitialView();
     }
@@ -107,8 +105,6 @@ public final class TrackDialog extends BaseBottomSheetDialog implements TrackAda
     protected void initEvent() {
         binding.offset.setOnClickListener(this::onOffset);
         binding.choose.setOnClickListener(this::onChoose);
-        binding.search.setOnClickListener(this::onSearch);
-        binding.audioSetting.setOnClickListener(this::onAudioSetting);
         binding.subtitle.setOnClickListener(this::onSubtitle);
     }
 
@@ -120,16 +116,6 @@ public final class TrackDialog extends BaseBottomSheetDialog implements TrackAda
     private void onChoose(View view) {
         FileChooser.from(launcher).show(new String[]{MimeTypes.APPLICATION_SUBRIP, MimeTypes.TEXT_SSA, MimeTypes.TEXT_VTT, MimeTypes.APPLICATION_TTML, "audio/*", "text/*", "application/octet-stream"});
         player.pause();
-    }
-
-    private void onSearch(View view) {
-        SubtitleSearchDialog.create().player(player).show(requireActivity());
-        dismiss();
-    }
-
-    private void onAudioSetting(View view) {
-        AudioPlaybackDialog.show(requireActivity(), player);
-        dismiss();
     }
 
     private void onSubtitle(View view) {
@@ -145,8 +131,6 @@ public final class TrackDialog extends BaseBottomSheetDialog implements TrackAda
     private void focusInitialView() {
         if (adapter.getItemCount() > 0) return;
         View target = binding.choose;
-        if (target.getVisibility() != View.VISIBLE) target = binding.search;
-        if (target.getVisibility() != View.VISIBLE) target = binding.audioSetting;
         if (target.getVisibility() != View.VISIBLE) target = binding.offset;
         if (target.getVisibility() != View.VISIBLE) target = binding.subtitle;
         if (target.getVisibility() != View.VISIBLE) return;
@@ -164,8 +148,6 @@ public final class TrackDialog extends BaseBottomSheetDialog implements TrackAda
 
     private boolean hasVisibleAction() {
         return binding.choose.getVisibility() == View.VISIBLE
-                || binding.search.getVisibility() == View.VISIBLE
-                || binding.audioSetting.getVisibility() == View.VISIBLE
                 || binding.offset.getVisibility() == View.VISIBLE
                 || binding.subtitle.getVisibility() == View.VISIBLE;
     }

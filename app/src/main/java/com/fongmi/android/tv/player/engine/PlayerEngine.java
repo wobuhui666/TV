@@ -38,10 +38,6 @@ public interface PlayerEngine {
         return false;
     }
 
-    default boolean applyAudioSettings() {
-        return false;
-    }
-
     String getErrorMessage(PlaybackException e);
 
     ErrorAction handleError(PlaybackException e);
