@@ -31,6 +31,7 @@ import androidx.media3.common.util.Util;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
+import com.fongmi.android.tv.player.failure.PlaybackFailureClassifier;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.setting.PlayerSetting;
@@ -81,6 +82,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private @Player.State int playbackState;
     private @Player.RepeatMode int repeatMode;
     private @Nullable PlaybackException playerError;
+    private int lastFileError;
     private @Nullable MediaItem mediaItem;
     private @Nullable PlaySpec spec;
     private @Nullable Object videoOutput;
@@ -758,17 +760,17 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         if (closed) return;
         loading = false;
         fileLoaded = false;
-        boolean isError = reason == MpvEndFile.REASON_ERROR || error != 0
-                || (errorString != null && errorString.toLowerCase(Locale.US).contains("error"));
+        boolean isError = reason == MpvEndFile.REASON_ERROR || error != 0;
         if (isError) {
             String errorMsg = errorString == null ? "" : errorString;
             int fileError = error;
+            lastFileError = fileError;
 
             MpvLogCollector.logError("MpvPlayer", "=== MPV播放错误详情 ===");
             MpvLogCollector.logError("MpvPlayer", "错误原因码: " + reason);
-            MpvLogCollector.logError("MpvPlayer", "错误消息: " + errorMsg);
+            MpvLogCollector.logError("MpvPlayer", "错误消息: " + PlaybackFailureClassifier.sanitize(errorMsg));
             MpvLogCollector.logError("MpvPlayer", "文件错误码: " + fileError);
-            MpvLogCollector.logError("MpvPlayer", "URL: " + (mediaItem != null && mediaItem.localConfiguration != null ? mediaItem.localConfiguration.uri.toString() : "null"));
+            MpvLogCollector.logError("MpvPlayer", "媒体协议: " + mediaProtocol());
             MpvLogCollector.logError("MpvPlayer", "Surface已附加: " + (attachedSurface != null));
             MpvLogCollector.logError("MpvPlayer", "Surface有效: " + (attachedSurface != null && attachedSurface.isValid()));
 
@@ -781,24 +783,10 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             MpvLogCollector.logError("MpvPlayer", "视频编码: " + videoCodec);
 
             StringBuilder msgBuilder = new StringBuilder("MPV播放失败");
-            if (!errorMsg.isEmpty()) {
-                msgBuilder.append(": ").append(errorMsg);
-            }
             if (fileError != 0) {
                 msgBuilder.append(" (错误码: ").append(fileError).append(")");
             }
-
-            int errorCode = PlaybackException.ERROR_CODE_IO_UNSPECIFIED;
-            String errorLower = errorMsg.toLowerCase(Locale.US);
-            if (errorLower.contains("decode") || errorLower.contains("codec")) {
-                errorCode = PlaybackException.ERROR_CODE_DECODING_FAILED;
-            } else if (errorLower.contains("format") || errorLower.contains("demux")) {
-                errorCode = PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED;
-            } else if (errorLower.contains("network") || errorLower.contains("connection") || errorLower.contains("http")) {
-                errorCode = PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED;
-            }
-
-            fail(new PlaybackException(msgBuilder.toString(), null, errorCode));
+            fail(new PlaybackException(msgBuilder.toString(), null, PlaybackException.ERROR_CODE_UNSPECIFIED));
             return;
         }
         // Only a genuine EOF may surface STATE_ENDED — upstream treats it as "auto play next".
@@ -806,6 +794,16 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         else if (reason == MpvEndFile.REASON_STOP && mediaItem == null) playbackState = Player.STATE_IDLE;
         else if (reason == MpvEndFile.REASON_QUIT) playbackState = Player.STATE_IDLE;
         invalidateState();
+    }
+
+    int getLastFileError() {
+        return lastFileError;
+    }
+
+    private String mediaProtocol() {
+        if (mediaItem == null || mediaItem.localConfiguration == null) return "unknown";
+        String scheme = mediaItem.localConfiguration.uri.getScheme();
+        return TextUtils.isEmpty(scheme) ? "unknown" : scheme.toLowerCase(Locale.US);
     }
 
     private void seekAfterLoadIfNeeded() {

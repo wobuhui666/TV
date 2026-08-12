@@ -32,6 +32,8 @@ import com.fongmi.android.tv.impl.LiveListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.SiteHealthStore;
+import com.fongmi.android.tv.playback.PlaybackSyncSetting;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
@@ -39,6 +41,7 @@ import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
 import com.fongmi.android.tv.ui.dialog.RestoreDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
+import com.fongmi.android.tv.ui.dialog.PlaybackSyncDialog;
 import com.fongmi.android.tv.ui.dialog.ThemeDialog;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.Notify;
@@ -115,6 +118,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.toastFilterText.setText(Setting.getSwitch(Setting.isToastFilter()));
         mBinding.toastFilterKeysText.setText(getFilterStatus(Setting.getToastFilterRaw()));
         mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
+        mBinding.playbackSyncText.setText(Setting.getSwitch(PlaybackSyncSetting.isEnabled()));
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
     }
 
@@ -157,6 +161,11 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.wallDefault.setOnClickListener(this::setWallDefault);
         mBinding.wallRefresh.setOnClickListener(this::setWallRefresh);
         mBinding.wallRefresh.setOnLongClickListener(this::onWallHistory);
+        mBinding.playbackSync.setOnClickListener(v -> PlaybackSyncDialog.create().show(this));
+        mBinding.siteHealthClear.setOnClickListener(v -> {
+            SiteHealthStore.clear(VodConfig.getCid());
+            Notify.show("站点健康统计已清空");
+        });
     }
 
     @Override

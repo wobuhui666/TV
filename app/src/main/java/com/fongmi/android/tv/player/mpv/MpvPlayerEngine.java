@@ -8,6 +8,8 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.player.media.PlaySpec;
+import com.fongmi.android.tv.player.failure.PlaybackFailure;
+import com.fongmi.android.tv.player.failure.PlaybackFailureClassifier;
 import com.fongmi.android.tv.utils.MpvLogCollector;
 
 /**
@@ -23,7 +25,6 @@ public class MpvPlayerEngine implements PlayerEngine {
 
     private static final int MAX_RECOVER_ATTEMPTS = 1;
 
-    private final MpvErrorMsgProvider provider;
     private final Player.Listener listener;
     private final MpvPlayer player;
     private PlaySpec spec;
@@ -31,7 +32,6 @@ public class MpvPlayerEngine implements PlayerEngine {
     private int recoverAttempts;
 
     public MpvPlayerEngine(int decode, Player.Listener listener) {
-        this.provider = new MpvErrorMsgProvider();
         this.listener = listener;
         this.decode = decode;
         this.player = new MpvPlayer(App.get(), decode);
@@ -113,8 +113,8 @@ public class MpvPlayerEngine implements PlayerEngine {
     }
 
     @Override
-    public String getErrorMessage(PlaybackException e) {
-        return provider.get(e);
+    public PlaybackFailure classifyFailure(PlaybackException e) {
+        return PlaybackFailureClassifier.classifyMpv(e, spec == null ? null : spec.getUrl(), player.getLastFileError());
     }
 
     @Override
