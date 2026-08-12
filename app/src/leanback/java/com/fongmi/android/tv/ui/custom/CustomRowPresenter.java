@@ -13,6 +13,7 @@ public class CustomRowPresenter extends ListRowPresenter {
 
     private final int spacing;
     private final int strategy;
+    private final int horizontalInset;
 
     public CustomRowPresenter(int spacing) {
         this(spacing, FocusHighlight.ZOOM_FACTOR_SMALL);
@@ -24,9 +25,14 @@ public class CustomRowPresenter extends ListRowPresenter {
     }
 
     public CustomRowPresenter(int spacing, int focusZoomFactor, int strategy) {
+        this(spacing, focusZoomFactor, strategy, 0);
+    }
+
+    public CustomRowPresenter(int spacing, int focusZoomFactor, int strategy, int horizontalInset) {
         super(focusZoomFactor);
         this.spacing = spacing;
         this.strategy = strategy;
+        this.horizontalInset = horizontalInset;
         setShadowEnabled(false);
         setSelectEffectEnabled(false);
         setKeepChildForeground(false);
@@ -39,5 +45,10 @@ public class CustomRowPresenter extends ListRowPresenter {
         ViewHolder vh = (ViewHolder) holder;
         vh.getGridView().setFocusScrollStrategy(strategy);
         vh.getGridView().setHorizontalSpacing(ResUtil.dp2px(spacing));
+        if (horizontalInset > 0) {
+            int inset = ResUtil.dp2px(horizontalInset);
+            vh.getGridView().setPaddingRelative(inset, vh.getGridView().getPaddingTop(), inset, vh.getGridView().getPaddingBottom());
+            vh.getGridView().setClipToPadding(false);
+        }
     }
 }

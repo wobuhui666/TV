@@ -494,7 +494,6 @@ class JetStreamDiscoverImmersiveHeroLayout @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     init {
-        foreground = jetStreamFocusForeground(cornerRadiusDp = 28, strokeWidthDp = 3)
         clipChildren = false
         clipToPadding = false
     }

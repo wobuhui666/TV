@@ -41,7 +41,7 @@ public final class DiscoverRankPresenter extends Presenter {
         holder.view.setOnClickListener(view -> listener.onItemClick(item, holder.binding.image));
         holder.view.setOnLongClickListener(view -> listener.onLongClick(item));
         holder.view.setOnFocusChangeListener((view, focused) -> {
-            JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 12);
+            JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 0);
             if (focused) JetStreamAmbient.push(item.getBackdrop());
         });
     }

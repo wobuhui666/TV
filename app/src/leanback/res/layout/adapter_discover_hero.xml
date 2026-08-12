@@ -2,39 +2,41 @@
 <com.fongmi.android.tv.ui.custom.JetStreamDiscoverImmersiveHeroLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="372dp"
+    android:layout_height="436dp"
     android:focusable="true"
     android:focusableInTouchMode="true">
 
-    <com.fongmi.android.tv.ui.custom.JetStreamHeroImageView
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
         android:id="@+id/imageA"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         tools:src="@drawable/wallpaper_1" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamHeroImageView
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
         android:id="@+id/imageB"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamFeaturedLeftScrimView
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverLeftScrimView
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamFeaturedBottomScrimView
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverBottomScrimView
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
     <LinearLayout
         android:id="@+id/details"
-        android:layout_width="620dp"
+        android:layout_width="540dp"
         android:layout_height="match_parent"
         android:gravity="bottom"
         android:orientation="vertical"
-        android:paddingStart="36dp"
+        android:paddingStart="28dp"
         android:paddingEnd="24dp"
-        android:paddingBottom="32dp">
+        android:paddingBottom="28dp"
+        android:visibility="invisible"
+        tools:visibility="visible">
 
         <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
             android:id="@+id/source"
@@ -49,7 +51,7 @@
             android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textSize="46sp"
+            android:textSize="44sp"
             android:textStyle="bold"
             tools:text="电影主视觉标题" />
 
@@ -101,8 +103,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="28dp"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"

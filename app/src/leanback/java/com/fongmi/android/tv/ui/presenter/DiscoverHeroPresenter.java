@@ -91,6 +91,7 @@ public final class DiscoverHeroPresenter extends Presenter {
             this.binding = binding;
             this.listener = listener;
             this.front = binding.imageA;
+            binding.details.setVisibility(View.INVISIBLE);
             this.rotate = () -> {
                 if (this.binding.getRoot().hasWindowFocus()) show(index + 1, true);
                 schedule();
@@ -100,7 +101,7 @@ public final class DiscoverHeroPresenter extends Presenter {
 
         private void setListeners() {
             binding.getRoot().setOnFocusChangeListener((view, hasFocus) -> {
-                JetStreamAnimator.animateFocus(view, hasFocus, JetStreamAnimator.FOCUS_SCALE_LIST, 12);
+                view.setSelected(hasFocus);
                 binding.action.animate().cancel();
                 binding.action.animate().alpha(hasFocus ? 1f : 0.76f).setDuration(160).start();
             });
@@ -135,6 +136,7 @@ public final class DiscoverHeroPresenter extends Presenter {
             binding.imageA.animate().cancel();
             binding.imageB.animate().cancel();
             binding.details.animate().cancel();
+            binding.getRoot().setSelected(binding.getRoot().hasFocus());
             bindIndicator(items.size());
             if (items.isEmpty()) {
                 binding.details.setVisibility(View.INVISIBLE);

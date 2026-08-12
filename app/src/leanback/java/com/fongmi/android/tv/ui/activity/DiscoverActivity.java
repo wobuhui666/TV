@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.FocusHighlight;
+import androidx.leanback.widget.HorizontalGridView;
 import androidx.leanback.widget.ItemBridgeAdapter;
 import androidx.leanback.widget.ListRow;
 import androidx.lifecycle.Lifecycle;
@@ -123,13 +124,13 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     @SuppressLint("RestrictedApi")
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
-        selector.addPresenter(Integer.class, new HeaderPresenter());
+        selector.addPresenter(Integer.class, new HeaderPresenter(24));
         selector.addPresenter(String.class, new ProgressPresenter());
         selector.addPresenter(DiscoverHero.class, new DiscoverHeroPresenter(this));
         selector.addPresenter(DiscoverFilterPanel.class, new DiscoverFilterPanelPresenter(this));
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE), VodPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE), DiscoverLandscapePresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(10, FocusHighlight.ZOOM_FACTOR_NONE), DiscoverRankPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), VodPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), DiscoverLandscapePresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(10, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), DiscoverRankPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setItemAnimator(null);
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(10));
@@ -140,7 +141,6 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
 
     private void buildStablePage() {
         mAdapter.add(hero);
-        mAdapter.add(filterPanel);
         addLandscapeSection(R.string.discover_today_trending, DiscoverApi.Row.TMDB_DAY);
         addRankSection(R.string.discover_top_ten, DiscoverApi.Row.TMDB_WEEK);
         addPosterSection(R.string.discover_douban_hot_movie, DiscoverApi.Row.DOUBAN_HOT_MOVIE, new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)});
@@ -150,6 +150,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         addPosterSection(R.string.discover_now_playing, DiscoverApi.Row.TMDB_NOW_PLAYING, new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)});
         addPosterSection(R.string.discover_popular_selection, DiscoverApi.Row.TMDB_POPULAR_MOVIE, new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)});
         addPosterSection(R.string.discover_top_rated, DiscoverApi.Row.TMDB_TOP_MOVIE, new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)});
+        mAdapter.add(filterPanel);
         mAdapter.add(R.string.discover_filter_results);
         resultStartPosition = mAdapter.size();
         mAdapter.add("discover_filter_progress");
