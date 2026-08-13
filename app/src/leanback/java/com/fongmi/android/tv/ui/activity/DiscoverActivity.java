@@ -292,7 +292,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     private static boolean putHero(Map<String, Vod> result, Vod item) {
         if (item == null || item.getName().isEmpty() || item.getPic().isEmpty()) return false;
         if (!item.getId().startsWith("douban:") && item.getBackdrop().equals(item.getPic())) return false;
-        String title = item.getName().toLowerCase(Locale.ROOT).replaceAll("[\\s\\p{Punct}\\p{IsPunctuation}]", "");
+        String title = item.getName().toLowerCase(Locale.ROOT).replaceAll("[\\s\\p{P}]", "");
         if (title.isEmpty() || result.containsKey(title)) return false;
         result.put(title, item);
         return true;

@@ -11,8 +11,8 @@
   - `platform-tools`
   - `platforms;android-37.0`
   - `build-tools;37.0.0`
-- Media3 源码: `wobuhui666/media` 的 `release-1.10.1-fongmi` 分支
-- Gradle: 使用仓库内 `./gradlew` 自动下载的 Gradle 9.5
+- Media3 源码: `wobuhui666/media` 的 `release-1.11.0-fongmi` 分支
+- Gradle: 使用仓库内 `./gradlew` 自动下载的 Gradle 9.1
 
 ## 本机已完成配置
 
@@ -93,8 +93,8 @@ GitHub Actions 会 checkout `wobuhui666/media` 并通过 `MEDIA3_SOURCE_DIR` 做
 
 ```bash
 cd "/root/TV"
-git clone --depth 1 --branch "release-1.10.1-fongmi" "https://github.com/wobuhui666/media.git" ".media3"
-cp ".github/media3-composite-settings.gradle" ".media3/settings.gradle"
+git clone --depth 1 --branch "release-1.11.0-fongmi" "https://github.com/wobuhui666/media.git" ".media3"
+cp ".github/media3-composite-settings.gradle.kts" ".media3/settings.gradle.kts"
 export MEDIA3_SOURCE_DIR="/root/TV/.media3"
 ```
 

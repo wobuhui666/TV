@@ -30,12 +30,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: wobuhui666/media
-          ref: release-1.10.1-fongmi
+          ref: release-1.11.0-fongmi
           path: .media3
           fetch-depth: 1
 
       - name: Limit Media3 composite modules
-        run: cp .github/media3-composite-settings.gradle .media3/settings.gradle
+        run: cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
 
       - name: Prepare signing config
         env:

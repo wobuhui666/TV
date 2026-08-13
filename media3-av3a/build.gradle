@@ -1,0 +1,25 @@
+plugins {
+    alias libs.plugins.android.library
+}
+
+android {
+    namespace = 'androidx.media3.decoder.av3a'
+    compileSdk libs.versions.compileSdk.get().toInteger()
+
+    defaultConfig {
+        minSdk libs.versions.minSdk.get().toInteger()
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+dependencies {
+    api libs.media3.common
+    implementation libs.annotation
+    implementation libs.guava
+    implementation libs.media3.exoplayer
+}
