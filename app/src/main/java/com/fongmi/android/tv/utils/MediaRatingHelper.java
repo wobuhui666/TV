@@ -29,7 +29,7 @@ public final class MediaRatingHelper {
     private static final String DOUBAN_SUGGEST = "https://movie.douban.com/j/subject_suggest";
     private static final String DOUBAN_ABSTRACT = "https://movie.douban.com/j/subject_abstract";
     private static final Pattern YEAR = Pattern.compile("(?:19|20)\\d{2}");
-    private static final Pattern TITLE_NOISE = Pattern.compile("[\\s\\p{Punct}\\p{IsPunctuation}]+");
+    private static final Pattern TITLE_NOISE = Pattern.compile("[\\s\\p{P}]+");
 
     private MediaRatingHelper() {
     }

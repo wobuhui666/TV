@@ -47,7 +47,7 @@ public class DiscoverApi {
     private static final Map<String, DiscoverMediaKey> DOUBAN_MATCH_CACHE = new ConcurrentHashMap<>();
     private static final Pattern YEAR = Pattern.compile("(?:19|20)\\d{2}");
     private static final Pattern TITLE_YEAR_SUFFIX = Pattern.compile("\\s*[（(](?:19|20)\\d{2}[)）]\\s*$");
-    private static final Pattern TITLE_NOISE = Pattern.compile("[\\s\\p{Punct}\\p{IsPunctuation}]+");
+    private static final Pattern TITLE_NOISE = Pattern.compile("[\\s\\p{P}]+");
 
     public enum Row {
         DOUBAN_HOT_MOVIE, DOUBAN_HOT_TV, DOUBAN_NEW_MOVIE,

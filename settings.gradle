@@ -22,6 +22,7 @@ dependencyResolutionManagement {
 
 include ':app'
 include ':mpv'
+include ':media3-av3a'
 include ':catvod'
 include ':chaquo'
 include ':quickjs'
@@ -40,7 +41,6 @@ if (media3SourceDir != null && !media3SourceDir.isBlank()) {
                 substitute module("androidx.media3:media3-datasource-okhttp") using project(":lib-datasource-okhttp")
                 substitute module("androidx.media3:media3-datasource-rtmp") using project(":lib-datasource-rtmp")
                 substitute module("androidx.media3:media3-decoder") using project(":lib-decoder")
-                substitute module("androidx.media3:media3-decoder-av3a") using project(":lib-decoder-av3a")
                 substitute module("androidx.media3:media3-exoplayer") using project(":lib-exoplayer")
                 substitute module("androidx.media3:media3-exoplayer-dash") using project(":lib-exoplayer-dash")
                 substitute module("androidx.media3:media3-exoplayer-hls") using project(":lib-exoplayer-hls")

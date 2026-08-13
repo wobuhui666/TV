@@ -153,13 +153,13 @@ public final class AiSubtitleRuntime implements SherpaSubtitleController.Listene
         statusView = new WeakReference<>(overlay);
         if (sessionActive && AiSubtitleSettings.isEnabled() && !serviceReady) showStartingStatus();
         else overlay.setVisibility(View.GONE);
-        if (!AiSubtitleSettings.isEnabled()) view.setExternalCues(null);
+        if (!AiSubtitleSettings.isEnabled()) view.getSubtitleView().setCues(null);
     }
 
     public void detachPlayerView(PlayerView view) {
         PlayerView current = playerView.get();
         if (current == view) {
-            current.setExternalCues(null);
+            current.getSubtitleView().setCues(null);
             TextView overlay = statusView.get();
             if (overlay != null) overlay.setVisibility(View.GONE);
             playerView = new WeakReference<>(null);
@@ -482,7 +482,7 @@ public final class AiSubtitleRuntime implements SherpaSubtitleController.Listene
         PlayerView view = playerView.get();
         if (view == null) return;
         if (text == null || text.isBlank()) {
-            view.setExternalCues(null);
+            view.getSubtitleView().setCues(null);
             return;
         }
         Cue cue = new Cue.Builder()
@@ -490,7 +490,7 @@ public final class AiSubtitleRuntime implements SherpaSubtitleController.Listene
                 .setLine(0.90f, Cue.LINE_TYPE_FRACTION)
                 .setLineAnchor(Cue.ANCHOR_TYPE_END)
                 .build();
-        view.setExternalCues(List.of(cue));
+        view.getSubtitleView().setCues(List.of(cue));
     }
 
     private void resetTimeline() {

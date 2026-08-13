@@ -1,6 +1,5 @@
 plugins {
     alias libs.plugins.android.application
-    alias libs.plugins.kotlin.android
     alias libs.plugins.kotlin.compose
 }
 
@@ -130,6 +129,7 @@ androidComponents {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.aar"], exclude: ["mpv-android-lib-*.aar"])
     implementation project(":mpv")
+    implementation project(":media3-av3a")
     implementation files('libs/sherpa-onnx-v1.13.4.jar')
     implementation project(':catvod')
     implementation project(':chaquo')
@@ -138,7 +138,6 @@ dependencies {
     implementation libs.coroutines.android
     implementation libs.lifecycle.service
     implementation libs.bundles.media3
-    implementation "androidx.media3:media3-decoder-av3a:1.10.1"
     implementation libs.palette
     implementation libs.recyclerview
     implementation libs.room.runtime

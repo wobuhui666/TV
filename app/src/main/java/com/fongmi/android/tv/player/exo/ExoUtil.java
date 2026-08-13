@@ -6,6 +6,8 @@ import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.media3.common.AudioAttributes;
+import androidx.media3.common.C;
+import androidx.media3.common.DolbyVisionOutputPolicy;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
@@ -23,7 +25,7 @@ import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider;
 import androidx.media3.exoplayer.audio.DefaultAudioSink;
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.source.MediaSource;
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
+import androidx.media3.exoplayer.trackselection.DecodeTrackSelector;
 import androidx.media3.exoplayer.trackselection.TrackSelector;
 import androidx.media3.exoplayer.util.EventLogger;
 
@@ -47,7 +49,7 @@ public class ExoUtil {
 
     public static ExoPlayer buildPlayer(int decode, Player.Listener listener) {
         ExoPlayer player = new ExoPlayer.Builder(App.get())
-                .setTrackSelector(buildTrackSelector())
+                .setTrackSelector(buildTrackSelector(decode))
                 .setRenderersFactory(buildPlaybackRenderersFactory(decode))
                 .setMediaSourceFactory(buildMediaSourceFactory())
                 // Sony's Dolby Vision OMX stack regularly needs >500 ms to flush/release. The
@@ -78,8 +80,10 @@ public class ExoUtil {
         return decode == PlayerEngine.HARD ? DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON : DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER;
     }
 
-    private static TrackSelector buildTrackSelector() {
-        DefaultTrackSelector trackSelector = new DefaultTrackSelector(App.get());
+    private static TrackSelector buildTrackSelector(int decode) {
+        DecodeTrackSelector trackSelector = new DecodeTrackSelector(App.get());
+        int decodeMode = getDecodeMode(decode);
+        trackSelector.setRendererDecodePreferences(decodeMode, decodeMode);
         DefaultTrackSelector.Parameters.Builder builder = trackSelector.buildUponParameters();
         if (PlayerSetting.isPreferAAC()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AAC);
         else if (PlayerSetting.isAv3a()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AV3A);
@@ -92,6 +96,10 @@ public class ExoUtil {
 
     private static RenderersFactory buildPlaybackRenderersFactory(int decode) {
         return buildRenderersFactory(getRenderMode(decode), PlayerSetting.isAudioPrefer(), PlayerSetting.isVideoPrefer());
+    }
+
+    private static @C.DecodeMode int getDecodeMode(int decode) {
+        return decode == PlayerEngine.HARD ? C.DECODE_HARDWARE : C.DECODE_SOFTWARE;
     }
 
     static RenderersFactory buildRenderersFactory() {
@@ -120,7 +128,9 @@ public class ExoUtil {
         int extensionMode = audioPrefer || videoPrefer ? DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER : renderMode;
         // Exo keeps its Profile-7 fallback independent from MPV's hwdec codec allow-list.
         boolean dv7 = PlayerSetting.isDv7HevcFallback();
-        return factory.setEnableDecoderFallback(true).setEnableDv7HevcFallback(dv7).setExtensionRendererMode(extensionMode);
+        return factory.setEnableDecoderFallback(true)
+                .setDolbyVisionOutputPolicy(dv7 ? DolbyVisionOutputPolicy.ASSUME_UNSUPPORTED : DolbyVisionOutputPolicy.AUTO)
+                .setExtensionRendererMode(extensionMode);
     }
 
     private static AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams) {

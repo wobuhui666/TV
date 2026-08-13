@@ -786,7 +786,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             if (fileError != 0) {
                 msgBuilder.append(" (错误码: ").append(fileError).append(")");
             }
-            fail(new PlaybackException(msgBuilder.toString(), null, PlaybackException.ERROR_CODE_UNSPECIFIED));
+            fail(new PlaybackException(msgBuilder.toString(), null, MpvEndFile.playbackErrorCode(fileError)));
             return;
         }
         // Only a genuine EOF may surface STATE_ENDED — upstream treats it as "auto play next".

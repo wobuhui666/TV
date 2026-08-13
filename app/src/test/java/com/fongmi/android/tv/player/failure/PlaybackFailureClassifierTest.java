@@ -59,6 +59,17 @@ public class PlaybackFailureClassifierTest {
         assertFalse(output.affectsSiteHealth());
     }
 
+    @Test
+    public void unspecifiedErrorsHaveActionableChineseMessages() {
+        PlaybackException error = error(PlaybackException.ERROR_CODE_UNSPECIFIED, null);
+        PlaybackFailure exo = PlaybackFailureClassifier.classifyExo(error, "https://media.test/a");
+        PlaybackFailure mpv = PlaybackFailureClassifier.classifyMpv(error, "https://media.test/a", 0);
+        assertFalse(exo.userMessage().toLowerCase().contains("unspecified"));
+        assertFalse(mpv.userMessage().toLowerCase().contains("unspecified"));
+        assertTrue(exo.userMessage().contains("重试"));
+        assertTrue(mpv.userMessage().contains("重试"));
+    }
+
     private static PlaybackException error(int code, Throwable cause) {
         return new PlaybackException("failure", cause, code);
     }
