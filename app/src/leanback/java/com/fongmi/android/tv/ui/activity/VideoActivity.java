@@ -1833,6 +1833,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (mHistory != null && isEnded()) controller().seekTo(mHistory.getOpening());
         if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
+        hideCenter();
     }
 
     private boolean onSeekBack() {

@@ -525,6 +525,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         if (isEnded()) controller().seekTo(0);
         if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
+        hideCenter();
     }
 
     private void consumePendingSeek() {
