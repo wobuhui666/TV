@@ -76,6 +76,13 @@ public class OpenAiSubtitleTranslatorTest {
         assertEquals(4, body.getJSONArray("messages").length());
     }
 
+    @Test
+    public void traditionalChineseIsConvertedWithoutPlatformApi() {
+        assertEquals("繁体字幕", OpenAiSubtitleTranslator.toSimplified("繁體字幕"));
+        assertEquals("", OpenAiSubtitleTranslator.toSimplified(""));
+        assertEquals("", OpenAiSubtitleTranslator.toSimplified(null));
+    }
+
 
     @Test
     public void mTranUsesOfficialV4ProtocolAndParsesResult() throws Exception {

@@ -40,6 +40,16 @@ public class SearchResultFilterTest {
         assertEquals(1, result.getList().size());
     }
 
+    @Test
+    public void matchesChineseSeasonNotation() {
+        Result result = Result.list(List.of(vod("庆余年 第二季"), vod("庆余年 第一季")));
+
+        SearchResultFilter.apply(result, "庆余年2");
+
+        assertEquals(1, result.getList().size());
+        assertEquals("庆余年 第二季", result.getList().get(0).getName());
+    }
+
     private static Vod vod(String name) {
         Vod vod = new Vod();
         vod.setName(name);

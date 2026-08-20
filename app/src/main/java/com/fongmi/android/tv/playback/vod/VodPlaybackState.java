@@ -5,6 +5,7 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.source.EpisodeTarget;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,6 +26,8 @@ public class VodPlaybackState {
     private boolean useParse;
     private String searchKeyword;
     private int qualityPosition;
+    private Vod media;
+    private EpisodeTarget episodeTarget;
 
     public VodPlaybackState() {
         this.failedIds = new HashSet<>();
@@ -46,10 +49,33 @@ public class VodPlaybackState {
         useParse = false;
         searchKeyword = "";
         qualityPosition = 0;
+        media = null;
+        episodeTarget = null;
     }
 
     public void addFailedId(String id) {
         if (id != null && !id.isEmpty()) failedIds.add(id);
+    }
+
+    public Vod getMedia() {
+        return media;
+    }
+
+    public void setMedia(Vod media) {
+        this.media = media;
+    }
+
+    public EpisodeTarget getEpisodeTarget() {
+        if (episodeTarget != null) return episodeTarget;
+        return hasEpisode() ? EpisodeTarget.of(getEpisode()) : new EpisodeTarget(null, "");
+    }
+
+    public void setEpisodeTarget(EpisodeTarget episodeTarget) {
+        this.episodeTarget = episodeTarget;
+    }
+
+    public boolean hasEpisodeTarget() {
+        return episodeTarget != null;
     }
 
     public boolean hasFailedId(String id) {

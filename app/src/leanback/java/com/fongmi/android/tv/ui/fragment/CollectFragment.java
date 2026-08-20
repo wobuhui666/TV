@@ -30,6 +30,10 @@ import com.fongmi.android.tv.ui.custom.CustomScroller;
 import com.fongmi.android.tv.ui.custom.CustomSelector;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.SourceAggregator;
+import com.fongmi.android.tv.source.SourceSelectionMode;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
@@ -47,6 +51,8 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     private SiteViewModel mViewModel;
     private Collect mCollect;
     private String mKeyword;
+    private final SourceAggregator mAggregator = new SourceAggregator();
+    private final List<Vod> mAggregated = new ArrayList<>();
 
     public static CollectFragment newInstance(String keyword, Collect collect) {
         Bundle args = new Bundle();
@@ -109,6 +115,12 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     }
 
     public void addVideo(List<Vod> items) {
+        if (isAllPage() && SourceSelectionSetting.getMode() != SourceSelectionMode.LEGACY) {
+            mAggregator.mergeInto(mAggregated, items);
+            items = new ArrayList<>(mAggregated);
+            mAdapter.clear();
+            mLast = null;
+        }
         if (checkLastSize(items) || getActivity() == null || getActivity().isFinishing()) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, Style.rect(), getPageSpec(Style.rect()));
@@ -136,7 +148,31 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     public void onItemClick(Vod item, View poster) {
         requireActivity().setResult(Activity.RESULT_OK);
         if (item.isFolder()) VodActivity.start(requireActivity(), item.getSiteKey(), Result.folder(item));
-        else VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic(), poster);
+        else chooseSource(item, poster);
+    }
+
+    private void chooseSource(Vod item, View poster) {
+        List<Vod> options = item.getSourceOptions();
+        if (SourceSelectionSetting.getMode() != SourceSelectionMode.GROUP_ONLY || options.size() <= 1) {
+            VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates(), poster);
+            return;
+        }
+        String[] labels = new String[options.size()];
+        for (int i = 0; i < options.size(); i++) {
+            Vod option = options.get(i);
+            labels[i] = option.getSiteName().isEmpty() ? option.getName() : option.getSiteName();
+        }
+        new MaterialAlertDialogBuilder(requireActivity())
+                .setTitle(item.getName())
+                .setSingleChoiceItems(labels, 0, (dialog, which) -> {
+                    Vod selected = options.get(which);
+                    List<Vod> remaining = new ArrayList<>(options);
+                    remaining.remove(which);
+                    VideoActivity.collect(requireActivity(), selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining, poster);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.dialog_negative, null)
+                .show();
     }
 
     @Override
@@ -146,9 +182,13 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     @Override
     public boolean onLoadMore(String page) {
-        if (mCollect == null || "all".equals(mCollect.getSite().getKey())) return false;
+        if (mCollect == null || isAllPage()) return false;
         mViewModel.searchContent(mCollect.getSite(), getKeyword(), false, page);
         return true;
+    }
+
+    private boolean isAllPage() {
+        return mCollect != null && "all".equals(mCollect.getSite().getKey());
     }
 
     @Override

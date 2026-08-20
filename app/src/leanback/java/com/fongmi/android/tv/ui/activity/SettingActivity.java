@@ -36,6 +36,8 @@ import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.SourceSelectionMode;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.JetStreamDialogDecor;
 import com.fongmi.android.tv.ui.custom.JetStreamSettingView;
@@ -204,6 +206,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         initArrays();
         String[] doh = getDohList();
         setRowValue(JetStreamSettingView.KEY_INCOGNITO, Setting.getSwitch(Setting.isIncognito()));
+        setSourceSelectionRows();
         setRowValue(JetStreamSettingView.KEY_DETAIL_FILTER, getStatus(Setting.getDetailFilter()));
         setRowValue(JetStreamSettingView.KEY_FLAG_FILTER, getStatus(Setting.getFlagFilter()));
         setRowValue(JetStreamSettingView.KEY_TOAST_FILTER, Setting.getSwitch(Setting.isToastFilter()));
@@ -216,6 +219,14 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setMpvLogText();
         setQuickJsLogText();
         setRowValue(JetStreamSettingView.KEY_VERSION, BuildConfig.VERSION_NAME);
+    }
+
+    private void setSourceSelectionRows() {
+        SourceSelectionMode mode = SourceSelectionSetting.getMode();
+        int label = mode == SourceSelectionMode.SMART ? R.string.setting_source_mode_smart : mode == SourceSelectionMode.GROUP_ONLY ? R.string.setting_source_mode_group : R.string.setting_source_mode_legacy;
+        setRowValue(JetStreamSettingView.KEY_SOURCE_MODE, getString(label));
+        setRowValue(JetStreamSettingView.KEY_SOURCE_CROSS_SITE, Setting.getSwitch(SourceSelectionSetting.isCrossSiteEnabled()));
+        setRowVisible(JetStreamSettingView.KEY_SOURCE_CROSS_SITE, mode == SourceSelectionMode.SMART);
     }
 
     private void setRowValue(String key, CharSequence value) {
@@ -298,6 +309,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_DANMAKU_AUTO -> setDanmakuAuto();
             case JetStreamSettingView.KEY_DANMAKU_SPIDER -> setDanmakuSpider();
             case JetStreamSettingView.KEY_INCOGNITO -> setIncognito();
+            case JetStreamSettingView.KEY_SOURCE_MODE -> setSourceMode();
+            case JetStreamSettingView.KEY_SOURCE_CROSS_SITE -> setSourceCrossSite();
+            case JetStreamSettingView.KEY_SOURCE_CLEAR -> clearSourceLearning();
             case JetStreamSettingView.KEY_DETAIL_FILTER -> setDetailFilter();
             case JetStreamSettingView.KEY_FLAG_FILTER -> setFlagFilter();
             case JetStreamSettingView.KEY_TOAST_FILTER -> setToastFilter();
@@ -664,6 +678,25 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void setIncognito() {
         Setting.putIncognito(!Setting.isIncognito());
         setRowValue(JetStreamSettingView.KEY_INCOGNITO, Setting.getSwitch(Setting.isIncognito()));
+    }
+
+    private void setSourceMode() {
+        String[] modes = {getString(R.string.setting_source_mode_legacy), getString(R.string.setting_source_mode_group), getString(R.string.setting_source_mode_smart)};
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.setting_source_mode).setSingleChoiceItems(modes, SourceSelectionSetting.getMode().ordinal(), (dialog, which) -> {
+            SourceSelectionSetting.putMode(SourceSelectionMode.values()[which]);
+            setSourceSelectionRows();
+            dialog.dismiss();
+        }).setNegativeButton(R.string.dialog_negative, null).show();
+    }
+
+    private void setSourceCrossSite() {
+        SourceSelectionSetting.putCrossSiteEnabled(!SourceSelectionSetting.isCrossSiteEnabled());
+        setSourceSelectionRows();
+    }
+
+    private void clearSourceLearning() {
+        SourceSelectionSetting.clearReliability();
+        Notify.show(R.string.setting_source_clear);
     }
 
     private void setDetailFilter() {

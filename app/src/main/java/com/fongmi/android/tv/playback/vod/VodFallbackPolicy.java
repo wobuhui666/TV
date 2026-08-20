@@ -5,6 +5,12 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.EpisodeTarget;
+import com.fongmi.android.tv.source.SmartSourceSelector;
+import com.fongmi.android.tv.source.SourceAggregator;
+import com.fongmi.android.tv.source.SourceReliabilityStore;
+import com.fongmi.android.tv.source.SourceSelectionMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,11 +20,15 @@ public class VodFallbackPolicy {
     private final VodPlaybackController controller;
     private final VodPlaybackState state;
     private final VodPlaybackHost host;
+    private final SourceAggregator aggregator;
+    private final SourceReliabilityStore reliability;
 
     public VodFallbackPolicy(VodPlaybackController controller, VodPlaybackState state, VodPlaybackHost host) {
         this.controller = controller;
         this.state = state;
         this.host = host;
+        this.aggregator = new SourceAggregator();
+        this.reliability = new SourceReliabilityStore();
     }
 
     public void playbackError() {
@@ -48,7 +58,8 @@ public class VodFallbackPolicy {
     public void onSearchResult(Result result) {
         List<Vod> items = new ArrayList<>(result.getList());
         items.removeIf(this::mismatch);
-        state.setSources(items);
+        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART) aggregator.mergeInto(state.getSources(), items);
+        else state.setSources(items);
         host.renderSources(state.getSources());
         if (state.isSelectFirstSource()) nextSource();
         if (items.isEmpty()) return;
@@ -63,11 +74,15 @@ public class VodFallbackPolicy {
 
     private boolean fallbackToNextLine() {
         int position = state.getFlagPosition() + 1;
-        if (position >= state.getFlags().size()) return false;
-        Flag flag = state.getFlags().get(position);
-        host.showSwitchLine(flag);
-        controller.selectFlag(flag);
-        return true;
+        EpisodeTarget target = state.getEpisodeTarget();
+        for (int i = position; i < state.getFlags().size(); i++) {
+            Flag flag = state.getFlags().get(i);
+            if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && SmartSourceSelector.findEpisode(flag, target) == null) continue;
+            host.showSwitchLine(flag);
+            controller.selectFlag(flag);
+            return true;
+        }
+        return false;
     }
 
     private void fallbackToNextSource(boolean force) {
@@ -77,10 +92,21 @@ public class VodFallbackPolicy {
 
     private void nextSource() {
         if (!state.hasSources()) return;
-        Vod item = state.removeFirstSource();
+        Vod item;
+        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisode()) {
+            List<Vod> options = new ArrayList<>();
+            for (Vod source : state.getSources()) options.addAll(source.getSourceOptions());
+            item = SmartSourceSelector.selectSource(options, state.getEpisodeTarget(), host.getVodKey(), reliability, state.getFlag().getFlag());
+            if (item == null) return;
+            options.removeIf(source -> sameSource(source, item));
+            item.setSourceCandidates(null);
+            state.setSources(aggregator.aggregate(options));
+        } else {
+            item = state.removeFirstSource();
+        }
         host.renderSources(state.getSources());
         host.showSwitchSource(item);
-        state.addFailedId(host.getVodId());
+        state.addFailedId(sourceKey(item));
         state.setSelectFirstSource(false);
         controller.fallbackSource(item);
     }
@@ -93,13 +119,25 @@ public class VodFallbackPolicy {
 
     private boolean isPass(Site item) {
         if (state.isAutoFallback() && !item.isChangeable()) return false;
+        if (state.isAutoFallback() && SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && !SourceSelectionSetting.isCrossSiteEnabled()) return item.getKey().equals(host.getVodKey());
         return item.isSearchable();
     }
 
     private boolean mismatch(Vod item) {
-        if (host.getVodId().equals(item.getId())) return true;
-        if (state.hasFailedId(item.getId())) return true;
-        if (state.isAutoFallback()) return !item.getName().equals(state.getSearchKeyword());
-        return !item.getName().contains(state.getSearchKeyword());
+        if (SourceSelectionSetting.getMode() != SourceSelectionMode.SMART) {
+            if (host.getVodId().equals(item.getId()) || state.hasFailedId(item.getId())) return true;
+            return state.isAutoFallback() ? !item.getName().equals(state.getSearchKeyword()) : !item.getName().contains(state.getSearchKeyword());
+        }
+        if (host.getVodKey().equals(item.getSiteKey()) && host.getVodId().equals(item.getId())) return true;
+        if (state.hasFailedId(sourceKey(item))) return true;
+        return !com.fongmi.android.tv.source.MediaMatcher.queryMatches(state.getSearchKeyword(), item);
+    }
+
+    private String sourceKey(Vod item) {
+        return SourceSelectionSetting.getMode() == SourceSelectionMode.SMART ? item.getSiteKey() + "::" + item.getId() : item.getId();
+    }
+
+    private boolean sameSource(Vod first, Vod second) {
+        return first.getSiteKey().equals(second.getSiteKey()) && first.getId().equals(second.getId());
     }
 }

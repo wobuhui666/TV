@@ -32,6 +32,8 @@ import com.fongmi.android.tv.impl.LiveListener;
 import com.fongmi.android.tv.impl.SiteListener;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.SourceSelectionMode;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
@@ -115,6 +117,7 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.toastFilterText.setText(Setting.getSwitch(Setting.isToastFilter()));
         mBinding.toastFilterKeysText.setText(getFilterStatus(Setting.getToastFilterRaw()));
         mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
+        setSourceSelectionText();
         mBinding.sizeText.setText((size = ResUtil.getStringArray(R.array.select_size))[PlayerSetting.getSize()]);
     }
 
@@ -151,6 +154,9 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
         mBinding.liveHome.setOnClickListener(this::onLiveHome);
         mBinding.wall.setOnLongClickListener(this::onWallEdit);
         mBinding.incognito.setOnClickListener(this::setIncognito);
+        mBinding.sourceMode.setOnClickListener(this::setSourceMode);
+        mBinding.sourceCrossSite.setOnClickListener(this::setSourceCrossSite);
+        mBinding.sourceClear.setOnClickListener(this::clearSourceLearning);
         mBinding.vodHistory.setOnClickListener(this::onVodHistory);
         mBinding.themeColor.setOnClickListener(this::onThemeColor);
         mBinding.liveHistory.setOnClickListener(this::onLiveHistory);
@@ -371,6 +377,33 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     private void setIncognito(View view) {
         Setting.putIncognito(!Setting.isIncognito());
         mBinding.incognitoText.setText(Setting.getSwitch(Setting.isIncognito()));
+    }
+
+    private void setSourceSelectionText() {
+        SourceSelectionMode mode = SourceSelectionSetting.getMode();
+        int label = mode == SourceSelectionMode.SMART ? R.string.setting_source_mode_smart : mode == SourceSelectionMode.GROUP_ONLY ? R.string.setting_source_mode_group : R.string.setting_source_mode_legacy;
+        mBinding.sourceModeText.setText(label);
+        mBinding.sourceCrossSiteText.setText(Setting.getSwitch(SourceSelectionSetting.isCrossSiteEnabled()));
+        mBinding.sourceCrossSite.setVisibility(mode == SourceSelectionMode.SMART ? View.VISIBLE : View.GONE);
+    }
+
+    private void setSourceMode(View view) {
+        String[] modes = {getString(R.string.setting_source_mode_legacy), getString(R.string.setting_source_mode_group), getString(R.string.setting_source_mode_smart)};
+        new MaterialAlertDialogBuilder(requireActivity()).setTitle(R.string.setting_source_mode).setSingleChoiceItems(modes, SourceSelectionSetting.getMode().ordinal(), (dialog, which) -> {
+            SourceSelectionSetting.putMode(SourceSelectionMode.values()[which]);
+            setSourceSelectionText();
+            dialog.dismiss();
+        }).setNegativeButton(R.string.dialog_negative, null).show();
+    }
+
+    private void setSourceCrossSite(View view) {
+        SourceSelectionSetting.putCrossSiteEnabled(!SourceSelectionSetting.isCrossSiteEnabled());
+        setSourceSelectionText();
+    }
+
+    private void clearSourceLearning(View view) {
+        SourceSelectionSetting.clearReliability();
+        Notify.show(R.string.setting_source_clear);
     }
 
     private void setSize(View view) {
