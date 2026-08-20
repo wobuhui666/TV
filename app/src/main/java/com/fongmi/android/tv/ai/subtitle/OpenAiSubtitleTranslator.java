@@ -1,12 +1,12 @@
 package com.fongmi.android.tv.ai.subtitle;
 
-import android.icu.text.Transliterator;
 import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Trans;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -363,11 +363,7 @@ public final class OpenAiSubtitleTranslator {
 
     static String toSimplified(String source) {
         if (source == null || source.isEmpty()) return "";
-        try {
-            return Transliterator.getInstance("Traditional-Simplified").transliterate(source);
-        } catch (Throwable ignored) {
-            return source;
-        }
+        return Trans.t2s(false, source);
     }
 
     private static final class SettingsConfig implements Config {
