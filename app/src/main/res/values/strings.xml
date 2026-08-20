@@ -156,6 +156,14 @@
     <string name="setting_choose">Choose</string>
     <string name="setting_off">Off</string>
     <string name="setting_on">On</string>
+    <string name="setting_source_selection">Source selection</string>
+    <string name="setting_source_mode">Selection mode</string>
+    <string name="setting_source_mode_legacy">Traditional</string>
+    <string name="setting_source_mode_group">Group only</string>
+    <string name="setting_source_mode_smart">Smart</string>
+    <string name="setting_source_cross_site">Smart cross-site fallback</string>
+    <string name="setting_source_clear">Clear learning data</string>
+    <string name="source_available">Available %1$d sources</string>
 
     <!-- Backup & Restore -->
     <string name="restore_select">Select backup</string>

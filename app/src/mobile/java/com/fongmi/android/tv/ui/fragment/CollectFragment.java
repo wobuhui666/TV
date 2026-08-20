@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.Collect;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
@@ -30,7 +31,12 @@ import com.fongmi.android.tv.ui.adapter.SearchAdapter;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.custom.CustomScroller;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.SourceAggregator;
+import com.fongmi.android.tv.source.SourceSelectionMode;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CollectFragment extends BaseFragment implements MenuProvider, CollectAdapter.OnClickListener, SearchAdapter.OnClickListener, CustomScroller.Callback {
@@ -41,6 +47,8 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     private CustomScroller mScroller;
     private SiteViewModel mViewModel;
     private List<Site> mSites;
+    private final SourceAggregator mAggregator = new SourceAggregator();
+    private final List<Vod> mAggregated = new ArrayList<>();
 
     public static CollectFragment newInstance(String keyword) {
         Bundle args = new Bundle();
@@ -135,7 +143,13 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     private void setCollect(Result result) {
         if (result == null || result.getList().isEmpty()) return;
-        if (mCollectAdapter.getPosition() == 0) mSearchAdapter.addAll(result.getList());
+        if (mCollectAdapter.getPosition() == 0) {
+            if (SourceSelectionSetting.getMode() == SourceSelectionMode.LEGACY) mSearchAdapter.addAll(result.getList());
+            else {
+                mAggregator.mergeInto(mAggregated, result.getList());
+                mSearchAdapter.setItems(new ArrayList<>(mAggregated));
+            }
+        }
         mCollectAdapter.add(Collect.create(result.getList()));
         mCollectAdapter.add(result.getList());
     }
@@ -158,7 +172,31 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     @Override
     public void onItemClick(Vod item) {
         if (item.isFolder()) FolderActivity.start(requireActivity(), item.getSiteKey(), Result.folder(item));
-        else VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic());
+        else chooseSource(item);
+    }
+
+    private void chooseSource(Vod item) {
+        List<Vod> options = item.getSourceOptions();
+        if (SourceSelectionSetting.getMode() != SourceSelectionMode.GROUP_ONLY || options.size() <= 1) {
+            VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates());
+            return;
+        }
+        String[] labels = new String[options.size()];
+        for (int i = 0; i < options.size(); i++) {
+            Vod option = options.get(i);
+            labels[i] = option.getSiteName().isEmpty() ? option.getName() : option.getSiteName();
+        }
+        new MaterialAlertDialogBuilder(requireActivity())
+                .setTitle(item.getName())
+                .setSingleChoiceItems(labels, 0, (dialog, which) -> {
+                    Vod selected = options.get(which);
+                    List<Vod> remaining = new ArrayList<>(options);
+                    remaining.remove(which);
+                    VideoActivity.collect(requireActivity(), selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.dialog_negative, null)
+                .show();
     }
 
     @Override

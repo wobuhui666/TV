@@ -9,6 +9,11 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.EpisodeTarget;
+import com.fongmi.android.tv.source.SmartSourceSelector;
+import com.fongmi.android.tv.source.SourceReliabilityStore;
+import com.fongmi.android.tv.source.SourceSelectionMode;
 import com.fongmi.android.tv.utils.MpvLogCollector;
 
 import java.util.Collections;
@@ -21,12 +26,14 @@ public class VodPlaybackController {
     private final VodPlaybackState state;
     private final VodPlaybackHost host;
     private History lastHistory;
+    private final SourceReliabilityStore reliability;
 
     public VodPlaybackController(VodPlaybackHost host, VodPlaybackState state) {
         this.historyPolicy = new VodHistoryPolicy();
         this.state = state;
         this.host = host;
         this.fallbackPolicy = new VodFallbackPolicy(this, state, host);
+        this.reliability = new SourceReliabilityStore();
     }
 
     public void reset() {
@@ -40,7 +47,14 @@ public class VodPlaybackController {
             id = host.getVodId();
         }
         if (id.isEmpty() || id.startsWith("msearch:")) detailEmpty(false);
-        else requestDetail();
+        else {
+            List<Vod> candidates = host.getSourceCandidates();
+            if (!candidates.isEmpty()) {
+                state.setSources(candidates);
+                state.setAutoFallback(SourceSelectionSetting.getMode() == SourceSelectionMode.SMART);
+            }
+            requestDetail();
+        }
     }
 
     public void requestDetail() {
@@ -68,6 +82,8 @@ public class VodPlaybackController {
     }
 
     private void applyPlayerResult(Result result, VodPlayRequest request) {
+        Vod media = state.getMedia();
+        if (media != null && SourceSelectionSetting.getMode() == SourceSelectionMode.SMART) reliability.recordSuccess(media);
         state.setQuality(result);
         state.setPlayingRequest(request);
         state.setUseParse(result.isUseParse());
@@ -106,6 +122,7 @@ public class VodPlaybackController {
 
     public void selectEpisode(Episode item) {
         if (!state.hasFlags()) return;
+        state.setEpisodeTarget(EpisodeTarget.of(item));
         Flag selected = state.getFlag();
         for (Flag flag : state.getFlags()) flag.toggle(flag == selected, item);
         historyPolicy.updateEpisode(state.getHistory(), state.getFlag(), item);
@@ -147,6 +164,7 @@ public class VodPlaybackController {
     }
 
     private void switchSource(Vod item, boolean autoFallback) {
+        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisode()) state.setEpisodeTarget(EpisodeTarget.of(state.getEpisode()));
         state.setAutoFallback(autoFallback);
         state.clearPlayRequest();
         saveCurrentHistory();
@@ -163,6 +181,7 @@ public class VodPlaybackController {
     }
 
     public void playbackError(String msg) {
+        if (state.getMedia() != null && SourceSelectionSetting.getMode() == SourceSelectionMode.SMART) reliability.recordFailure(state.getMedia());
         host.resetPlaybackForError(msg);
         fallbackPolicy.playbackError();
     }
@@ -198,7 +217,8 @@ public class VodPlaybackController {
         if (!state.hasEpisode()) return;
         Episode item = getRelativeEpisode(1);
         if (!item.isSelected()) selectEpisode(item);
-        else if (notify) host.showNoNext(reversed);
+        else if (notify && tryCrossSiteEpisode(1)) {
+        } else if (notify) host.showNoNext(reversed);
     }
 
     private void prevEpisode(boolean notify, boolean reversed) {
@@ -206,6 +226,16 @@ public class VodPlaybackController {
         Episode item = getRelativeEpisode(-1);
         if (!item.isSelected()) selectEpisode(item);
         else if (notify) host.showNoPrev(reversed);
+    }
+
+    private boolean tryCrossSiteEpisode(int offset) {
+        if (!SourceSelectionSetting.getMode().selectsAutomatically()
+                || !SourceSelectionSetting.isCrossSiteEnabled() || !state.hasEpisode()) return false;
+        Integer current = state.getEpisodeTarget().getNumber();
+        if (current == null) return false;
+        state.setEpisodeTarget(EpisodeTarget.of(current + offset));
+        fallbackPolicy.search(host.getVodName(), true);
+        return true;
     }
 
     public void reverseEpisode(boolean scroll) {
@@ -297,6 +327,10 @@ public class VodPlaybackController {
     }
 
     private void detailEmpty(boolean finish) {
+        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.isAutoFallback()) {
+            fallbackPolicy.emptyDetail();
+            return;
+        }
         if (host.isFromCollect() || finish) {
             host.finishVod();
         } else if (host.getVodName().isEmpty()) {
@@ -312,6 +346,7 @@ public class VodPlaybackController {
         item.checkPic(host.getVodPic());
         item.checkName(host.getVodName());
         state.setFlags(item.getFlags());
+        state.setMedia(item);
         state.setHistory(historyPolicy.findOrCreate(host.getHistoryKey(), host.getVodMark(), item));
         lastHistory = state.getHistory();
         host.renderDetail(item, state.getHistory());
@@ -321,7 +356,18 @@ public class VodPlaybackController {
         if (item.getFlags().isEmpty()) {
             fallbackPolicy.emptyFlag();
         } else {
-            selectFlag(state.getHistory().getFlag(), true);
+            SmartSourceSelector.FlagSelection selection = SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisodeTarget()
+                    ? SmartSourceSelector.selectFlag(item, state.getEpisodeTarget(), state.getHistory().getFlag().getFlag(), reliability)
+                    : null;
+            if (selection != null) {
+                selectFlag(selection.flag(), true);
+                if (!selection.episode().isSelected()) selectEpisode(selection.episode());
+            } else if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisodeTarget() && state.isAutoFallback()) {
+                fallbackPolicy.emptyFlag();
+                return;
+            } else {
+                selectFlag(state.getHistory().getFlag(), true);
+            }
             if (state.getHistory().isRevSort()) reverseEpisode(true);
         }
     }

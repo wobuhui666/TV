@@ -8,8 +8,13 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 
 import java.util.List;
+import java.util.ArrayList;
 
 public interface VodPlaybackHost {
+
+    default List<Vod> getSourceCandidates() {
+        return new ArrayList<>();
+    }
 
     String getVodKey();
 

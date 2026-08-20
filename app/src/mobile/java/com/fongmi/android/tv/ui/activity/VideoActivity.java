@@ -112,6 +112,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -161,6 +162,10 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         start(activity, key, id, name, pic, null, true);
     }
 
+    public static void collect(Activity activity, String key, String id, String name, String pic, List<Vod> sources) {
+        start(activity, key, id, name, pic, null, true, sources);
+    }
+
     public static void start(Activity activity, String url) {
         start(activity, SiteApi.PUSH, url, url);
     }
@@ -178,6 +183,10 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect) {
+        start(activity, key, id, name, pic, mark, collect, null);
+    }
+
+    public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, List<Vod> sources) {
         Intent intent = new Intent(activity, VideoActivity.class);
         intent.putExtra("collect", collect);
         intent.putExtra("mark", mark);
@@ -185,6 +194,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         intent.putExtra("pic", pic);
         intent.putExtra("key", key);
         intent.putExtra("id", id);
+        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
         activity.startActivity(intent);
     }
 
@@ -206,6 +216,12 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     private String getId() {
         return Objects.toString(getIntent().getStringExtra("id"), "");
+    }
+
+    @Override
+    public List<Vod> getSourceCandidates() {
+        ArrayList<Vod> sources = getIntent().getParcelableArrayListExtra("sources");
+        return sources == null ? new ArrayList<>() : sources;
     }
 
     @Override
@@ -622,6 +638,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void renderSources(List<Vod> items) {
+        mQuickAdapter.clear();
         mQuickAdapter.addAll(items);
         mBinding.quick.setVisibility(mQuickAdapter.isEmpty() ? View.GONE : View.VISIBLE);
     }

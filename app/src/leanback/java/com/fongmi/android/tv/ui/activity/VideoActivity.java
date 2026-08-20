@@ -197,11 +197,19 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         start(activity, key, id, name, pic, null, true, false, poster);
     }
 
+    public static void collect(Activity activity, String key, String id, String name, String pic, List<Vod> sources, View poster) {
+        start(activity, key, id, name, pic, null, true, false, sources, poster);
+    }
+
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, boolean cast) {
         start(activity, key, id, name, pic, mark, collect, cast, null);
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, boolean cast, View poster) {
+        start(activity, key, id, name, pic, mark, collect, cast, null, poster);
+    }
+
+    public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, boolean cast, List<Vod> sources, View poster) {
         Intent intent = new Intent(activity, VideoActivity.class);
         intent.putExtra("collect", collect);
         intent.putExtra("cast", cast);
@@ -210,6 +218,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         intent.putExtra("pic", pic);
         intent.putExtra("key", key);
         intent.putExtra("id", id);
+        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
         if (poster != null) {
             poster.setTransitionName(HERO_TRANSITION);
             activity.startActivity(intent, ActivityOptionsCompat.makeSceneTransitionAnimation(activity, poster, HERO_TRANSITION).toBundle());
@@ -241,6 +250,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private String getId() {
         return Objects.toString(getIntent().getStringExtra("id"), "");
+    }
+
+    @Override
+    public List<Vod> getSourceCandidates() {
+        ArrayList<Vod> sources = getIntent().getParcelableArrayListExtra("sources");
+        return sources == null ? new ArrayList<>() : sources;
     }
 
     @Override
@@ -759,7 +774,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     public void renderSources(List<Vod> items) {
         mQuickItems = items;
         List<String> texts = new ArrayList<>();
-        for (Vod item : items) texts.add(item.getName());
+        for (Vod item : items) texts.add(item.getSourceCount() > 1 ? item.getName() + " (" + item.getSourceCount() + ")" : item.getName());
         mBinding.quick.setItems(texts, -1);
         setRowVisibility(mBinding.quick, !items.isEmpty());
     }

@@ -10,8 +10,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.impl.Diffable;
 import com.fongmi.android.tv.utils.Sniffer;
+import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.utils.Trans;
 import com.google.gson.annotations.SerializedName;
@@ -95,6 +97,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     @ElementList(entry = "dd", required = false, inline = true)
     private List<Flag> vodFlags;
     private Site site;
+    private transient List<Vod> sourceCandidates;
 
     public Vod() {
     }
@@ -122,6 +125,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         this.style = in.readParcelable(Style.class.getClassLoader());
         this.vodFlags = in.createTypedArrayList(Flag.CREATOR);
         this.site = in.readParcelable(Site.class.getClassLoader());
+        this.sourceCandidates = in.createTypedArrayList(Vod.CREATOR);
     }
 
     public static Vod objectFrom(String str) {
@@ -154,7 +158,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     }
 
     public String getTypeName() {
-        return TextUtils.isEmpty(typeName) ? "" : typeName.trim();
+        return typeName == null || typeName.isEmpty() ? "" : typeName.trim();
     }
 
     public void setTypeName(String typeName) {
@@ -178,7 +182,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     }
 
     public String getYear() {
-        return TextUtils.isEmpty(vodYear) ? "" : vodYear.trim();
+        return vodYear == null || vodYear.isEmpty() ? "" : vodYear.trim();
     }
 
     public void setYear(String vodYear) {
@@ -285,6 +289,30 @@ public class Vod implements Parcelable, Diffable<Vod> {
         this.site = site;
     }
 
+    public List<Vod> getSourceCandidates() {
+        return sourceCandidates == null ? (sourceCandidates = new ArrayList<>()) : sourceCandidates;
+    }
+
+    public void setSourceCandidates(List<Vod> sourceCandidates) {
+        this.sourceCandidates = sourceCandidates;
+    }
+
+    public List<Vod> getSourceOptions() {
+        List<Vod> options = new ArrayList<>();
+        options.add(this);
+        options.addAll(getSourceCandidates());
+        return options;
+    }
+
+    public int getSourceCount() {
+        return 1 + getSourceCandidates().size();
+    }
+
+    public String getSourceSummary() {
+        int count = getSourceCount();
+        return count > 1 ? ResUtil.getString(R.string.source_available, count) : getRemarks();
+    }
+
     public String getSiteName() {
         return getSite() == null ? "" : getSite().getName();
     }
@@ -306,7 +334,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     }
 
     public int getRemarkVisible() {
-        return getRemarks().isEmpty() ? View.GONE : View.VISIBLE;
+        return getSourceCount() > 1 || !getRemarks().isEmpty() ? View.VISIBLE : View.GONE;
     }
 
     public boolean isFolder() {
@@ -405,6 +433,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         dest.writeParcelable(this.style, flags);
         dest.writeTypedList(this.vodFlags);
         dest.writeParcelable(this.site, flags);
+        dest.writeTypedList(this.sourceCandidates);
     }
 
     @Override

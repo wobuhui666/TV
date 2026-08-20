@@ -31,7 +31,7 @@ public class VodRectHolder extends BaseVodHolder {
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());
-        binding.remark.setText(item.getRemarks());
+        binding.remark.setText(item.getSourceSummary());
         binding.site.setVisibility(item.getSiteVisible());
         binding.name.setVisibility(item.getNameVisible());
         binding.year.setVisibility(item.getYearVisible());

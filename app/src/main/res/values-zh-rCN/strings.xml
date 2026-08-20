@@ -155,6 +155,14 @@
     <string name="setting_choose">选择</string>
     <string name="setting_off">关</string>
     <string name="setting_on">开</string>
+    <string name="setting_source_selection">选源设置</string>
+    <string name="setting_source_mode">选源模式</string>
+    <string name="setting_source_mode_legacy">传统</string>
+    <string name="setting_source_mode_group">仅聚合</string>
+    <string name="setting_source_mode_smart">智能</string>
+    <string name="setting_source_cross_site">智能跨站换源</string>
+    <string name="setting_source_clear">清除学习数据</string>
+    <string name="source_available">可用 %1$d 个来源</string>
 
     <!-- Backup & Restore -->
     <string name="restore_select">选择备份</string>
