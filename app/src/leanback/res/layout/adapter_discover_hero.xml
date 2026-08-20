@@ -6,25 +6,31 @@
     android:focusable="true"
     android:focusableInTouchMode="true">
 
-    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
-        android:id="@+id/imageA"
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverArtworkLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:src="@drawable/wallpaper_1" />
+        android:layout_height="match_parent">
 
-    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
-        android:id="@+id/imageB"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
+        <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
+            android:id="@+id/imageA"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:src="@drawable/wallpaper_1" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverLeftScrimView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <com.fongmi.android.tv.ui.custom.JetStreamDiscoverHeroImageView
+            android:id="@+id/imageB"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverBottomScrimView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <com.fongmi.android.tv.ui.custom.JetStreamDiscoverLeftScrimView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamDiscoverBottomScrimView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </com.fongmi.android.tv.ui.custom.JetStreamDiscoverArtworkLayout>
 
     <LinearLayout
         android:id="@+id/details"

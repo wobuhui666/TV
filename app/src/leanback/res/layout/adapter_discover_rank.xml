@@ -39,13 +39,6 @@
             android:layout_height="match_parent" />
     </com.fongmi.android.tv.ui.custom.JetStreamVodPosterLayout>
 
-    <View
-        android:layout_width="132dp"
-        android:layout_height="176dp"
-        android:layout_gravity="end|top"
-        android:background="@drawable/selector_discover_rank_focus"
-        android:duplicateParentState="true" />
-
     <com.fongmi.android.tv.ui.custom.JetStreamVodTitleTextView
         android:id="@+id/name"
         android:layout_width="132dp"
