@@ -14,6 +14,7 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.SearchResultFilter;
 import com.fongmi.android.tv.utils.Sniffer;
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderDebug;
@@ -189,12 +190,11 @@ public class SiteApi {
     public static Result searchContent(@NonNull Site site, @NonNull String keyword, boolean quick, @NonNull String page) throws Exception {
         SpiderDebug.log("search", "site=%s,keyword=%s,quick=%s,page=%s", site.getName(), keyword, quick, page);
         boolean hasPage = !page.equals("1");
+        Result result;
         if (isSpider(site)) {
             String searchContent = hasPage ? site.spider().searchContent(keyword, quick, page) : site.spider().searchContent(keyword, quick);
             SpiderDebug.log("search", searchContent);
-            Result result = Result.fromJson(searchContent);
-            for (Vod vod : result.getList()) vod.setSite(site);
-            return result;
+            result = Result.fromJson(searchContent);
         } else {
             ArrayMap<String, String> params = new ArrayMap<>();
             params.put("wd", keyword);
@@ -203,10 +203,10 @@ public class SiteApi {
             if (hasPage) params.put("pg", page);
             String searchContent = call(site, params);
             SpiderDebug.log("search", searchContent);
-            Result result = fetchPic(site, Result.fromType(site.getType(), searchContent));
-            for (Vod vod : result.getList()) vod.setSite(site);
-            return result;
+            result = fetchPic(site, Result.fromType(site.getType(), searchContent));
         }
+        for (Vod vod : result.getList()) vod.setSite(site);
+        return SearchResultFilter.apply(result, keyword);
     }
 
     @NonNull
