@@ -14,7 +14,7 @@ import java.util.WeakHashMap
 
 object JetStreamAnimator {
 
-    const val FOCUS_DURATION = 180L
+    const val FOCUS_DURATION = 90L
     const val PANEL_DURATION = 220L
     const val PAGE_DURATION = 260L
     const val EXIT_DURATION = 160L
@@ -47,11 +47,11 @@ object JetStreamAnimator {
         }
         val targetScale = if (focused) scale else 1f
         val targetElevation = if (focused) dp(view, elevationDp) else 0f
+        view.translationZ = targetElevation
         val animation = AnimatorSet().apply {
             playTogether(
                 ObjectAnimator.ofFloat(view, View.SCALE_X, targetScale),
-                ObjectAnimator.ofFloat(view, View.SCALE_Y, targetScale),
-                ObjectAnimator.ofFloat(view, View.TRANSLATION_Z, targetElevation)
+                ObjectAnimator.ofFloat(view, View.SCALE_Y, targetScale)
             )
             interpolator = enterInterpolator
             this.duration = duration

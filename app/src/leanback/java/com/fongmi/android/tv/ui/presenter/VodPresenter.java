@@ -18,7 +18,11 @@ import com.fongmi.android.tv.ui.holder.VodListHolder;
 import com.fongmi.android.tv.ui.holder.VodOvalHolder;
 import com.fongmi.android.tv.ui.holder.VodRectHolder;
 
+import java.util.List;
+
 public class VodPresenter extends Presenter {
+
+    public static final String PAYLOAD_SOURCE_SUMMARY = "source_summary";
 
     private final OnClickListener listener;
     private final Style style;
@@ -62,6 +66,15 @@ public class VodPresenter extends Presenter {
     @Override
     public void onBindViewHolder(@NonNull Presenter.ViewHolder viewHolder, Object object) {
         ((BaseVodHolder) viewHolder).initView((Vod) object);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull Presenter.ViewHolder viewHolder, Object object, @NonNull List<Object> payloads) {
+        if (payloads.contains(PAYLOAD_SOURCE_SUMMARY)) {
+            ((BaseVodHolder) viewHolder).updateSourceSummary((Vod) object);
+        } else {
+            onBindViewHolder(viewHolder, object);
+        }
     }
 
     @Override

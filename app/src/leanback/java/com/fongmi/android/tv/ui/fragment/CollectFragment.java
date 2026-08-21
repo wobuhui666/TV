@@ -106,7 +106,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
         if (size == 0) return false;
         size = Math.min(size, items.size());
         mLast.addAll(mLast.size(), items.subList(0, size));
-        addVideo(items.subList(size, items.size()));
+        appendVideo(items.subList(size, items.size()));
         return true;
     }
 
@@ -116,11 +116,33 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     public void addVideo(List<Vod> items) {
         if (isAllPage() && SourceSelectionSetting.getMode() != SourceSelectionMode.LEGACY) {
-            mAggregator.mergeInto(mAggregated, items);
-            items = new ArrayList<>(mAggregated);
-            mAdapter.clear();
-            mLast = null;
+            addGroupedVideo(items);
+            return;
         }
+        appendVideo(items);
+    }
+
+    private void addGroupedVideo(List<Vod> items) {
+        int previousSize = mAggregated.size();
+        int[] previousSourceCounts = new int[previousSize];
+        for (int i = 0; i < previousSize; i++) previousSourceCounts[i] = mAggregated.get(i).getSourceCount();
+        mAggregator.mergeInto(mAggregated, items);
+        notifySourceSummaryChanges(previousSourceCounts);
+        appendVideo(new ArrayList<>(mAggregated.subList(previousSize, mAggregated.size())));
+    }
+
+    private void notifySourceSummaryChanges(int[] previousSourceCounts) {
+        int column = Product.getColumn();
+        int count = Math.min(previousSourceCounts.length, mAggregated.size());
+        for (int i = 0; i < count; i++) {
+            if (previousSourceCounts[i] == mAggregated.get(i).getSourceCount()) continue;
+            int rowIndex = i / column;
+            if (rowIndex >= mAdapter.size() || !(mAdapter.get(rowIndex) instanceof ListRow row)) continue;
+            row.getAdapter().notifyItemRangeChanged(i % column, 1, VodPresenter.PAYLOAD_SOURCE_SUMMARY);
+        }
+    }
+
+    private void appendVideo(List<Vod> items) {
         if (checkLastSize(items) || getActivity() == null || getActivity().isFinishing()) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, Style.rect(), getPageSpec(Style.rect()));

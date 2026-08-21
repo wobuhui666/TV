@@ -5,10 +5,6 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -22,7 +18,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -52,7 +47,7 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
             val backdrop = JetStreamAmbient.backdrop
             val glowColor by animateColorAsState(
                 targetValue = (JetStreamAmbient.color?.let { Color(it) } ?: colorScheme.primary).copy(alpha = 0.22f),
-                animationSpec = tween(durationMillis = 800),
+                animationSpec = tween(durationMillis = 220),
                 label = "ambientGlow"
             )
             Box(
@@ -68,32 +63,17 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
             ) {
                 Crossfade(
                     targetState = backdrop,
-                    animationSpec = tween(durationMillis = 700),
+                    animationSpec = tween(durationMillis = 220),
                     label = "ambientBackdrop"
                 ) { bitmap ->
                     if (bitmap != null) {
-                        val kenBurns = rememberInfiniteTransition(label = "kenBurns")
-                        val drift by kenBurns.animateFloat(
-                            initialValue = 1f,
-                            targetValue = 1.08f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 22000),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "kenBurnsScale"
-                        )
                         Image(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    scaleX = drift
-                                    scaleY = drift
-                                },
+                            modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                             alpha = 0.26f,
-                            filterQuality = FilterQuality.High
+                            filterQuality = FilterQuality.Low
                         )
                     }
                 }

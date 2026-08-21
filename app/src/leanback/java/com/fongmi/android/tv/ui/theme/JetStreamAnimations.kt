@@ -1,8 +1,6 @@
 package com.fongmi.android.tv.ui.theme
 
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 
 /**
@@ -16,12 +14,10 @@ object JetStreamAnimations {
     const val DurationLong = 500
     const val DurationPanel = 220
     const val DurationExit = 160
+    const val DurationFocus = 90
 
     // Scale animations - 缩放动画
-    val ScaleSpring: AnimationSpec<Float> = spring(
-        dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow
-    )
+    val ScaleSpring: AnimationSpec<Float> = tween(durationMillis = DurationFocus)
 
     val ScaleTween: AnimationSpec<Float> = tween(
         durationMillis = DurationMedium
