@@ -31,14 +31,19 @@ public class VodRectHolder extends BaseVodHolder {
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());
-        binding.remark.setText(item.getSourceSummary());
         binding.site.setVisibility(item.getSiteVisible());
         binding.year.setVisibility(item.getYearVisible());
         binding.name.setVisibility(item.getNameVisible());
-        binding.remark.setVisibility(item.getRemarkVisible());
+        updateSourceSummary(item);
         binding.getRoot().setOnClickListener(v -> listener.onItemClick(item, binding.image));
         binding.getRoot().setOnLongClickListener(v -> listener.onLongClick(item));
         ImgUtil.load(item.getName(), item.getPic(), binding.image);
+    }
+
+    @Override
+    public void updateSourceSummary(Vod item) {
+        binding.remark.setText(item.getSourceSummary());
+        binding.remark.setVisibility(item.getRemarkVisible());
     }
 
     @Override

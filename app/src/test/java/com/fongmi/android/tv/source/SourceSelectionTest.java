@@ -7,6 +7,7 @@ import com.fongmi.android.tv.bean.Vod;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -25,6 +26,20 @@ public class SourceSelectionTest {
         assertEquals(1, result.size());
         assertEquals(2, result.get(0).getSourceCount());
         assertEquals("site-b", result.get(0).getSourceCandidates().get(0).getSiteKey());
+    }
+
+    @Test
+    public void mergePreservesVisibleRepresentativesAndAppendsNewGroups() {
+        Vod first = vod("庆余年2", "site-a", "a");
+        Vod same = vod("庆餘年 第二季", "site-b", "b");
+        Vod next = vod("琅琊榜", "site-c", "c");
+        List<Vod> result = new ArrayList<>(List.of(first));
+
+        new SourceAggregator().mergeInto(result, List.of(same, next));
+
+        assertSame(first, result.get(0));
+        assertEquals(2, result.get(0).getSourceCount());
+        assertSame(next, result.get(1));
     }
 
     @Test
