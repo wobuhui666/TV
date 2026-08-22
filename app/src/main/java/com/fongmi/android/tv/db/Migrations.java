@@ -53,8 +53,8 @@ public class Migrations {
     public static final Migration MIGRATION_35_36 = new Migration(35, 36) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
-            database.execSQL("ALTER TABLE History ADD COLUMN openingSource TEXT NOT NULL DEFAULT 'unknown'");
-            database.execSQL("ALTER TABLE History ADD COLUMN endingSource TEXT NOT NULL DEFAULT 'unknown'");
+            database.execSQL("ALTER TABLE History ADD COLUMN openingSource TEXT DEFAULT 'unknown'");
+            database.execSQL("ALTER TABLE History ADD COLUMN endingSource TEXT DEFAULT 'unknown'");
         }
     };
 }
