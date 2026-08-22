@@ -12,6 +12,7 @@ import android.widget.FrameLayout;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.Updater;
 import com.fongmi.android.tv.api.DiscoverApi;
@@ -42,6 +43,8 @@ import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.JetStreamDialogDecor;
 import com.fongmi.android.tv.ui.custom.JetStreamSettingView;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitleSettingsActivity;
+import com.fongmi.android.tv.ai.skip.AiSkipApi;
+import com.fongmi.android.tv.ai.skip.AiSkipSettings;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
 import com.fongmi.android.tv.ui.dialog.DohDialog;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
@@ -59,6 +62,7 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.TmdbEndpoint;
+import com.fongmi.android.tv.utils.Task;
 import com.fongmi.quickjs.utils.QuickLog;
 import com.github.catvod.bean.Doh;
 import com.github.catvod.net.OkHttp;
@@ -160,6 +164,18 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowVisible(JetStreamSettingView.KEY_MPV_HDR, !exo);
         setRowVisible(JetStreamSettingView.KEY_ADBLOCK, exo);
         setRowVisible(JetStreamSettingView.KEY_CAPTION, PlayerSetting.hasCaption());
+        refreshAiSkipRows();
+    }
+
+    private void refreshAiSkipRows() {
+        boolean enabled = AiSkipSettings.isEnabled();
+        setRowValue(JetStreamSettingView.KEY_AI_SKIP, Setting.getSwitch(enabled));
+        setRowValue(JetStreamSettingView.KEY_AI_SKIP_URL, getStatus(AiSkipSettings.getBaseUrl()));
+        setRowValue(JetStreamSettingView.KEY_AI_SKIP_TOKEN, getStatus(AiSkipSettings.getToken()));
+        setRowValue(JetStreamSettingView.KEY_AI_SKIP_TEST, getString(R.string.ai_skip_test_idle));
+        setRowVisible(JetStreamSettingView.KEY_AI_SKIP_URL, enabled);
+        setRowVisible(JetStreamSettingView.KEY_AI_SKIP_TOKEN, enabled);
+        setRowVisible(JetStreamSettingView.KEY_AI_SKIP_TEST, enabled);
     }
 
     private void refreshDecodeRows() {
@@ -284,6 +300,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_BACKGROUND -> onBackground();
             case JetStreamSettingView.KEY_UA -> onUa();
             case JetStreamSettingView.KEY_AI_SUBTITLE -> AiSubtitleSettingsActivity.start(this);
+            case JetStreamSettingView.KEY_AI_SKIP -> setAiSkipEnabled();
+            case JetStreamSettingView.KEY_AI_SKIP_URL -> setApiUrl(R.string.ai_skip_url, AiSkipSettings.getBaseUrl(), this::setAiSkipUrl);
+            case JetStreamSettingView.KEY_AI_SKIP_TOKEN -> setAiSkipToken();
+            case JetStreamSettingView.KEY_AI_SKIP_TEST -> testAiSkip();
             case JetStreamSettingView.KEY_MPV_CONF -> onMpvConf();
             case JetStreamSettingView.KEY_MPV_ANIME4K -> setMpvAnime4K();
             case JetStreamSettingView.KEY_MPV_GPU_NEXT -> setMpvGpuNext();
@@ -770,6 +790,49 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         container.setPadding(0, ResUtil.dp2px(8), 0, 0);
         container.addView(input, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
         JetStreamDialogDecor.tintButtons(new MaterialAlertDialogBuilder(this).setTitle(title).setView(container).setPositiveButton(R.string.dialog_positive, (dialog, which) -> callback.accept(input.getText().toString().trim())).setNegativeButton(R.string.dialog_negative, null).show());
+    }
+
+    private void setAiSkipEnabled() {
+        AiSkipSettings.setEnabled(!AiSkipSettings.isEnabled());
+        refreshAiSkipRows();
+    }
+
+    private void setAiSkipUrl(String url) {
+        AiSkipSettings.setBaseUrl(url);
+        refreshAiSkipRows();
+    }
+
+    private void setAiSkipToken() {
+        EditText input = new EditText(this);
+        FrameLayout container = new FrameLayout(this);
+        int horizontalPadding = ResUtil.dp2px(24);
+        int verticalPadding = ResUtil.dp2px(12);
+        input.setHint(R.string.ai_skip_token);
+        input.setSingleLine(true);
+        input.setMinHeight(ResUtil.dp2px(56));
+        input.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        container.setPadding(0, ResUtil.dp2px(8), 0, 0);
+        container.addView(input, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+        JetStreamDialogDecor.tintButtons(new MaterialAlertDialogBuilder(this).setTitle(R.string.ai_skip_token).setView(container)
+                .setPositiveButton(R.string.dialog_positive, (dialog, which) -> {
+                    AiSkipSettings.setToken(input.getText().toString());
+                    refreshAiSkipRows();
+                }).setNegativeButton(R.string.dialog_negative, null).show());
+    }
+
+    private void testAiSkip() {
+        setRowValue(JetStreamSettingView.KEY_AI_SKIP_TEST, getString(R.string.ai_skip_test_running));
+        Task.execute(() -> {
+            boolean success;
+            try {
+                success = new AiSkipApi().health();
+            } catch (Exception ignored) {
+                success = false;
+            }
+            boolean result = success;
+            App.post(() -> setRowValue(JetStreamSettingView.KEY_AI_SKIP_TEST, getString(result ? R.string.ai_skip_test_ok : R.string.ai_skip_test_failed)));
+        });
     }
 
     private void setSize() {

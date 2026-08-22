@@ -206,6 +206,14 @@
     <string name="player_dv7">杜比視界(HEVC 回退)</string>
     <string name="player_mpv_hdr">HDR（自動）</string>
     <string name="player_ai_subtitle">即時語音字幕與翻譯</string>
+    <string name="ai_skip_enabled">AI 自動跳片頭片尾</string>
+    <string name="ai_skip_url">AI 跳過服務位址</string>
+    <string name="ai_skip_token">AI 跳過服務權杖</string>
+    <string name="ai_skip_test">測試 AI 跳過服務</string>
+    <string name="ai_skip_test_idle">測試連線</string>
+    <string name="ai_skip_test_running">正在測試…</string>
+    <string name="ai_skip_test_ok">連線成功</string>
+    <string name="ai_skip_test_failed">連線失敗</string>
     <string name="ai_subtitle_on">字幕翻譯：開</string>
     <string name="ai_subtitle_off">字幕翻譯：關</string>
     <string name="ai_subtitle_language">來源語種：%1$s</string>

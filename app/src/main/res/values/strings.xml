@@ -207,6 +207,14 @@
     <string name="player_dv7">Dolby Vision (HEVC fallback)</string>
     <string name="player_mpv_hdr">HDR (auto)</string>
     <string name="player_ai_subtitle">Live speech subtitles &amp; translation</string>
+    <string name="ai_skip_enabled">AI intro/outro skipping</string>
+    <string name="ai_skip_url">AI skip service URL</string>
+    <string name="ai_skip_token">AI skip service token</string>
+    <string name="ai_skip_test">Test AI skip service</string>
+    <string name="ai_skip_test_idle">Test connection</string>
+    <string name="ai_skip_test_running">Testing…</string>
+    <string name="ai_skip_test_ok">Connected</string>
+    <string name="ai_skip_test_failed">Connection failed</string>
     <string name="ai_subtitle_on">Subtitle translation: On</string>
     <string name="ai_subtitle_off">Subtitle translation: Off</string>
     <string name="ai_subtitle_language">Source: %1$s</string>

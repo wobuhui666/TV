@@ -36,6 +36,7 @@ import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitlePlaybackUi;
+import com.fongmi.android.tv.ai.skip.AiSkipRuntime;
 import com.fongmi.android.tv.api.DanmakuApi;
 import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.VodConfig;
@@ -148,6 +149,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private String mTmdbLogoUrl;
     private String mTmdbLogoRequest;
     private int mRatingRequest;
+    private boolean mAiSkipPipelineReady;
 
     public static void push(FragmentActivity activity, String text) {
         Uri uri = UrlUtil.uri(text);
@@ -655,6 +657,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         getIntent().putExtra("id", item.getId());
         mBinding.scroll.scrollTo(0, 0);
         mClock.setCallback(null);
+        AiSkipRuntime.get().stopSession();
         updateNavigationKey();
         player().reset();
         player().stop();
@@ -665,6 +668,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         player().stop();
         player().clear();
         mClock.setCallback(null);
+        AiSkipRuntime.get().stopSession();
     }
 
     @Override
@@ -680,7 +684,20 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void startPlayback(Result result, boolean useParse, long startPositionMs, History history, Episode episode) {
+        if (!mAiSkipPipelineReady && player().getEngine() == PlayerSetting.ENGINE_EXO && com.fongmi.android.tv.ai.skip.AiSkipSettings.isConfigured()) {
+            reloadAiSubtitleAudioPipeline();
+            mAiSkipPipelineReady = true;
+        }
+        String mediaKey = com.github.catvod.utils.Util.md5(getHistoryKey() + "|" + episode.getUrl() + "|" + episode.getName());
+        AiSkipRuntime.get().startSession(mediaKey, history, episode.getName(), startPositionMs, this::refreshAiSkipResult);
         startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), startPositionMs, VodPlaybackMedia.metadata(history, episode));
+    }
+
+    private void refreshAiSkipResult() {
+        if (mHistory == null || isFinishing()) return;
+        mBinding.control.action.opening.setText(mHistory.getOpening() <= 0 ? getString(R.string.play_op) : Util.timeMs(mHistory.getOpening()));
+        mBinding.control.action.ending.setText(mHistory.getEnding() <= 0 ? getString(R.string.play_ed) : Util.timeMs(mHistory.getEnding()));
+        syncJetStreamControl();
     }
 
     @Override
@@ -1150,6 +1167,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setOpening(long opening) {
         mVod.setOpening(opening);
+        AiSkipRuntime.get().feedback(mHistory);
         mBinding.control.action.opening.setText(opening <= 0 ? getString(R.string.play_op) : Util.timeMs(mHistory.getOpening()));
         syncJetStreamControl();
     }
@@ -1175,6 +1193,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setEnding(long ending) {
         mVod.setEnding(ending);
+        AiSkipRuntime.get().feedback(mHistory);
         mBinding.control.action.ending.setText(ending <= 0 ? getString(R.string.play_ed) : Util.timeMs(mHistory.getEnding()));
         syncJetStreamControl();
     }
@@ -1790,6 +1809,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         long duration = player().getDuration();
         if (position < 0 || duration <= 0) return;
         mVod.onTimeChanged(time, position, duration);
+        AiSkipRuntime.get().onTimeChanged(position, duration);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -2006,6 +2026,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onDestroy() {
+        AiSkipRuntime.get().stopSession();
         mRatingRequest++;
         MediaRatingHelper.cancel();
         mClock.release();

@@ -51,6 +51,10 @@ public class History implements Diffable<History> {
     private long opening;
     @SerializedName("ending")
     private long ending;
+    @SerializedName("openingSource")
+    private String openingSource;
+    @SerializedName("endingSource")
+    private String endingSource;
     @SerializedName("position")
     private long position;
     @SerializedName("duration")
@@ -69,6 +73,8 @@ public class History implements Diffable<History> {
         this.scale = -1;
         this.ending = C.TIME_UNSET;
         this.opening = C.TIME_UNSET;
+        this.openingSource = "unknown";
+        this.endingSource = "unknown";
         this.position = C.TIME_UNSET;
         this.duration = C.TIME_UNSET;
     }
@@ -203,12 +209,28 @@ public class History implements Diffable<History> {
         this.opening = opening;
     }
 
+    public String getOpeningSource() {
+        return openingSource == null ? "unknown" : openingSource;
+    }
+
+    public void setOpeningSource(String source) {
+        this.openingSource = source == null ? "unknown" : source;
+    }
+
     public long getEnding() {
         return ending;
     }
 
     public void setEnding(long ending) {
         this.ending = ending;
+    }
+
+    public String getEndingSource() {
+        return endingSource == null ? "unknown" : endingSource;
+    }
+
+    public void setEndingSource(String source) {
+        this.endingSource = source == null ? "unknown" : source;
     }
 
     public long getPosition() {
@@ -297,6 +319,8 @@ public class History implements Diffable<History> {
     private History copyTo(History item) {
         if (getOpening() > 0) item.setOpening(getOpening());
         if (getEnding() > 0) item.setEnding(getEnding());
+        if (getOpening() > 0) item.setOpeningSource(getOpeningSource());
+        if (getEnding() > 0) item.setEndingSource(getEndingSource());
         if (getSpeed() != 1) item.setSpeed(getSpeed());
         return this;
     }
