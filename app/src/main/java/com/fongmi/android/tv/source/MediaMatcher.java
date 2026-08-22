@@ -13,8 +13,8 @@ public final class MediaMatcher {
     private static final Pattern YEAR = Pattern.compile("(?<!\\d)(?:19|20)\\d{2}(?!\\d)");
     private static final Pattern SEASON = Pattern.compile("(?i)(?:s|season)\\s*0*(\\d{1,2})");
     private static final Pattern CHINESE_SEASON = Pattern.compile("第\\s*([零〇一二两三四五六七八九十百千万0-9]+)\\s*季");
-    private static final Pattern TRAILING_NUMBER = Pattern.compile("(?<=[\\p{L}\\p{IsHan}])\\s*([0-9]{1,2})\\s*$");
-    private static final Pattern TRAILING_ROMAN = Pattern.compile("(?i)(?<=[\\p{L}\\p{IsHan}])\\s*(I{1,3}|IV|V|VI{0,3}|IX|X)\\s*$");
+    private static final Pattern TRAILING_NUMBER = Pattern.compile("(?<=\\p{L})\\s*([0-9]{1,2})\\s*$");
+    private static final Pattern TRAILING_ROMAN = Pattern.compile("(?i)(?<=\\p{L})\\s*(I{1,3}|IV|V|VI{0,3}|IX|X)\\s*$");
     private static final Pattern NOISE = Pattern.compile("(?i)(?:4k|8k|16k|2160p|1080p|720p|480p|uhd|hdr|dolby|blu[ -]?ray|web[ -]?dl|中字|中文字幕|国语|国語|粤语|高清|超清|蓝光|藍光|完结|完結|全集|全\\d+集|无删减|無刪減|纯净版|純淨版|修复版|修復版|抢先版|搶先版|导演剪辑版|導演剪輯版)");
     private static final Pattern TYPE_MOVIE = Pattern.compile("(?i)电影|電影|movie|film");
     private static final Pattern TYPE_SERIES = Pattern.compile("(?i)电视剧|電視劇|连续剧|連續劇|剧集|劇集|series|tv|anime|番剧|番劇");
@@ -88,7 +88,7 @@ public final class MediaMatcher {
     }
 
     public static String normalizedEpisodeName(String value) {
-        return normalize(value).replaceAll("(?i)(?:ep(?:isode)?|第)", "").replaceAll("[^\\p{L}\\p{IsHan}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
+        return normalize(value).replaceAll("(?i)(?:ep(?:isode)?|第)", "").replaceAll("[^\\p{L}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
     }
 
     private static String normalizeTitle(String value, Integer season, String year) {
@@ -101,7 +101,7 @@ public final class MediaMatcher {
             text = TRAILING_ROMAN.matcher(text).replaceAll("");
         }
         if (!year.isEmpty()) text = text.replace(year, "");
-        return text.replaceAll("[^\\p{L}\\p{IsHan}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
+        return text.replaceAll("[^\\p{L}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
     }
 
     private static MediaIdentity.Kind kind(String value) {

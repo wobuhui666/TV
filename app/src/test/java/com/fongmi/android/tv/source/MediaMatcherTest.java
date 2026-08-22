@@ -43,6 +43,12 @@ public class MediaMatcherTest {
         assertTrue(MediaMatcher.queryMatches("庆余年2", vod("庆余年 第二季 4K 完结", "", "电视剧")));
     }
 
+    @Test
+    public void keepsChineseLettersDuringNormalization() {
+        assertEquals("庆余年", MediaMatcher.identity("庆余年2").getTitle());
+        assertEquals("庆余年12", MediaMatcher.normalizedEpisodeName("庆余年 第12集"));
+    }
+
     private static Vod vod(String name, String year, String type) {
         Vod vod = new Vod();
         vod.setName(name);
