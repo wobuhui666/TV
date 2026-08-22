@@ -303,11 +303,17 @@ public class VodPlaybackController {
     }
 
     public void setOpening(long opening) {
-        if (state.getHistory() != null) state.getHistory().setOpening(opening);
+        if (state.getHistory() != null) {
+            state.getHistory().setOpening(opening);
+            state.getHistory().setOpeningSource("manual");
+        }
     }
 
     public void setEnding(long ending) {
-        if (state.getHistory() != null) state.getHistory().setEnding(ending);
+        if (state.getHistory() != null) {
+            state.getHistory().setEnding(ending);
+            state.getHistory().setEndingSource("manual");
+        }
     }
 
     public void setSpeed(float speed) {

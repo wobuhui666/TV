@@ -1,0 +1,40 @@
+name = "tv-ai-skip"
+main = "src/index.ts"
+compatibility_date = "2026-08-21"
+routes = [{ pattern = "ai-skip.ciallo0d000721.cc.cd", custom_domain = true }]
+
+[[kv_namespaces]]
+binding = "AI_SKIP_KV"
+id = "af5f100a3c384820bae77e0753fab5e5"
+
+[[r2_buckets]]
+binding = "AI_SKIP_R2"
+bucket_name = "tv-ai-skip-samples"
+
+[[queues.producers]]
+binding = "AI_SKIP_QUEUE"
+queue = "tv-ai-skip-jobs"
+
+[[queues.consumers]]
+queue = "tv-ai-skip-jobs"
+max_batch_size = 3
+max_retries = 4
+retry_delay = 30
+
+[[ratelimits]]
+name = "AI_SKIP_RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
+[vars]
+AI_API_BASE_URL = "https://api.picpi.top"
+GEMINI_MODEL = "gemini-3.7-flash"
+RESULT_TTL_SECONDS = "2592000"
+MAX_SAMPLE_BYTES = "12000000"
+MIN_CONFIDENCE = "0.80"
+ALLOWED_ORIGIN = ""
+
+# Set with: wrangler secret put AI_SKIP_TOKEN
+# Set with: wrangler secret put GEMINI_API_KEY
+# Create once with: wrangler queues create tv-ai-skip-jobs
+# Create once with: wrangler r2 bucket create tv-ai-skip-samples

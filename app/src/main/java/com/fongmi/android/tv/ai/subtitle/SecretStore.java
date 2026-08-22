@@ -19,6 +19,7 @@ public final class SecretStore {
     private static final String ALIAS = "fongmi_ai_subtitle_api_key";
     private static final String PREF_API_KEY = "ai_subtitle_api_key_cipher";
     private static final String PREF_MTRAN_TOKEN = "ai_subtitle_mtran_token_cipher";
+    private static final String PREF_AI_SKIP_TOKEN = "ai_skip_token_cipher";
 
     private SecretStore() {
     }
@@ -37,6 +38,14 @@ public final class SecretStore {
 
     public static synchronized String getMTranToken() {
         return get(PREF_MTRAN_TOKEN);
+    }
+
+    public static synchronized void putAiSkipToken(String value) {
+        put(PREF_AI_SKIP_TOKEN, value);
+    }
+
+    public static synchronized String getAiSkipToken() {
+        return get(PREF_AI_SKIP_TOKEN);
     }
 
     private static void put(String pref, String value) {

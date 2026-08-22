@@ -654,6 +654,10 @@ class JetStreamSettingView @JvmOverloads constructor(
                     RowSpec(KEY_BACKGROUND, context.getString(R.string.player_background), toggle = true),
                     RowSpec(KEY_UA, context.getString(R.string.player_ua)),
                     RowSpec(KEY_AI_SUBTITLE, context.getString(R.string.player_ai_subtitle)),
+                    RowSpec(KEY_AI_SKIP, context.getString(R.string.ai_skip_enabled), toggle = true),
+                    RowSpec(KEY_AI_SKIP_URL, context.getString(R.string.ai_skip_url)),
+                    RowSpec(KEY_AI_SKIP_TOKEN, context.getString(R.string.ai_skip_token)),
+                    RowSpec(KEY_AI_SKIP_TEST, context.getString(R.string.ai_skip_test)),
                     RowSpec(KEY_MPV_CONF, context.getString(R.string.player_mpv_conf)),
                     RowSpec(KEY_MPV_ANIME4K, context.getString(R.string.player_mpv_anime4k)),
                     RowSpec(KEY_MPV_GPU_NEXT, context.getString(R.string.player_mpv_gpu_next), toggle = true),
@@ -751,6 +755,10 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_BACKGROUND = "background"
         const val KEY_UA = "ua"
         const val KEY_AI_SUBTITLE = "ai_subtitle"
+        const val KEY_AI_SKIP = "ai_skip"
+        const val KEY_AI_SKIP_URL = "ai_skip_url"
+        const val KEY_AI_SKIP_TOKEN = "ai_skip_token"
+        const val KEY_AI_SKIP_TEST = "ai_skip_test"
         const val KEY_AV3A = "av3a"
         const val KEY_DOLBY = "dolby"
         const val KEY_DV7 = "dv7_hevc"
