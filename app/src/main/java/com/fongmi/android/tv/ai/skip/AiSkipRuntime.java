@@ -22,27 +22,7 @@ public final class AiSkipRuntime {
     private static volatile AiSkipRuntime instance;
 
     private final Object lock = new Object();
-    private short[] opening = new short[WINDOW_SAMPLES];
-    private int openingLength;
-    private short[] ending = new short[WINDOW_SAMPLES];
-    private int endingLength;
-    private double resampleCursor;
-    private int inputRate;
-    private int inputSamples;
-    private History history;
-    private String mediaKey;
-    private String seriesKey;
-    private String episode;
-    private long durationMs;
-    private boolean captureOpening;
-    private boolean captureFinalized;
-    private boolean jobSubmissionStarted;
-    private boolean stopped;
-    private int nextOpeningChunk;
-    private int pendingUploads;
-    private final List<AiSkipApi.Sample> uploadedSamples = new ArrayList<>();
-    private Runnable appliedCallback;
-    private String activeJobId;
+    private CaptureSession activeSession;
 
     private AiSkipRuntime() {
     }
@@ -62,37 +42,30 @@ public final class AiSkipRuntime {
                              long startPositionMs, @Nullable Runnable appliedCallback) {
         stopSession();
         if (!AiSkipSettings.isConfigured() || history == null || mediaKey == null || mediaKey.isEmpty()) return;
+        CaptureSession session = new CaptureSession(mediaKey, history, episode, startPositionMs, appliedCallback);
         synchronized (lock) {
-            resetCapture();
-            this.history = history;
-            this.mediaKey = mediaKey;
-            this.seriesKey = com.github.catvod.utils.Util.md5(history.getKey());
-            this.episode = episode == null ? history.getVodRemarks() : episode;
-            this.durationMs = history.getDuration();
-            this.captureOpening = startPositionMs <= TimeUnit.SECONDS.toMillis(2);
-            this.appliedCallback = appliedCallback;
-            this.stopped = false;
+            activeSession = session;
         }
-        String sessionMediaKey = mediaKey;
-        Task.execute(() -> loadCachedResult(sessionMediaKey));
+        Task.execute(() -> loadCachedResult(session));
     }
 
     public void stopSession() {
         synchronized (lock) {
-            stopped = true;
-            history = null;
-            mediaKey = null;
-            appliedCallback = null;
-            resetCapture();
+            if (activeSession != null) {
+                activeSession.appliedCallback = null;
+                activeSession.releaseAudio();
+            }
+            activeSession = null;
         }
     }
 
     public void onTimeChanged(long positionMs, long durationMs) {
         synchronized (lock) {
-            if (stopped || history == null) return;
-            if (durationMs > 0) this.durationMs = durationMs;
-            if (positionMs >= 0 && this.durationMs > 0 && positionMs >= this.durationMs - 2_000 && endingLength > SAMPLE_RATE * 5) {
-                if (!captureFinalized && captureOpening && openingLength > SAMPLE_RATE * 5) finalizeCapture();
+            CaptureSession session = activeSession;
+            if (session == null) return;
+            if (durationMs > 0) session.durationMs = durationMs;
+            if (positionMs >= 0 && session.durationMs > 0 && positionMs >= session.durationMs - 2_000 && session.endingLength > SAMPLE_RATE * 5) {
+                if (!session.captureFinalized && session.captureOpening && session.openingLength > SAMPLE_RATE * 5) finalizeCapture(session);
             }
         }
     }
@@ -100,131 +73,127 @@ public final class AiSkipRuntime {
     private void onPcm(float[] mono, int sampleRate) {
         if (mono == null || mono.length == 0 || sampleRate <= 0) return;
         synchronized (lock) {
-            if (stopped || history == null) return;
-            if (inputRate != sampleRate) {
-                inputRate = sampleRate;
-                resampleCursor = 0;
-                inputSamples = 0;
+            CaptureSession session = activeSession;
+            if (session == null || session.captureFinalized) return;
+            if (session.inputRate != sampleRate) {
+                session.inputRate = sampleRate;
+                session.resampleCursor = 0;
+                session.inputSamples = 0;
             }
             double step = sampleRate / (double) SAMPLE_RATE;
             for (float value : mono) {
-                if (inputSamples >= resampleCursor) {
+                if (session.inputSamples >= session.resampleCursor) {
                     short pcm = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(value * 32767f)));
-                    if (captureOpening && openingLength < WINDOW_SAMPLES) opening[openingLength++] = pcm;
-                    ending[endingLength % WINDOW_SAMPLES] = pcm;
-                    endingLength++;
-                    resampleCursor += step;
+                    if (session.captureOpening && session.openingLength < WINDOW_SAMPLES) session.opening[session.openingLength++] = pcm;
+                    session.ending[session.endingLength % WINDOW_SAMPLES] = pcm;
+                    session.endingLength++;
+                    session.resampleCursor += step;
                 }
-                inputSamples++;
+                session.inputSamples++;
             }
-            while (nextOpeningChunk < MAX_CHUNKS_PER_SIDE
-                    && openingLength >= (nextOpeningChunk + 1) * CHUNK_SAMPLES) {
-                scheduleOpeningChunk(nextOpeningChunk, CHUNK_SAMPLES);
-                nextOpeningChunk++;
+            while (session.nextOpeningChunk < MAX_CHUNKS_PER_SIDE
+                    && session.openingLength >= (session.nextOpeningChunk + 1) * CHUNK_SAMPLES) {
+                scheduleOpeningChunk(session, session.nextOpeningChunk, CHUNK_SAMPLES);
+                session.nextOpeningChunk++;
             }
         }
     }
 
-    private void scheduleOpeningChunk(int index, int length) {
+    private void scheduleOpeningChunk(CaptureSession session, int index, int length) {
         int offset = index * CHUNK_SAMPLES;
-        short[] chunk = Arrays.copyOfRange(opening, offset, offset + length);
-        scheduleUpload("opening", samplesToMs(offset), chunk);
+        short[] chunk = Arrays.copyOfRange(session.opening, offset, offset + length);
+        scheduleUpload(session, "opening", samplesToMs(offset), chunk);
     }
 
-    private void finalizeCapture() {
-        captureFinalized = true;
-        int openingOffset = nextOpeningChunk * CHUNK_SAMPLES;
-        if (openingOffset < openingLength) {
-            scheduleOpeningChunk(nextOpeningChunk, openingLength - openingOffset);
-            nextOpeningChunk++;
+    private void finalizeCapture(CaptureSession session) {
+        session.captureFinalized = true;
+        int openingOffset = session.nextOpeningChunk * CHUNK_SAMPLES;
+        if (openingOffset < session.openingLength) {
+            scheduleOpeningChunk(session, session.nextOpeningChunk, session.openingLength - openingOffset);
+            session.nextOpeningChunk++;
         }
 
-        int length = Math.min(endingLength, WINDOW_SAMPLES);
-        int start = Math.max(0, endingLength - length);
-        long tailStartMs = Math.max(0, durationMs - samplesToMs(length));
+        int length = Math.min(session.endingLength, WINDOW_SAMPLES);
+        int start = Math.max(0, session.endingLength - length);
+        long tailStartMs = Math.max(0, session.durationMs - samplesToMs(length));
         for (int offset = 0; offset < length; offset += CHUNK_SAMPLES) {
             int chunkLength = Math.min(CHUNK_SAMPLES, length - offset);
             short[] chunk = new short[chunkLength];
-            for (int i = 0; i < chunkLength; i++) chunk[i] = ending[(start + offset + i) % WINDOW_SAMPLES];
-            scheduleUpload("ending", tailStartMs + samplesToMs(offset), chunk);
+            for (int i = 0; i < chunkLength; i++) chunk[i] = session.ending[(start + offset + i) % WINDOW_SAMPLES];
+            scheduleUpload(session, "ending", tailStartMs + samplesToMs(offset), chunk);
         }
-        maybeSubmitJob(mediaKey);
+        session.releaseAudio();
+        maybeSubmitJob(session);
     }
 
-    private void scheduleUpload(String side, long startMs, short[] pcm) {
-        String media = mediaKey;
-        if (media == null) return;
+    private void scheduleUpload(CaptureSession session, String side, long startMs, short[] pcm) {
         long sampleDurationMs = samplesToMs(pcm.length);
         byte[] wav = WavEncoder.encode(pcm, pcm.length, SAMPLE_RATE);
-        pendingUploads++;
+        session.pendingUploads++;
         Task.execute(() -> {
             try {
                 String objectKey = new AiSkipApi().upload(wav);
                 synchronized (lock) {
-                    if (!media.equals(mediaKey)) return;
-                    uploadedSamples.add(new AiSkipApi.Sample(side, startMs, sampleDurationMs, objectKey));
+                    session.uploadedSamples.add(new AiSkipApi.Sample(side, startMs, sampleDurationMs, objectKey));
                 }
             } catch (Exception ignored) {
             } finally {
                 synchronized (lock) {
-                    if (!media.equals(mediaKey)) return;
-                    pendingUploads--;
+                    session.pendingUploads--;
                 }
-                maybeSubmitJob(media);
+                maybeSubmitJob(session);
             }
         });
     }
 
-    private void maybeSubmitJob(String media) {
+    private void maybeSubmitJob(CaptureSession session) {
         boolean ready;
         synchronized (lock) {
-            if (media == null || !media.equals(mediaKey) || !captureFinalized || jobSubmissionStarted
-                    || pendingUploads > 0 || durationMs <= 0) return;
-            boolean hasOpening = uploadedSamples.stream().anyMatch(sample -> "opening".equals(sample.side()));
-            boolean hasEnding = uploadedSamples.stream().anyMatch(sample -> "ending".equals(sample.side()));
-            ready = hasOpening && hasEnding;
-            if (ready) jobSubmissionStarted = true;
+            ready = isReadyToSubmit(session.captureFinalized, session.jobSubmissionStarted, session.pendingUploads,
+                    session.durationMs, session.uploadedSamples);
+            if (ready) session.jobSubmissionStarted = true;
         }
-        if (ready) submitJob(media);
+        if (ready) submitJob(session);
     }
 
-    private void submitJob(String media) {
+    private void submitJob(CaptureSession session) {
         JobSnapshot snapshot;
         synchronized (lock) {
-            if (history == null || !media.equals(mediaKey)) return;
-            long duration = Math.max(durationMs, 1);
-            List<AiSkipApi.Sample> samples = new ArrayList<>(uploadedSamples);
+            long duration = Math.max(session.durationMs, 1);
+            List<AiSkipApi.Sample> samples = new ArrayList<>(session.uploadedSamples);
             samples.sort(Comparator
                     .comparingInt((AiSkipApi.Sample sample) -> "opening".equals(sample.side()) ? 0 : 1)
                     .thenComparingLong(AiSkipApi.Sample::startMs));
-            snapshot = new JobSnapshot(media, seriesKey, episode, duration, samples);
+            snapshot = new JobSnapshot(session.mediaKey, session.seriesKey, session.episode, duration, samples);
         }
         try {
             AiSkipResult created = new AiSkipApi().create(snapshot.mediaKey(), snapshot.seriesKey(), snapshot.episode(), snapshot.durationMs(), snapshot.samples());
             if (created != null && created.getJobId().isEmpty()) return;
-            poll(media, created == null ? "" : created.getJobId());
+            poll(session, created == null ? "" : created.getJobId());
         } catch (Exception ignored) {
         }
     }
 
-    private void loadCachedResult(String media) {
+    private void loadCachedResult(CaptureSession session) {
         try {
-            AiSkipResult cached = new AiSkipApi().find(media);
-            if (cached != null && cached.isCompleted()) apply(media, cached);
+            AiSkipResult cached = new AiSkipApi().find(session.mediaKey);
+            if (cached != null && cached.isCompleted()) apply(session, cached);
         } catch (Exception ignored) {
         }
     }
 
-    private void poll(String media, String jobId) {
+    private void poll(CaptureSession session, String jobId) {
         if (jobId == null || jobId.isEmpty()) return;
-        synchronized (lock) { if (media.equals(mediaKey)) activeJobId = jobId; }
+        synchronized (lock) {
+            if (activeSession != null && activeSession.mediaKey.equals(session.mediaKey)) activeSession.activeJobId = jobId;
+        }
         long deadline = System.currentTimeMillis() + POLL_LIMIT_MS;
         long delay = 5_000;
         while (System.currentTimeMillis() < deadline) {
             try {
                 AiSkipResult result = new AiSkipApi().getJob(jobId);
                 if (result == null) return;
-                if (result.isCompleted()) { apply(media, result); return; }
+                if (result.isCompleted()) { apply(session, result); return; }
                 if (!result.isPending()) return;
             } catch (Exception ignored) {
                 return;
@@ -234,21 +203,30 @@ public final class AiSkipRuntime {
         }
     }
 
-    private void apply(String media, AiSkipResult result) {
+    private void apply(CaptureSession session, AiSkipResult result) {
         synchronized (lock) {
-            if (history == null || !media.equals(mediaKey)) return;
-            activeJobId = result.getJobId();
-            if (!isManual(history.getOpening(), history.getOpeningSource()) && result.getOpeningMs() > 0 && result.getOpeningConfidence() >= 0.8f) {
-                history.setOpening(result.getOpeningMs());
-                history.setOpeningSource("ai");
+            CaptureSession current = activeSession;
+            if (current == null || !current.mediaKey.equals(session.mediaKey)) return;
+            current.activeJobId = result.getJobId();
+            if (!isManual(current.history.getOpening(), current.history.getOpeningSource()) && result.getOpeningMs() > 0 && result.getOpeningConfidence() >= 0.8f) {
+                current.history.setOpening(result.getOpeningMs());
+                current.history.setOpeningSource("ai");
             }
-            if (!isManual(history.getEnding(), history.getEndingSource()) && result.getEndingMs() > 0 && result.getEndingConfidence() >= 0.8f) {
-                history.setEnding(result.getEndingMs());
-                history.setEndingSource("ai");
+            if (!isManual(current.history.getEnding(), current.history.getEndingSource()) && result.getEndingMs() > 0 && result.getEndingConfidence() >= 0.8f) {
+                current.history.setEnding(result.getEndingMs());
+                current.history.setEndingSource("ai");
             }
-            history.save();
-            if (appliedCallback != null) App.post(appliedCallback);
+            current.history.save();
+            if (current.appliedCallback != null) App.post(current.appliedCallback);
         }
+    }
+
+    static boolean isReadyToSubmit(boolean captureFinalized, boolean submissionStarted, int pendingUploads,
+                                   long durationMs, List<AiSkipApi.Sample> samples) {
+        if (!captureFinalized || submissionStarted || pendingUploads > 0 || durationMs <= 0) return false;
+        boolean hasOpening = samples.stream().anyMatch(sample -> "opening".equals(sample.side()));
+        boolean hasEnding = samples.stream().anyMatch(sample -> "ending".equals(sample.side()));
+        return hasOpening && hasEnding;
     }
 
     static boolean isManual(long value, String source) {
@@ -258,8 +236,9 @@ public final class AiSkipRuntime {
     public void feedback(History target) {
         String jobId;
         synchronized (lock) {
-            if (target == null || target != history || activeJobId == null || activeJobId.isEmpty()) return;
-            jobId = activeJobId;
+            CaptureSession session = activeSession;
+            if (session == null || target == null || target != session.history || session.activeJobId == null || session.activeJobId.isEmpty()) return;
+            jobId = session.activeJobId;
         }
         long openingMs = Math.max(0, target.getOpening());
         long endingMs = Math.max(0, target.getEnding());
@@ -268,26 +247,47 @@ public final class AiSkipRuntime {
         });
     }
 
-    private void resetCapture() {
-        opening = new short[WINDOW_SAMPLES];
-        ending = new short[WINDOW_SAMPLES];
-        openingLength = 0;
-        endingLength = 0;
-        resampleCursor = 0;
-        inputSamples = 0;
-        inputRate = 0;
-        durationMs = 0;
-        captureOpening = false;
-        captureFinalized = false;
-        jobSubmissionStarted = false;
-        nextOpeningChunk = 0;
-        pendingUploads = 0;
-        uploadedSamples.clear();
-        activeJobId = null;
-    }
-
     private static long samplesToMs(int samples) {
         return samples * 1000L / SAMPLE_RATE;
+    }
+
+    private static final class CaptureSession {
+        private short[] opening = new short[WINDOW_SAMPLES];
+        private short[] ending = new short[WINDOW_SAMPLES];
+        private final History history;
+        private final String mediaKey;
+        private final String seriesKey;
+        private final String episode;
+        private final List<AiSkipApi.Sample> uploadedSamples = new ArrayList<>();
+        private long durationMs;
+        private boolean captureOpening;
+        private boolean captureFinalized;
+        private boolean jobSubmissionStarted;
+        private int openingLength;
+        private int endingLength;
+        private int nextOpeningChunk;
+        private int pendingUploads;
+        private int inputRate;
+        private int inputSamples;
+        private double resampleCursor;
+        private Runnable appliedCallback;
+        private String activeJobId;
+
+        private CaptureSession(String mediaKey, History history, @Nullable String episode, long startPositionMs,
+                               @Nullable Runnable appliedCallback) {
+            this.history = history;
+            this.mediaKey = mediaKey;
+            this.seriesKey = com.github.catvod.utils.Util.md5(history.getKey());
+            this.episode = episode == null ? history.getVodRemarks() : episode;
+            this.durationMs = history.getDuration();
+            this.captureOpening = startPositionMs <= TimeUnit.SECONDS.toMillis(2);
+            this.appliedCallback = appliedCallback;
+        }
+
+        private void releaseAudio() {
+            opening = new short[0];
+            ending = new short[0];
+        }
     }
 
     private record JobSnapshot(String mediaKey, String seriesKey, String episode, long durationMs,
