@@ -52,6 +52,8 @@ public class SiteViewModel extends ViewModel {
     }
 
     public SiteViewModel init() {
+        searches.stop();
+        tasks.cancelAll();
         search.setValue(null);
         result.setValue(null);
         player.setValue(null);
@@ -64,7 +66,8 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void categoryContent(String key, String tid, String page, boolean filter, HashMap<String, String> extend) {
-        execute(TaskType.RESULT, result, () -> SiteApi.categoryContent(key, tid, page, filter, extend));
+        HashMap<String, String> requestExtend = new HashMap<>(extend);
+        execute(TaskType.RESULT, result, () -> SiteApi.categoryContent(key, tid, page, filter, requestExtend));
     }
 
     public void action(String key, String act) {
@@ -84,13 +87,13 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void searchContent(List<Site> sites, String keyword, boolean quick) {
-        searches.start(sites, site -> SearchTask.create(site, keyword, quick), search::postValue);
+        searches.start(sites, site -> SearchTask.create(site, keyword, quick), search::setValue);
     }
 
     private void execute(TaskType type, MutableLiveData<Result> liveData, Callable<Result> callable) {
-        tasks.execute(type, Constant.TIMEOUT_VOD, callable, liveData::postValue, error -> {
-            if (error instanceof ExtractException) liveData.postValue(Result.error(error.getMessage()));
-            else liveData.postValue(Result.empty());
+        tasks.execute(type, Constant.TIMEOUT_VOD, callable, liveData::setValue, error -> {
+            if (error instanceof ExtractException) liveData.setValue(Result.error(error.getMessage()));
+            else liveData.setValue(Result.empty());
             error.printStackTrace();
         });
     }

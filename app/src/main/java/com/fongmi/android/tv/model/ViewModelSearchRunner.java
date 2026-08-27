@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.model;
 
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
@@ -51,7 +52,10 @@ final class ViewModelSearchRunner {
         futures.add(future);
         future.addCallback(Task.callback(
                 result -> {
-                    if (epoch.get() == current) onResult.accept(result);
+                    if (epoch.get() != current) return;
+                    App.post(() -> {
+                        if (epoch.get() == current) onResult.accept(result);
+                    });
                 }
         ), MoreExecutors.directExecutor());
     }

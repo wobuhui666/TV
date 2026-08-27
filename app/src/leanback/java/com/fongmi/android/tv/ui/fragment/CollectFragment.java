@@ -51,8 +51,11 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     private SiteViewModel mViewModel;
     private Collect mCollect;
     private String mKeyword;
+    private boolean mViewReady;
+    private Result mLastResult;
     private final SourceAggregator mAggregator = new SourceAggregator();
     private final List<Vod> mAggregated = new ArrayList<>();
+    private final List<Vod> mPending = new ArrayList<>();
 
     public static CollectFragment newInstance(String keyword, Collect collect) {
         Bundle args = new Bundle();
@@ -79,22 +82,38 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     @Override
     protected void initView() {
         setRecyclerView();
+        mViewReady = true;
+        restoreItems();
         setViewModel();
-        addVideo(mCollect);
     }
 
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
         selector.addPresenter(ListRow.class, new CustomRowPresenter(16), VodPresenter.class);
-        mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
-        mBinding.recycler.addOnScrollListener(mScroller = new CustomScroller(this));
+        if (mAdapter == null) mAdapter = new ArrayObjectAdapter(selector);
+        mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter));
+        if (mScroller == null) mScroller = new CustomScroller(this);
+        mBinding.recycler.addOnScrollListener(mScroller);
         mBinding.recycler.setHeader(getActivity(), R.id.recyclerPanel, R.id.recycler);
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
     }
 
+    private void restoreItems() {
+        if (mAdapter.size() == 0) {
+            if (isAllPage() && SourceSelectionSetting.getMode() != SourceSelectionMode.LEGACY && !mAggregated.isEmpty()) {
+                appendVideo(new ArrayList<>(mAggregated));
+            } else {
+                addVideo(mCollect);
+            }
+        }
+        flushPending();
+    }
+
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
-        mViewModel.getResult().observe(this, result -> {
+        mViewModel.getResult().observe(getViewLifecycleOwner(), result -> {
+            if (result == null || result == mLastResult || mScroller == null) return;
+            mLastResult = result;
             mScroller.endLoading(result);
             addVideo(result.getList());
         });
@@ -103,7 +122,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     private boolean checkLastSize(List<Vod> items) {
         if (mLast == null || items.isEmpty()) return false;
         int size = Product.getColumn() - mLast.size();
-        if (size == 0) return false;
+        if (size <= 0) return false;
         size = Math.min(size, items.size());
         mLast.addAll(mLast.size(), items.subList(0, size));
         appendVideo(items.subList(size, items.size()));
@@ -115,11 +134,23 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     }
 
     public void addVideo(List<Vod> items) {
+        if (items == null || items.isEmpty()) return;
+        if (!mViewReady || mAdapter == null) {
+            mPending.addAll(items);
+            return;
+        }
         if (isAllPage() && SourceSelectionSetting.getMode() != SourceSelectionMode.LEGACY) {
             addGroupedVideo(items);
             return;
         }
         appendVideo(items);
+    }
+
+    private void flushPending() {
+        if (mPending.isEmpty()) return;
+        List<Vod> pending = new ArrayList<>(mPending);
+        mPending.clear();
+        addVideo(pending);
     }
 
     private void addGroupedVideo(List<Vod> items) {
@@ -132,7 +163,9 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     }
 
     private void notifySourceSummaryChanges(int[] previousSourceCounts) {
+        if (mAdapter == null) return;
         int column = Product.getColumn();
+        if (column <= 0) return;
         int count = Math.min(previousSourceCounts.length, mAggregated.size());
         for (int i = 0; i < count; i++) {
             if (previousSourceCounts[i] == mAggregated.get(i).getSourceCount()) continue;
@@ -143,7 +176,9 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     }
 
     private void appendVideo(List<Vod> items) {
-        if (checkLastSize(items) || getActivity() == null || getActivity().isFinishing()) return;
+        if (items == null || items.isEmpty() || !mViewReady || mAdapter == null) return;
+        if (getActiveActivity() == null) return;
+        if (checkLastSize(items)) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, Style.rect(), getPageSpec(Style.rect()));
         for (List<Vod> part : Lists.partition(items, Product.getColumn())) {
@@ -152,6 +187,15 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
             rows.add(new ListRow(mLast));
         }
         mAdapter.addAll(mAdapter.size(), rows);
+    }
+
+    @Override
+    public void onDestroyView() {
+        mViewReady = false;
+        if (mBinding != null && mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);
+        if (mBinding != null) mBinding.recycler.setAdapter(null);
+        mBinding = null;
+        super.onDestroyView();
     }
 
     private int[] getPageSpec(Style style) {
@@ -168,15 +212,17 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     @Override
     public void onItemClick(Vod item, View poster) {
-        requireActivity().setResult(Activity.RESULT_OK);
-        if (item.isFolder()) VodActivity.start(requireActivity(), item.getSiteKey(), Result.folder(item));
-        else chooseSource(item, poster);
+        Activity activity = getActiveActivity();
+        if (activity == null) return;
+        activity.setResult(Activity.RESULT_OK);
+        if (item.isFolder()) VodActivity.start(activity, item.getSiteKey(), Result.folder(item));
+        else chooseSource(activity, item, poster);
     }
 
-    private void chooseSource(Vod item, View poster) {
+    private void chooseSource(Activity activity, Vod item, View poster) {
         List<Vod> options = item.getSourceOptions();
         if (SourceSelectionSetting.getMode() != SourceSelectionMode.GROUP_ONLY || options.size() <= 1) {
-            VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates(), poster);
+            VideoActivity.collect(activity, item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates(), poster);
             return;
         }
         String[] labels = new String[options.size()];
@@ -184,17 +230,32 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
             Vod option = options.get(i);
             labels[i] = option.getSiteName().isEmpty() ? option.getName() : option.getSiteName();
         }
-        new MaterialAlertDialogBuilder(requireActivity())
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(item.getName())
                 .setSingleChoiceItems(labels, 0, (dialog, which) -> {
+                    Activity current = getActiveActivity();
+                    if (current == null) {
+                        dialog.dismiss();
+                        return;
+                    }
                     Vod selected = options.get(which);
                     List<Vod> remaining = new ArrayList<>(options);
                     remaining.remove(which);
-                    VideoActivity.collect(requireActivity(), selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining, poster);
+                    VideoActivity.collect(current, selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining, poster);
                     dialog.dismiss();
                 })
                 .setNegativeButton(R.string.dialog_negative, null)
                 .show();
+    }
+
+    @Nullable
+    private Activity getActiveActivity() {
+        Activity activity = getActivity();
+        return !isInteractive() || activity == null || activity.isFinishing() || activity.isDestroyed() ? null : activity;
+    }
+
+    private boolean isInteractive() {
+        return mViewReady && mBinding != null && isAdded() && !isHidden() && getUserVisibleHint();
     }
 
     @Override
@@ -204,7 +265,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     @Override
     public boolean onLoadMore(String page) {
-        if (mCollect == null || isAllPage()) return false;
+        if (!isInteractive() || mCollect == null || mViewModel == null || isAllPage()) return false;
         mViewModel.searchContent(mCollect.getSite(), getKeyword(), false, page);
         return true;
     }

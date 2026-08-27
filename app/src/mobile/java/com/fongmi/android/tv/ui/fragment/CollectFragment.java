@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.fragment;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -11,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.MenuProvider;
+import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -47,6 +49,7 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     private CustomScroller mScroller;
     private SiteViewModel mViewModel;
     private List<Site> mSites;
+    private boolean mViewReady;
     private final SourceAggregator mAggregator = new SourceAggregator();
     private final List<Vod> mAggregated = new ArrayList<>();
 
@@ -69,7 +72,7 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     @Override
     protected void initMenu() {
-        if (isHidden()) return;
+        if (mBinding == null || isHidden()) return;
         AppCompatActivity activity = (AppCompatActivity) requireActivity();
         activity.setSupportActionBar(mBinding.toolbar);
         activity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -81,6 +84,8 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     protected void initView() {
         mScroller = new CustomScroller(this);
         setRecyclerView();
+        mViewReady = true;
+        mAggregated.clear();
         setViewModel();
         setSites();
         setWidth();
@@ -109,8 +114,8 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class).init();
-        mViewModel.getSearch().observe(this, this::setCollect);
-        mViewModel.getResult().observe(this, this::setSearch);
+        mViewModel.getSearch().observe(getViewLifecycleOwner(), this::setCollect);
+        mViewModel.getResult().observe(getViewLifecycleOwner(), this::setSearch);
     }
 
     private void setSites() {
@@ -131,8 +136,10 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     }
 
     private void search() {
-        if (mSites.isEmpty()) return;
-        mCollectAdapter.setItems(List.of(Collect.all()), () -> mViewModel.searchContent(mSites, getKeyword(), false));
+        if (!mViewReady || mSites == null || mSites.isEmpty() || mCollectAdapter == null || mViewModel == null) return;
+        mCollectAdapter.reset(() -> {
+            if (mViewReady && mViewModel != null) mViewModel.searchContent(mSites, getKeyword(), false);
+        });
     }
 
     private int getCount() {
@@ -142,43 +149,51 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
     }
 
     private void setCollect(Result result) {
-        if (result == null || result.getList().isEmpty()) return;
+        if (!mViewReady || mCollectAdapter == null || mSearchAdapter == null || result == null || result.getList().isEmpty()) return;
         if (mCollectAdapter.getPosition() == 0) {
-            if (SourceSelectionSetting.getMode() == SourceSelectionMode.LEGACY) mSearchAdapter.addAll(result.getList());
+            if (SourceSelectionSetting.getMode() == SourceSelectionMode.LEGACY) mSearchAdapter.append(result.getList());
             else {
                 mAggregator.mergeInto(mAggregated, result.getList());
-                mSearchAdapter.setItems(new ArrayList<>(mAggregated));
+                mSearchAdapter.replace(new ArrayList<>(mAggregated));
             }
         }
-        mCollectAdapter.add(Collect.create(result.getList()));
         mCollectAdapter.add(result.getList());
     }
 
     private void setSearch(Result result) {
-        if (result == null) return;
+        if (!mViewReady || mScroller == null || mCollectAdapter == null || mSearchAdapter == null || result == null) return;
         mScroller.endLoading(result);
-        boolean same = !result.getList().isEmpty() && mCollectAdapter.getActivated().getSite().equals(result.getVod().getSite());
-        if (same) mCollectAdapter.getActivated().getList().addAll(result.getList());
-        if (same) mSearchAdapter.addAll(result.getList());
+        if (mCollectAdapter.getItemCount() == 0 || result.getList().isEmpty()) return;
+        Collect activated = mCollectAdapter.getActivated();
+        boolean same = activated != null && activated.getSite().equals(result.getVod().getSite());
+        if (same) activated.getList().addAll(result.getList());
+        if (same) mSearchAdapter.append(result.getList());
     }
 
     @Override
     public void onItemClick(int position, Collect item) {
-        mSearchAdapter.setItems(item.getList(), () -> mBinding.recycler.scrollToPosition(0));
+        if (!mViewReady || mBinding == null || mCollectAdapter == null || mSearchAdapter == null || mScroller == null || item == null) return;
+        if (position < 0 || position >= mCollectAdapter.getItemCount()) return;
+        SearchAdapter adapter = mSearchAdapter;
+        adapter.replace(item.getList(), () -> {
+            if (mViewReady && mBinding != null && mSearchAdapter == adapter) mBinding.recycler.scrollToPosition(0);
+        });
         mCollectAdapter.setSelected(position);
         mScroller.setPage(item.getPage());
     }
 
     @Override
     public void onItemClick(Vod item) {
-        if (item.isFolder()) FolderActivity.start(requireActivity(), item.getSiteKey(), Result.folder(item));
-        else chooseSource(item);
+        Activity activity = getActiveActivity();
+        if (activity == null || item == null) return;
+        if (item.isFolder()) FolderActivity.start(activity, item.getSiteKey(), Result.folder(item));
+        else chooseSource(activity, item);
     }
 
-    private void chooseSource(Vod item) {
+    private void chooseSource(Activity activity, Vod item) {
         List<Vod> options = item.getSourceOptions();
         if (SourceSelectionSetting.getMode() != SourceSelectionMode.GROUP_ONLY || options.size() <= 1) {
-            VideoActivity.collect(requireActivity(), item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates());
+            VideoActivity.collect(activity, item.getSiteKey(), item.getId(), item.getName(), item.getPic(), item.getSourceCandidates());
             return;
         }
         String[] labels = new String[options.size()];
@@ -186,13 +201,18 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
             Vod option = options.get(i);
             labels[i] = option.getSiteName().isEmpty() ? option.getName() : option.getSiteName();
         }
-        new MaterialAlertDialogBuilder(requireActivity())
+        new MaterialAlertDialogBuilder(activity)
                 .setTitle(item.getName())
                 .setSingleChoiceItems(labels, 0, (dialog, which) -> {
+                    Activity current = getActiveActivity();
+                    if (current == null) {
+                        dialog.dismiss();
+                        return;
+                    }
                     Vod selected = options.get(which);
                     List<Vod> remaining = new ArrayList<>(options);
                     remaining.remove(which);
-                    VideoActivity.collect(requireActivity(), selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining);
+                    VideoActivity.collect(current, selected.getSiteKey(), selected.getId(), selected.getName(), selected.getPic(), remaining);
                     dialog.dismiss();
                 })
                 .setNegativeButton(R.string.dialog_negative, null)
@@ -201,8 +221,9 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     @Override
     public boolean onLoadMore(String page) {
+        if (!isInteractive() || mCollectAdapter == null || mViewModel == null || mScroller == null || mCollectAdapter.getItemCount() == 0) return false;
         Collect activated = mCollectAdapter.getActivated();
-        if ("all".equals(activated.getSite().getKey())) return false;
+        if (activated == null || "all".equals(activated.getSite().getKey())) return false;
         mViewModel.searchContent(activated.getSite(), getKeyword(), false, page);
         activated.setPage(Integer.parseInt(page));
         return true;
@@ -214,20 +235,41 @@ public class CollectFragment extends BaseFragment implements MenuProvider, Colle
 
     @Override
     public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
-        if (menuItem.getItemId() == android.R.id.home) requireActivity().getOnBackPressedDispatcher().onBackPressed();
+        FragmentActivity activity = getActiveActivity();
+        if (activity != null && menuItem.getItemId() == android.R.id.home) activity.getOnBackPressedDispatcher().onBackPressed();
         return true;
     }
 
     @Override
     public void onHiddenChanged(boolean hidden) {
-        if (hidden) requireActivity().removeMenuProvider(this);
-        else initMenu();
+        if (hidden) {
+            Activity activity = getActivity();
+            if (activity instanceof AppCompatActivity appCompatActivity) appCompatActivity.removeMenuProvider(this);
+        } else if (mViewReady) initMenu();
     }
 
     @Override
     public void onDestroyView() {
+        mViewReady = false;
+        if (mBinding != null && mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);
+        if (mBinding != null) mBinding.recycler.setAdapter(null);
+        if (mViewModel != null) mViewModel.stopSearch();
+        Activity activity = getActivity();
+        if (activity instanceof AppCompatActivity appCompatActivity) appCompatActivity.removeMenuProvider(this);
+        mCollectAdapter = null;
+        mSearchAdapter = null;
+        mScroller = null;
+        mBinding = null;
         super.onDestroyView();
-        mViewModel.stopSearch();
-        requireActivity().removeMenuProvider(this);
+    }
+
+    @Nullable
+    private FragmentActivity getActiveActivity() {
+        FragmentActivity activity = getActivity();
+        return !isInteractive() || activity == null || activity.isFinishing() || activity.isDestroyed() ? null : activity;
+    }
+
+    private boolean isInteractive() {
+        return mViewReady && mBinding != null && isAdded() && !isHidden() && getUserVisibleHint();
     }
 }

@@ -72,16 +72,16 @@ public class LiveViewModel extends ViewModel {
             return item;
         }, result -> {
             setTimeZone(result);
-            live.postValue(result);
+            live.setValue(result);
         }, this::handleParseError);
     }
 
     public void parseXml(Live item) {
-        execute(TaskType.XML, () -> LiveApi.parseXml(item), xml::postValue, error -> xml.postValue(false));
+        execute(TaskType.XML, () -> LiveApi.parseXml(item), xml::setValue, error -> xml.setValue(false));
     }
 
     public void getEpg(Channel item) {
-        execute(TaskType.EPG, () -> LiveApi.getEpg(item, zoneId), epg::postValue, error -> epg.postValue(new Epg()));
+        execute(TaskType.EPG, () -> LiveApi.getEpg(item, zoneId), epg::setValue, error -> epg.setValue(new Epg()));
     }
 
     public void getUrl(Channel item) {
@@ -106,12 +106,12 @@ public class LiveViewModel extends ViewModel {
 
     private void postUrl(Result result, long startPositionMs) {
         if (startPositionMs != C.TIME_UNSET) result.setPosition(startPositionMs);
-        url.postValue(result);
+        url.setValue(result);
     }
 
     private void handleParseError(Throwable t) {
         if (t instanceof ExtractException) postUrl(Result.error(t.getMessage()), C.TIME_UNSET);
-        else live.postValue(new Live());
+        else live.setValue(new Live());
     }
 
     private void handleUrlError(Throwable t, long startPositionMs) {

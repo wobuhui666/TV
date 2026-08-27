@@ -60,6 +60,10 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     private List<Filter> mFilters;
     private boolean headerVisible;
     private boolean filterVisible;
+    private boolean mViewReady;
+    private boolean mPendingRefresh;
+    private int mFilterGeneration;
+    private Boolean mPendingFilter;
 
     public static TypeFragment newInstance(String key, String typeId, Style style, HashMap<String, String> extend, boolean folder) {
         Bundle args = new Bundle();
@@ -116,9 +120,19 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         mExtends = getExtend();
         mFilters = getFilter();
         setRecyclerView();
-        setViewModel();
         setFilters();
+        mViewReady = true;
+        applyPendingState();
+        setViewModel();
+        mPendingRefresh = false;
         getVideo();
+    }
+
+    private void applyPendingState() {
+        Boolean pendingFilter = mPendingFilter != null ? mPendingFilter : filterVisible;
+        mPendingFilter = null;
+        filterVisible = false;
+        if (Boolean.TRUE.equals(pendingFilter)) toggleFilter(true);
     }
 
     @Override
@@ -161,6 +175,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void getVideo() {
+        if (!mViewReady || mBinding == null || mAdapter == null || mScroller == null || mViewModel == null) return;
         mLast = null;
         checkFilter();
         mScroller.reset();
@@ -168,10 +183,12 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void getVideo(String typeId, String page) {
+        if (!mViewReady || mViewModel == null) return;
         mViewModel.categoryContent(getKey(), typeId, page, true, mExtends);
     }
 
     private void setAdapter(Result result) {
+        if (!mViewReady || mBinding == null || mAdapter == null || mScroller == null || result == null) return;
         boolean first = mScroller.first();
         boolean flag = mExtends.isEmpty();
         int size = result.getList().size();
@@ -182,6 +199,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void addVideo(Result result) {
+        if (!mViewReady || mBinding == null || mAdapter == null || result == null) return;
         Style style = result.getStyle(getStyle());
         if (style.isList()) mAdapter.addAll(mAdapter.size(), result.getList());
         else addGrid(result.getList(), style);
@@ -189,14 +207,17 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void checkMore() {
+        if (!mViewReady || mAdapter == null || mScroller == null) return;
         if (mScroller.isDisable() || mAdapter.size() >= 5) return;
         mScroller.checkMore();
     }
 
     private boolean checkLastSize(List<Vod> items, Style style) {
         if (mLast == null || items.isEmpty()) return false;
-        int size = Product.getColumn(style) - mLast.size();
-        if (size == 0) return false;
+        int column = Product.getColumn(style);
+        if (column <= 0) return false;
+        int size = column - mLast.size();
+        if (size <= 0) return false;
         size = Math.min(size, items.size());
         mLast.addAll(mLast.size(), items.subList(0, size));
         addGrid(items.subList(size, items.size()), style);
@@ -205,9 +226,11 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     private void addGrid(List<Vod> items, Style style) {
         if (checkLastSize(items, style)) return;
+        int column = Product.getColumn(style);
+        if (column <= 0 || items.isEmpty()) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, style, getPageSpec(style));
-        for (List<Vod> part : Lists.partition(items, Product.getColumn(style))) {
+        for (List<Vod> part : Lists.partition(items, column)) {
             mLast = new ArrayObjectAdapter(presenter);
             mLast.addAll(0, part);
             rows.add(new ListRow(mLast));
@@ -230,26 +253,36 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return new ListRow(adapter);
     }
 
-    private void showFilter() {
+    private void showFilter(int generation) {
+        if (!mViewReady || mBinding == null || mAdapter == null || mFilters == null) return;
         List<ListRow> rows = new ArrayList<>();
         for (Filter filter : mFilters) rows.add(getRow(filter));
         mBinding.recycler.postDelayed(() -> {
+            if (!mViewReady || mBinding == null || mAdapter == null || !filterVisible || generation != mFilterGeneration) return;
             mBinding.recycler.scrollToPosition(0);
-            requestRecyclerFocus(0);
+            requestRecyclerFocus(0, generation);
         }, 48);
         mAdapter.addAll(0, rows);
     }
 
     private void hideFilter() {
+        if (!mViewReady || mBinding == null || mAdapter == null || mFilters == null) return;
         boolean restoreFocus = mBinding.recycler.hasFocus() && mBinding.recycler.getSelectedPosition() < mFilters.size();
         mAdapter.removeItems(0, mFilters.size());
         if (restoreFocus) requestRecyclerFocus(0);
     }
 
     public void toggleFilter(boolean visible) {
+        if (!mViewReady || mBinding == null || mAdapter == null || mFilters == null) {
+            mPendingFilter = visible;
+            return;
+        }
         if (mFilters.isEmpty()) return;
+        mPendingFilter = null;
+        if (filterVisible == visible) return;
         this.filterVisible = visible;
-        if (visible) showFilter();
+        int generation = ++mFilterGeneration;
+        if (visible) showFilter(generation);
         else hideFilter();
     }
 
@@ -265,6 +298,11 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     public void onRefresh() {
+        if (!mViewReady || mBinding == null || mAdapter == null || mScroller == null || mViewModel == null) {
+            mPendingRefresh = true;
+            return;
+        }
+        mPendingRefresh = false;
         getVideo();
     }
 
@@ -275,6 +313,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     @Override
     public void onItemClick(Vod item, View poster) {
+        if (!isInteractive() || mViewModel == null || item == null) return;
         if (item.isAction()) {
             mViewModel.action(getKey(), item.getAction());
         } else if (item.isFolder()) {
@@ -288,6 +327,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     @Override
     public boolean onLongClick(Vod item) {
+        if (!isInteractive() || item == null) return false;
         if (item.isAction() || item.isFolder()) return false;
         CollectActivity.start(requireActivity(), item.getName());
         return true;
@@ -295,13 +335,20 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     @Override
     public boolean onLoadMore(String page) {
+        if (!isInteractive() || mViewModel == null || mScroller == null) return false;
         getVideo(getTypeId(), page);
         return true;
+    }
+
+    private boolean isInteractive() {
+        FolderFragment parent = getParent();
+        return mViewReady && mBinding != null && isAdded() && !isHidden() && getUserVisibleHint() && parent.isAdded() && !parent.isHidden() && parent.getUserVisibleHint();
     }
 
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
+        if (!mViewReady || mBinding == null) return;
         if (hidden) {
             mBinding.recycler.showHeader();
         } else {
@@ -316,13 +363,21 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void requestRecyclerFocus(int position) {
+        requestRecyclerFocus(position, -1);
+    }
+
+    private void requestRecyclerFocus(int position, int filterGeneration) {
+        if (!mViewReady || mBinding == null || mAdapter == null) return;
         mBinding.recycler.post(() -> {
-            if (mAdapter.size() == 0 || !mBinding.recycler.isShown() || !mBinding.recycler.isEnabled()) return;
+            if (filterGeneration >= 0 && (!filterVisible || filterGeneration != mFilterGeneration)) return;
+            if (!mViewReady || mBinding == null || mAdapter == null || mAdapter.size() == 0 || !mBinding.recycler.isShown() || !mBinding.recycler.isEnabled()) return;
             int target = position == RecyclerView.NO_POSITION ? mBinding.recycler.getSelectedPosition() : position;
             target = Math.max(0, Math.min(target, mAdapter.size() - 1));
             mBinding.recycler.setSelectedPosition(target);
             int focusTarget = target;
             mBinding.recycler.postDelayed(() -> {
+                if (filterGeneration >= 0 && (!filterVisible || filterGeneration != mFilterGeneration)) return;
+                if (!mViewReady || mBinding == null || mAdapter == null) return;
                 RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(focusTarget);
                 View focus = holder == null ? null : findFocusable(holder.itemView);
                 if (focus != null && focus.requestFocus()) return;
@@ -345,6 +400,18 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
-        if (mBinding != null) mBinding.recycler.moveToTop();
+        if (mViewReady && mBinding != null) mBinding.recycler.moveToTop();
+    }
+
+    @Override
+    public void onDestroyView() {
+        mViewReady = false;
+        mFilterGeneration++;
+        if (mBinding != null && mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);
+        mBinding = null;
+        mAdapter = null;
+        mLast = null;
+        mScroller = null;
+        super.onDestroyView();
     }
 }

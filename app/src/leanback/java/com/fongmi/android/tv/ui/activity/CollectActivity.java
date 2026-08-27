@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.fragment.app.FragmentStatePagerAdapter;
 import androidx.leanback.widget.OnChildViewHolderSelectedListener;
 import androidx.lifecycle.ViewModelProvider;
@@ -22,6 +23,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Collect;
 import com.fongmi.android.tv.bean.Site;
+import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.ActivityCollectBinding;
 import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.setting.Setting;
@@ -38,9 +40,12 @@ public class CollectActivity extends BaseActivity {
 
     private ActivityCollectBinding mBinding;
     private CollectAdapter mAdapter;
+    private PageAdapter mPageAdapter;
     private SiteViewModel mViewModel;
     private List<Site> mSites;
     private View mOldView;
+    private boolean mSearchStarted;
+    private final List<Vod> mPending = new ArrayList<>();
 
     public static void start(Activity activity, String keyword) {
         Intent intent = new Intent(activity, CollectActivity.class);
@@ -50,8 +55,8 @@ public class CollectActivity extends BaseActivity {
 
     @Nullable
     private CollectFragment getFragment() {
-        if (mBinding.pager.getAdapter() == null || mAdapter.getItemCount() == 0) return null;
-        return (CollectFragment) mBinding.pager.getAdapter().instantiateItem(mBinding.pager, 0);
+        if (isInactive() || mPageAdapter == null) return null;
+        return mPageAdapter.getAllFragment();
     }
 
     private String getKeyword() {
@@ -67,6 +72,9 @@ public class CollectActivity extends BaseActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         getIntent().putExtras(intent);
+        mSearchStarted = false;
+        if (mViewModel != null) mViewModel.stopSearch();
+        mPending.clear();
         mAdapter.clear();
         setPager();
         search();
@@ -87,8 +95,10 @@ public class CollectActivity extends BaseActivity {
         mBinding.pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
+                if (isInactive()) return;
                 int safePosition = clampPosition(position);
                 if (safePosition == RecyclerView.NO_POSITION) return;
+                if (safePosition == 0) flushPending();
                 mBinding.recycler.setSelectedPosition(safePosition);
                 requestRecyclerFocus();
             }
@@ -115,15 +125,27 @@ public class CollectActivity extends BaseActivity {
     }
 
     private void setViewModel() {
-        mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
+        mViewModel = new ViewModelProvider(this).get(SiteViewModel.class).init();
         mViewModel.getSearch().observe(this, result -> {
-            if (result.getList().isEmpty()) return;
-            CollectFragment fragment = getFragment();
-            if (fragment == null) return;
-            fragment.addVideo(result.getList());
-            mAdapter.add(Collect.create(result.getList()));
-            mBinding.pager.getAdapter().notifyDataSetChanged();
+            if (isInactive() || !mSearchStarted || result == null || result.getList().isEmpty()) return;
+            List<Vod> items = result.getList();
+            mPending.addAll(items);
+            mAdapter.add(Collect.create(items));
+            if (mBinding.pager.getAdapter() != null) mBinding.pager.getAdapter().notifyDataSetChanged();
+            flushPending();
+            mBinding.pager.post(this::flushPending);
         });
+    }
+
+    private void flushPending() {
+        flushPending(getFragment());
+    }
+
+    private void flushPending(@Nullable CollectFragment fragment) {
+        if (fragment == null || mPending.isEmpty()) return;
+        List<Vod> items = new ArrayList<>(mPending);
+        mPending.clear();
+        fragment.addVideo(items);
     }
 
     private void saveKeyword() {
@@ -139,18 +161,34 @@ public class CollectActivity extends BaseActivity {
     }
 
     private void setPager() {
-        mBinding.pager.setAdapter(new PageAdapter(getSupportFragmentManager()));
+        disposePages();
+        mBinding.pager.setAdapter(mPageAdapter = new PageAdapter(getSupportFragmentManager()));
+    }
+
+    private void disposePages() {
+        FragmentManager manager = getSupportFragmentManager();
+        if (manager.isDestroyed()) return;
+        FragmentTransaction transaction = manager.beginTransaction();
+        boolean changed = false;
+        for (Fragment fragment : manager.getFragments()) {
+            if (!(fragment instanceof CollectFragment) || !fragment.isAdded()) continue;
+            transaction.remove(fragment);
+            changed = true;
+        }
+        if (changed) transaction.commitNowAllowingStateLoss();
     }
 
     private void search() {
-        if (mSites.isEmpty()) return;
+        if (isInactive() || mSites == null || mSites.isEmpty() || mAdapter == null || mViewModel == null) return;
         mAdapter.add(Collect.all());
+        mSearchStarted = true;
         requestRecyclerFocus();
-        mBinding.pager.getAdapter().notifyDataSetChanged();
+        if (mBinding.pager.getAdapter() != null) mBinding.pager.getAdapter().notifyDataSetChanged();
         mViewModel.searchContent(mSites, getKeyword(), false);
     }
 
     private void onChildSelected(@Nullable RecyclerView.ViewHolder child) {
+        if (isInactive()) return;
         if (mOldView != null) mOldView.setSelected(false);
         if ((mOldView = child != null ? child.itemView : null) == null) return;
         mOldView.setSelected(true);
@@ -160,12 +198,14 @@ public class CollectActivity extends BaseActivity {
     private final Runnable mRunnable = new Runnable() {
         @Override
         public void run() {
+            if (isInactive()) return;
             int position = clampPosition(mBinding.recycler.getSelectedPosition());
             if (position != RecyclerView.NO_POSITION) mBinding.pager.setCurrentItem(position);
         }
     };
 
     private int clampPosition(int position) {
+        if (mAdapter == null) return RecyclerView.NO_POSITION;
         int size = mAdapter.getItemCount();
         if (size <= 0) return RecyclerView.NO_POSITION;
         if (position < 0) return 0;
@@ -174,10 +214,12 @@ public class CollectActivity extends BaseActivity {
 
     private void requestRecyclerFocus() {
         mBinding.recycler.post(() -> {
+            if (isInactive()) return;
             int position = clampPosition(mBinding.recycler.getSelectedPosition());
             if (position == RecyclerView.NO_POSITION || !canRequestFocus(mBinding.recycler)) return;
             mBinding.recycler.setSelectedPosition(position);
             mBinding.recycler.postDelayed(() -> {
+                if (isInactive()) return;
                 RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(position);
                 View target = holder == null ? null : findFocusable(holder.itemView);
                 if (target != null && target.requestFocus()) return;
@@ -207,7 +249,22 @@ public class CollectActivity extends BaseActivity {
         super.onBackInvoked();
     }
 
+    @Override
+    protected void onDestroy() {
+        mSearchStarted = false;
+        App.removeCallbacks(mRunnable);
+        if (mViewModel != null) mViewModel.stopSearch();
+        mPending.clear();
+        super.onDestroy();
+    }
+
+    private boolean isInactive() {
+        return isFinishing() || isDestroyed();
+    }
+
     class PageAdapter extends FragmentStatePagerAdapter {
+
+        private CollectFragment mAllFragment;
 
         public PageAdapter(@NonNull FragmentManager fm) {
             super(fm);
@@ -223,7 +280,20 @@ public class CollectActivity extends BaseActivity {
 
         @Override
         public int getCount() {
-            return mAdapter.getItemCount();
+            return mAdapter == null ? 0 : mAdapter.getItemCount();
+        }
+
+        @Override
+        public void setPrimaryItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
+            super.setPrimaryItem(container, position, object);
+            if (position != 0 || !(object instanceof CollectFragment fragment)) return;
+            mAllFragment = fragment;
+            flushPending(fragment);
+        }
+
+        @Nullable
+        private CollectFragment getAllFragment() {
+            return mAllFragment;
         }
 
         @Override
