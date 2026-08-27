@@ -11,9 +11,13 @@ import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterSearchBinding;
 import com.fongmi.android.tv.utils.ImgUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SearchAdapter extends BaseDiffAdapter<Vod, SearchAdapter.ViewHolder> {
 
     private final OnClickListener listener;
+    private final List<Vod> items = new ArrayList<>();
 
     public SearchAdapter(OnClickListener listener) {
         this.listener = listener;
@@ -22,6 +26,22 @@ public class SearchAdapter extends BaseDiffAdapter<Vod, SearchAdapter.ViewHolder
     public interface OnClickListener {
 
         void onItemClick(Vod item);
+    }
+
+    public void replace(List<Vod> vods) {
+        replace(vods, null);
+    }
+
+    public void replace(List<Vod> vods, Runnable runnable) {
+        items.clear();
+        if (vods != null) items.addAll(vods);
+        setItems(new ArrayList<>(items), runnable);
+    }
+
+    public void append(List<Vod> vods) {
+        if (vods == null || vods.isEmpty()) return;
+        items.addAll(vods);
+        setItems(new ArrayList<>(items));
     }
 
     @NonNull
@@ -38,7 +58,10 @@ public class SearchAdapter extends BaseDiffAdapter<Vod, SearchAdapter.ViewHolder
         holder.binding.remark.setText(item.getSourceSummary());
         holder.binding.site.setVisibility(item.getSiteVisible());
         holder.binding.remark.setVisibility(item.getRemarkVisible());
-        holder.binding.getRoot().setOnClickListener(v -> listener.onItemClick(item));
+        holder.binding.getRoot().setOnClickListener(v -> {
+            int adapterPosition = holder.getBindingAdapterPosition();
+            if (adapterPosition >= 0 && adapterPosition < getItemCount()) listener.onItemClick(getItem(adapterPosition));
+        });
         ImgUtil.load(item.getName(), item.getPic(), holder.binding.image);
     }
 

@@ -8,6 +8,7 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
@@ -56,8 +57,10 @@ public class FolderActivity extends BaseActivity {
         getSupportFragmentManager().beginTransaction().replace(R.id.container, FolderFragment.newInstance(getKey(), type, 8), "0").commit();
     }
 
+    @Nullable
     private FolderFragment getFragment() {
-        return (FolderFragment) getSupportFragmentManager().findFragmentByTag("0");
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("0");
+        return fragment instanceof FolderFragment ? (FolderFragment) fragment : null;
     }
 
     @Override
@@ -68,7 +71,8 @@ public class FolderActivity extends BaseActivity {
 
     @Override
     protected void onBackInvoked() {
-        if (getFragment().canBack()) getFragment().goBack();
+        FolderFragment fragment = getFragment();
+        if (fragment != null && fragment.canBack()) fragment.goBack();
         else super.onBackInvoked();
     }
 }

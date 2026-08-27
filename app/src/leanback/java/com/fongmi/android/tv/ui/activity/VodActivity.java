@@ -38,6 +38,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     private ActivityVodBinding mBinding;
     private TypeAdapter mAdapter;
+    private PageAdapter mPageAdapter;
     private View mOldView;
 
     public static void start(Activity activity, Result result) {
@@ -62,15 +63,22 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     @Nullable
     private Class getType() {
+        if (isInactive() || mBinding == null || mAdapter == null) return null;
         int position = clampPosition(mBinding.pager.getCurrentItem());
         return position == RecyclerView.NO_POSITION ? null : mAdapter.get(position);
     }
 
     @Nullable
     private FolderFragment getFragment() {
-        int position = clampPosition(mBinding.pager.getCurrentItem());
-        if (position == RecyclerView.NO_POSITION || mBinding.pager.getAdapter() == null) return null;
-        return (FolderFragment) mBinding.pager.getAdapter().instantiateItem(mBinding.pager, position);
+        if (isInactive() || mBinding == null || mAdapter == null) return null;
+        return getFragment(mBinding.pager.getCurrentItem());
+    }
+
+    @Nullable
+    private FolderFragment getFragment(int position) {
+        if (isInactive() || mBinding == null || mAdapter == null || mPageAdapter == null) return null;
+        position = clampPosition(position);
+        return position == RecyclerView.NO_POSITION ? null : mPageAdapter.getCurrentFragment(position);
     }
 
     @Override
@@ -90,6 +98,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         mBinding.pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
+                if (isInactive()) return;
                 int safePosition = clampPosition(position);
                 if (safePosition == RecyclerView.NO_POSITION) return;
                 mBinding.recycler.setSelectedPosition(safePosition);
@@ -116,10 +125,11 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     private void setPager() {
-        mBinding.pager.setAdapter(new PageAdapter(getSupportFragmentManager()));
+        mBinding.pager.setAdapter(mPageAdapter = new PageAdapter(getSupportFragmentManager()));
     }
 
     private void onChildSelected(@Nullable RecyclerView.ViewHolder child) {
+        if (isInactive()) return;
         if (mOldView != null) mOldView.setSelected(false);
         if ((mOldView = child != null ? child.itemView : null) == null) return;
         mOldView.setSelected(true);
@@ -129,12 +139,14 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     private final Runnable mRunnable = new Runnable() {
         @Override
         public void run() {
+            if (isInactive()) return;
             int position = clampPosition(mBinding.recycler.getSelectedPosition());
             if (position != RecyclerView.NO_POSITION) mBinding.pager.setCurrentItem(position);
         }
     };
 
     private int clampPosition(int position) {
+        if (mAdapter == null) return RecyclerView.NO_POSITION;
         int size = mAdapter.getItemCount();
         if (size <= 0) return RecyclerView.NO_POSITION;
         if (position < 0) return 0;
@@ -142,11 +154,14 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     private void requestRecyclerFocus() {
+        if (isInactive() || mBinding == null || mAdapter == null) return;
         mBinding.recycler.post(() -> {
+            if (isInactive() || mBinding == null || mAdapter == null) return;
             int position = clampPosition(mBinding.recycler.getSelectedPosition());
             if (position == RecyclerView.NO_POSITION || !canRequestFocus(mBinding.recycler)) return;
             mBinding.recycler.setSelectedPosition(position);
             mBinding.recycler.postDelayed(() -> {
+                if (isInactive() || mBinding == null || mAdapter == null) return;
                 RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(position);
                 View target = holder == null ? null : findFocusable(holder.itemView);
                 if (target != null && target.requestFocus()) return;
@@ -170,16 +185,31 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         return view != null && view.isShown() && view.isEnabled();
     }
 
-    private boolean isFilterVisible() {
-        return Optional.ofNullable(getType()).map(Class::getFilter).orElse(false);
+    private void updateFilter() {
+        Class item = mBinding != null && mBinding.recycler.hasFocus() ? getSelectedType() : getType();
+        Optional.ofNullable(item).ifPresent(this::updateFilter);
     }
 
-    private void updateFilter() {
-        Optional.ofNullable(getType()).ifPresent(this::updateFilter);
+    @Nullable
+    private Class getSelectedType() {
+        if (isInactive() || mBinding == null || mAdapter == null) return null;
+        int position = clampPosition(mBinding.recycler.getSelectedPosition());
+        return position == RecyclerView.NO_POSITION ? null : mAdapter.get(position);
+    }
+
+    @Nullable
+    private FolderFragment showFragment(Class item) {
+        if (isInactive() || item == null || mBinding == null || mAdapter == null) return null;
+        int position = mAdapter.indexOf(item);
+        if (position < 0 || position >= mAdapter.getItemCount()) return null;
+        App.removeCallbacks(mRunnable);
+        mBinding.pager.setCurrentItem(position);
+        return getFragment(position);
     }
 
     private void updateFilter(Class item) {
-        FolderFragment fragment = getFragment();
+        if (isInactive() || item == null) return;
+        FolderFragment fragment = showFragment(item);
         if (fragment == null) return;
         item.setFilter(!item.getFilter());
         fragment.toggleFilter(item.getFilter());
@@ -188,34 +218,41 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
     }
 
     public void closeFilter() {
-        if (isFilterVisible()) updateFilter();
+        Class item = getType();
+        if (item != null && item.getFilter()) updateFilter(item);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
+        if (isInactive() || event == null) return;
         if (event.getType() == RefreshEvent.Type.CATEGORY) Optional.ofNullable(getFragment()).ifPresent(FolderFragment::onRefresh);
     }
 
     @Override
     public void onItemClick(Class item) {
+        if (isInactive()) return;
         updateFilter(item);
     }
 
     @Override
     public void onRefresh(Class item) {
-        Optional.ofNullable(getFragment()).ifPresent(FolderFragment::onRefresh);
+        if (isInactive()) return;
+        Optional.ofNullable(showFragment(item)).ifPresent(FolderFragment::onRefresh);
     }
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (isInactive()) return super.dispatchKeyEvent(event);
         if (KeyUtil.isMenuKey(event)) updateFilter();
         return super.dispatchKeyEvent(event);
     }
 
     @Override
     protected void onBackInvoked() {
+        if (isInactive()) return;
+        Class item = getType();
         FolderFragment fragment = getFragment();
-        if (isFilterVisible()) updateFilter();
+        if (item != null && item.getFilter()) updateFilter(item);
         else if (fragment != null && fragment.canBack()) fragment.goBack();
         else super.onBackInvoked();
     }
@@ -236,11 +273,37 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
         @Override
         public int getCount() {
-            return mAdapter.getItemCount();
+            return mAdapter == null ? 0 : mAdapter.getItemCount();
+        }
+
+        @Override
+        public void setPrimaryItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
+            super.setPrimaryItem(container, position, object);
+            if (!(object instanceof FolderFragment fragment)) return;
+            mCurrentFragment = fragment;
+            mCurrentPosition = position;
+        }
+
+        @Nullable
+        private FolderFragment getCurrentFragment(int position) {
+            return mCurrentPosition == position ? mCurrentFragment : null;
         }
 
         @Override
         public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
         }
+
+        private FolderFragment mCurrentFragment;
+        private int mCurrentPosition = -1;
+    }
+
+    @Override
+    protected void onDestroy() {
+        App.removeCallbacks(mRunnable);
+        super.onDestroy();
+    }
+
+    private boolean isInactive() {
+        return isFinishing() || isDestroyed();
     }
 }

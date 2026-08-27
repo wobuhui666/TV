@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.viewbinding.ViewBinding;
 
@@ -23,6 +24,8 @@ import java.util.Optional;
 public class FolderFragment extends BaseFragment {
 
     private FragmentFolderBinding mBinding;
+    private Boolean mPendingFilter;
+    private boolean mPendingRefresh;
     private Class mType;
 
     public static FolderFragment newInstance(String key, Class type) {
@@ -58,7 +61,8 @@ public class FolderFragment extends BaseFragment {
     @Override
     protected void initView() {
         mType = getType();
-        getChildFragmentManager().beginTransaction().replace(R.id.container, TypeFragment.newInstance(getKey(), mType.getTypeId(), mType.getStyle(), getExtend(), mType.isFolder())).commit();
+        if (mPendingFilter == null) mPendingFilter = mType.getFilter();
+        getChildFragmentManager().beginTransaction().replace(R.id.container, TypeFragment.newInstance(getKey(), mType.getTypeId(), mType.getStyle(), getExtend(), mType.isFolder())).runOnCommit(this::applyPendingState).commit();
     }
 
     private HashMap<String, String> getExtend() {
@@ -68,21 +72,50 @@ public class FolderFragment extends BaseFragment {
     }
 
     public void openFolder(String typeId, HashMap<String, String> extend) {
+        FragmentManager manager = getChildFragmentManager();
+        if (mType == null || !isAdded() || isHidden() || !getUserVisibleHint() || manager.isStateSaved()) return;
         TypeFragment next = TypeFragment.newInstance(getKey(), typeId, mType.getStyle(), extend, mType.isFolder());
-        FragmentTransaction ft = getChildFragmentManager().beginTransaction();
+        FragmentTransaction ft = manager.beginTransaction();
         Optional.ofNullable(getParent()).ifPresent(VodActivity::closeFilter);
         Optional.ofNullable(getChild()).ifPresent(ft::hide);
         ft.add(R.id.container, next);
         ft.addToBackStack(null);
         ft.commit();
+        manager.executePendingTransactions();
     }
 
     public void toggleFilter(boolean visible) {
-        Optional.ofNullable(getChild()).ifPresent(f -> f.toggleFilter(visible));
+        TypeFragment child = getChild();
+        if (child == null) {
+            mPendingFilter = visible;
+            return;
+        }
+        mPendingFilter = null;
+        child.toggleFilter(visible);
+    }
+
+    private void applyPendingState() {
+        TypeFragment child = getChild();
+        if (child == null) return;
+        if (mPendingFilter != null) {
+            boolean visible = mPendingFilter;
+            mPendingFilter = null;
+            child.toggleFilter(visible);
+        }
+        if (mPendingRefresh) {
+            mPendingRefresh = false;
+            child.onRefresh();
+        }
     }
 
     public void onRefresh() {
-        Optional.ofNullable(getChild()).ifPresent(TypeFragment::onRefresh);
+        TypeFragment child = getChild();
+        if (child == null) {
+            mPendingRefresh = true;
+            return;
+        }
+        mPendingRefresh = false;
+        child.onRefresh();
     }
 
     public boolean canBack() {
@@ -90,7 +123,8 @@ public class FolderFragment extends BaseFragment {
     }
 
     public void goBack() {
-        getChildFragmentManager().popBackStack();
+        FragmentManager manager = getChildFragmentManager();
+        if (!manager.isStateSaved()) manager.popBackStackImmediate();
     }
 
     @Override

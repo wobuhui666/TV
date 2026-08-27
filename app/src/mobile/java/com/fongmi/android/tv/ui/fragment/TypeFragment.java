@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.fragment;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -30,6 +31,8 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class TypeFragment extends BaseFragment implements CustomScroller.Callback, VodAdapter.OnClickListener, SwipeRefreshLayout.OnRefreshListener {
 
@@ -38,6 +41,10 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     private CustomScroller mScroller;
     private SiteViewModel mViewModel;
     private VodAdapter mAdapter;
+    private boolean mViewReady;
+    private boolean mPendingRefresh;
+    private boolean mPendingScrollToTop;
+    private final Map<String, Value> mPendingFilters = new LinkedHashMap<>();
 
     public static TypeFragment newInstance(String key, String typeId, Style style, HashMap<String, String> extend, boolean folder, int y) {
         Bundle args = new Bundle();
@@ -84,8 +91,9 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         return VodConfig.get().getSite(getKey());
     }
 
+    @Nullable
     private FolderFragment getParent() {
-        return (FolderFragment) getParentFragment();
+        return getParentFragment() instanceof FolderFragment fragment ? fragment : null;
     }
 
     @Override
@@ -98,9 +106,16 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         mBinding.progressLayout.showProgress();
         mScroller = new CustomScroller(this);
         mExtends = getExtend();
+        if (mExtends == null) mExtends = new HashMap<>();
+        applyPendingFilters();
         setRecyclerView();
         setViewModel();
+        mViewReady = true;
+        mPendingRefresh = false;
+        boolean scrollToTop = mPendingScrollToTop;
+        mPendingScrollToTop = false;
         getVideo();
+        if (scrollToTop) scrollToTop();
     }
 
     @Override
@@ -127,23 +142,33 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void getHome() {
-        mAdapter.clear(() -> mViewModel.homeContent());
+        if (!isViewReady() || mAdapter == null || mViewModel == null) return;
+        VodAdapter adapter = mAdapter;
+        adapter.clear(() -> {
+            if (isViewReady() && mAdapter == adapter && mViewModel != null) mViewModel.homeContent();
+        });
     }
 
     private void getVideo() {
+        if (!isViewReady() || mAdapter == null || mScroller == null || mViewModel == null) return;
         mScroller.reset();
-        mAdapter.clear(() -> {
+        VodAdapter adapter = mAdapter;
+        adapter.clear(() -> {
+            if (!isViewReady() || mAdapter != adapter || mScroller == null || mViewModel == null) return;
             if (!mBinding.swipeLayout.isRefreshing()) mBinding.progressLayout.showProgress();
-            if (isHome()) setAdapter(getParent().getResult());
-            else getVideo(getTypeId(), "1");
+            FolderFragment parent = getParent();
+            if (isHome() && parent != null) setAdapter(parent.getResult());
+            else if (!isHome()) getVideo(getTypeId(), "1");
         });
     }
 
     private void getVideo(String typeId, String page) {
+        if (!isViewReady() || mViewModel == null) return;
         mViewModel.categoryContent(getKey(), typeId, page, true, mExtends);
     }
 
     private void setAdapter(Result result) {
+        if (!isViewReady() || mAdapter == null || mScroller == null || result == null) return;
         boolean first = mScroller.first();
         int size = result.getList().size();
         mBinding.progressLayout.showContent(first, size);
@@ -153,57 +178,127 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private void addVideo(Result result) {
+        if (!isViewReady() || mAdapter == null || result == null) return;
         Style style = result.getVod().getStyle(getStyle());
         if (!style.equals(mAdapter.getStyle())) setStyle(style);
         mAdapter.addAll(result.getList(), this::checkMore);
     }
 
     private void checkMore() {
-        mBinding.recycler.post(() -> {
+        if (!isViewReady() || mScroller == null) return;
+        FragmentTypeBinding binding = mBinding;
+        binding.recycler.post(() -> {
+            if (!isViewReady() || mBinding != binding || mScroller == null) return;
             if (isHome()) return;
-            mScroller.checkMore(mBinding.recycler);
+            mScroller.checkMore(binding.recycler);
         });
     }
 
     public void scrollToTop() {
+        if (!isViewReady()) {
+            mPendingScrollToTop = true;
+            return;
+        }
+        mPendingScrollToTop = false;
         mBinding.recycler.smoothScrollToPosition(0);
     }
 
     public void setFilter(String key, Value value) {
+        if (!isViewReady() || mExtends == null) {
+            mPendingFilters.put(key, value.copy());
+            mPendingRefresh = false;
+            return;
+        }
+        applyFilter(key, value);
+        onRefresh();
+    }
+
+    public void setFilters(Map<String, Value> filters) {
+        if (filters.isEmpty()) return;
+        if (!isViewReady() || mExtends == null) {
+            for (Map.Entry<String, Value> entry : filters.entrySet()) mPendingFilters.put(entry.getKey(), entry.getValue().copy());
+            mPendingRefresh = false;
+            return;
+        }
+        for (Map.Entry<String, Value> entry : filters.entrySet()) applyFilter(entry.getKey(), entry.getValue());
+        onRefresh();
+    }
+
+    private void applyPendingFilters() {
+        for (Map.Entry<String, Value> entry : mPendingFilters.entrySet()) applyFilter(entry.getKey(), entry.getValue());
+        mPendingFilters.clear();
+    }
+
+    private void applyFilter(String key, Value value) {
         if (value.isSelected()) mExtends.put(key, value.getV());
         else mExtends.remove(key);
-        onRefresh();
     }
 
     @Override
     public void onRefresh() {
+        if (!isViewReady() || mAdapter == null || mScroller == null || mViewModel == null) {
+            mPendingRefresh = true;
+            return;
+        }
+        mPendingRefresh = false;
         if (isHome()) getHome();
         else getVideo();
     }
 
     @Override
     public boolean onLoadMore(String page) {
-        if (isHome()) return false;
+        if (!isInteractive() || mViewModel == null || isHome()) return false;
         getVideo(getTypeId(), page);
         return true;
     }
 
     @Override
     public void onItemClick(Vod item) {
+        if (!isInteractive() || mViewModel == null || item == null) return;
         if (item.isAction()) {
             mViewModel.action(getKey(), item.getAction());
         } else if (item.isFolder()) {
-            getParent().openFolder(item.getId(), mExtends);
+            FolderFragment parent = getParent();
+            if (parent != null) parent.openFolder(item.getId(), mExtends);
         } else {
-            if (getSite().isIndex()) SearchActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null);
+            Activity activity = getActivity();
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+            if (getSite().isIndex()) SearchActivity.start(activity, item.getName());
+            else VideoActivity.start(activity, getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null);
         }
     }
 
     @Override
     public boolean onLongClick(Vod item) {
+        if (!isInteractive() || item == null) return false;
         if (item.isAction() || item.isFolder()) return false;
-        SearchActivity.start(requireActivity(), item.getName());
+        Activity activity = getActivity();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return false;
+        SearchActivity.start(activity, item.getName());
         return true;
+    }
+
+    private boolean isViewReady() {
+        return mViewReady && mBinding != null;
+    }
+
+    private boolean isInteractive() {
+        FolderFragment parent = getParent();
+        return isViewReady() && isAdded() && !isHidden() && getUserVisibleHint() && parent != null && parent.isAdded() && !parent.isHidden() && parent.getUserVisibleHint();
+    }
+
+    @Override
+    public void onDestroyView() {
+        mViewReady = false;
+        if (mBinding != null) {
+            mBinding.swipeLayout.setOnRefreshListener(null);
+            if (mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);
+            mBinding.recycler.setAdapter(null);
+        }
+        mBinding = null;
+        mAdapter = null;
+        mScroller = null;
+        mViewModel = null;
+        super.onDestroyView();
     }
 }

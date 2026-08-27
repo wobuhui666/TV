@@ -31,6 +31,7 @@ abstract class BaseConfig {
     public static final int WALL = 2;
 
     private final AtomicInteger taskId = new AtomicInteger(0);
+    private final Object requestLock = new Object();
 
     protected boolean sync;
     protected volatile Config config;
@@ -80,29 +81,42 @@ abstract class BaseConfig {
     }
 
     public void load(Callback callback) {
-        int id = taskId.incrementAndGet();
-        if (future != null && !future.isDone()) future.cancel(true);
-        future = Task.submit(() -> loadConfig(id, config, callback));
-        callback.start();
+        int id;
+        synchronized (requestLock) {
+            id = taskId.incrementAndGet();
+            Config requestConfig = config;
+            if (future != null && !future.isDone()) future.cancel(true);
+            OkHttp.cancel(getTag());
+            future = Task.submit(() -> loadConfig(id, requestConfig, callback));
+        }
+        if (taskId.get() == id) callback.start();
     }
 
     protected void loadConfig(int id, Config config, Callback callback) {
         try {
+            if (taskId.get() != id) return;
             Server.get().start();
-            OkHttp.cancel(getTag());
+            if (taskId.get() != id) return;
             load(config);
             if (taskId.get() != id) return;
             if (config.equals(this.config)) config.update();
-            App.post(() -> Notify.show(config.getNotice()));
-            App.post(callback::success);
+            App.post(() -> {
+                if (taskId.get() != id) return;
+                Notify.show(config.getNotice());
+                callback.success();
+            });
         } catch (Throwable e) {
             e.printStackTrace();
             if (isCanceled(e)) return;
             if (taskId.get() != id) return;
-            if (TextUtils.isEmpty(config.getUrl())) App.post(() -> callback.error(""));
-            else App.post(() -> callback.error(Notify.getError(R.string.error_config_get, e)));
+            String msg = TextUtils.isEmpty(config.getUrl()) ? "" : Notify.getError(R.string.error_config_get, e);
+            App.post(() -> {
+                if (taskId.get() == id) callback.error(msg);
+            });
         } finally {
-            if (taskId.get() == id) postEvent();
+            App.post(() -> {
+                if (taskId.get() == id) postEvent();
+            });
         }
     }
 

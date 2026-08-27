@@ -45,13 +45,16 @@ import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.google.android.material.appbar.AppBarLayout;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class VodFragment extends BaseFragment implements ConfigListener, SiteListener, FilterListener, TypeAdapter.OnClickListener {
@@ -59,14 +62,37 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
     private TypeAdapter mAdapter;
+    private PageAdapter mPageAdapter;
+    private AppBarLayout.OnOffsetChangedListener mAppBarListener;
+    private ViewPager.OnPageChangeListener mPageChangeListener;
     private Result mResult;
+    private boolean mPendingRefresh;
+    private boolean mPendingScrollToTop;
+    private final Map<String, Value> mPendingFilters = new LinkedHashMap<>();
 
     public static VodFragment newInstance() {
         return new VodFragment();
     }
 
+    @Nullable
     private FolderFragment getFragment() {
-        return (FolderFragment) mBinding.pager.getAdapter().instantiateItem(mBinding.pager, mBinding.pager.getCurrentItem());
+        if (mBinding == null || mPageAdapter == null) return null;
+        return mPageAdapter.getCurrentFragment(mBinding.pager.getCurrentItem());
+    }
+
+    private void dispatchPendingCommands() {
+        FolderFragment fragment = getFragment();
+        if (fragment == null) return;
+        boolean hasFilters = !mPendingFilters.isEmpty();
+        if (hasFilters) {
+            Map<String, Value> filters = new LinkedHashMap<>(mPendingFilters);
+            mPendingFilters.clear();
+            fragment.setFilters(filters);
+        }
+        if (mPendingRefresh && !hasFilters) fragment.onRefresh();
+        if (mPendingScrollToTop) fragment.scrollToTop();
+        mPendingRefresh = false;
+        mPendingScrollToTop = false;
     }
 
     private Site getHome() {
@@ -102,27 +128,40 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         mBinding.filter.setOnClickListener(this::onFilter);
         mBinding.filter.setOnLongClickListener(this::onLink);
         mBinding.toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
-        mBinding.appBar.addOnOffsetChangedListener((appBarLayout, verticalOffset) -> {
+        mAppBarListener = (appBarLayout, verticalOffset) -> {
+            if (mBinding == null) return;
             float factor = Math.abs(verticalOffset * 1f / appBarLayout.getTotalScrollRange());
             int padding = (int) (ResUtil.dp2px(12) * factor);
             if (mBinding.type.getPaddingTop() == padding) return;
             mBinding.type.setPadding(mBinding.type.getPaddingStart(), padding, mBinding.type.getPaddingEnd(), mBinding.type.getPaddingBottom());
-        });
-        mBinding.pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
+        };
+        mBinding.appBar.addOnOffsetChangedListener(mAppBarListener);
+        mPageChangeListener = new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
+                if (mBinding == null || mAdapter == null || position < 0 || position >= mAdapter.getItemCount()) return;
                 mBinding.type.smoothScrollToPosition(position);
                 mAdapter.setSelected(position);
                 setFabVisible(position);
             }
-        });
+        };
+        mBinding.pager.addOnPageChangeListener(mPageChangeListener);
     }
 
     private void setRecyclerView() {
         mBinding.type.setHasFixedSize(true);
         mBinding.type.setItemAnimator(null);
         mBinding.type.setAdapter(mAdapter = new TypeAdapter(this));
-        mBinding.pager.setAdapter(new PageAdapter(getChildFragmentManager()));
+        installPagerAdapter();
+    }
+
+    private void installPagerAdapter() {
+        mBinding.pager.setAdapter(mPageAdapter = new PageAdapter(getChildFragmentManager()));
+    }
+
+    private void replacePagerAdapter() {
+        if (mPageAdapter != null) mPageAdapter.dispose();
+        installPagerAdapter();
     }
 
     private void setViewModel() {
@@ -161,7 +200,9 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     }
 
     private void onTop(View view) {
-        getFragment().scrollToTop();
+        FolderFragment fragment = getFragment();
+        if (fragment == null) mPendingScrollToTop = true;
+        else fragment.scrollToTop();
         mBinding.top.setVisibility(View.INVISIBLE);
         if (mBinding.filter.getVisibility() == View.INVISIBLE) mBinding.filter.show();
         else if (mBinding.link.getVisibility() == View.INVISIBLE) mBinding.link.show();
@@ -212,9 +253,12 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
     private void homeContent() {
         showProgress();
         setFabVisible(0);
+        mPendingRefresh = false;
+        mPendingScrollToTop = false;
+        mPendingFilters.clear();
         mAdapter.clear();
         mViewModel.homeContent();
-        mBinding.pager.setAdapter(new PageAdapter(getChildFragmentManager()));
+        replacePagerAdapter();
     }
 
     public Result getResult() {
@@ -239,7 +283,9 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
                 homeContent();
                 break;
             case CATEGORY:
-                getFragment().onRefresh();
+                FolderFragment fragment = getFragment();
+                if (fragment == null) mPendingRefresh = true;
+                else fragment.onRefresh();
                 break;
         }
     }
@@ -266,6 +312,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
         VodConfig.load(config, new Callback() {
             @Override
             public void start() {
+                if (mBinding == null) return;
                 showProgress();
                 hideContent();
                 setTitle();
@@ -274,6 +321,7 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
             @Override
             public void error(String msg) {
+                if (mBinding == null) return;
                 Notify.dismiss();
                 Notify.show(msg);
                 showContent();
@@ -288,33 +336,53 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
     @Override
     public void onItemClick(int position, Class item) {
+        if (mBinding == null || mAdapter == null || item == null || position < 0 || position >= mAdapter.getItemCount()) return;
         mBinding.pager.setCurrentItem(position);
         mAdapter.setSelected(position);
     }
 
     @Override
     public void setFilter(String key, Value value) {
-        getFragment().setFilter(key, value);
+        FolderFragment fragment = getFragment();
+        if (fragment == null) {
+            mPendingFilters.put(key, value.copy());
+            mPendingRefresh = false;
+        }
+        else fragment.setFilter(key, value);
     }
 
     @Override
     public boolean canBack() {
+        if (mBinding == null) return true;
         if (mBinding.pager.getAdapter() == null || mBinding.pager.getAdapter().getCount() == 0) return true;
-        if (!getFragment().canBack()) return true;
-        getFragment().goBack();
+        FolderFragment fragment = getFragment();
+        if (fragment == null || !fragment.canBack()) return true;
+        fragment.goBack();
         return false;
     }
 
     @Override
     public void onDestroyView() {
-        super.onDestroyView();
         EventBus.getDefault().unregister(this);
+        if (mBinding != null && mAppBarListener != null) mBinding.appBar.removeOnOffsetChangedListener(mAppBarListener);
+        if (mBinding != null && mPageChangeListener != null) mBinding.pager.removeOnPageChangeListener(mPageChangeListener);
+        mAppBarListener = null;
+        mPageChangeListener = null;
+        mPageAdapter = null;
+        mAdapter = null;
+        mBinding = null;
+        super.onDestroyView();
     }
 
     class PageAdapter extends FragmentStatePagerAdapter {
 
+        private final FragmentManager mFragmentManager;
+        private FolderFragment mCurrentFragment;
+        private int mCurrentPosition = -1;
+
         public PageAdapter(@NonNull FragmentManager fm) {
             super(fm);
+            mFragmentManager = fm;
         }
 
         @NonNull
@@ -326,7 +394,36 @@ public class VodFragment extends BaseFragment implements ConfigListener, SiteLis
 
         @Override
         public int getCount() {
-            return mAdapter.getItemCount();
+            return mAdapter == null ? 0 : mAdapter.getItemCount();
+        }
+
+        @Override
+        public void setPrimaryItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
+            super.setPrimaryItem(container, position, object);
+            if (!(object instanceof FolderFragment fragment)) return;
+            mCurrentFragment = fragment;
+            mCurrentPosition = position;
+            dispatchPendingCommands();
+        }
+
+        @Nullable
+        private FolderFragment getCurrentFragment(int position) {
+            return mCurrentPosition == position ? mCurrentFragment : null;
+        }
+
+        private void dispose() {
+            if (!mFragmentManager.isDestroyed()) {
+                androidx.fragment.app.FragmentTransaction transaction = mFragmentManager.beginTransaction();
+                boolean changed = false;
+                for (Fragment fragment : mFragmentManager.getFragments()) {
+                    if (!(fragment instanceof FolderFragment) || !fragment.isAdded()) continue;
+                    transaction.remove(fragment);
+                    changed = true;
+                }
+                if (changed) transaction.commitNowAllowingStateLoss();
+            }
+            mCurrentFragment = null;
+            mCurrentPosition = -1;
         }
 
         @Override

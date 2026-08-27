@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.model;
 
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.utils.Task;
 import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -34,16 +35,23 @@ final class ViewModelTaskRunner<T extends Enum<T>> {
         futures.put(type, future);
         future.addCallback(Task.callback(
                 result -> {
-                    if (taskId.get() == currentId) onSuccess.accept(result);
+                    if (taskId.get() != currentId) return;
+                    App.post(() -> {
+                        if (taskId.get() == currentId) onSuccess.accept(result);
+                    });
                 },
                 error -> {
                     if (error instanceof CancellationException) return;
-                    if (taskId.get() == currentId) onError.accept(error);
+                    if (taskId.get() != currentId) return;
+                    App.post(() -> {
+                        if (taskId.get() == currentId) onError.accept(error);
+                    });
                 }
         ), MoreExecutors.directExecutor());
     }
 
     void cancelAll() {
+        taskIds.values().forEach(AtomicInteger::incrementAndGet);
         futures.values().forEach(future -> future.cancel(true));
         futures.clear();
     }
