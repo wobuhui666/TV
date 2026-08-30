@@ -37,8 +37,6 @@ import com.fongmi.android.tv.ai.subtitle.AiAudioTrackBufferSizeProvider;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitleRuntime;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitleSettings;
 import com.fongmi.android.tv.ai.subtitle.PcmTapAudioProcessor;
-import com.fongmi.android.tv.ai.skip.AiSkipRuntime;
-import com.fongmi.android.tv.ai.skip.AiSkipSettings;
 import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.player.track.LangUtil;
 import com.fongmi.android.tv.setting.PlayerSetting;
@@ -137,19 +135,10 @@ public class ExoUtil {
 
     private static AudioSink buildAudioSink(Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams) {
         boolean aiSubtitle = AiSubtitleSettings.isEnabled();
-        boolean aiSkip = AiSkipSettings.isConfigured();
-        boolean aiFeature = aiSubtitle || aiSkip;
         DefaultAudioSink.Builder builder = new DefaultAudioSink.Builder(context)
-                .setEnableFloatOutput(aiFeature ? false : enableFloatOutput)
+                .setEnableFloatOutput(aiSubtitle ? false : enableFloatOutput)
                 .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams);
-        if (aiFeature) {
-            PcmTapAudioProcessor.Sink subtitleSink = aiSubtitle ? AiSubtitleRuntime.get().createPcmSink() : null;
-            PcmTapAudioProcessor.Sink skipSink = aiSkip ? AiSkipRuntime.get().createPcmSink() : null;
-            builder.setAudioProcessors(new AudioProcessor[]{new PcmTapAudioProcessor((mono, sampleRate) -> {
-                if (subtitleSink != null) subtitleSink.onPcm(mono, sampleRate);
-                if (skipSink != null) skipSink.onPcm(mono, sampleRate);
-            })});
-        }
+        if (aiSubtitle) builder.setAudioProcessors(new AudioProcessor[]{new PcmTapAudioProcessor(AiSubtitleRuntime.get().createPcmSink())});
         if (aiSubtitle) {
             // Match the reference application's audio-lookahead design: playback starts normally,
             // while the renderer is allowed to fill several seconds of decoded PCM ahead of the
@@ -161,7 +150,7 @@ public class ExoUtil {
                             .setAudioTrackBufferSizeProvider(new AiAudioTrackBufferSizeProvider())
                             .build(),
                     AiSubtitleRuntime.get().createAudioClockSink()));
-        } else if (aiSkip || !PlayerSetting.isAudioPassThrough()) {
+        } else if (!PlayerSetting.isAudioPassThrough()) {
             builder.setAudioOutputProvider(new AudioTrackAudioOutputProvider.Builder(null).build());
         }
         return builder.build();

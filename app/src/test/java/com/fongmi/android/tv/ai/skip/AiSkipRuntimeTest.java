@@ -28,6 +28,22 @@ public class AiSkipRuntimeTest {
     }
 
     @Test
+    public void shouldAcceptOnlyBoundariesInsideTheSkipWindow() {
+        assertTrue(AiSkipRuntime.isPlausibleBoundary(90_000, 600_000));
+        assertFalse(AiSkipRuntime.isPlausibleBoundary(0, 600_000));
+        assertFalse(AiSkipRuntime.isPlausibleBoundary(599_000, 600_000));
+        assertFalse(AiSkipRuntime.isPlausibleBoundary(700_000, 600_000));
+    }
+
+    @Test
+    public void shouldApplyBoundariesThatArriveDuringPlayback() {
+        assertTrue(AiSkipRuntime.shouldSkipOpening(20_000, 75_000));
+        assertFalse(AiSkipRuntime.shouldSkipOpening(80_000, 75_000));
+        assertTrue(AiSkipRuntime.hasEnteredEnding(550_000, 600_000, 60_000));
+        assertFalse(AiSkipRuntime.hasEnteredEnding(530_000, 600_000, 60_000));
+    }
+
+    @Test
     public void shouldSubmitFinalizedCaptureWithoutActivePlaybackSession() {
         List<AiSkipApi.Sample> samples = List.of(
                 new AiSkipApi.Sample("opening", 0, 30_000, "samples/opening.wav"),
