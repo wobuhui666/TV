@@ -142,15 +142,20 @@ public class SiteApi {
 
     @NonNull
     public static Result playerContent(@NonNull String key, @NonNull String flag, @NonNull String id) throws Exception {
+        return playerContent(Source.get().beginResolve(), key, flag, id);
+    }
+
+    @NonNull
+    public static Result playerContent(@NonNull Source.ResolveRequest resolveRequest, @NonNull String key, @NonNull String flag, @NonNull String id) throws Exception {
         SpiderDebug.log("player", "key=%s,flag=%s,id=%s", key, flag, id);
         Site site = VodConfig.get().getSite(key);
-        Source.get().stop();
+        Source source = Source.get();
         if (site.getType() == 3) {
             String playerContent = site.recent().spider().playerContent(flag, id, VodConfig.get().getFlags());
             SpiderDebug.log("player", playerContent);
             Result result = Result.fromJson(playerContent);
             if (result.getFlag().isEmpty()) result.setFlag(flag);
-            result.setUrl(Source.get().fetch(result));
+            result.setUrl(source.fetch(resolveRequest, result));
             result.setHeader(site.getHeader());
             result.setKey(key);
             return result;
@@ -162,7 +167,7 @@ public class SiteApi {
             SpiderDebug.log("player", playerContent);
             Result result = Result.fromJson(playerContent);
             if (result.getFlag().isEmpty()) result.setFlag(flag);
-            result.setUrl(Source.get().fetch(result));
+            result.setUrl(source.fetch(resolveRequest, result));
             result.setHeader(site.getHeader());
             return result;
         } else if (site.isEmpty() && "push_agent".equals(key)) {
@@ -170,7 +175,7 @@ public class SiteApi {
             result.setUrl(id);
             result.setParse(0);
             result.setFlag(flag);
-            result.setUrl(Source.get().fetch(result));
+            result.setUrl(source.fetch(resolveRequest, result));
             SpiderDebug.log("player", result.toString());
             return result;
         } else {
@@ -180,7 +185,7 @@ public class SiteApi {
             result.setHeader(site.getHeader());
             result.setPlayUrl(site.getPlayUrl());
             result.setParse(Sniffer.isVideoFormat(id) && result.getPlayUrl().isEmpty() ? 0 : 1);
-            result.setUrl(Source.get().fetch(result));
+            result.setUrl(source.fetch(resolveRequest, result));
             SpiderDebug.log("player", result.toString());
             return result;
         }

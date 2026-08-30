@@ -190,8 +190,6 @@
     <string name="player_decode_setting">解碼設定</string>
     <string name="player_preload_setting">預載設定</string>
     <string name="player_preload">預載</string>
-    <string name="player_preload_threads">預載線程</string>
-    <string name="player_preload_threads_value">%1$d 條</string>
     <string name="player_preload_size">預載容量</string>
     <string name="player_preload_time">預載時間</string>
     <string name="player_preload_time_value">%1$d 秒</string>

@@ -190,8 +190,6 @@
     <string name="player_decode_setting">解码设置</string>
     <string name="player_preload_setting">预载设置</string>
     <string name="player_preload">预载</string>
-    <string name="player_preload_threads">预载线程</string>
-    <string name="player_preload_threads_value">%1$d 条</string>
     <string name="player_preload_size">预载容量</string>
     <string name="player_preload_time">预载时间</string>
     <string name="player_preload_time_value">%1$d 秒</string>

@@ -257,7 +257,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onUrlObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mLive.onUrlResult(result);
     }
 
@@ -702,11 +702,13 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void requestUrl(LivePlayRequest request) {
+        beginPlaybackRequest();
         mViewModel.getUrl(request.getChannel(), request.getPosition());
     }
 
     @Override
     public void requestCatchupUrl(LivePlayRequest request) {
+        beginPlaybackRequest();
         mViewModel.getUrl(request.getChannel(), request.getCatchupData(), request.getPosition());
         hideUI();
     }
@@ -718,6 +720,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void startPlayback(Result result, long position, Channel channel) {
+        claimLocalPlayback();
         start(result, position);
     }
 

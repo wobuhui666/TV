@@ -4,8 +4,6 @@ import com.github.catvod.utils.Prefers;
 
 public class PreloadSetting {
 
-    public static final int MIN_THREADS = 1;
-    public static final int MAX_THREADS = 10;
     public static final int MIN_SIZE_MB = 128;
     public static final int MAX_SIZE_MB = 4096;
     public static final int STEP_SIZE_MB = 128;
@@ -19,14 +17,6 @@ public class PreloadSetting {
 
     public static void putPreload(boolean preload) {
         Prefers.put("preload", preload);
-    }
-
-    public static int getPreloadThreads() {
-        return Math.clamp(Prefers.getInt("preload_threads", MIN_THREADS), MIN_THREADS, MAX_THREADS);
-    }
-
-    public static void putPreloadThreads(int threads) {
-        Prefers.put("preload_threads", Math.clamp(threads, MIN_THREADS, MAX_THREADS));
     }
 
     public static int getPreloadSizeMb() {

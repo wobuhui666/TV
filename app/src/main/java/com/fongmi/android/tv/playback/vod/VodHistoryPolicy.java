@@ -13,7 +13,11 @@ import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.Task;
 
+import java.util.concurrent.TimeUnit;
+
 public class VodHistoryPolicy {
+
+    private static final long MAX_UNKNOWN_DURATION_POSITION_MS = TimeUnit.DAYS.toMillis(1);
 
     public History findOrCreate(String key, String mark, Vod item) {
         History history = History.find(key);
@@ -50,7 +54,10 @@ public class VodHistoryPolicy {
 
     public void updateEpisode(History history, Flag flag, Episode episode) {
         if (history == null || flag == null || episode == null) return;
-        history.setPosition(episode.matchesName(history.getEpisode()) ? history.getPosition() : C.TIME_UNSET);
+        if (!episode.matchesName(history.getEpisode())) {
+            history.setPosition(C.TIME_UNSET);
+            history.setDuration(C.TIME_UNSET);
+        }
         history.setVodFlag(flag.getFlag());
         history.setVodRemarks(episode.getName());
         history.setEpisodeUrl(episode.getUrl());
@@ -64,7 +71,22 @@ public class VodHistoryPolicy {
         if (history.canSave() && history.canSync()) sync(history);
     }
 
+    /**
+     * Returns a source-provided position only when local history has no usable progress.
+     * A null result means the controller must keep the current local value.
+     */
+    public Long acceptedResultPosition(History history, Long sourcePosition) {
+        if (history == null || sourcePosition == null || sourcePosition < 0) return null;
+        if (history.getPosition() > 0) return null;
+        long duration = history.getDuration();
+        if (duration > 0 && sourcePosition >= duration) return null;
+        if (duration <= 0 && sourcePosition >= MAX_UNKNOWN_DURATION_POSITION_MS) return null;
+        return sourcePosition;
+    }
+
     public long startPositionMs(History history) {
-        return history == null ? C.TIME_UNSET : Math.max(history.getOpening(), history.getPosition());
+        if (history == null) return C.TIME_UNSET;
+        long position = Math.max(history.getOpening(), history.getPosition());
+        return position < 0 ? C.TIME_UNSET : position;
     }
 }

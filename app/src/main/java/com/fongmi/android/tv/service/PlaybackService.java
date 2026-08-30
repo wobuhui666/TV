@@ -27,25 +27,36 @@ import androidx.media3.ui.danmaku.DanmakuConfig;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
+import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.browse.BrowseTree;
 import com.fongmi.android.tv.event.ActionEvent;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.utils.Task;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.FluentFuture;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public class PlaybackService extends MediaLibraryService implements MediaLibrarySession.Callback, PlayerManager.Callback {
@@ -54,12 +65,17 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     private static final SessionCommand COMMAND_REPEAT = new SessionCommand(ActionEvent.REPEAT, Bundle.EMPTY);
     private static final String ACTION_MEDIA_BROWSER_SERVICE = "android.media.browse.MediaBrowserService";
+    private static final String EXTRA_RESOLUTION_GENERATION = BuildConfig.APPLICATION_ID + ".RESOLUTION_GENERATION";
 
     private static volatile boolean running;
 
     private final List<PlayerCallback> playerCallbacks = new CopyOnWriteArrayList<>();
     private final MediaClients clients = new MediaClients();
     private final IBinder binder = new LocalBinder();
+    private final NavigationRequestGate navigationGate = new NavigationRequestGate();
+    private final MediaResolutionRequestGate mediaResolutionGate = new MediaResolutionRequestGate();
+    private final NavigationRequestGate browseGate = new NavigationRequestGate();
+    private final AtomicLong localPlaybackGeneration = new AtomicLong();
 
     private NavigationCallback navigationCallback;
     private MediaLibrarySession session;
@@ -67,6 +83,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private PlayerManager player;
     private String navigationKey;
     private Player sessionPlayer;
+    private volatile boolean active;
 
     public static boolean isRunning() {
         return running;
@@ -88,6 +105,9 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @Override
     public void onCreate() {
         super.onCreate();
+        active = true;
+        invalidatePlaybackRequests();
+        browseGate.invalidate();
         running = true;
         player = new PlayerManager(this);
         sessionPlayer = player.getPlayer();
@@ -172,6 +192,9 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     @Override
     public void onDestroy() {
+        active = false;
+        invalidatePlaybackRequests();
+        invalidateBrowseRequests();
         running = false;
         releaseSession();
         player.stop();
@@ -183,6 +206,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void stopAndClear() {
+        invalidatePlaybackRequests();
         player.stop();
         player.clearMediaItems();
     }
@@ -193,7 +217,10 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void shutdown() {
-        if (!running) return;
+        if (!active) return;
+        active = false;
+        invalidatePlaybackRequests();
+        invalidateBrowseRequests();
         running = false;
         stopAndClear();
         stopSelf();
@@ -216,6 +243,8 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void releaseMediaState() {
+        invalidatePlaybackRequests();
+        invalidateBrowseRequests();
         saveProgress();
         BrowseTree.clear();
         tryShutdown();
@@ -241,6 +270,8 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onConfigEvent(ConfigEvent event) {
         if (session == null) return;
+        invalidatePlaybackRequests();
+        invalidateBrowseRequests();
         if (event.isVod()) {
             BrowseTree.clearVod();
             session.notifyChildrenChanged("VOD", 0, null);
@@ -282,6 +313,20 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
         return clients.hasAny();
     }
 
+    public boolean isMediaResolutionPending() {
+        return mediaResolutionGate.isPending();
+    }
+
+    public long beginLocalPlaybackRequest() {
+        invalidateNavigation();
+        invalidateMediaResolution();
+        return localPlaybackGeneration.incrementAndGet();
+    }
+
+    public boolean canApplyLocalPlaybackRequest(long generation) {
+        return active && generation == localPlaybackGeneration.get() && !mediaResolutionGate.isPending();
+    }
+
     public void setSessionActivity(PendingIntent pendingIntent) {
         if (session != null) session.setSessionActivity(pendingIntent);
     }
@@ -291,8 +336,28 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void setNavigationCallback(NavigationCallback navigationCallback, String key) {
+        if (this.navigationCallback != navigationCallback || !Objects.equals(this.navigationKey, key)) invalidateNavigation();
         this.navigationCallback = navigationCallback;
         this.navigationKey = key;
+    }
+
+    private void invalidateNavigation() {
+        navigationGate.invalidate();
+    }
+
+    private void invalidateMediaResolution() {
+        long generation = mediaResolutionGate.invalidate();
+        if (generation != MediaResolutionRequestGate.NO_GENERATION) BrowseTree.discardBrowseResult(generation);
+    }
+
+    private void invalidatePlaybackRequests() {
+        invalidateNavigation();
+        invalidateMediaResolution();
+        localPlaybackGeneration.incrementAndGet();
+    }
+
+    private void invalidateBrowseRequests() {
+        browseGate.invalidate();
     }
 
     private boolean isNavigationOwner() {
@@ -320,11 +385,13 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     private void dispatchNavigate(Consumer<NavigationCallback> action, int delta) {
+        invalidatePlaybackRequests();
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(action);
         else navigateItem(delta);
     }
 
     public void dispatchStop() {
+        invalidatePlaybackRequests();
         if (player.getPlaybackState() == Player.STATE_IDLE) return;
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(NavigationCallback::onStop);
         else {
@@ -338,6 +405,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void dispatchReplay() {
+        invalidateNavigation();
         if (hasNavigationCallback() && isNavigationOwner()) dispatch(NavigationCallback::onReplay);
         else {
             player.seekTo(0);
@@ -346,41 +414,88 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void dispatchAudio() {
+        invalidateNavigation();
         dispatch(NavigationCallback::onAudio);
     }
 
     private void dispatch(Consumer<NavigationCallback> action) {
         NavigationCallback callback = navigationCallback;
-        if (callback != null) App.post(() -> action.accept(callback));
+        if (callback == null) return;
+        String callbackKey = navigationKey;
+        String playbackKey = player == null ? null : player.getKey();
+        MediaItem item = player == null ? null : player.getCurrentMediaItem();
+        String mediaId = item == null ? null : item.mediaId;
+        App.post(() -> {
+            if (!active || navigationCallback != callback || !Objects.equals(navigationKey, callbackKey)) return;
+            if (player == null || player.isReleased() || !Objects.equals(player.getKey(), playbackKey)) return;
+            if (mediaResolutionGate.isPending()) return;
+            MediaItem current = player.getCurrentMediaItem();
+            if (!Objects.equals(mediaId, current == null ? null : current.mediaId)) return;
+            action.accept(callback);
+        });
     }
 
     private void navigateItem(int delta) {
+        if (mediaResolutionGate.isPending() || player == null || player.isReleased()) return;
         MediaItem current = player.getCurrentMediaItem();
         if (current == null) return;
-        Task.submit(() -> {
-            try {
-                MediaItem next = BrowseTree.navigate(current.mediaId, delta);
-                if (next == null || next.localConfiguration == null) return;
-                Result result = BrowseTree.consumeBrowseResult(next.mediaId);
-                if (result == null || !isRunning()) return;
-                App.post(() -> startBrowse(next, result, 0));
-            } catch (Exception ignored) {
+        String sourceMediaId = current.mediaId;
+        String sourcePlaybackKey = player.getKey();
+        NavigationRequestGate.Request request = navigationGate.begin(sourceMediaId, sourcePlaybackKey);
+        Source.ResolveRequest sourceRequest = Source.get().beginResolve();
+        FluentFuture<BrowseTree.NavigationCandidate> task = FluentFuture.from(Task.largeExecutor().submit(() -> {
+            if (!active || !navigationGate.isCurrent(request)) throw new CancellationException();
+            return BrowseTree.navigate(sourceMediaId, delta, sourceRequest);
+        })).withTimeout(Constant.TIMEOUT_VOD, TimeUnit.MILLISECONDS, Task.scheduler());
+        task.addCallback(new FutureCallback<>() {
+            @Override
+            public void onSuccess(@Nullable BrowseTree.NavigationCandidate candidate) {
+                if (!navigationGate.isCurrent(request) || candidate == null || candidate.item().localConfiguration == null) return;
+                App.post(() -> commitNavigation(request, candidate));
             }
-        });
+
+            @Override
+            public void onFailure(@NonNull Throwable error) {
+            }
+        }, MoreExecutors.directExecutor());
+    }
+
+    private void commitNavigation(NavigationRequestGate.Request request, BrowseTree.NavigationCandidate candidate) {
+        if (!isNavigationCurrent(request)) return;
+        candidate.commit();
+        startBrowse(candidate.item(), candidate.result(), 0);
+    }
+
+    private boolean isNavigationCurrent(NavigationRequestGate.Request request) {
+        if (!active || player == null || player.isReleased()) return false;
+        MediaItem current = player.getCurrentMediaItem();
+        return current != null && navigationGate.isCurrent(request, current.mediaId, player.getKey());
     }
 
     private boolean isSameItem(MediaItem item) {
         if (item == null || item.localConfiguration == null) return false;
-        return item.localConfiguration.uri.toString().equals(player.getUrl());
+        return Objects.equals(item.mediaId, player.getKey()) && item.localConfiguration.uri.toString().equals(player.getUrl());
     }
 
     private void interceptItem(@NonNull MediaItem item, long startPositionMs) {
-        if (isSameItem(item)) return;
+        long generation = getResolutionGeneration(item);
+        String playbackKey = player == null ? null : player.getKey();
+        if (generation != C.TIME_UNSET && !mediaResolutionGate.accept(generation, item.mediaId, playbackKey)) {
+            cancelMediaResolution(generation);
+            return;
+        }
+        if (generation == C.TIME_UNSET && mediaResolutionGate.isPending()) return;
+        if (isSameItem(item)) {
+            BrowseTree.consumeBrowseResult(item.mediaId, generation);
+            return;
+        }
         playViaManager(item, startPositionMs);
     }
 
     private void interceptItems(@NonNull List<MediaItem> items, int startIndex, long startPositionMs) {
-        if (items.isEmpty()) return;
+        if (items.isEmpty()) {
+            return;
+        }
         int idx = (startIndex >= 0 && startIndex < items.size()) ? startIndex : 0;
         interceptItem(items.get(idx), startPositionMs);
     }
@@ -452,16 +567,25 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     private void playViaManager(MediaItem item, long startPositionMs) {
         if (item == null || item.localConfiguration == null) return;
-        Result result = BrowseTree.consumeBrowseResult(item.mediaId);
-        if (result != null) startBrowse(item, result, startPositionMs);
+        Result result = BrowseTree.consumeBrowseResult(item.mediaId, getResolutionGeneration(item));
+        PlaySpec spec = result == null
+                ? PlaySpec.from(item.mediaId, item.localConfiguration.uri.toString(), null, item.mediaMetadata)
+                : PlaySpec.from(result, item.mediaId, item.mediaMetadata);
+        startBrowse(spec, startPositionMs);
     }
 
     private void startBrowse(MediaItem item, Result result, long startPositionMs) {
-        player.browse(PlaySpec.from(result, item.mediaId, item.mediaMetadata), startPositionMs);
+        startBrowse(PlaySpec.from(result, item.mediaId, item.mediaMetadata), startPositionMs);
+    }
+
+    private void startBrowse(PlaySpec spec, long startPositionMs) {
+        invalidatePlaybackRequests();
+        player.browse(spec, startPositionMs);
     }
 
     @Override
     public void onPrepare() {
+        invalidateNavigation();
         playerCallbacks.forEach(PlayerCallback::onPrepare);
     }
 
@@ -487,6 +611,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
 
     @Override
     public void onPlayerRebuild(Player newPlayer) {
+        invalidateNavigation();
         sessionPlayer.removeListener(listener);
         sessionPlayer = newPlayer;
         sessionPlayer.addListener(listener);
@@ -517,7 +642,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     private final Player.Listener listener = new Player.Listener() {
         @Override
         public void onPlaybackStateChanged(int state) {
-            if (state == Player.STATE_ENDED && !(hasNavigationCallback() && isNavigationOwner())) navigateItem(1);
+            if (state == Player.STATE_ENDED && !mediaResolutionGate.isPending() && !(hasNavigationCallback() && isNavigationOwner())) navigateItem(1);
         }
 
         @Override
@@ -535,15 +660,36 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @NonNull
     @Override
     public ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> onGetChildren(@NonNull MediaLibrarySession session, @NonNull MediaSession.ControllerInfo browser, @NonNull String parentId, int page, int pageSize, @Nullable MediaLibraryService.LibraryParams params) {
-        return Task.executor().submit(() -> LibraryResult.ofItemList(BrowseTree.getChildren(parentId, page, pageSize), params));
+        long browseGeneration = browseGate.snapshot();
+        SettableFuture<LibraryResult<ImmutableList<MediaItem>>> future = SettableFuture.create();
+        Task.submit(() -> {
+            try {
+                BrowseTree.ChildrenCandidate candidate = BrowseTree.prepareChildren(parentId, page, pageSize);
+                App.post(() -> {
+                    if (future.isCancelled() || !active || this.session != session || !browseGate.isCurrent(browseGeneration)) {
+                        future.cancel(false);
+                        return;
+                    }
+                    if (future.set(LibraryResult.ofItemList(candidate.items(), params))) candidate.commit();
+                });
+            } catch (Exception error) {
+                future.setException(error);
+            }
+        });
+        return future;
     }
 
     @NonNull
     @Override
     public ListenableFuture<LibraryResult<Void>> onSearch(@NonNull MediaLibrarySession session, @NonNull MediaSession.ControllerInfo browser, @NonNull String query, @Nullable MediaLibraryService.LibraryParams params) {
+        long browseGeneration = browseGate.snapshot();
         Task.execute(() -> {
-            ImmutableList<MediaItem> results = BrowseTree.search(query);
-            App.post(() -> session.notifySearchResultChanged(browser, query, results.size(), params));
+            BrowseTree.SearchCandidate candidate = BrowseTree.prepareSearch(query);
+            App.post(() -> {
+                if (!active || this.session != session || !browseGate.isCurrent(browseGeneration)) return;
+                candidate.commit();
+                session.notifySearchResultChanged(browser, query, candidate.items().size(), params);
+            });
         });
         return Futures.immediateFuture(LibraryResult.ofVoid(params));
     }
@@ -566,14 +712,104 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     @NonNull
     @Override
     public ListenableFuture<MediaSession.MediaItemsWithStartPosition> onSetMediaItems(@NonNull MediaSession session, @NonNull MediaSession.ControllerInfo controller, @NonNull List<MediaItem> mediaItems, int startIndex, long startPositionMs) {
+        invalidatePlaybackRequests();
         saveProgress();
-        return Task.executor().submit(() -> {
-            List<MediaItem> resolved = mediaItems.stream().map(BrowseTree::resolveOrKeep).toList();
-            int index = resolved.isEmpty() ? 0 : Math.clamp(startIndex, 0, resolved.size() - 1);
-            long resumePositionMs = BrowseTree.consumeResumePosition();
+        List<MediaItem> requestedItems = List.copyOf(mediaItems);
+        int index = requestedItems.isEmpty() ? 0 : Math.clamp(startIndex, 0, requestedItems.size() - 1);
+        String mediaId = requestedItems.isEmpty() ? null : requestedItems.get(index).mediaId;
+        String playbackKey = player == null ? null : player.getKey();
+        NavigationRequestGate.Request request = mediaResolutionGate.begin(mediaId, playbackKey);
+        Source.ResolveRequest sourceRequest = Source.get().beginResolve();
+        SettableFuture<MediaSession.MediaItemsWithStartPosition> future = SettableFuture.create();
+        FluentFuture<BrowseTree.ResolutionCandidate> resolutionTask = FluentFuture.from(Task.largeExecutor().submit(() -> {
+            if (!active || !mediaResolutionGate.isCurrent(request)) throw new CancellationException();
+            return requestedItems.isEmpty() ? null : BrowseTree.prepareOrKeep(requestedItems.get(index), sourceRequest);
+        })).withTimeout(Constant.TIMEOUT_VOD, TimeUnit.MILLISECONDS, Task.scheduler());
+        future.addListener(() -> {
+            if (!future.isCancelled()) return;
+            resolutionTask.cancel(true);
+            cancelMediaResolution(request);
+        }, MoreExecutors.directExecutor());
+        resolutionTask.addCallback(new FutureCallback<>() {
+            @Override
+            public void onSuccess(@Nullable BrowseTree.ResolutionCandidate candidate) {
+                App.post(() -> commitMediaItems(request, requestedItems, candidate, index, startPositionMs, future));
+            }
+
+            @Override
+            public void onFailure(@NonNull Throwable error) {
+                cancelMediaResolution(request);
+                if (error instanceof CancellationException) future.cancel(false);
+                else future.setException(error);
+            }
+        }, MoreExecutors.directExecutor());
+        return future;
+    }
+
+    private void commitMediaItems(NavigationRequestGate.Request request, List<MediaItem> requestedItems,
+                                  @Nullable BrowseTree.ResolutionCandidate candidate, int index, long startPositionMs,
+                                  SettableFuture<MediaSession.MediaItemsWithStartPosition> future) {
+        if (future.isCancelled() || !active || !mediaResolutionGate.isCurrent(request)) {
+            cancelMediaItems(request, future);
+            return;
+        }
+        try {
+            List<MediaItem> resolved = new ArrayList<>(requestedItems);
+            if (candidate != null) {
+                if (candidate.item().localConfiguration == null) throw new IllegalStateException("Resolved media item has no URI: " + candidate.item().mediaId);
+                resolved.set(index, candidate.item());
+            }
+            if (resolved.isEmpty()) {
+                cancelMediaResolution(request);
+                future.set(new MediaSession.MediaItemsWithStartPosition(resolved, index, startPositionMs));
+                return;
+            }
+            MediaItem resolvedItem = resolved.get(index);
+            String currentPlaybackKey = player == null ? null : player.getKey();
+            if (!mediaResolutionGate.stage(request, resolvedItem.mediaId, currentPlaybackKey)) {
+                cancelMediaItems(request, future);
+                return;
+            }
+            resolved.set(index, withResolutionGeneration(resolvedItem, request.generation()));
+            long resumePositionMs = candidate == null ? C.TIME_UNSET : candidate.resumePositionMs();
             long positionMs = startPositionMs != C.TIME_UNSET ? startPositionMs : resumePositionMs;
-            return new MediaSession.MediaItemsWithStartPosition(resolved, index, positionMs);
-        });
+            if (candidate != null) candidate.stage(request.generation());
+            if (future.set(new MediaSession.MediaItemsWithStartPosition(resolved, index, positionMs))) {
+                Task.schedule(() -> cancelMediaResolution(request.generation()), Constant.TIMEOUT_VOD, TimeUnit.MILLISECONDS);
+            } else {
+                if (candidate != null) candidate.rollback();
+                cancelMediaResolution(request);
+            }
+        } catch (RuntimeException error) {
+            if (candidate != null) candidate.rollback();
+            cancelMediaResolution(request);
+            future.setException(error);
+        }
+    }
+
+    private void cancelMediaItems(NavigationRequestGate.Request request, SettableFuture<MediaSession.MediaItemsWithStartPosition> future) {
+        cancelMediaResolution(request);
+        future.cancel(false);
+    }
+
+    private void cancelMediaResolution(NavigationRequestGate.Request request) {
+        if (mediaResolutionGate.cancel(request)) BrowseTree.discardBrowseResult(request.generation());
+    }
+
+    private void cancelMediaResolution(long generation) {
+        if (mediaResolutionGate.cancel(generation)) BrowseTree.discardBrowseResult(generation);
+    }
+
+    private MediaItem withResolutionGeneration(MediaItem item, long generation) {
+        Bundle extras = item.requestMetadata.extras == null ? new Bundle() : new Bundle(item.requestMetadata.extras);
+        extras.putLong(EXTRA_RESOLUTION_GENERATION, generation);
+        MediaItem.RequestMetadata requestMetadata = item.requestMetadata.buildUpon().setExtras(extras).build();
+        return item.buildUpon().setRequestMetadata(requestMetadata).build();
+    }
+
+    private long getResolutionGeneration(MediaItem item) {
+        Bundle extras = item.requestMetadata.extras;
+        return extras != null && extras.containsKey(EXTRA_RESOLUTION_GENERATION) ? extras.getLong(EXTRA_RESOLUTION_GENERATION) : C.TIME_UNSET;
     }
 
     public interface PlayerCallback {

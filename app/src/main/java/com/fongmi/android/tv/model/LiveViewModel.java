@@ -13,6 +13,7 @@ import com.fongmi.android.tv.bean.EpgData;
 import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.exception.ExtractException;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.playback.live.LivePlaybackController;
 import com.fongmi.android.tv.playback.live.LivePlaybackHost;
 import com.fongmi.android.tv.playback.live.LivePlaybackState;
@@ -89,7 +90,8 @@ public class LiveViewModel extends ViewModel {
     }
 
     public void getUrl(Channel item, long startPositionMs) {
-        requestUrl(() -> LiveApi.getUrl(item), startPositionMs);
+        Source.ResolveRequest request = Source.get().beginResolve();
+        requestUrl(() -> LiveApi.getUrl(request, item), startPositionMs);
     }
 
     public void getUrl(Channel item, EpgData data) {
@@ -97,7 +99,8 @@ public class LiveViewModel extends ViewModel {
     }
 
     public void getUrl(Channel item, EpgData data, long startPositionMs) {
-        requestUrl(() -> LiveApi.getUrl(item, data), startPositionMs);
+        Source.ResolveRequest request = Source.get().beginResolve();
+        requestUrl(() -> LiveApi.getUrl(request, item, data), startPositionMs);
     }
 
     private void requestUrl(Callable<Result> callable, long startPositionMs) {

@@ -14,7 +14,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class PreloadDialog extends BaseAlertDialog {
 
-    public static final int THREADS = 0;
     public static final int SIZE = 1;
     public static final int TIME = 2;
 
@@ -76,13 +75,11 @@ public class PreloadDialog extends BaseAlertDialog {
     }
 
     private int getMin() {
-        if (type == THREADS) return PreloadSetting.MIN_THREADS;
         if (type == SIZE) return PreloadSetting.MIN_SIZE_MB;
         return PreloadSetting.MIN_TIME_SECONDS;
     }
 
     private int getMax() {
-        if (type == THREADS) return PreloadSetting.MAX_THREADS;
         if (type == SIZE) return PreloadSetting.MAX_SIZE_MB;
         return PreloadSetting.MAX_TIME_SECONDS;
     }
@@ -94,19 +91,16 @@ public class PreloadDialog extends BaseAlertDialog {
     }
 
     private int getValue() {
-        if (type == THREADS) return PreloadSetting.getPreloadThreads();
         if (type == SIZE) return PreloadSetting.getPreloadSizeMb();
         return PreloadSetting.getPreloadTimeSeconds();
     }
 
     private int getTitleRes() {
-        if (type == THREADS) return R.string.player_preload_threads;
         if (type == SIZE) return R.string.player_preload_size;
         return R.string.player_preload_time;
     }
 
     private String format(int value) {
-        if (type == THREADS) return getString(R.string.player_preload_threads_value, value);
         if (type == SIZE) return FileUtil.byteCountToDisplaySize(value * 1024L * 1024L);
         return getString(R.string.player_preload_time_value, value);
     }

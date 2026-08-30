@@ -13,14 +13,21 @@ import com.forcetech.Util;
 import com.github.catvod.net.OkHttp;
 import com.google.common.net.HttpHeaders;
 
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 public class Force implements Source.Extractor, ServiceConnection {
 
     private static final Pattern PATTERN = Pattern.compile("(?i)(p[2-9]p|mitv)");
-    private final HashSet<String> set = new HashSet<>();
+    private static final long CONNECT_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(10);
+    private final Set<String> set = ConcurrentHashMap.newKeySet();
+    private final AtomicLong stopGeneration = new AtomicLong();
 
     @Override
     public boolean match(Uri uri) {
@@ -33,9 +40,15 @@ public class Force implements Source.Extractor, ServiceConnection {
 
     @Override
     public String fetch(String url) throws Exception {
+        long generation = stopGeneration.get();
         String scheme = Util.scheme(url);
         if (!set.contains(scheme)) init(scheme);
-        while (!set.contains(scheme)) SystemClock.sleep(10);
+        long deadline = SystemClock.elapsedRealtime() + CONNECT_TIMEOUT_MS;
+        while (!set.contains(scheme)) {
+            if (generation != stopGeneration.get() || Thread.currentThread().isInterrupted()) throw new CancellationException();
+            if (SystemClock.elapsedRealtime() >= deadline) throw new TimeoutException("Force service connection timeout: " + scheme);
+            Thread.sleep(10);
+        }
         Uri uri = UrlUtil.uri(url);
         int port = Util.port(scheme);
         String id = uri.getLastPathSegment();
@@ -46,6 +59,7 @@ public class Force implements Source.Extractor, ServiceConnection {
 
     @Override
     public void stop() {
+        stopGeneration.incrementAndGet();
     }
 
     @Override

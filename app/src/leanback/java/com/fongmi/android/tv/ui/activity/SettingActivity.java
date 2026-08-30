@@ -201,12 +201,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void refreshPreloadRows() {
         boolean preload = PreloadSetting.isPreload();
         setRowValue(JetStreamSettingView.KEY_PRELOAD, Setting.getSwitch(preload));
-        setPreloadThreadsText();
         setPreloadSizeText();
         setPreloadTimeText();
         setRowVisible(JetStreamSettingView.KEY_PRELOAD_SIZE, preload);
         setRowVisible(JetStreamSettingView.KEY_PRELOAD_TIME, preload);
-        setRowVisible(JetStreamSettingView.KEY_PRELOAD_THREADS, preload && !PlayerSetting.isMpv());
     }
 
     private void refreshDanmakuRows() {
@@ -320,7 +318,6 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_DOLBY -> setDolby();
             case JetStreamSettingView.KEY_DV7 -> setDv7();
             case JetStreamSettingView.KEY_PRELOAD -> setPreload();
-            case JetStreamSettingView.KEY_PRELOAD_THREADS -> PreloadDialog.show(this, PreloadDialog.THREADS);
             case JetStreamSettingView.KEY_PRELOAD_SIZE -> PreloadDialog.show(this, PreloadDialog.SIZE);
             case JetStreamSettingView.KEY_PRELOAD_TIME -> PreloadDialog.show(this, PreloadDialog.TIME);
             case JetStreamSettingView.KEY_DANMAKU_LOAD -> setDanmakuLoad();
@@ -627,10 +624,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     @Override
     public void setPreload(int type, int value) {
-        if (type == PreloadDialog.THREADS) {
-            PreloadSetting.putPreloadThreads(value);
-            setPreloadThreadsText();
-        } else if (type == PreloadDialog.SIZE) {
+        if (type == PreloadDialog.SIZE) {
             PreloadSetting.putPreloadSizeMb(value);
             setPreloadSizeText();
         } else if (type == PreloadDialog.TIME) {
@@ -645,10 +639,6 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
 
     private void setPreloadTimeText() {
         setRowValue(JetStreamSettingView.KEY_PRELOAD_TIME, getString(R.string.player_preload_time_value, PreloadSetting.getPreloadTimeSeconds()));
-    }
-
-    private void setPreloadThreadsText() {
-        setRowValue(JetStreamSettingView.KEY_PRELOAD_THREADS, getString(R.string.player_preload_threads_value, PreloadSetting.getPreloadThreads()));
     }
 
     private void setDanmakuLoad() {

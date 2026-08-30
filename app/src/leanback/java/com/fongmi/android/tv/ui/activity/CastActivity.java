@@ -215,6 +215,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void start() {
+        claimLocalPlayback();
         mPlaybackKey = mAction.getCurrentURI();
         startPlayer(mPlaybackKey, mAction.result(), false, Constant.TIMEOUT_PLAY, buildMetadata());
     }
@@ -654,8 +655,8 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     public void onSeekEnd(long time) {
-        if (!isPlaybackReady() || player().isEmpty()) return;
         mKeyDown.reset();
+        if (!isPlaybackReady() || player().isEmpty()) return;
         seekTo(time);
     }
 
@@ -738,6 +739,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void onDestroy() {
+        if (mKeyDown != null) mKeyDown.reset();
         mClock.release();
         releaseRenderer();
         App.removeCallbacks(mR1, mR2);

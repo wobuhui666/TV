@@ -23,6 +23,7 @@ public class VodPlaybackController {
 
     private final VodHistoryPolicy historyPolicy;
     private final VodFallbackPolicy fallbackPolicy;
+    private final VodEndingPolicy endingPolicy;
     private final VodPlaybackState state;
     private final VodPlaybackHost host;
     private History lastHistory;
@@ -30,6 +31,7 @@ public class VodPlaybackController {
 
     public VodPlaybackController(VodPlaybackHost host, VodPlaybackState state) {
         this.historyPolicy = new VodHistoryPolicy();
+        this.endingPolicy = new VodEndingPolicy();
         this.state = state;
         this.host = host;
         this.fallbackPolicy = new VodFallbackPolicy(this, state, host);
@@ -37,6 +39,7 @@ public class VodPlaybackController {
     }
 
     public void reset() {
+        endingPolicy.reset();
         state.reset();
     }
 
@@ -92,12 +95,14 @@ public class VodPlaybackController {
         host.renderQuality(result, result.getUrl().isMulti());
         if (result.hasDesc()) host.renderDescription(result.getDesc());
         if (result.hasArtwork()) host.renderArtwork(result.getArtwork());
-        if (result.hasPosition()) state.getHistory().setPosition(result.getPosition());
+        Long sourcePosition = historyPolicy.acceptedResultPosition(state.getHistory(), result.getPosition());
+        if (sourcePosition != null) state.getHistory().setPosition(sourcePosition);
         startPlayback(result, startPositionMs());
         host.loadDanmaku(result, state.getHistory(), state.getEpisode());
     }
 
     private void startPlayback(Result result, long startPositionMs) {
+        endingPolicy.reset();
         host.startPlayback(result, state.isUseParse(), startPositionMs, state.getHistory(), state.getEpisode());
     }
 
@@ -284,7 +289,11 @@ public class VodPlaybackController {
     public void onTimeChanged(long time, long position, long duration) {
         History history = currentHistory();
         historyPolicy.updateTime(history, time, position, duration);
-        if (history != null && history.getEnding() > 0 && history.getEnding() + position >= duration) nextEpisode(false);
+        if (history != null && endingPolicy.update(position, duration, history.getEnding())) nextEpisode(false);
+    }
+
+    public void onSeek() {
+        endingPolicy.resetPosition();
     }
 
     public long startPositionMs() {
@@ -313,6 +322,7 @@ public class VodPlaybackController {
         if (state.getHistory() != null) {
             state.getHistory().setEnding(ending);
             state.getHistory().setEndingSource("manual");
+            endingPolicy.resetPosition();
         }
     }
 
