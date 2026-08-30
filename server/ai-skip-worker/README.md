@@ -35,6 +35,7 @@ unless `[vars].ALLOWED_ORIGIN` is set to their exact origin, for example `https:
 - `POST /v1/jobs`: create or reuse an analysis job.
 - `GET /v1/jobs/:jobId`: poll task state and boundaries.
 - `GET /v1/jobs/media/:mediaKey`: retrieve a cached completed result.
+- `GET /v1/jobs/series/:seriesKey`: retrieve the latest usable result for another episode in the same series.
 - `POST /v1/jobs/:jobId/feedback`: store corrected boundaries.
 
 All endpoints require `Authorization: Bearer <AI_SKIP_TOKEN>`. Authenticated requests are rate-limited

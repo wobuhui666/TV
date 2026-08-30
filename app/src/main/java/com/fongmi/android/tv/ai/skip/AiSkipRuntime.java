@@ -2,17 +2,21 @@ package com.fongmi.android.tv.ai.skip;
 
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.media3.common.MediaItem;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.bean.History;
-import com.fongmi.android.tv.ai.subtitle.PcmTapAudioProcessor;
 import com.fongmi.android.tv.db.AppDatabase;
+import com.fongmi.android.tv.player.media.MediaItemFactory;
+import com.fongmi.android.tv.player.media.PlaySpec;
+import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.utils.MpvLogCollector;
 import com.fongmi.android.tv.utils.Task;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -23,9 +27,6 @@ public final class AiSkipRuntime {
     private static final String AI_SOURCE = "ai";
     private static final String AI_SOURCE_PREFIX = AI_SOURCE + ":";
     private static final int SAMPLE_RATE = 8_000;
-    private static final int CHUNK_SAMPLES = SAMPLE_RATE * 30;
-    private static final int MAX_CHUNKS_PER_SIDE = 3;
-    private static final int WINDOW_SAMPLES = CHUNK_SAMPLES * MAX_CHUNKS_PER_SIDE;
     private static final long POLL_LIMIT_MS = TimeUnit.MINUTES.toMillis(3);
     private static final Executor BOUNDARY_EXECUTOR = MoreExecutors.newSequentialExecutor(Task.executor());
     private static volatile AiSkipRuntime instance;
@@ -43,10 +44,6 @@ public final class AiSkipRuntime {
         return instance;
     }
 
-    public PcmTapAudioProcessor.Sink createPcmSink() {
-        return this::onPcm;
-    }
-
     public long startSession(@Nullable String mediaKey, @Nullable History history, @Nullable String episode,
                              long startPositionMs, @Nullable Runnable appliedCallback) {
         stopSession();
@@ -56,7 +53,7 @@ public final class AiSkipRuntime {
         long effectivePositionMs = prepareStartPosition(mediaKey, history, startPositionMs);
         if (stale) saveAsync(history, previousBoundaries, BoundarySnapshot.from(history));
         if (!AiSkipSettings.isConfigured()) return effectivePositionMs;
-        CaptureSession session = new CaptureSession(mediaKey, history, episode, effectivePositionMs, appliedCallback);
+        CaptureSession session = new CaptureSession(mediaKey, history, episode, appliedCallback);
         synchronized (lock) {
             activeSession = session;
         }
@@ -68,90 +65,95 @@ public final class AiSkipRuntime {
         synchronized (lock) {
             if (activeSession != null) {
                 activeSession.appliedCallback = null;
-                activeSession.releaseAudio();
+                activeSession.cancelProbe();
             }
             activeSession = null;
         }
     }
 
-    public void onTimeChanged(long positionMs, long durationMs) {
-        synchronized (lock) {
-            CaptureSession session = activeSession;
-            if (session == null) return;
-            if (durationMs > 0) session.durationMs = durationMs;
-            if (positionMs >= 0 && session.durationMs > 0 && positionMs >= session.durationMs - 2_000 && session.endingLength > SAMPLE_RATE * 5) {
-                if (!session.captureFinalized && session.captureOpening && session.openingLength > SAMPLE_RATE * 5) finalizeCapture(session);
-            }
+    public void onMediaResolved(@Nullable PlaySpec spec, int playbackEngine) {
+        if (spec == null || !AiSkipSettings.isConfigured()) return;
+        MediaItem item;
+        try {
+            item = MediaItemFactory.from(spec);
+        } catch (Exception e) {
+            MpvLogCollector.logError("AiSkip", "无法创建音频探针媒体项: " + e.getClass().getSimpleName());
+            return;
         }
+        CaptureSession session;
+        Runnable callback;
+        synchronized (lock) {
+            session = activeSession;
+            if (session == null || !session.matchesHistory()) return;
+            session.pendingMediaItem = item;
+            session.playbackEngine = playbackEngine;
+            session.mediaResolved = true;
+            callback = session.resultApplied ? session.appliedCallback : null;
+        }
+        if (callback != null) App.post(callback);
+        maybeStartProbe(session);
     }
 
-    private void onPcm(float[] mono, int sampleRate) {
-        if (mono == null || mono.length == 0 || sampleRate <= 0) return;
+    private void maybeStartProbe(CaptureSession session) {
+        MediaItem item;
+        AiSkipAudioProbe probe;
+        int engine;
         synchronized (lock) {
-            CaptureSession session = activeSession;
-            if (session == null || session.captureFinalized) return;
-            if (session.inputRate != sampleRate) {
-                session.inputRate = sampleRate;
-                session.resampleCursor = 0;
-                session.inputSamples = 0;
-            }
-            double step = sampleRate / (double) SAMPLE_RATE;
-            for (float value : mono) {
-                if (session.inputSamples >= session.resampleCursor) {
-                    short pcm = (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(value * 32767f)));
-                    if (session.captureOpening && session.openingLength < WINDOW_SAMPLES) session.opening[session.openingLength++] = pcm;
-                    session.ending[session.endingLength % WINDOW_SAMPLES] = pcm;
-                    session.endingLength++;
-                    session.resampleCursor += step;
+            if (activeSession != session || !session.matchesHistory() || !session.cachedLookupComplete
+                    || session.exactCachedResultFound || session.probeStarted || session.pendingMediaItem == null) return;
+            session.probeStarted = true;
+            item = session.pendingMediaItem;
+            engine = session.playbackEngine;
+            probe = new AiSkipAudioProbe(new AiSkipAudioProbe.Callback() {
+                @Override
+                public void onComplete(long durationMs, List<AiSkipAudioProbe.CapturedSample> samples) {
+                    onProbeComplete(session, durationMs, samples);
                 }
-                session.inputSamples++;
-            }
-            while (session.nextOpeningChunk < MAX_CHUNKS_PER_SIDE
-                    && session.openingLength >= (session.nextOpeningChunk + 1) * CHUNK_SAMPLES) {
-                scheduleOpeningChunk(session, session.nextOpeningChunk, CHUNK_SAMPLES);
-                session.nextOpeningChunk++;
-            }
+
+                @Override
+                public void onFailure(String reason) {
+                    synchronized (lock) {
+                        if (activeSession == session) session.probe = null;
+                    }
+                }
+            });
+            session.probe = probe;
         }
+        MpvLogCollector.log("AiSkip", "开始分析，播放内核="
+                + (engine == PlayerSetting.ENGINE_MPV ? "MPV" : "EXO"));
+        probe.start(item);
     }
 
-    private void scheduleOpeningChunk(CaptureSession session, int index, int length) {
-        int offset = index * CHUNK_SAMPLES;
-        short[] chunk = Arrays.copyOfRange(session.opening, offset, offset + length);
-        scheduleUpload(session, "opening", samplesToMs(offset), chunk);
-    }
-
-    private void finalizeCapture(CaptureSession session) {
-        session.captureFinalized = true;
-        int openingOffset = session.nextOpeningChunk * CHUNK_SAMPLES;
-        if (openingOffset < session.openingLength) {
-            scheduleOpeningChunk(session, session.nextOpeningChunk, session.openingLength - openingOffset);
-            session.nextOpeningChunk++;
+    private void onProbeComplete(CaptureSession session, long durationMs,
+                                 List<AiSkipAudioProbe.CapturedSample> samples) {
+        synchronized (lock) {
+            if (activeSession != session || !session.matchesHistory()) return;
+            session.probe = null;
+            session.durationMs = durationMs;
         }
-
-        int length = Math.min(session.endingLength, WINDOW_SAMPLES);
-        int start = Math.max(0, session.endingLength - length);
-        long tailStartMs = Math.max(0, session.durationMs - samplesToMs(length));
-        for (int offset = 0; offset < length; offset += CHUNK_SAMPLES) {
-            int chunkLength = Math.min(CHUNK_SAMPLES, length - offset);
-            short[] chunk = new short[chunkLength];
-            for (int i = 0; i < chunkLength; i++) chunk[i] = session.ending[(start + offset + i) % WINDOW_SAMPLES];
-            scheduleUpload(session, "ending", tailStartMs + samplesToMs(offset), chunk);
+        for (AiSkipAudioProbe.CapturedSample sample : samples) {
+            scheduleUpload(session, sample.side(), sample.startMs(), sample.pcm());
         }
-        session.releaseAudio();
+        synchronized (lock) {
+            session.captureFinalized = true;
+        }
         maybeSubmitJob(session);
     }
 
     private void scheduleUpload(CaptureSession session, String side, long startMs, short[] pcm) {
         long sampleDurationMs = samplesToMs(pcm.length);
         byte[] wav = WavEncoder.encode(pcm, pcm.length, SAMPLE_RATE);
-        session.pendingUploads++;
+        synchronized (lock) {
+            session.pendingUploads++;
+        }
         Task.execute(() -> {
             try {
                 String objectKey = new AiSkipApi().upload(wav);
                 synchronized (lock) {
                     session.uploadedSamples.add(new AiSkipApi.Sample(side, startMs, sampleDurationMs, objectKey));
                 }
-            } catch (Exception ignored) {
+            } catch (Exception error) {
+                MpvLogCollector.logError("AiSkip", "样本上传失败: " + error.getMessage());
             } finally {
                 synchronized (lock) {
                     session.pendingUploads--;
@@ -185,15 +187,33 @@ public final class AiSkipRuntime {
             AiSkipResult created = new AiSkipApi().create(snapshot.mediaKey(), snapshot.seriesKey(), snapshot.episode(), snapshot.durationMs(), snapshot.samples());
             if (created != null && created.getJobId().isEmpty()) return;
             poll(session, created == null ? "" : created.getJobId());
-        } catch (Exception ignored) {
+        } catch (Exception error) {
+            MpvLogCollector.logError("AiSkip", "任务创建失败: " + error.getMessage());
         }
     }
 
     private void loadCachedResult(CaptureSession session) {
         try {
-            AiSkipResult cached = new AiSkipApi().find(session.mediaKey);
-            if (cached != null && cached.isCompleted()) apply(session, cached);
-        } catch (Exception ignored) {
+            AiSkipApi api = new AiSkipApi();
+            AiSkipResult cached = api.find(session.mediaKey);
+            boolean exact = cached != null && cached.isCompleted();
+            if (!exact) {
+                AiSkipResult series = api.findSeries(session.seriesKey);
+                if (series != null && series.isCompleted() && series.hasUsableBoundary()) cached = series;
+            }
+            if (cached != null && cached.isCompleted() && (exact || cached.hasUsableBoundary())) {
+                synchronized (lock) {
+                    session.exactCachedResultFound = exact;
+                }
+                apply(session, cached, exact);
+            }
+        } catch (Exception error) {
+            MpvLogCollector.logError("AiSkip", "缓存查询失败: " + error.getMessage());
+        } finally {
+            synchronized (lock) {
+                session.cachedLookupComplete = true;
+            }
+            maybeStartProbe(session);
         }
     }
 
@@ -211,11 +231,12 @@ public final class AiSkipRuntime {
             AiSkipResult result = new AiSkipApi().getJob(jobId);
             if (result == null) return;
             if (result.isCompleted()) {
-                apply(session, result);
+                apply(session, result, true);
                 return;
             }
             if (!result.isPending()) return;
-        } catch (Exception ignored) {
+        } catch (Exception error) {
+            MpvLogCollector.logError("AiSkip", "任务轮询失败: " + error.getMessage());
             return;
         }
         long nextDelayMs = Math.min(30_000, delayMs * 2);
@@ -228,11 +249,11 @@ public final class AiSkipRuntime {
         }
     }
 
-    private void apply(CaptureSession session, AiSkipResult result) {
-        App.post(() -> applyOnMainThread(session, result));
+    private void apply(CaptureSession session, AiSkipResult result, boolean feedbackEnabled) {
+        App.post(() -> applyOnMainThread(session, result, feedbackEnabled));
     }
 
-    private void applyOnMainThread(CaptureSession session, AiSkipResult result) {
+    private void applyOnMainThread(CaptureSession session, AiSkipResult result, boolean feedbackEnabled) {
         Runnable callback;
         History history;
         BoundarySnapshot previousBoundaries;
@@ -243,17 +264,24 @@ public final class AiSkipRuntime {
             history = current.history;
             previousBoundaries = BoundarySnapshot.from(current.history);
             if (previousBoundaries == null) return;
-            current.activeJobId = result.getJobId();
+            if (feedbackEnabled) current.activeJobId = result.getJobId();
+            current.resultApplied = true;
             clearStaleAiBoundaries(current.history, current.mediaKey);
-            if (!isManual(current.history.getOpening(), current.history.getOpeningSource()) && result.getOpeningMs() > 0 && result.getOpeningConfidence() >= 0.8f) {
+            long durationMs = current.history.getDuration() > 0
+                    ? current.history.getDuration() : result.getDurationMs();
+            if (!isManual(current.history.getOpening(), current.history.getOpeningSource())
+                    && isPlausibleBoundary(result.getOpeningMs(), durationMs)
+                    && result.getOpeningConfidence() >= 0.8f) {
                 current.history.setOpening(result.getOpeningMs());
                 current.history.setOpeningSource(aiSource(current.mediaKey));
             }
-            if (!isManual(current.history.getEnding(), current.history.getEndingSource()) && result.getEndingMs() > 0 && result.getEndingConfidence() >= 0.8f) {
+            if (!isManual(current.history.getEnding(), current.history.getEndingSource())
+                    && isPlausibleBoundary(result.getEndingMs(), durationMs)
+                    && result.getEndingConfidence() >= 0.8f) {
                 current.history.setEnding(result.getEndingMs());
                 current.history.setEndingSource(aiSource(current.mediaKey));
             }
-            callback = current.appliedCallback;
+            callback = current.mediaResolved ? current.appliedCallback : null;
             updatedBoundaries = BoundarySnapshot.from(current.history);
         }
         saveAsync(history, previousBoundaries, updatedBoundaries);
@@ -284,6 +312,20 @@ public final class AiSkipRuntime {
 
     static boolean isManual(long value, String source) {
         return "manual".equalsIgnoreCase(source) || ("unknown".equalsIgnoreCase(source) && value > 0);
+    }
+
+    static boolean isPlausibleBoundary(long boundaryMs, long durationMs) {
+        return boundaryMs > 0 && durationMs > 0 && boundaryMs < durationMs
+                && boundaryMs <= Constant.getOpEdLimit(durationMs);
+    }
+
+    public static boolean shouldSkipOpening(long positionMs, long openingMs) {
+        return positionMs >= 0 && openingMs > 0 && positionMs < openingMs;
+    }
+
+    public static boolean hasEnteredEnding(long positionMs, long durationMs, long endingMs) {
+        return positionMs >= 0 && durationMs > 0 && endingMs > 0 && endingMs < durationMs
+                && positionMs >= durationMs - endingMs;
     }
 
     static String aiSource(String mediaKey) {
@@ -347,8 +389,6 @@ public final class AiSkipRuntime {
     }
 
     private static final class CaptureSession {
-        private short[] opening = new short[WINDOW_SAMPLES];
-        private short[] ending = new short[WINDOW_SAMPLES];
         private final History history;
         private final String mediaKey;
         private final String seriesKey;
@@ -356,20 +396,21 @@ public final class AiSkipRuntime {
         private final EpisodeSnapshot episodeSnapshot;
         private final List<AiSkipApi.Sample> uploadedSamples = new ArrayList<>();
         private long durationMs;
-        private boolean captureOpening;
         private boolean captureFinalized;
         private boolean jobSubmissionStarted;
-        private int openingLength;
-        private int endingLength;
-        private int nextOpeningChunk;
         private int pendingUploads;
-        private int inputRate;
-        private int inputSamples;
-        private double resampleCursor;
+        private boolean cachedLookupComplete;
+        private boolean exactCachedResultFound;
+        private boolean probeStarted;
+        private boolean mediaResolved;
+        private boolean resultApplied;
+        private int playbackEngine;
         private Runnable appliedCallback;
         private String activeJobId;
+        private MediaItem pendingMediaItem;
+        private AiSkipAudioProbe probe;
 
-        private CaptureSession(String mediaKey, History history, @Nullable String episode, long startPositionMs,
+        private CaptureSession(String mediaKey, History history, @Nullable String episode,
                                @Nullable Runnable appliedCallback) {
             this.history = history;
             this.mediaKey = mediaKey;
@@ -377,7 +418,6 @@ public final class AiSkipRuntime {
             this.episode = episode == null ? history.getVodRemarks() : episode;
             this.episodeSnapshot = EpisodeSnapshot.from(history);
             this.durationMs = history.getDuration();
-            this.captureOpening = startPositionMs <= TimeUnit.SECONDS.toMillis(2);
             this.appliedCallback = appliedCallback;
         }
 
@@ -385,9 +425,9 @@ public final class AiSkipRuntime {
             return episodeSnapshot != null && episodeSnapshot.matches(history);
         }
 
-        private void releaseAudio() {
-            opening = new short[0];
-            ending = new short[0];
+        private void cancelProbe() {
+            if (probe != null) probe.cancel();
+            probe = null;
         }
     }
 

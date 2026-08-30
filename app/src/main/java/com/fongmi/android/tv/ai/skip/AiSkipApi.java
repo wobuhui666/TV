@@ -27,7 +27,20 @@ public final class AiSkipApi {
     }
 
     public AiSkipResult find(String mediaKey) throws IOException {
-        return get("/v1/jobs/media/" + encode(mediaKey));
+        return findPath("/v1/jobs/media/" + encode(mediaKey));
+    }
+
+    public AiSkipResult findSeries(String seriesKey) throws IOException {
+        return findPath("/v1/jobs/series/" + encode(seriesKey));
+    }
+
+    private AiSkipResult findPath(String path) throws IOException {
+        Request request = base(path).get().build();
+        try (Response response = execute(request)) {
+            if (response.code() == 404) return null;
+            if (!response.isSuccessful()) throw new IOException("api_" + response.code());
+            return gson.fromJson(response.body().string(), AiSkipResult.class);
+        }
     }
 
     public String upload(byte[] wav) throws IOException {

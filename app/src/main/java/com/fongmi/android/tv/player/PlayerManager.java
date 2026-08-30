@@ -18,6 +18,7 @@ import androidx.media3.ui.danmaku.DanmakuConfig;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.ai.skip.AiSkipRuntime;
 import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Sub;
@@ -524,6 +525,7 @@ public class PlayerManager implements ParseCallback {
         }
         ensureEngine(spec.checkUa());
         engine.start(spec, startPositionMs);
+        AiSkipRuntime.get().onMediaResolved(spec, getEngine());
         setDanmakus(spec.getDanmakus());
         App.post(runnable, timeout);
         callback.onPrepare();

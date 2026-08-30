@@ -91,6 +91,9 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (request.method === "GET" && path.startsWith("/v1/jobs/media/")) {
       return getMediaJob(env, path.slice("/v1/jobs/media/".length));
     }
+    if (request.method === "GET" && path.startsWith("/v1/jobs/series/")) {
+      return getSeriesJob(env, path.slice("/v1/jobs/series/".length));
+    }
     if (request.method === "GET" && path.startsWith("/v1/jobs/")) {
       return getJob(env, path.slice("/v1/jobs/".length));
     }
@@ -195,6 +198,14 @@ async function getMediaJob(env: Env, encodedKey: string): Promise<Response> {
   try { mediaKey = decodeURIComponent(encodedKey); } catch { return json({ error: "invalid_media_key" }, 400); }
   if (!mediaKey || mediaKey.length > 160) return json({ error: "invalid_media_key" }, 400);
   const job = await env.AI_SKIP_KV.get<Job>(`media:${mediaStorageKey(mediaKey)}`, "json");
+  return job ? json(publicJob(job)) : json({ error: "not_found" }, 404);
+}
+
+async function getSeriesJob(env: Env, encodedKey: string): Promise<Response> {
+  let seriesKey: string;
+  try { seriesKey = decodeURIComponent(encodedKey); } catch { return json({ error: "invalid_series_key" }, 400); }
+  if (!seriesKey || seriesKey.length > 160) return json({ error: "invalid_series_key" }, 400);
+  const job = await env.AI_SKIP_KV.get<Job>(`series:${mediaStorageKey(seriesKey)}`, "json");
   return job ? json(publicJob(job)) : json({ error: "not_found" }, 404);
 }
 
@@ -323,10 +334,13 @@ async function saveJob(env: Env, job: Job): Promise<void> {
   await env.AI_SKIP_KV.put(`job:${job.jobId}`, JSON.stringify(job), { expirationTtl: ttl });
   await env.AI_SKIP_KV.put(`media-job:${mediaStorageKey(job.mediaKey)}`, job.jobId, { expirationTtl: ttl });
   if (job.status === "completed") await env.AI_SKIP_KV.put(`media:${mediaStorageKey(job.mediaKey)}`, JSON.stringify(job), { expirationTtl: ttl });
+  if (job.status === "completed" && ((job.openingMs ?? 0) > 0 || (job.endingMs ?? 0) > 0)) {
+    await env.AI_SKIP_KV.put(`series:${mediaStorageKey(job.seriesKey)}`, JSON.stringify(job), { expirationTtl: ttl });
+  }
 }
 
 function publicJob(job: Job) {
-  return { jobId: job.jobId, mediaKey: job.mediaKey, status: job.status, openingMs: job.openingMs ?? 0, endingMs: job.endingMs ?? 0, confidence: { opening: job.openingConfidence ?? 0, ending: job.endingConfidence ?? 0 }, error: job.error, updatedAt: job.updatedAt };
+  return { jobId: job.jobId, mediaKey: job.mediaKey, durationMs: job.durationMs, status: job.status, openingMs: job.openingMs ?? 0, endingMs: job.endingMs ?? 0, confidence: { opening: job.openingConfidence ?? 0, ending: job.endingConfidence ?? 0 }, error: job.error, updatedAt: job.updatedAt };
 }
 
 function parseSamples(value: unknown, durationMs: number): Sample[] {

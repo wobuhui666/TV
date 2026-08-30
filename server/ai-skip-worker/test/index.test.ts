@@ -131,6 +131,30 @@ describe("AI skip request validation", () => {
     });
   });
 
+  it("returns a reusable series result with its source duration", async () => {
+    const job = {
+      jobId: "12345678-1234-1234-1234-123456789abc",
+      mediaKey: "episode-key",
+      seriesKey: "series-key",
+      episode: "1",
+      durationMs: 600_000,
+      samples: [],
+      status: "completed",
+      openingMs: 75_000,
+      endingMs: 90_000,
+      openingConfidence: 0.92,
+      endingConfidence: 0.88,
+      createdAt: 1,
+      updatedAt: 2
+    };
+    const response = await worker.fetch(new Request("https://worker.example.com/v1/jobs/series/series-key", {
+      headers: { authorization: "Bearer secret" }
+    }), env({ AI_SKIP_KV: { get: async (key: string) => key === "series:series-key" ? job : null } }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ durationMs: 600_000, openingMs: 75_000 });
+  });
+
   it("rejects malformed Gemini JSON", () => {
     expect(() => __test.parseGeminiText("not-json")).toThrow();
   });

@@ -149,7 +149,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private String mTmdbLogoUrl;
     private String mTmdbLogoRequest;
     private int mRatingRequest;
-    private boolean mAiSkipPipelineReady;
 
     public static void push(FragmentActivity activity, String text) {
         Uri uri = UrlUtil.uri(text);
@@ -688,10 +687,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public void startPlayback(Result result, boolean useParse, long startPositionMs, History history, Episode episode) {
         claimLocalPlayback();
-        if (!mAiSkipPipelineReady && player().getEngine() == PlayerSetting.ENGINE_EXO && com.fongmi.android.tv.ai.skip.AiSkipSettings.isConfigured()) {
-            reloadAiSubtitleAudioPipeline();
-            mAiSkipPipelineReady = true;
-        }
         String mediaKey = com.github.catvod.utils.Util.md5(getHistoryKey() + "|" + episode.getUrl() + "|" + episode.getName());
         long effectiveStartPositionMs = AiSkipRuntime.get().startSession(mediaKey, history, episode.getName(), startPositionMs, this::refreshAiSkipResult);
         startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), effectiveStartPositionMs, VodPlaybackMedia.metadata(history, episode));
@@ -702,6 +697,15 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.control.action.opening.setText(mHistory.getOpening() <= 0 ? getString(R.string.play_op) : Util.timeMs(mHistory.getOpening()));
         mBinding.control.action.ending.setText(mHistory.getEnding() <= 0 ? getString(R.string.play_ed) : Util.timeMs(mHistory.getEnding()));
         syncJetStreamControl();
+        if (!isPlaybackReady() || !isOwner() || controller() == null) return;
+        long position = player().getPosition();
+        long duration = player().getDuration();
+        if (AiSkipRuntime.shouldSkipOpening(position, mHistory.getOpening())) {
+            controller().seekTo(mHistory.getOpening());
+        } else if (player().isPlaying()
+                && AiSkipRuntime.hasEnteredEnding(position, duration, mHistory.getEnding())) {
+            mVod.nextEpisode(false);
+        }
     }
 
     @Override
@@ -1818,7 +1822,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         long duration = player().getDuration();
         if (position < 0 || duration <= 0) return;
         mVod.onTimeChanged(time, position, duration);
-        AiSkipRuntime.get().onTimeChanged(position, duration);
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
