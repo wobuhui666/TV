@@ -559,17 +559,17 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void onDetailObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onDetailResult(result);
     }
 
     private void onPlayerObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onPlayerResult(result);
     }
 
     private void onSearchObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onSearchResult(result);
     }
 
@@ -631,11 +631,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void requestDetail(String key, String id) {
+        beginPlaybackRequest();
         mViewModel.detailContent(key, id);
     }
 
     @Override
     public void requestPlayer(VodPlayRequest request) {
+        beginPlaybackRequest();
         mBinding.widget.title.setText(getString(R.string.detail_title, getVodName(), request.getTitle()));
         mViewModel.playerContent(request.getKey(), request.getFlag(), request.getId());
         mBinding.widget.title.setSelected(true);
@@ -644,6 +646,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void requestSearch(List<Site> sites, String keyword) {
+        beginPlaybackRequest();
         mQuickItems.clear();
         mBinding.quick.setItems(new ArrayList<>(), -1);
         setRowVisibility(mBinding.quick, false);
@@ -684,13 +687,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void startPlayback(Result result, boolean useParse, long startPositionMs, History history, Episode episode) {
+        claimLocalPlayback();
         if (!mAiSkipPipelineReady && player().getEngine() == PlayerSetting.ENGINE_EXO && com.fongmi.android.tv.ai.skip.AiSkipSettings.isConfigured()) {
             reloadAiSubtitleAudioPipeline();
             mAiSkipPipelineReady = true;
         }
         String mediaKey = com.github.catvod.utils.Util.md5(getHistoryKey() + "|" + episode.getUrl() + "|" + episode.getName());
-        AiSkipRuntime.get().startSession(mediaKey, history, episode.getName(), startPositionMs, this::refreshAiSkipResult);
-        startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), startPositionMs, VodPlaybackMedia.metadata(history, episode));
+        long effectiveStartPositionMs = AiSkipRuntime.get().startSession(mediaKey, history, episode.getName(), startPositionMs, this::refreshAiSkipResult);
+        startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), effectiveStartPositionMs, VodPlaybackMedia.metadata(history, episode));
     }
 
     private void refreshAiSkipResult() {
@@ -1736,6 +1740,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     @Override
+    protected void onPlaybackPositionDiscontinuity() {
+        if (mVod != null) mVod.onSeek();
+    }
+
+    @Override
     protected void onTracksChanged() {
         setTrackVisible();
     }
@@ -1928,6 +1937,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onSeekEnd(long time) {
+        if (mVod != null) mVod.onSeek();
         if (seekTo(time)) hideCenter();
         mKeyDown.reset();
     }
@@ -2026,6 +2036,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onDestroy() {
+        if (mKeyDown != null) mKeyDown.reset();
         AiSkipRuntime.get().stopSession();
         mRatingRequest++;
         MediaRatingHelper.cancel();

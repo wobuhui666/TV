@@ -30,4 +30,14 @@ public abstract class HistoryDao extends BaseDao<History> {
 
     @Query("DELETE FROM History")
     public abstract void delete();
+
+    @Query("UPDATE History SET opening = :opening, openingSource = :openingSource, ending = :ending, endingSource = :endingSource " +
+            "WHERE cid = :cid AND `key` = :key " +
+            "AND IFNULL(vodRemarks, '') = IFNULL(:vodRemarks, '') AND IFNULL(episodeUrl, '') = IFNULL(:episodeUrl, '') " +
+            "AND opening = :previousOpening AND IFNULL(openingSource, 'unknown') = IFNULL(:previousOpeningSource, 'unknown') " +
+            "AND ending = :previousEnding AND IFNULL(endingSource, 'unknown') = IFNULL(:previousEndingSource, 'unknown')")
+    public abstract int updateBoundariesIfUnchanged(int cid, String key, String vodRemarks, String episodeUrl,
+                                                    long previousOpening, String previousOpeningSource,
+                                                    long previousEnding, String previousEndingSource,
+                                                    long opening, String openingSource, long ending, String endingSource);
 }

@@ -191,8 +191,6 @@
     <string name="player_decode_setting">Decode setting</string>
     <string name="player_preload_setting">Preload setting</string>
     <string name="player_preload">Preload</string>
-    <string name="player_preload_threads">Preload threads</string>
-    <string name="player_preload_threads_value">%1$d threads</string>
     <string name="player_preload_size">Preload size</string>
     <string name="player_preload_time">Preload time</string>
     <string name="player_preload_time_value">%1$d seconds</string>

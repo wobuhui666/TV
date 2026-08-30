@@ -685,7 +685,6 @@ class JetStreamSettingView @JvmOverloads constructor(
                 label = context.getString(R.string.setting_section_preload),
                 rows = listOf(
                     RowSpec(KEY_PRELOAD, context.getString(R.string.player_preload), toggle = true),
-                    RowSpec(KEY_PRELOAD_THREADS, context.getString(R.string.player_preload_threads)),
                     RowSpec(KEY_PRELOAD_SIZE, context.getString(R.string.player_preload_size)),
                     RowSpec(KEY_PRELOAD_TIME, context.getString(R.string.player_preload_time))
                 )
@@ -776,7 +775,6 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_AAC = "aac"
 
         const val KEY_PRELOAD = "preload_switch"
-        const val KEY_PRELOAD_THREADS = "preload_threads"
         const val KEY_PRELOAD_SIZE = "preload_size"
         const val KEY_PRELOAD_TIME = "preload_time"
 

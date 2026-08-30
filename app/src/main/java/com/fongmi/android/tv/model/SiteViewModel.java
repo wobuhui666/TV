@@ -10,6 +10,7 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.exception.ExtractException;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.github.catvod.utils.Trans;
 
 import java.util.HashMap;
@@ -79,7 +80,8 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void playerContent(String key, String flag, String id) {
-        execute(TaskType.PLAYER, player, () -> SiteApi.playerContent(key, flag, id));
+        Source.ResolveRequest request = Source.get().beginResolve();
+        execute(TaskType.PLAYER, player, () -> SiteApi.playerContent(request, key, flag, id));
     }
 
     public void searchContent(Site site, String keyword, boolean quick, String page) {

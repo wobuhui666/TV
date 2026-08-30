@@ -15,6 +15,7 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.Task;
@@ -64,17 +65,25 @@ class VodBrowse {
 
     @NonNull
     static ImmutableList<MediaItem> search(@NonNull String query) {
+        BrowseTree.SearchCandidate candidate = prepareSearchResults(query);
+        candidate.commit();
+        return candidate.items();
+    }
+
+    @NonNull
+    static BrowseTree.SearchCandidate prepareSearchResults(@NonNull String query) {
         VodConfig.get().ensureLoaded();
         String keyword = searchKey(query);
-        if (TextUtils.isEmpty(keyword)) return ImmutableList.of();
+        if (TextUtils.isEmpty(keyword)) return BrowseTree.searchCandidate(ImmutableList.of(), null);
         List<Site> sites = VodConfig.get().getSites().stream().filter(Site::isSearchable).toList();
         List<ListenableFuture<List<MediaItem>>> futures = sites.stream().map(site -> Task.largeExecutor().submit(() -> searchSite(site, keyword))).toList();
         List<MediaItem> items = collectResults(futures);
         items.sort((a, b) -> matchScore(b, keyword) - matchScore(a, keyword));
         ImmutableList<MediaItem> results = ImmutableList.copyOf(items.subList(0, Math.min(items.size(), SEARCH_LIMIT)));
-        searchCacheMap.put(keyword, results);
-        results.forEach(item -> searchItemMap.put(item.mediaId, item));
-        return results;
+        return BrowseTree.searchCandidate(results, () -> {
+            searchCacheMap.put(keyword, results);
+            results.forEach(item -> searchItemMap.put(item.mediaId, item));
+        });
     }
 
     private static List<MediaItem> searchSite(@NonNull Site site, @NonNull String keyword) throws Exception {
@@ -117,19 +126,27 @@ class VodBrowse {
     }
 
     @Nullable
-    static MediaItem navigate(@NonNull String mediaId, int delta) throws Exception {
-        if (mediaId.startsWith(VOD_EP)) return navigateEpisode(mediaId, delta);
-        String epId = ensureEpLoaded(mediaId);
-        if (epId != null) return navigateEpisode(epId, delta);
+    static BrowseTree.ResolutionCandidate prepare(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        if (mediaId.startsWith(VOD_PLAY)) return prepareWithHistory(mediaId.substring(VOD_PLAY.length()), null, request);
+        if (mediaId.startsWith(VOD_EP)) return prepareEpisode(mediaId, request);
+        if (mediaId.startsWith(VOD_SEARCH)) return prepareSearch(mediaId, request);
         return null;
     }
 
-    static long consumeResumePosition() {
-        if (browseHistory == null) return C.TIME_UNSET;
-        History history = browseHistory;
-        long position = history.getPosition();
-        history.setPosition(0);
-        return position > 0 ? position : C.TIME_UNSET;
+    @Nullable
+    static BrowseTree.NavigationCandidate navigate(@NonNull String mediaId, int delta, @NonNull Source.ResolveRequest request) throws Exception {
+        if (mediaId.startsWith(VOD_EP)) return navigateEpisode(mediaId, delta, request);
+        String historyKey = mediaId.startsWith(VOD_PLAY) ? mediaId.substring(VOD_PLAY.length()) : mediaId;
+        History history = History.find(historyKey);
+        if (history == null) return null;
+        Vod vod = getVodForNavigation(historyKey, history);
+        if (vod == null) return null;
+        Flag flag = findFlag(vod, history.getVodFlag());
+        if (flag == null || flag.getEpisodes().isEmpty()) return null;
+        int target = BrowseTree.wrapIndex(findCurrentIndex(flag, history), delta, flag.getEpisodes().size());
+        String nextId = VOD_EP + epNavKey(historyKey, flag.getFlag(), target);
+        EpEntry entry = new EpEntry(historyKey, flag.getFlag(), target, history.getSiteKey(), history.getVodPic());
+        return resolveEpCandidate(nextId, entry, vod, flag, history, true, request);
     }
 
     static boolean saveProgress(long position, long duration) {
@@ -172,6 +189,76 @@ class VodBrowse {
     }
 
     @Nullable
+    private static BrowseTree.ResolutionCandidate prepareSearch(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        SearchEntry search = SearchEntry.parse(mediaId);
+        if (search == null) return null;
+        String historyKey = historyKey(search.siteKey, search.vodId);
+        History history = History.find(historyKey);
+        if (history != null) return prepareWithHistory(historyKey, history, request);
+        VodConfig.get().ensureLoaded();
+        Vod vod = SiteApi.detailContent(search.siteKey, search.vodId).getVod();
+        if (TextUtils.isEmpty(vod.getId()) || vod.getFlags().isEmpty()) return null;
+        history = createHistory(historyKey, vod);
+        Flag flag = findFlag(vod, history.getVodFlag());
+        if (flag == null || flag.getEpisodes().isEmpty()) return null;
+        int index = findCurrentIndex(flag, history);
+        return prepareEpisodeCandidate(historyKey, vod, flag, history, index, true, request);
+    }
+
+    @Nullable
+    private static BrowseTree.ResolutionCandidate prepareWithHistory(@NonNull String historyKey, @Nullable History history, @NonNull Source.ResolveRequest request) throws Exception {
+        if (history == null) history = History.find(historyKey);
+        if (history == null) return null;
+        Vod vod = getVodForNavigation(historyKey, history);
+        if (vod == null) return null;
+        Flag flag = findFlag(vod, history.getVodFlag());
+        if (flag == null || flag.getEpisodes().isEmpty()) return null;
+        return prepareEpisodeCandidate(historyKey, vod, flag, history, findCurrentIndex(flag, history), false, request);
+    }
+
+    @Nullable
+    private static BrowseTree.ResolutionCandidate prepareEpisode(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        EpEntry entry = epEntries.get(mediaId);
+        if (entry == null) return null;
+        History history = findNavigationHistory(entry.historyKey);
+        Vod vod = getVodForNavigation(entry.historyKey, history);
+        if (vod == null) return null;
+        Flag flag = findFlag(vod, entry.flagName);
+        if (flag == null) return null;
+        return prepareEpisodeCandidate(mediaId, entry, vod, flag, history, false, false, request);
+    }
+
+    @Nullable
+    private static BrowseTree.ResolutionCandidate prepareEpisodeCandidate(@NonNull String historyKey, @NonNull Vod vod,
+                                                                           @NonNull Flag flag, @NonNull History history,
+                                                                           int index, boolean saveCreated, @NonNull Source.ResolveRequest request) throws Exception {
+        String mediaId = VOD_EP + epNavKey(historyKey, flag.getFlag(), index);
+        EpEntry entry = new EpEntry(historyKey, flag.getFlag(), index, history.getSiteKey(), history.getVodPic());
+        return prepareEpisodeCandidate(mediaId, entry, vod, flag, history, true, saveCreated, request);
+    }
+
+    @Nullable
+    private static BrowseTree.ResolutionCandidate prepareEpisodeCandidate(@NonNull String mediaId, @NonNull EpEntry entry,
+                                                                           @NonNull Vod vod, @NonNull Flag flag,
+                                                                           @Nullable History history, boolean indexOnCommit,
+                                                                           boolean saveCreated, @NonNull Source.ResolveRequest request) throws Exception {
+        if (history == null || entry.index < 0 || entry.index >= flag.getEpisodes().size()) return null;
+        Episode episode = flag.getEpisodes().get(entry.index);
+        Result result = SiteApi.playerContent(request, entry.siteKey, entry.flagName, episode.getUrl());
+        if (TextUtils.isEmpty(result.getRealUrl())) return null;
+        MediaItem item = BrowseTree.stream(mediaId, result.getRealUrl(), vodName(vod, history), episode.getName(), entry.vodPic);
+        long resumePositionMs = history.getPosition() > 0 ? history.getPosition() : C.TIME_UNSET;
+        return BrowseTree.resolution(item, result, resumePositionMs, () -> {
+            vodCache.put(entry.historyKey, vod);
+            if (indexOnCommit) buildEpIndex(entry.historyKey, flag, history);
+            browseHistory = history;
+            updateHistory(history, episode);
+            if (saveCreated) saveCreatedHistory(history);
+            history.setPosition(0);
+        });
+    }
+
+    @Nullable
     private static MediaItem resolveWithHistory(@NonNull String historyKey, @NonNull History history) throws Exception {
         String epId = ensureEpLoaded(historyKey, history);
         return epId != null ? resolveEp(epId) : null;
@@ -194,13 +281,24 @@ class VodBrowse {
 
     @Nullable
     private static String ensureEpLoaded(@NonNull String historyKey, @Nullable History history) throws Exception {
+        String epId = ensureEpIndexed(historyKey, history);
+        if (epId != null) browseHistory = history;
+        return epId;
+    }
+
+    /**
+     * Builds the episode navigation index without activating or changing the
+     * current playback history.  Navigation workers use this read/cache-only
+     * path and defer history mutations to the candidate commit action.
+     */
+    @Nullable
+    private static String ensureEpIndexed(@NonNull String historyKey, @Nullable History history) throws Exception {
         if (history == null) return null;
         Vod vod = getOrFetchVod(historyKey, history);
         if (vod == null) return null;
         Flag flag = findFlag(vod, history.getVodFlag());
         if (flag == null || flag.getEpisodes().isEmpty()) return null;
         int currentIdx = buildEpIndex(historyKey, flag, history);
-        browseHistory = history;
         return epNavMap.get(epNavKey(historyKey, flag.getFlag(), currentIdx));
     }
 
@@ -231,7 +329,7 @@ class VodBrowse {
     }
 
     @Nullable
-    private static MediaItem navigateEpisode(@NonNull String mediaId, int delta) throws Exception {
+    private static BrowseTree.NavigationCandidate navigateEpisode(@NonNull String mediaId, int delta, @NonNull Source.ResolveRequest request) throws Exception {
         EpEntry current = epEntries.get(mediaId);
         if (current == null) return null;
         Integer count = epCountMap.get(epCountKey(current.historyKey, current.flagName));
@@ -239,8 +337,7 @@ class VodBrowse {
         int target = BrowseTree.wrapIndex(current.index, delta, count);
         String nextId = epNavMap.get(epNavKey(current.historyKey, current.flagName, target));
         if (nextId == null) return null;
-        if (browseHistory != null) browseHistory.setPosition(0);
-        return resolveEp(nextId);
+        return resolveEpCandidate(nextId, request);
     }
 
     @Nullable
@@ -259,10 +356,58 @@ class VodBrowse {
         return BrowseTree.stream(mediaId, result.getRealUrl(), vodName(vod), episode.getName(), entry.vodPic);
     }
 
+    @Nullable
+    private static BrowseTree.NavigationCandidate resolveEpCandidate(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        EpEntry entry = epEntries.get(mediaId);
+        if (entry == null) return null;
+        History history = findNavigationHistory(entry.historyKey);
+        Vod vod = getVodForNavigation(entry.historyKey, history);
+        if (vod == null) return null;
+        Flag flag = findFlag(vod, entry.flagName);
+        if (flag == null || entry.index >= flag.getEpisodes().size()) return null;
+        return resolveEpCandidate(mediaId, entry, vod, flag, history, false, request);
+    }
+
+    @Nullable
+    private static BrowseTree.NavigationCandidate resolveEpCandidate(@NonNull String mediaId, @NonNull EpEntry entry,
+                                                                      @NonNull Vod vod, @NonNull Flag flag,
+                                                                      @Nullable History history, boolean indexOnCommit,
+                                                                      @NonNull Source.ResolveRequest request) throws Exception {
+        if (entry.index < 0 || entry.index >= flag.getEpisodes().size()) return null;
+        Episode episode = flag.getEpisodes().get(entry.index);
+        Result result = SiteApi.playerContent(request, entry.siteKey, entry.flagName, episode.getUrl());
+        if (TextUtils.isEmpty(result.getRealUrl())) return null;
+        MediaItem item = BrowseTree.stream(mediaId, result.getRealUrl(), vodName(vod, history), episode.getName(), entry.vodPic);
+        return BrowseTree.candidate(item, result, () -> {
+            vodCache.put(entry.historyKey, vod);
+            if (indexOnCommit && history != null) buildEpIndex(entry.historyKey, flag, history);
+            commitNavigationHistory(history, episode);
+        });
+    }
+
+    @Nullable
+    private static History findNavigationHistory(@NonNull String historyKey) {
+        History current = browseHistory;
+        if (current != null && historyKey.equals(current.getKey())) return current;
+        return History.find(historyKey);
+    }
+
+    private static void commitNavigationHistory(@Nullable History captured, @NonNull Episode episode) {
+        History history = browseHistory;
+        if (history == null || captured == null || !captured.getKey().equals(history.getKey())) history = captured;
+        if (history == null) return;
+        browseHistory = history;
+        history.setPosition(0);
+        updateHistory(history, episode);
+    }
+
     private static void updateHistory(@NonNull Episode episode) {
-        if (browseHistory == null) return;
-        browseHistory.setVodRemarks(episode.getName());
-        browseHistory.setEpisodeUrl(episode.getUrl());
+        if (browseHistory != null) updateHistory(browseHistory, episode);
+    }
+
+    private static void updateHistory(@NonNull History history, @NonNull Episode episode) {
+        history.setVodRemarks(episode.getName());
+        history.setEpisodeUrl(episode.getUrl());
     }
 
     private static void saveCreatedHistory(@NonNull History history) {
@@ -316,6 +461,13 @@ class VodBrowse {
         if (vod == null) return null;
         vodCache.put(historyKey, vod);
         return vod;
+    }
+
+    @Nullable
+    private static Vod getVodForNavigation(@NonNull String historyKey, @Nullable History history) throws Exception {
+        Vod vod = vodCache.get(historyKey);
+        if (vod != null) return vod;
+        return history == null ? null : fetchDetail(history);
     }
 
     @Nullable
@@ -375,6 +527,13 @@ class VodBrowse {
     private static String vodName(@NonNull Vod vod) {
         if (!TextUtils.isEmpty(vod.getName())) return vod.getName();
         String name = browseHistory != null ? browseHistory.getVodName() : "";
+        return name == null ? "" : name;
+    }
+
+    @NonNull
+    private static String vodName(@NonNull Vod vod, @Nullable History history) {
+        if (!TextUtils.isEmpty(vod.getName())) return vod.getName();
+        String name = history != null ? history.getVodName() : "";
         return name == null ? "" : name;
     }
 

@@ -63,6 +63,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private boolean scrubbing;
     private boolean redirect;
     private boolean debugViewVisible;
+    private long localPlaybackRequest = -1;
     private boolean bound;
     private boolean stop;
     private boolean lock;
@@ -77,6 +78,18 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     protected boolean isPlaybackReady() {
         return mService != null && mController != null;
+    }
+
+    protected boolean canApplyPlaybackResult() {
+        return mService != null && localPlaybackRequest >= 0 && mService.canApplyLocalPlaybackRequest(localPlaybackRequest);
+    }
+
+    protected void beginPlaybackRequest() {
+        localPlaybackRequest = mService == null ? -1 : mService.beginLocalPlaybackRequest();
+    }
+
+    protected void claimLocalPlayback() {
+        beginPlaybackRequest();
     }
 
     protected PlayerManager player() {
@@ -229,6 +242,9 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     protected void onMediaOptionsChanged() {
     }
 
+    protected void onPlaybackPositionDiscontinuity() {
+    }
+
     protected void onError(String msg) {
     }
 
@@ -249,6 +265,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     }
 
     protected boolean seekTo(long deltaMs) {
+        if (deltaMs == 0) return false;
         MediaController controller = mController;
         if (mService == null || controller == null) return false;
         PlayerManager player = player();
@@ -566,7 +583,10 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     @Override
     public void onEvents(@NonNull Player player, @NonNull Player.Events events) {
         if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_POSITION_DISCONTINUITY, Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_PLAYBACK_STATE_CHANGED, Player.EVENT_AVAILABLE_COMMANDS_CHANGED)) updateKeyIncrement();
-        if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) AiSubtitleRuntime.get().onPlaybackPositionDiscontinuity();
+        if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) {
+            AiSubtitleRuntime.get().onPlaybackPositionDiscontinuity();
+            if (isOwner()) onPlaybackPositionDiscontinuity();
+        }
     }
 
     @Override
@@ -579,7 +599,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     public void onPlaybackStateChanged(int state) {
-        if (isOwner()) onStateChanged(state);
+        if (isOwner() && (state != Player.STATE_ENDED || mService == null || !mService.isMediaResolutionPending())) onStateChanged(state);
     }
 
     @Override

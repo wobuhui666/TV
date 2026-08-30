@@ -16,9 +16,9 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     private final GestureDetector detector;
     private final Listener listener;
+    private final PendingSeek pendingSeek;
     private boolean changeSpeed;
     private boolean full;
-    private long holdTime;
 
     public static CustomKeyDownVod create(Activity activity) {
         return new CustomKeyDownVod(activity);
@@ -27,6 +27,17 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     private CustomKeyDownVod(Activity activity) {
         this.detector = new GestureDetector(activity, this);
         this.listener = (Listener) activity;
+        this.pendingSeek = new PendingSeek(listener::onSeekEnd, new PendingSeek.Scheduler() {
+            @Override
+            public void post(Runnable runnable, long delayMs) {
+                App.post(runnable, delayMs);
+            }
+
+            @Override
+            public void cancel(Runnable runnable) {
+                App.removeCallbacks(runnable);
+            }
+        });
     }
 
     public boolean onTouchEvent(MotionEvent e) {
@@ -49,11 +60,13 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     private void check(KeyEvent event) {
         if (KeyUtil.isActionDown(event) && KeyUtil.isLeftKey(event)) {
+            pendingSeek.cancel();
             listener.onSeeking(subTime(event));
         } else if (KeyUtil.isActionDown(event) && KeyUtil.isRightKey(event)) {
+            pendingSeek.cancel();
             listener.onSeeking(addTime(event));
         } else if (KeyUtil.isActionUp(event) && (KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event))) {
-            App.post(() -> listener.onSeekEnd(holdTime), 250);
+            pendingSeek.post(250);
         } else if (KeyUtil.isActionUp(event) && KeyUtil.isUpKey(event)) {
             if (changeSpeed) listener.onSpeedEnd();
             else listener.onKeyUp();
@@ -80,11 +93,11 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     }
 
     private long addTime(KeyEvent event) {
-        return holdTime = holdTime + seekStep(event);
+        return pendingSeek.add(seekStep(event));
     }
 
     private long subTime(KeyEvent event) {
-        return holdTime = holdTime - seekStep(event);
+        return pendingSeek.add(-seekStep(event));
     }
 
     /**
@@ -100,7 +113,7 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     }
 
     public void reset() {
-        holdTime = 0;
+        pendingSeek.clear();
     }
 
     public interface Listener {

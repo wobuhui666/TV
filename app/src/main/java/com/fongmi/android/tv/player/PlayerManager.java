@@ -35,7 +35,6 @@ import com.fongmi.android.tv.utils.MpvLogCollector;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.Util;
-import com.google.common.net.HttpHeaders;
 
 import java.util.HashMap;
 import java.util.List;
@@ -326,6 +325,7 @@ public class PlayerManager implements ParseCallback {
     }
 
     public void stop() {
+        App.removeCallbacks(runnable);
         engine.stop();
         stopParse();
     }
@@ -396,8 +396,9 @@ public class PlayerManager implements ParseCallback {
         MpvLogCollector.log("PlayerManager", "切换解码模式: " + (decode == PlayerEngine.HARD ? "硬解" : "软解") + ", rebuild=" + rebuild);
         callback.onDecodeChanged();
         if (!rebuild) return;
+        long position = isLive() ? C.TIME_UNSET : getPosition();
         setPlayer(engine.rebuild());
-        startCurrent(getPosition());
+        startCurrent(position);
     }
 
     /** Rebuilds the renderer/AudioSink so the AI PCM tap and lookahead buffer change immediately. */
@@ -571,7 +572,8 @@ public class PlayerManager implements ParseCallback {
     @Override
     public void onParseSuccess(Map<String, String> headers, String url, String from) {
         if (!TextUtils.isEmpty(from)) Notify.show(ResUtil.getString(R.string.parse_from, from));
-        if (headers != null) headers.remove(HttpHeaders.RANGE);
+        // PlaySpec.checkUa() copies and sanitizes the map before it reaches any data source.
+        // Keep the parser-owned map untouched because some parsers return immutable maps.
         if (spec != null) spec.setHeaders(headers);
         if (spec != null) spec.setUrl(url);
         startCurrent(pendingStartPositionMs);

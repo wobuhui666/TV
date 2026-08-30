@@ -17,12 +17,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Source {
 
     private final List<Extractor> extractors;
+    private final AtomicLong resolveGeneration;
+    private final Object resolveLock;
+    private final Object fetchLock;
 
     public Source() {
+        resolveGeneration = new AtomicLong();
+        resolveLock = new Object();
+        fetchLock = new Object();
         extractors = new ArrayList<>();
         extractors.add(new Force());
         extractors.add(new JianPian());
@@ -69,13 +76,31 @@ public class Source {
         }
     }
 
-    public String fetch(Result result) throws Exception {
-        Uri uri = result.getUrl().uri();
-        String url = result.getUrl().v();
-        Extractor extractor = getExtractor(uri);
-        if (extractor != null) result.setParse(0);
-        if (extractor instanceof Video) result.setParse(1);
-        return extractor == null ? url : extractor.fetch(result);
+    public ResolveRequest beginResolve() {
+        synchronized (resolveLock) {
+            ResolveRequest request = new ResolveRequest(resolveGeneration.incrementAndGet());
+            stop();
+            return request;
+        }
+    }
+
+    public String fetch(ResolveRequest request, Result result) throws Exception {
+        requireCurrent(request);
+        synchronized (fetchLock) {
+            requireCurrent(request);
+            Uri uri = result.getUrl().uri();
+            String url = result.getUrl().v();
+            Extractor extractor = getExtractor(uri);
+            if (extractor != null) result.setParse(0);
+            if (extractor instanceof Video) result.setParse(1);
+            String resolved = extractor == null ? url : extractor.fetch(result);
+            requireCurrent(request);
+            return resolved;
+        }
+    }
+
+    private void requireCurrent(ResolveRequest request) {
+        if (request == null || request.generation != resolveGeneration.get()) throw new CancellationException();
     }
 
     public void stop() {
@@ -101,6 +126,9 @@ public class Source {
         void stop();
 
         void exit();
+    }
+
+    public record ResolveRequest(long generation) {
     }
 
     private static class Loader {

@@ -440,17 +440,17 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     private void onDetailObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onDetailResult(result);
     }
 
     private void onPlayerObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onPlayerResult(result);
     }
 
     private void onSearchObserved(Result result) {
-        if (service() == null) return;
+        if (!canApplyPlaybackResult()) return;
         mVod.onSearchResult(result);
     }
 
@@ -512,11 +512,13 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void requestDetail(String key, String id) {
+        beginPlaybackRequest();
         mViewModel.detailContent(key, id);
     }
 
     @Override
     public void requestPlayer(VodPlayRequest request) {
+        beginPlaybackRequest();
         mBinding.control.title.setText(getString(R.string.detail_title, mBinding.name.getText(), request.getTitle()));
         mViewModel.playerContent(request.getKey(), request.getFlag(), request.getId());
         mBinding.control.title.setSelected(true);
@@ -525,6 +527,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void requestSearch(List<Site> sites, String keyword) {
+        beginPlaybackRequest();
         mQuickAdapter.clear();
         mViewModel.searchContent(sites, keyword, true);
     }
@@ -564,6 +567,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void startPlayback(Result result, boolean useParse, long startPositionMs, History history, Episode episode) {
+        claimLocalPlayback();
         startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), startPositionMs, VodPlaybackMedia.metadata(history, episode));
     }
 
@@ -1301,6 +1305,11 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     @Override
+    protected void onPlaybackPositionDiscontinuity() {
+        if (mVod != null) mVod.onSeek();
+    }
+
+    @Override
     protected void onTracksChanged() {
         setTrackVisible();
     }
@@ -1552,6 +1561,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void onSeekEnd(long time) {
+        if (mVod != null) mVod.onSeek();
         seekTo(time);
     }
 

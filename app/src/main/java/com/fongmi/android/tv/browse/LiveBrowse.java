@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 
 import com.fongmi.android.tv.api.LiveApi;
@@ -12,6 +13,7 @@ import com.fongmi.android.tv.bean.Channel;
 import com.fongmi.android.tv.bean.Group;
 import com.fongmi.android.tv.bean.Live;
 import com.fongmi.android.tv.bean.Result;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.google.common.collect.ImmutableList;
 
@@ -42,24 +44,38 @@ class LiveBrowse {
 
     @NonNull
     static ImmutableList<MediaItem> getChannels(@NonNull String parentId) {
-        String groupName = parentId.substring(LIVE_GROUP.length());
-        Group group = liveHome().getGroups().stream().filter(item -> item.getName().equals(groupName)).findFirst().orElse(null);
-        if (group == null) {
-            liveCountMap.put(groupName, 0);
-            return ImmutableList.of();
-        }
-        liveNavMap.keySet().removeIf(key -> key.startsWith(groupName + '|'));
-        livePosMap.values().removeIf(entry -> entry.groupName.equals(groupName));
-        List<Channel> channels = group.getChannel();
-        liveCountMap.put(groupName, channels.size());
-        return IntStream.range(0, channels.size()).mapToObj(i -> indexChannel(groupName, channels.get(i), i)).collect(ImmutableList.toImmutableList());
+        BrowseTree.ChildrenCandidate candidate = prepareChannels(parentId);
+        candidate.commit();
+        return candidate.items();
     }
 
-    private static MediaItem indexChannel(@NonNull String groupName, @NonNull Channel channel, int index) {
+    @NonNull
+    static BrowseTree.ChildrenCandidate prepareChannels(@NonNull String parentId) {
+        String groupName = parentId.substring(LIVE_GROUP.length());
+        Group group = liveHome().getGroups().stream().filter(item -> item.getName().equals(groupName)).findFirst().orElse(null);
+        if (group == null) return BrowseTree.childrenCandidate(ImmutableList.of(), () -> indexChannels(groupName, List.of()));
+        List<Channel> channels = List.copyOf(group.getChannel());
+        ImmutableList<MediaItem> items = IntStream.range(0, channels.size())
+                .mapToObj(i -> channelItem(groupName, channels.get(i), i)).collect(ImmutableList.toImmutableList());
+        return BrowseTree.childrenCandidate(items, () -> indexChannels(groupName, channels));
+    }
+
+    private static void indexChannels(@NonNull String groupName, @NonNull List<Channel> channels) {
+        liveNavMap.keySet().removeIf(key -> key.startsWith(groupName + '|'));
+        livePosMap.values().removeIf(entry -> entry.groupName.equals(groupName));
+        liveCountMap.put(groupName, channels.size());
+        IntStream.range(0, channels.size()).forEach(i -> indexChannel(groupName, channels.get(i), i));
+    }
+
+    private static void indexChannel(@NonNull String groupName, @NonNull Channel channel, int index) {
         String key = liveNavKey(groupName, index);
         String id = LIVE_CH + key;
         liveNavMap.put(key, id);
         livePosMap.put(id, new LiveEntry(channel, groupName, index));
+    }
+
+    private static MediaItem channelItem(@NonNull String groupName, @NonNull Channel channel, int index) {
+        String id = LIVE_CH + liveNavKey(groupName, index);
         return BrowseTree.playable(id, channel.getNumber() + " " + channel.getShow(), null, channel.getLogo());
     }
 
@@ -79,15 +95,24 @@ class LiveBrowse {
     }
 
     @Nullable
-    static MediaItem navigate(@NonNull String mediaId, int delta) throws Exception {
-        if (mediaId.startsWith(LIVE_CH)) return navigateChannel(mediaId, delta);
-        String liveId = ensureLoaded();
-        if (liveId != null) return navigateChannel(liveId, delta);
-        return null;
+    static BrowseTree.ResolutionCandidate prepare(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        LiveEntry entry = livePosMap.get(mediaId);
+        Channel channel = entry != null ? entry.channel() : null;
+        if (channel == null || TextUtils.isEmpty(channel.getCurrent())) return null;
+        Result result = LiveApi.getUrl(request, channel);
+        if (TextUtils.isEmpty(result.getRealUrl())) return null;
+        MediaItem item = BrowseTree.stream(mediaId, result.getRealUrl(), channel.getShow(), null, channel.getLogo());
+        return BrowseTree.resolution(item, result, C.TIME_UNSET, null);
     }
 
     @Nullable
-    private static MediaItem navigateChannel(@NonNull String mediaId, int delta) throws Exception {
+    static BrowseTree.NavigationCandidate navigate(@NonNull String mediaId, int delta, @NonNull Source.ResolveRequest request) throws Exception {
+        if (mediaId.startsWith(LIVE_CH)) return navigateChannel(mediaId, delta, request);
+        return navigateKeep(delta, request);
+    }
+
+    @Nullable
+    private static BrowseTree.NavigationCandidate navigateChannel(@NonNull String mediaId, int delta, @NonNull Source.ResolveRequest request) throws Exception {
         LiveEntry current = livePosMap.get(mediaId);
         if (current == null) return null;
         Integer count = liveCountMap.get(current.groupName);
@@ -96,21 +121,25 @@ class LiveBrowse {
         String nextId = liveNavMap.get(liveNavKey(current.groupName, target));
         if (nextId == null) return null;
         LiveEntry next = livePosMap.get(nextId);
-        return resolveChannel(next != null ? next.channel() : null, nextId);
+        return resolveChannelCandidate(next != null ? next.channel() : null, nextId, null, request);
     }
 
     @Nullable
-    private static String ensureLoaded() {
+    private static BrowseTree.NavigationCandidate navigateKeep(int delta, @NonNull Source.ResolveRequest request) throws Exception {
         String keep = liveHome().getKeep();
         if (TextUtils.isEmpty(keep)) return null;
         String[] splits = keep.split(AppDatabase.SYMBOL);
         if (splits.length < 2) return null;
         String groupName = splits[0];
         String channelName = splits[1];
-        getChannels(LIVE_GROUP + groupName);
-        Integer count = liveCountMap.get(groupName);
-        if (count == null || count == 0) return null;
-        return livePosMap.entrySet().stream().filter(e -> e.getValue().groupName().equals(groupName) && e.getValue().channel().getName().equals(channelName)).map(Map.Entry::getKey).findFirst().orElse(null);
+        Group group = liveHome().getGroups().stream().filter(item -> item.getName().equals(groupName)).findFirst().orElse(null);
+        if (group == null || group.getChannel().isEmpty()) return null;
+        List<Channel> channels = group.getChannel();
+        int current = IntStream.range(0, channels.size()).filter(i -> channels.get(i).getName().equals(channelName)).findFirst().orElse(0);
+        int target = BrowseTree.wrapIndex(current, delta, channels.size());
+        Channel channel = channels.get(target);
+        String mediaId = LIVE_CH + liveNavKey(groupName, target);
+        return resolveChannelCandidate(channel, mediaId, () -> getChannels(LIVE_GROUP + groupName), request);
     }
 
     @Nullable
@@ -120,6 +149,16 @@ class LiveBrowse {
         if (TextUtils.isEmpty(result.getRealUrl())) return null;
         BrowseTree.putBrowseResult(mediaId, result);
         return BrowseTree.stream(mediaId, result.getRealUrl(), channel.getShow(), null, channel.getLogo());
+    }
+
+    @Nullable
+    private static BrowseTree.NavigationCandidate resolveChannelCandidate(@Nullable Channel channel, @NonNull String mediaId,
+                                                                           @Nullable Runnable commit, @NonNull Source.ResolveRequest request) throws Exception {
+        if (channel == null || TextUtils.isEmpty(channel.getCurrent())) return null;
+        Result result = LiveApi.getUrl(request, channel);
+        if (TextUtils.isEmpty(result.getRealUrl())) return null;
+        MediaItem item = BrowseTree.stream(mediaId, result.getRealUrl(), channel.getShow(), null, channel.getLogo());
+        return BrowseTree.candidate(item, result, commit);
     }
 
     private static Live liveHome() {

@@ -29,6 +29,8 @@ import com.github.catvod.utils.Path;
 import java.io.File;
 import java.util.Map;
 
+import okhttp3.Call;
+
 public class MediaSourceFactory implements MediaSource.Factory {
 
     private static final int CACHE_SPACE_PERCENT = 80;
@@ -45,8 +47,8 @@ public class MediaSourceFactory implements MediaSource.Factory {
         defaultMediaSourceFactory = new DefaultMediaSourceFactory(getDataSourceFactory(), getExtractorsFactory());
     }
 
-    static DataSource.Factory createUpstreamDataSourceFactory(Map<String, String> headers) {
-        HttpDataSource.Factory factory = new OkHttpDataSource.Factory(OkHttp.player());
+    static DataSource.Factory createUpstreamDataSourceFactory(Map<String, String> headers, Call.Factory callFactory) {
+        HttpDataSource.Factory factory = new OkHttpDataSource.Factory(callFactory);
         factory.setDefaultRequestProperties(headers);
         return new DefaultDataSource.Factory(App.get(), factory);
     }

@@ -6,10 +6,12 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 
 import com.fongmi.android.tv.bean.Result;
+import com.fongmi.android.tv.player.extractor.Source;
 import com.google.common.collect.ImmutableList;
 
 import java.util.Map;
@@ -23,7 +25,7 @@ public class BrowseTree {
     private static final String ROOT = "ROOT";
     private static final String VOD = "VOD";
     private static final String LIVE = "LIVE";
-    private static final Map<String, Result> browseResultMap = new ConcurrentHashMap<>();
+    private static final Map<String, PreparedResult> browseResultMap = new ConcurrentHashMap<>();
     private static final MediaItem ROOT_ITEM = folder(ROOT, "影視");
     private static final MediaItem VOD_FOLDER = folder(VOD, "點播");
     private static final MediaItem LIVE_FOLDER;
@@ -36,12 +38,15 @@ public class BrowseTree {
     }
 
     public static void clear() {
+        browseResultMap.clear();
         clearVod();
         clearLive();
     }
 
     public static void clearVod() {
+        clearPending(VodBrowse.VOD_PLAY);
         clearPending(VodBrowse.VOD_EP);
+        clearPending(VodBrowse.VOD_SEARCH);
         VodBrowse.clear();
     }
 
@@ -57,6 +62,15 @@ public class BrowseTree {
     @NonNull
     public static ImmutableList<MediaItem> getChildren(@NonNull String parentId, int page, int pageSize) {
         return page(getChildrenInternal(parentId), page, pageSize);
+    }
+
+    @NonNull
+    public static ChildrenCandidate prepareChildren(@NonNull String parentId, int page, int pageSize) {
+        if (parentId.startsWith(LiveBrowse.LIVE_GROUP)) {
+            ChildrenCandidate candidate = LiveBrowse.prepareChannels(parentId);
+            return childrenCandidate(page(candidate.items(), page, pageSize), candidate.commitAction());
+        }
+        return childrenCandidate(page(getChildrenInternal(parentId), page, pageSize), null);
     }
 
     @NonNull
@@ -84,7 +98,14 @@ public class BrowseTree {
 
     @NonNull
     public static ImmutableList<MediaItem> search(@NonNull String query) {
-        return VodBrowse.search(query);
+        SearchCandidate candidate = VodBrowse.prepareSearchResults(query);
+        candidate.commit();
+        return candidate.items();
+    }
+
+    @NonNull
+    public static SearchCandidate prepareSearch(@NonNull String query) {
+        return VodBrowse.prepareSearchResults(query);
     }
 
     @NonNull
@@ -99,6 +120,32 @@ public class BrowseTree {
     }
 
     @NonNull
+    public static ResolutionCandidate prepareOrKeep(@NonNull MediaItem item) throws Exception {
+        return prepareOrKeep(item, Source.get().beginResolve());
+    }
+
+    @NonNull
+    public static ResolutionCandidate prepareOrKeep(@NonNull MediaItem item, @NonNull Source.ResolveRequest request) throws Exception {
+        ResolutionCandidate candidate = mediaItemCandidate(item.mediaId, request);
+        if (candidate != null) return candidate;
+        if (isBrowseMediaId(item.mediaId)) throw new IllegalStateException("Unable to resolve media item: " + item.mediaId);
+        return resolution(item, null, C.TIME_UNSET, null);
+    }
+
+    @Nullable
+    private static ResolutionCandidate mediaItemCandidate(@NonNull String mediaId, @NonNull Source.ResolveRequest request) throws Exception {
+        if (mediaId.startsWith(LiveBrowse.LIVE_CH)) return LiveBrowse.prepare(mediaId, request);
+        return VodBrowse.prepare(mediaId, request);
+    }
+
+    private static boolean isBrowseMediaId(@NonNull String mediaId) {
+        return mediaId.startsWith(LiveBrowse.LIVE_CH)
+                || mediaId.startsWith(VodBrowse.VOD_PLAY)
+                || mediaId.startsWith(VodBrowse.VOD_EP)
+                || mediaId.startsWith(VodBrowse.VOD_SEARCH);
+    }
+
+    @NonNull
     public static MediaItem resolveOrKeep(@NonNull MediaItem item) {
         try {
             MediaItem resolved = resolve(item.mediaId);
@@ -109,14 +156,15 @@ public class BrowseTree {
     }
 
     @Nullable
-    public static MediaItem navigate(@NonNull String mediaId, int delta) throws Exception {
-        MediaItem vod = VodBrowse.navigate(mediaId, delta);
-        if (vod != null) return vod;
-        return LiveBrowse.navigate(mediaId, delta);
+    public static NavigationCandidate navigate(@NonNull String mediaId, int delta) throws Exception {
+        return navigate(mediaId, delta, Source.get().beginResolve());
     }
 
-    public static long consumeResumePosition() {
-        return VodBrowse.consumeResumePosition();
+    @Nullable
+    public static NavigationCandidate navigate(@NonNull String mediaId, int delta, @NonNull Source.ResolveRequest request) throws Exception {
+        NavigationCandidate vod = VodBrowse.navigate(mediaId, delta, request);
+        if (vod != null) return vod;
+        return LiveBrowse.navigate(mediaId, delta, request);
     }
 
     public static boolean saveProgress(long position, long duration) {
@@ -125,11 +173,104 @@ public class BrowseTree {
 
     @Nullable
     public static Result consumeBrowseResult(@NonNull String mediaId) {
-        return browseResultMap.remove(mediaId);
+        return consumeBrowseResult(mediaId, C.TIME_UNSET);
+    }
+
+    @Nullable
+    public static Result consumeBrowseResult(@NonNull String mediaId, long generation) {
+        PreparedResult prepared = browseResultMap.get(mediaId);
+        if (prepared == null || prepared.generation() != generation || !browseResultMap.remove(mediaId, prepared)) return null;
+        prepared.commit();
+        return prepared.result();
+    }
+
+    public static void discardBrowseResult(long generation) {
+        browseResultMap.entrySet().removeIf(entry -> entry.getValue().generation() == generation);
     }
 
     static void putBrowseResult(@NonNull String mediaId, @NonNull Result result) {
-        browseResultMap.put(mediaId, result);
+        browseResultMap.put(mediaId, new PreparedResult(result, null, C.TIME_UNSET));
+    }
+
+    static NavigationCandidate candidate(@NonNull MediaItem item, @NonNull Result result, @Nullable Runnable historyCommit) {
+        return new NavigationCandidate(item, result, historyCommit);
+    }
+
+    static ResolutionCandidate resolution(@NonNull MediaItem item, @Nullable Result result, long resumePositionMs, @Nullable Runnable commitAction) {
+        return new ResolutionCandidate(item, result, commitAction, resumePositionMs);
+    }
+
+    static SearchCandidate searchCandidate(@NonNull ImmutableList<MediaItem> items, @Nullable Runnable commitAction) {
+        return new SearchCandidate(items, commitAction);
+    }
+
+    static ChildrenCandidate childrenCandidate(@NonNull ImmutableList<MediaItem> items, @Nullable Runnable commitAction) {
+        return new ChildrenCandidate(items, commitAction);
+    }
+
+    public record NavigationCandidate(@NonNull MediaItem item, @NonNull Result result, @Nullable Runnable historyCommit) {
+
+        public void commit() {
+            if (historyCommit != null) historyCommit.run();
+        }
+    }
+
+    public static final class ResolutionCandidate {
+
+        private final MediaItem item;
+        private final Result result;
+        private final Runnable commitAction;
+        private final long resumePositionMs;
+        private PreparedResult staged;
+
+        private ResolutionCandidate(@NonNull MediaItem item, @Nullable Result result, @Nullable Runnable commitAction, long resumePositionMs) {
+            this.item = item;
+            this.result = result;
+            this.commitAction = commitAction;
+            this.resumePositionMs = resumePositionMs;
+        }
+
+        @NonNull
+        public MediaItem item() {
+            return item;
+        }
+
+        public long resumePositionMs() {
+            return resumePositionMs;
+        }
+
+        public void stage(long generation) {
+            if (result == null) return;
+            staged = new PreparedResult(result, commitAction, generation);
+            browseResultMap.put(item.mediaId, staged);
+        }
+
+        public void rollback() {
+            if (staged != null) browseResultMap.remove(item.mediaId, staged);
+        }
+
+    }
+
+    private record PreparedResult(@NonNull Result result, @Nullable Runnable commitAction, long generation) {
+
+        private void commit() {
+            if (commitAction != null) commitAction.run();
+        }
+
+    }
+
+    public record SearchCandidate(@NonNull ImmutableList<MediaItem> items, @Nullable Runnable commitAction) {
+
+        public void commit() {
+            if (commitAction != null) commitAction.run();
+        }
+    }
+
+    public record ChildrenCandidate(@NonNull ImmutableList<MediaItem> items, @Nullable Runnable commitAction) {
+
+        public void commit() {
+            if (commitAction != null) commitAction.run();
+        }
     }
 
     static int wrapIndex(int current, int delta, int count) {

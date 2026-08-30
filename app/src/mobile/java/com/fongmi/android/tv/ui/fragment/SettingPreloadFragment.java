@@ -10,7 +10,6 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.FragmentSettingPreloadBinding;
-import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.base.BaseFragment;
@@ -40,12 +39,10 @@ public class SettingPreloadFragment extends BaseFragment {
         mBinding.preload.setOnClickListener(this::setPreload);
         mBinding.preloadSize.setOnClickListener(view -> PreloadDialog.show(this, PreloadDialog.SIZE));
         mBinding.preloadTime.setOnClickListener(view -> PreloadDialog.show(this, PreloadDialog.TIME));
-        mBinding.preloadThread.setOnClickListener(view -> PreloadDialog.show(this, PreloadDialog.THREADS));
     }
 
     private void refresh() {
         mBinding.preloadText.setText(Setting.getSwitch(PreloadSetting.isPreload()));
-        setPreloadThreadsText();
         setPreloadSizeText();
         setPreloadTimeText();
         setVisible();
@@ -55,7 +52,6 @@ public class SettingPreloadFragment extends BaseFragment {
         boolean preload = PreloadSetting.isPreload();
         mBinding.preloadSize.setVisibility(preload ? View.VISIBLE : View.GONE);
         mBinding.preloadTime.setVisibility(preload ? View.VISIBLE : View.GONE);
-        mBinding.preloadThread.setVisibility(preload && !PlayerSetting.isMpv() ? View.VISIBLE : View.GONE);
     }
 
     private void setPreload(View view) {
@@ -65,10 +61,7 @@ public class SettingPreloadFragment extends BaseFragment {
     }
 
     public void setPreload(int type, int value) {
-        if (type == PreloadDialog.THREADS) {
-            PreloadSetting.putPreloadThreads(value);
-            setPreloadThreadsText();
-        } else if (type == PreloadDialog.SIZE) {
+        if (type == PreloadDialog.SIZE) {
             PreloadSetting.putPreloadSizeMb(value);
             setPreloadSizeText();
         } else if (type == PreloadDialog.TIME) {
@@ -83,10 +76,6 @@ public class SettingPreloadFragment extends BaseFragment {
 
     private void setPreloadTimeText() {
         mBinding.preloadTimeText.setText(getString(R.string.player_preload_time_value, PreloadSetting.getPreloadTimeSeconds()));
-    }
-
-    private void setPreloadThreadsText() {
-        mBinding.preloadThreadText.setText(getString(R.string.player_preload_threads_value, PreloadSetting.getPreloadThreads()));
     }
 
     @Override

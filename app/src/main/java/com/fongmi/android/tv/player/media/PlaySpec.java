@@ -110,9 +110,15 @@ public class PlaySpec {
     }
 
     public PlaySpec checkUa() {
-        if (headers == null) headers = new HashMap<>();
+        headers = sanitizeHeaders(headers);
         if (headers.keySet().stream().noneMatch(HttpHeaders.USER_AGENT::equalsIgnoreCase)) headers.put(HttpHeaders.USER_AGENT, Setting.getUa().isEmpty() ? PlayerHelper.getDefaultUa() : Setting.getUa());
         return this;
+    }
+
+    static Map<String, String> sanitizeHeaders(Map<String, String> headers) {
+        Map<String, String> sanitized = headers == null ? new HashMap<>() : new HashMap<>(headers);
+        sanitized.keySet().removeIf(HttpHeaders.RANGE::equalsIgnoreCase);
+        return sanitized;
     }
 
     public void setSub(Sub sub) {
