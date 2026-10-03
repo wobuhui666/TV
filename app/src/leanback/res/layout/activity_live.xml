@@ -44,42 +44,68 @@
 
     <com.fongmi.android.tv.ui.custom.JetStreamLiveSidebarLayout
         android:id="@+id/recycler"
-        android:layout_width="wrap_content"
+        android:layout_width="512dp"
         android:layout_height="match_parent"
-        android:orientation="horizontal"
+        android:layout_marginStart="48dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginBottom="48dp"
+        android:orientation="vertical"
+        android:padding="24dp"
         android:visibility="gone"
         tools:visibility="visible">
 
-        <com.fongmi.android.tv.ui.custom.CustomLiveListView
-            android:id="@+id/group"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
+        <com.fongmi.android.tv.ui.custom.JetStreamPlaybackSectionTitleView
+            android:id="@+id/liveGuideTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/playback_live_guide"
+            android:textSize="24sp" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamPlaybackSecondaryTextView
+            android:id="@+id/liveGuideSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="18dp"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:text="@string/playback_live_navigation"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:padding="12dp"
-            tools:itemCount="5"
-            tools:listitem="@layout/adapter_group" />
+            android:orientation="horizontal">
 
-        <com.fongmi.android.tv.ui.custom.CustomLiveListView
-            android:id="@+id/channel"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:clipChildren="false"
-            android:translationX="-12dp"
-            android:clipToPadding="false"
-            android:padding="12dp"
-            tools:itemCount="5"
-            tools:listitem="@layout/adapter_channel" />
+            <com.fongmi.android.tv.ui.custom.CustomLiveListView
+                android:id="@+id/group"
+                android:layout_width="152dp"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:paddingEnd="12dp"
+                tools:listitem="@layout/adapter_group" />
 
-        <com.fongmi.android.tv.ui.custom.CustomLiveListView
-            android:id="@+id/epgData"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:padding="12dp"
-            tools:itemCount="5"
-            tools:listitem="@layout/adapter_epg_data" />
+            <com.fongmi.android.tv.ui.custom.CustomLiveListView
+                android:id="@+id/channel"
+                android:layout_width="312dp"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:paddingStart="4dp"
+                tools:listitem="@layout/adapter_channel" />
 
+            <com.fongmi.android.tv.ui.custom.CustomLiveListView
+                android:id="@+id/epgData"
+                android:layout_width="464dp"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:visibility="gone"
+                tools:listitem="@layout/adapter_epg_data" />
+        </LinearLayout>
     </com.fongmi.android.tv.ui.custom.JetStreamLiveSidebarLayout>
 </FrameLayout>

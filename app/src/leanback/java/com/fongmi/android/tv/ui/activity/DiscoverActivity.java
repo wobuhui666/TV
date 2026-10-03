@@ -37,6 +37,7 @@ import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
 import com.fongmi.android.tv.ui.custom.CustomScroller;
 import com.fongmi.android.tv.ui.custom.CustomSelector;
+import com.fongmi.android.tv.ui.custom.JetStreamEmptyStateView;
 import com.fongmi.android.tv.ui.dialog.DiscoverDialog;
 import com.fongmi.android.tv.ui.presenter.DiscoverFilterPanelPresenter;
 import com.fongmi.android.tv.ui.presenter.DiscoverHeroPresenter;
@@ -94,7 +95,10 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     private String sort = DiscoverQuery.SORT_POPULAR;
     private DiscoverQuery lastQuery;
     private int featurePending;
+    private int featureGeneration;
+    private int genreGeneration;
     private int queryGeneration;
+    private int retryKeyCode = KeyEvent.KEYCODE_UNKNOWN;
     private int page = 1;
     private int totalPages = 1;
     private int resultStartPosition;
@@ -115,6 +119,8 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     @Override
     protected void initView(Bundle savedInstanceState) {
         setRecyclerView();
+        JetStreamEmptyStateView emptyState = mBinding.progressLayout.findViewById(R.id.empty_state);
+        emptyState.setText(R.string.tv_empty_discover_retry);
         buildStablePage();
         loadFeatured();
         loadGenres(mediaType);
@@ -124,16 +130,16 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     @SuppressLint("RestrictedApi")
     private void setRecyclerView() {
         CustomSelector selector = new CustomSelector();
-        selector.addPresenter(Integer.class, new HeaderPresenter(24));
+        selector.addPresenter(Integer.class, new HeaderPresenter(48));
         selector.addPresenter(String.class, new ProgressPresenter());
         selector.addPresenter(DiscoverHero.class, new DiscoverHeroPresenter(this));
         selector.addPresenter(DiscoverFilterPanel.class, new DiscoverFilterPanelPresenter(this));
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), VodPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), DiscoverLandscapePresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(10, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 24), DiscoverRankPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), VodPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(18, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), DiscoverLandscapePresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(10, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), DiscoverRankPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setItemAnimator(null);
-        mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(10));
+        mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
         mBinding.recycler.setOnKeyInterceptListener(this::interceptFocusBoundary);
         mBinding.recycler.addOnScrollListener(scroller = new CustomScroller(this));
         mBinding.progressLayout.showProgress();
@@ -183,6 +189,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     }
 
     private void loadFeatured() {
+        int generation = ++featureGeneration;
         featurePending = FEATURE_REQUESTS;
         featureFinished = false;
         DiscoverApi.Row[] rows = {
@@ -194,7 +201,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         for (DiscoverApi.Row row : rows) DiscoverApi.fetch(row, BuildConfig.TMDB_API_KEY, requestTag, new DiscoverApi.Listener() {
             @Override
             public void onSuccess(DiscoverApi.Row value, List<Vod> items) {
-                if (isInactive()) return;
+                if (isInactive() || generation != featureGeneration) return;
                 content.put(value, items);
                 updatePosterRow(value, items);
                 updateHero();
@@ -203,8 +210,9 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
 
             @Override
             public void onError(DiscoverApi.Row value, Exception e) {
-                if (isInactive()) return;
+                if (isInactive() || generation != featureGeneration) return;
                 content.put(value, List.of());
+                updatePosterRow(value, List.of());
                 updateHero();
                 completeFeatured();
             }
@@ -331,17 +339,18 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     }
 
     private void loadGenres(String type) {
+        int generation = ++genreGeneration;
         DiscoverApi.fetchGenres(type, BuildConfig.TMDB_API_KEY, requestTag, new DiscoverApi.FacetListener() {
             @Override
             public void onSuccess(List<DiscoverFacet> items) {
-                if (isInactive() || !mediaType.equals(type)) return;
+                if (isInactive() || generation != genreGeneration || !mediaType.equals(type)) return;
                 genres = items;
                 updateFilterPanel();
             }
 
             @Override
             public void onError(Exception e) {
-                if (isInactive() || !mediaType.equals(type)) return;
+                if (isInactive() || generation != genreGeneration || !mediaType.equals(type)) return;
                 genres = List.of();
                 updateFilterPanel();
             }
@@ -406,8 +415,9 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
 
             @Override
             public void onError(Exception e) {
-                if (isInactive() || !requestState.accepts(generation)) return;
+                if (isInactive() || !requestState.accepts(generation) || !query.equals(currentQuery(query.getPage()))) return;
                 queryFinished = true;
+                if (query.getPage() == 1) replaceResultRows(requestState.getItems(), false);
                 if (scroller != null) {
                     if (query.getPage() > 1) scroller.endLoading(newResult(List.of()));
                     scroller.setEnable(totalPages);
@@ -424,7 +434,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         List<Object> rows = new ArrayList<>();
         if (loading) rows.add("discover_filter_progress");
         else {
-            VodPresenter presenter = new VodPresenter(this, Style.rect());
+            VodPresenter presenter = resultPresenter();
             for (List<Vod> part : Lists.partition(values, Product.getColumn(Style.rect()))) {
                 ArrayObjectAdapter adapter = new ArrayObjectAdapter(presenter);
                 adapter.addAll(0, part);
@@ -436,6 +446,12 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         resultRowCount = rows.size();
         int delta = resultRowCount - previousCount;
         if (delta != 0) sectionPositions.replaceAll((title, position) -> position >= resultStartPosition ? position + delta : position);
+    }
+
+    private VodPresenter resultPresenter() {
+        int column = Product.getColumn(Style.rect());
+        int space = ResUtil.dp2px(96 + 16 * (column - 1));
+        return new VodPresenter(this, Style.rect(), Product.getSpec(space, column, Style.rect()));
     }
 
     private void appendResultRows(List<Vod> values) {
@@ -451,7 +467,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
             }
         }
         if (offset >= values.size()) return;
-        VodPresenter presenter = new VodPresenter(this, Style.rect());
+        VodPresenter presenter = resultPresenter();
         List<Object> rows = new ArrayList<>();
         for (List<Vod> part : Lists.partition(values.subList(offset, values.size()), column)) {
             ArrayObjectAdapter adapter = new ArrayObjectAdapter(presenter);
@@ -552,8 +568,41 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     }
 
     private void showContentIfReady() {
-        if (featureFinished && queryFinished) mBinding.progressLayout.showContent(true, mAdapter.size());
-        else mBinding.progressLayout.showContent();
+        // Fixed hero/header/filter rows are page structure, not loaded content.
+        // Some valid recommendation posters cannot be used as hero backdrops.
+        boolean hasContent = !hero.isEmpty() || !requestState.isEmpty()
+                || content.values().stream().anyMatch(items -> !items.isEmpty());
+        if (hasContent) mBinding.progressLayout.showContent();
+        else if (featureFinished && queryFinished) mBinding.progressLayout.showEmpty();
+        else mBinding.progressLayout.showProgress();
+    }
+
+    private boolean canRetryDiscovery() {
+        return !isInactive() && featureFinished && queryFinished && mBinding.progressLayout.isEmpty();
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        int code = event.getKeyCode();
+        if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_NUMPAD_ENTER) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && (retryKeyCode == code || canRetryDiscovery())) {
+                if (event.getRepeatCount() == 0 && retryKeyCode == KeyEvent.KEYCODE_UNKNOWN) retryKeyCode = code;
+                return true;
+            }
+            if (event.getAction() == KeyEvent.ACTION_UP && (retryKeyCode == code || canRetryDiscovery())) {
+                boolean pressed = retryKeyCode == code;
+                if (pressed) retryKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+                if (pressed && !event.isCanceled() && canRetryDiscovery()) {
+                    DiscoverApi.cancel(requestTag);
+                    mBinding.progressLayout.showProgress();
+                    loadFeatured();
+                    loadGenres(mediaType);
+                    refreshResults(true);
+                }
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     private com.fongmi.android.tv.bean.Result newResult(List<Vod> items) {
@@ -712,6 +761,12 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         queryFinished = false;
         loadQuery(currentQuery(page + 1), queryGeneration);
         return true;
+    }
+
+    @Override
+    protected void onPause() {
+        retryKeyCode = KeyEvent.KEYCODE_UNKNOWN;
+        super.onPause();
     }
 
     @Override

@@ -2,10 +2,6 @@ package com.fongmi.android.tv.ui.custom
 
 import android.content.Context
 import android.util.AttributeSet
-import android.widget.ImageView
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
@@ -29,14 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.airbnb.lottie.LottieAnimationView
-import com.airbnb.lottie.LottieDrawable
 import com.fongmi.android.tv.R
-import com.fongmi.android.tv.ui.components.jetStreamHorizontalScrimBrush
-import com.fongmi.android.tv.ui.theme.JetStreamBorders
-import com.fongmi.android.tv.ui.theme.JetStreamShapes
-import com.fongmi.android.tv.ui.theme.JetStreamSpacing
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
 class JetStreamEmptyStateView @JvmOverloads constructor(
@@ -45,11 +33,11 @@ class JetStreamEmptyStateView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : AbstractComposeView(context, attrs, defStyleAttr) {
 
-    private var message by mutableStateOf(context.getString(R.string.error_empty))
+    private var message by mutableStateOf(context.getString(R.string.tv_empty_content))
 
     init {
         val typedArray = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.text), defStyleAttr, 0)
-        message = typedArray.getText(0)?.toString()?.takeIf { it.isNotBlank() } ?: context.getString(R.string.error_empty)
+        message = typedArray.getText(0)?.toString()?.takeIf { it.isNotBlank() } ?: context.getString(R.string.tv_empty_content)
         typedArray.recycle()
         isFocusable = false
         isFocusableInTouchMode = false
@@ -58,62 +46,46 @@ class JetStreamEmptyStateView @JvmOverloads constructor(
     }
 
     fun setText(text: CharSequence?) {
-        message = text?.toString()?.takeIf { it.isNotBlank() } ?: context.getString(R.string.error_empty)
+        message = text?.toString()?.takeIf { it.isNotBlank() } ?: context.getString(R.string.tv_empty_content)
     }
 
     fun setText(resId: Int) {
-        message = if (resId == 0) context.getString(R.string.error_empty) else context.getString(resId)
+        message = if (resId == 0) context.getString(R.string.tv_empty_content) else context.getString(resId)
     }
 
     @Composable
     override fun Content() {
         JetStreamTheme {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 320.dp)
-                    .clip(JetStreamShapes.Card)
-                    .background(
-                        jetStreamHorizontalScrimBrush(
-                            startColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
-                            middleColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.68f),
-                            endColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
-                        )
-                    )
-                    .border(
-                        JetStreamBorders.Thin,
-                        MaterialTheme.colorScheme.outlineVariant,
-                        JetStreamShapes.Card
-                    )
-                    .padding(horizontal = JetStreamSpacing.ExtraExtraLarge, vertical = JetStreamSpacing.ExtraLarge),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp)
+                    .padding(horizontal = 24.dp, vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    AndroidView(
-                        factory = { viewContext ->
-                            LottieAnimationView(viewContext).apply {
-                                setAnimation(R.raw.empty)
-                                repeatCount = LottieDrawable.INFINITE
-                                scaleType = ImageView.ScaleType.CENTER_INSIDE
-                                playAnimation()
-                            }
-                        },
-                        modifier = Modifier.size(width = 180.dp, height = 190.dp)
-                    )
-                    Spacer(Modifier.height(JetStreamSpacing.Large))
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 17.sp,
-                        lineHeight = 23.sp,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.msr_movie),
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = context.getString(R.string.tv_empty_back_hint),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

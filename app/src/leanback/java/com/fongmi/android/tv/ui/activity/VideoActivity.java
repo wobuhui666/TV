@@ -65,6 +65,7 @@ import com.fongmi.android.tv.ui.custom.JetStreamChipRow;
 import com.fongmi.android.tv.ui.custom.JetStreamVideoDecor;
 import com.fongmi.android.tv.ui.custom.JetStreamVodControlView;
 import com.fongmi.android.tv.ui.custom.JetStreamVodDetailView;
+import com.fongmi.android.tv.ui.custom.JetStreamPlaybackSectionLayout;
 import com.fongmi.android.tv.ui.theme.JetStreamAmbient;
 import com.fongmi.android.tv.ui.dialog.ChapterDialog;
 import com.fongmi.android.tv.ui.dialog.ContentDialog;
@@ -134,6 +135,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private Runnable mR4;
     private Clock mClock;
     private View mFocus1;
+    private boolean restoreDetailActionFocus;
     private View mFocus2;
     private CharSequence mDetailTitle;
     private CharSequence mDetailTmdbRating;
@@ -328,6 +330,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     @Override
+    protected void onThemeChanged() {
+        // BaseActivity already refreshes JetStreamThemeController; Compose updates in place.
+        // Recreating for a color change would detach the active player and reset playback UI.
+    }
+
+    @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
         mFrameParams = mBinding.video.getLayoutParams();
@@ -356,6 +364,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             else JetStreamAnimator.animateFocus(view, hasFocus, JetStreamAnimator.FOCUS_SCALE_VIDEO, 10);
         });
         mBinding.detail.setListener(new JetStreamVodDetailView.Listener() {
+            @Override
+            public void onWatch() {
+                onVideo();
+            }
+
             @Override
             public void onSummary() {
                 onContent();
@@ -481,7 +494,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void focusFirstMediaList() {
-        for (int id : Arrays.asList(R.id.flag, R.id.quality, R.id.episode, R.id.array, R.id.part, R.id.quick)) {
+        for (int id : Arrays.asList(R.id.episode, R.id.array, R.id.flag, R.id.quality, R.id.part, R.id.quick)) {
             View view = findViewById(id);
             if (canRequestFocus(view)) {
                 requestFocus(view, mBinding.video);
@@ -992,6 +1005,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void enterFullscreen() {
         mFocus1 = getCurrentFocus();
+        restoreDetailActionFocus = mBinding.detail.hasFocus();
         if (canRequestFocus(mBinding.video)) mBinding.video.requestFocus();
         JetStreamAnimator.reset(mBinding.video);
         mBinding.video.setForeground(null);
@@ -1014,7 +1028,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         setFullscreen(false);
         updateFullscreenViews();
         applyWindowVideoStyle();
-        requestFocus(getFocus1(), mBinding.video);
+        if (restoreDetailActionFocus) mBinding.detail.restoreActionFocus();
+        else requestFocus(getFocus1(), mBinding.video);
+        restoreDetailActionFocus = false;
         mFocus2 = null;
         hideInfo();
     }
@@ -1330,6 +1346,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     private void setRowVisibility(View row, boolean visible) {
         if (!visible && row.hasFocus()) requestFocus(mBinding.video, null);
         row.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (row.getParent() instanceof JetStreamPlaybackSectionLayout) {
+            ((View) row.getParent()).setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
         updateFocus();
     }
 
@@ -1514,7 +1533,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             return;
         }
         List<View> rows = new ArrayList<>();
-        for (int id : Arrays.asList(R.id.flag, R.id.quality, R.id.episode, R.id.array, R.id.part, R.id.quick)) {
+        for (int id : Arrays.asList(R.id.episode, R.id.array, R.id.flag, R.id.quality, R.id.part, R.id.quick)) {
             View row = findViewById(id);
             if (row != null && row.getVisibility() == View.VISIBLE && mBinding.scroll.getVisibility() == View.VISIBLE) rows.add(row);
         }

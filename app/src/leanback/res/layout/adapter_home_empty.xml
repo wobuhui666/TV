@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fongmi.android.tv.ui.custom.JetStreamListItemContentLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="48dp"
+    android:paddingTop="28dp"
+    android:paddingEnd="48dp"
+    android:paddingBottom="40dp"
+    android:orientation="vertical">
+
+    <com.fongmi.android.tv.ui.custom.JetStreamHeroTitleTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/home_empty_source"
+        android:textSize="28sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:layout_width="440dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/home_empty_source_hint"
+        android:textSize="15sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+        android:id="@+id/choose"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_marginTop="24dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:gravity="center"
+        android:text="@string/home_choose_source" />
+</com.fongmi.android.tv.ui.custom.JetStreamListItemContentLayout>

@@ -15,32 +15,32 @@ import com.fongmi.android.tv.R
 
 /**
  * JetStream Material Design 3 Color Scheme
- * 统一的深色主题配色方案，遵循 Google JetStream 设计规范
+ * 统一的深色主题配色方案，中性焦点、内容优先的电视端设计
  */
 object JetStreamColors {
     // Surface Colors - 表面层级颜色
-    val Surface = Color(0xFF1A1C1E)
-    val SurfaceContainer = Color(0xFF1E2022)
-    val SurfaceContainerHigh = Color(0xFF292B2D)
-    val SurfaceContainerHighest = Color(0xFF33353A)
-    val OnSurface = Color(0xFFE3E2E6)
-    val OnSurfaceVariant = Color(0xFFC4C6CF)
+    val Surface = Color(0xFF17181C)
+    val SurfaceContainer = Color(0xFF1D1F23)
+    val SurfaceContainerHigh = Color(0xFF27292E)
+    val SurfaceContainerHighest = Color(0xFF32343A)
+    val OnSurface = Color(0xFFF2F2F2)
+    val OnSurfaceVariant = Color(0xFFB9BBC2)
 
     // Outline Colors - 边框颜色
-    val Outline = Color(0xFF8E9099)
-    val OutlineVariant = Color(0xFF44464F)
+    val Outline = Color(0xFF898B93)
+    val OutlineVariant = Color(0xFF373940)
 
     // Primary Colors - 主色调
-    val Primary = Color(0xFFAEBEF4)
-    val OnPrimary = Color(0xFF0E2F7A)
-    val PrimaryContainer = Color(0xFF2B4690)
-    val OnPrimaryContainer = Color(0xFFD9E2FF)
+    val Primary = Color(0xFFF2F2F2)
+    val OnPrimary = Color(0xFF17181C)
+    val PrimaryContainer = Color(0xFF41454E)
+    val OnPrimaryContainer = Color(0xFFF2F2F2)
 
     // Secondary Colors - 次要色调
-    val Secondary = Color(0xFFBEC6DC)
-    val OnSecondary = Color(0xFF283041)
-    val SecondaryContainer = Color(0xFF3F4759)
-    val OnSecondaryContainer = Color(0xFFDAE2F9)
+    val Secondary = Color(0xFFD2D3D8)
+    val OnSecondary = Color(0xFF17181C)
+    val SecondaryContainer = Color(0xFF35373D)
+    val OnSecondaryContainer = Color(0xFFF2F2F2)
 
     // Tertiary Colors - 第三色调
     val Tertiary = Color(0xFFDEBCDF)
@@ -55,8 +55,8 @@ object JetStreamColors {
     val OnErrorContainer = Color(0xFFFFDAD6)
 
     // Background Colors - 背景颜色
-    val Background = Color(0xFF11131A)
-    val OnBackground = Color(0xFFE3E2E6)
+    val Background = Color(0xFF101114)
+    val OnBackground = Color(0xFFF2F2F2)
 
 }
 

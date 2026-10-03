@@ -1,0 +1,22 @@
+{
+  "verified-accent-blue": {
+    "expected_tertiary_rgb": [
+      174,
+      190,
+      244
+    ],
+    "matching_pixels_in_copy_icon": 37,
+    "frame_timestamp_seconds": 1.5,
+    "frame_source": "verified-accent-blue.mp4"
+  },
+  "verified-accent-pink": {
+    "expected_tertiary_rgb": [
+      255,
+      177,
+      200
+    ],
+    "matching_pixels_in_copy_icon": 40,
+    "frame_timestamp_seconds": 1.5,
+    "frame_source": "verified-accent-pink.mp4"
+  }
+}

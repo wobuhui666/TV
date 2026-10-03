@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_search_results_title">Results for “%1$s”</string>
+    <string name="tv_search_result_count">%1$d matches · %2$d sources</string>
+    <string name="tv_search_waiting">Searching your enabled sources…</string>
+    <string name="tv_search_empty">No matches. Try another title or change sources.</string>
+    <string name="tv_search_no_sources">Enable a searchable source to see results.</string>
+    <string name="tv_search_edit">Edit search</string>
+    <string name="tv_keep_hint">Your saved titles · Hold OK to manage</string>
+    <string name="tv_vod_hint">Browse this source · Press OK on a category to filter</string>
+    <string name="tv_history_delete_error">Could not remove the record. Please try again.</string>
+</resources>

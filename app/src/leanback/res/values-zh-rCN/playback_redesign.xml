@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_watch_fullscreen">全屏观看</string>
+    <string name="playback_episodes">选集</string>
+    <string name="playback_episode_ranges">集数范围</string>
+    <string name="playback_sources">播放来源</string>
+    <string name="playback_quality">画质</string>
+    <string name="playback_related">相关影片</string>
+    <string name="playback_quick_sources">快速换源</string>
+    <string name="playback_live_guide">直播</string>
+    <string name="playback_live_navigation">选择分类与频道</string>
+    <string name="playback_live_programs">节目单 · 返回继续选台</string>
+    <string name="playback_live_now">直播中</string>
+    <string name="playback_seek_hint">左右预览 · 确认跳转 · 返回取消</string>
+</resources>

@@ -125,4 +125,12 @@
     <string name="push_copy_url">复制地址</string>
     <string name="push_copied_url">已复制地址到剪贴板</string>
 
+    <!-- Playback drawer command names; current values are supplied by the player. -->
+    <string name="playback_command_speed">播放速度</string>
+    <string name="playback_command_scale">画面比例</string>
+    <string name="playback_command_player">播放器</string>
+    <string name="playback_command_decode">解码方式</string>
+    <string name="playback_command_opening">跳过片头</string>
+    <string name="playback_command_ending">跳过片尾</string>
+
 </resources>

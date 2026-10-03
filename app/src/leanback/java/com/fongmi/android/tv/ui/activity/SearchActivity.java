@@ -8,6 +8,7 @@ import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -43,6 +44,14 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     private ActivitySearchBinding mBinding;
     private RecordAdapter mRecordAdapter;
     private WordAdapter mWordAdapter;
+    private SearchResultsController results;
+    private Call suggestionCall;
+    private Runnable suggestionRequest;
+    private long suggestionGeneration;
+    private View savedFocus;
+    private final SearchFocusGuard focus = new SearchFocusGuard(this);
+    private long resumeFocusGeneration;
+    private boolean restoreAfterResume;
 
     public static void start(Activity activity) {
         activity.startActivity(new Intent(activity, SearchActivity.class));
@@ -72,6 +81,7 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     protected void initView(Bundle savedInstanceState) {
         CustomKeyboard.init(this, mBinding);
         setRecyclerView();
+        results = new SearchResultsController(this, mBinding.results, true, focus);
         checkKeyword();
         onSearch();
     }
@@ -119,28 +129,37 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     }
 
     private void getWord(String text) {
-        if (text.isEmpty()) getHot();
-        else getSuggest(text);
+        focus.invalidate();
+        if (text.isEmpty()) showResults(false);
+        long generation = ++suggestionGeneration;
+        if (suggestionRequest != null) App.removeCallbacks(suggestionRequest);
+        if (suggestionCall != null) suggestionCall.cancel();
+        mBinding.word.setText(text.isEmpty() ? R.string.search_hot : R.string.search_suggest);
+        if (text.isEmpty()) mWordAdapter.setItems(Word.objectFrom(Setting.getHot()).getData());
+        else mWordAdapter.setItems(java.util.List.of());
+        suggestionRequest = () -> {
+            if (isFinishing() || isDestroyed() || generation != suggestionGeneration) return;
+            String url = text.isEmpty() ? "https://hot.api.coolmarket.eu.org/api/douban-hot-mixed"
+                    : "https://suggest.video.iqiyi.com/?if=mobile&key=" + URLEncoder.encode(ZhuToPin.get(text));
+            suggestionCall = OkHttp.newCall(url);
+            suggestionCall.enqueue(getCallback(text, generation));
+        };
+        App.post(suggestionRequest, text.isEmpty() ? 0 : 250);
     }
 
-    private void getHot() {
-        mBinding.word.setText(R.string.search_hot);
-        mWordAdapter.setItems(Word.objectFrom(Setting.getHot()).getData());
-        OkHttp.newCall("https://hot.api.coolmarket.eu.org/api/douban-hot-mixed").enqueue(getCallback(true));
-    }
-
-    private void getSuggest(String text) {
-        mBinding.word.setText(R.string.search_suggest);
-        OkHttp.newCall("https://suggest.video.iqiyi.com/?if=mobile&key=" + URLEncoder.encode(ZhuToPin.get(text))).enqueue(getCallback(false));
-    }
-
-    private Callback getCallback(boolean hot) {
+    private Callback getCallback(String query, long generation) {
         return new Callback() {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                String result = response.body().string();
-                if (TextUtils.isEmpty(result)) return;
-                App.post(() -> setAdapter(result, hot));
+                try (response) {
+                    String result = response.body().string();
+                    if (TextUtils.isEmpty(result) || call.isCanceled()) return;
+                    App.post(() -> {
+                        if (isFinishing() || isDestroyed() || generation != suggestionGeneration) return;
+                        if (!query.equals(mBinding.keyword.getText().toString())) return;
+                        setAdapter(result, query.isEmpty());
+                    });
+                }
             }
         };
     }
@@ -152,7 +171,8 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         View item = current == null ? null : mBinding.wordRecycler.findContainingItemView(current);
         boolean restoreFocus = current == mBinding.wordRecycler || item != null;
         int position = item == null ? 0 : mBinding.wordRecycler.getChildAdapterPosition(item);
-        mWordAdapter.setItems(Word.objectFrom(result).getData(), () -> restoreWordFocus(restoreFocus, position));
+        long generation = focus.snapshot();
+        mWordAdapter.setItems(Word.objectFrom(result).getData(), () -> restoreWordFocus(restoreFocus, position, generation));
     }
 
     @Override
@@ -163,7 +183,8 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     @Override
     public void onDataChanged(int size, int deletedPosition) {
-        mBinding.recordLayout.setVisibility(size == 0 ? View.GONE : View.VISIBLE);
+        mBinding.recordLayout.setVisibility(size == 0 || mBinding.results.getRoot().getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        if (deletedPosition == RecyclerView.NO_POSITION && getCurrentFocus() != null) return;
         if (deletedPosition == RecyclerView.NO_POSITION) {
             if (size == 0 && !focusFirst(mBinding.wordRecycler)) requestKeywordFocus();
             return;
@@ -177,11 +198,23 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     @Override
     public void onSearch() {
+        focus.invalidate();
         if (empty()) return;
         String keyword = mBinding.keyword.getText().toString().trim();
-        App.post(() -> mRecordAdapter.add(keyword), 250);
+        mRecordAdapter.add(keyword);
         Util.hideKeyboard(mBinding.keyword);
-        CollectActivity.start(this, keyword);
+        showResults(true);
+        results.search(keyword);
+        results.requestFocus();
+    }
+
+    private void showResults(boolean visible) {
+        mBinding.results.getRoot().setVisibility(visible ? View.VISIBLE : View.GONE);
+        mBinding.recordLayout.setVisibility(!visible && mRecordAdapter != null && mRecordAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
+        LinearLayout.LayoutParams suggestions = (LinearLayout.LayoutParams) mBinding.scroll.getLayoutParams();
+        suggestions.height = visible ? com.fongmi.android.tv.utils.ResUtil.dp2px(128) : 0;
+        suggestions.weight = visible ? 0 : 1;
+        mBinding.scroll.setLayoutParams(suggestions);
     }
 
     @Override
@@ -196,6 +229,7 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (KeyUtil.isActionDown(event)) focus.invalidate();
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) && findFocus(event)) return true;
         return super.dispatchKeyEvent(event);
@@ -265,7 +299,11 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     private boolean handleKeywordKey(KeyEvent event) {
         if (!KeyUtil.isRightKey(event)) return false;
         if (mBinding.keyword.getSelectionEnd() < mBinding.keyword.getText().length()) return false;
-        if (!empty()) return focusFirst(mBinding.wordRecycler);
+        if (!empty()) {
+            if (focusFirst(mBinding.wordRecycler)) return true;
+            if (results.hasResults()) { results.requestFocus(); return true; }
+            return false;
+        }
         boolean hasRecord = mBinding.recordLayout.getVisibility() == View.VISIBLE;
         return focusFirst(hasRecord ? mBinding.recordRecycler : mBinding.wordRecycler);
     }
@@ -281,7 +319,10 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     private boolean handleWordKey(KeyEvent event, View item) {
         if (KeyUtil.isRightKey(event)) return isLastInRow(mBinding.wordRecycler, item);
-        if (KeyUtil.isDownKey(event)) return isLastRow(mBinding.wordRecycler, item);
+        if (KeyUtil.isDownKey(event) && isLastRow(mBinding.wordRecycler, item)) {
+            if (results.hasResults()) results.requestFocus();
+            return true;
+        }
         if (KeyUtil.isUpKey(event) && isFirstRow(mBinding.wordRecycler, item)) {
             if (mBinding.recordLayout.getVisibility() == View.VISIBLE) {
                 View child = findNearestInLastRow(mBinding.recordRecycler, item.getLeft());
@@ -305,57 +346,64 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     }
 
     private boolean focusFirst(RecyclerView rv) {
-        if (!canRequestFocus(rv)) return false;
+        return focusFirst(rv, focus.snapshot());
+    }
+
+    private boolean focusFirst(RecyclerView rv, long generation) {
+        if (!focus.canFocus(generation, rv)) return false;
         View child = rv.getChildAt(0);
-        if (canRequestFocus(child) && child.requestFocus()) return true;
+        if (focus.canFocus(generation, child) && child.requestFocus()) return true;
         RecyclerView.Adapter<?> adapter = rv.getAdapter();
         if (adapter == null || adapter.getItemCount() == 0) return false;
         rv.scrollToPosition(0);
-        rv.post(() -> {
+        focus.post(rv, generation, 0, () -> {
             View target = rv.getChildAt(0);
-            if (canRequestFocus(target) && target.requestFocus()) return;
-            if (canRequestFocus(rv)) rv.requestFocus();
+            if (focus.canFocus(generation, target) && target.requestFocus()) return;
+            if (focus.canFocus(generation, rv)) rv.requestFocus();
         });
         return true;
     }
 
-    private void restoreWordFocus(boolean restore, int position) {
-        if (!restore) return;
+    private void restoreWordFocus(boolean restore, int position, long generation) {
+        if (!restore || !focus.canFocus(generation, mBinding.wordRecycler)) return;
         if (mWordAdapter.getItemCount() == 0) {
-            requestKeywordFocus();
+            requestKeywordFocus(generation);
             return;
         }
         int target = position == RecyclerView.NO_POSITION ? 0 : Math.max(0, Math.min(position, mWordAdapter.getItemCount() - 1));
         mBinding.wordRecycler.scrollToPosition(target);
-        mBinding.wordRecycler.postDelayed(() -> {
+        focus.post(mBinding.wordRecycler, generation, 50, () -> {
             RecyclerView.ViewHolder holder = mBinding.wordRecycler.findViewHolderForAdapterPosition(target);
-            if (holder != null && canRequestFocus(holder.itemView) && holder.itemView.requestFocus()) return;
-            if (!focusFirst(mBinding.wordRecycler)) requestKeywordFocus();
-        }, 50);
+            if (holder != null && focus.canFocus(generation, holder.itemView) && holder.itemView.requestFocus()) return;
+            if (!focusFirst(mBinding.wordRecycler, generation)) requestKeywordFocus(generation);
+        });
     }
 
     private void restoreRecordFocus(int position) {
+        long generation = focus.snapshot();
         if (mRecordAdapter.getItemCount() == 0) {
-            if (!focusFirst(mBinding.wordRecycler)) requestKeywordFocus();
+            if (!focusFirst(mBinding.wordRecycler, generation)) requestKeywordFocus(generation);
             return;
         }
-        if (!canRequestFocus(mBinding.recordRecycler)) {
-            if (!focusFirst(mBinding.wordRecycler)) requestKeywordFocus();
+        if (!focus.canFocus(generation, mBinding.recordRecycler)) {
+            if (!focusFirst(mBinding.wordRecycler, generation)) requestKeywordFocus(generation);
             return;
         }
         int target = Math.max(0, Math.min(position, mRecordAdapter.getItemCount() - 1));
         mBinding.recordRecycler.scrollToPosition(target);
-        mBinding.recordRecycler.postDelayed(() -> {
+        focus.post(mBinding.recordRecycler, generation, 50, () -> {
             RecyclerView.ViewHolder holder = mBinding.recordRecycler.findViewHolderForAdapterPosition(target);
-            if (holder != null && canRequestFocus(holder.itemView) && holder.itemView.requestFocus()) return;
-            if (!focusFirst(mBinding.recordRecycler) && !focusFirst(mBinding.wordRecycler)) requestKeywordFocus();
-        }, 50);
+            if (holder != null && focus.canFocus(generation, holder.itemView) && holder.itemView.requestFocus()) return;
+            if (!focusFirst(mBinding.recordRecycler, generation) && !focusFirst(mBinding.wordRecycler, generation)) requestKeywordFocus(generation);
+        });
     }
 
     private void requestKeywordFocus() {
-        mBinding.keyword.post(() -> {
-            if (canRequestFocus(mBinding.keyword)) mBinding.keyword.requestFocus();
-        });
+        requestKeywordFocus(focus.snapshot());
+    }
+
+    private void requestKeywordFocus(long generation) {
+        focus.post(mBinding.keyword, generation, 0, () -> mBinding.keyword.requestFocus());
     }
 
     private boolean canRequestFocus(View view) {
@@ -364,6 +412,9 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     @Override
     protected void onPause() {
+        savedFocus = getCurrentFocus();
+        restoreAfterResume = false;
+        focus.invalidate();
         super.onPause();
         mBinding.mic.setFocusable(false);
     }
@@ -371,13 +422,42 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     @Override
     protected void onResume() {
         super.onResume();
+        focus.invalidate();
+        resumeFocusGeneration = focus.snapshot();
+        restoreAfterResume = true;
         mBinding.mic.setFocusable(true);
-        requestKeywordFocus();
+        if (hasWindowFocus()) restoreResumedFocus();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && restoreAfterResume) restoreResumedFocus();
+    }
+
+    private void restoreResumedFocus() {
+        restoreAfterResume = false;
+        View target = savedFocus;
+        if (canRequestFocus(target)) focus.post(target, resumeFocusGeneration, 0, target::requestFocus);
+        else if (mBinding.results.getRoot().isShown() && results.hasResults()) results.requestFocus(resumeFocusGeneration);
+        else if (getCurrentFocus() == null) requestKeywordFocus(resumeFocusGeneration);
+    }
+
+    @Override
+    protected void onBackInvoked() {
+        focus.invalidate();
+        if (mBinding.results.getRoot().hasFocus()) requestKeywordFocus();
+        else super.onBackInvoked();
     }
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        focus.close();
+        suggestionGeneration++;
+        if (suggestionRequest != null) App.removeCallbacks(suggestionRequest);
+        if (suggestionCall != null) suggestionCall.cancel();
+        if (results != null) results.dispose();
         mBinding.mic.destroy();
+        super.onDestroy();
     }
 }

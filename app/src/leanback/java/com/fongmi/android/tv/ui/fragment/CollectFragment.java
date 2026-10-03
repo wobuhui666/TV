@@ -41,7 +41,6 @@ import java.util.List;
 
 public class CollectFragment extends BaseFragment implements CustomScroller.Callback, VodPresenter.OnClickListener {
 
-    private static final int PAGE_HORIZONTAL_PADDING = 128;
     private static final int ROW_HORIZONTAL_SPACING = 16;
 
     private FragmentTypeBinding mBinding;
@@ -58,8 +57,13 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     private final List<Vod> mPending = new ArrayList<>();
 
     public static CollectFragment newInstance(String keyword, Collect collect) {
+        return newInstance(keyword, collect, false);
+    }
+
+    public static CollectFragment newInstance(String keyword, Collect collect, boolean compact) {
         Bundle args = new Bundle();
         args.putString("keyword", keyword);
+        args.putBoolean("compact", compact);
         CollectFragment fragment = new CollectFragment().setCollect(collect);
         fragment.setArguments(args);
         return fragment;
@@ -94,7 +98,10 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter));
         if (mScroller == null) mScroller = new CustomScroller(this);
         mBinding.recycler.addOnScrollListener(mScroller);
-        mBinding.recycler.setHeader(getActivity(), R.id.recyclerPanel, R.id.recycler);
+        if (!isCompact()) mBinding.recycler.setHeader(getActivity(), R.id.recyclerPanel, R.id.recycler);
+        // Insets are inside the page viewport, so scaled edge cards remain fully visible.
+        int focusInset = ResUtil.dp2px(8);
+        mBinding.recycler.setPadding(focusInset, ResUtil.dp2px(12), focusInset, ResUtil.dp2px(isCompact() ? 24 : 40));
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
     }
 
@@ -121,7 +128,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     private boolean checkLastSize(List<Vod> items) {
         if (mLast == null || items.isEmpty()) return false;
-        int size = Product.getColumn() - mLast.size();
+        int size = getColumn() - mLast.size();
         if (size <= 0) return false;
         size = Math.min(size, items.size());
         mLast.addAll(mLast.size(), items.subList(0, size));
@@ -164,7 +171,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     private void notifySourceSummaryChanges(int[] previousSourceCounts) {
         if (mAdapter == null) return;
-        int column = Product.getColumn();
+        int column = getColumn();
         if (column <= 0) return;
         int count = Math.min(previousSourceCounts.length, mAggregated.size());
         for (int i = 0; i < count; i++) {
@@ -181,7 +188,7 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
         if (checkLastSize(items)) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, Style.rect(), getPageSpec(Style.rect()));
-        for (List<Vod> part : Lists.partition(items, Product.getColumn())) {
+        for (List<Vod> part : Lists.partition(items, getColumn())) {
             mLast = new ArrayObjectAdapter(presenter);
             mLast.addAll(0, part);
             rows.add(new ListRow(mLast));
@@ -199,10 +206,20 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
     }
 
     private int[] getPageSpec(Style style) {
-        int column = Product.getColumn(style);
-        int space = ResUtil.dp2px(PAGE_HORIZONTAL_PADDING) + ResUtil.dp2px(ROW_HORIZONTAL_SPACING * (column - 1));
-        if (style.isOval()) space += ResUtil.dp2px(column * 16);
-        return Product.getSpec(space, column, style);
+        int column = getColumn();
+        int available = mBinding.recycler.getWidth();
+        if (available <= 0) available = ResUtil.getScreenWidth() - ResUtil.dp2px(isCompact() ? 464 : 96);
+        available -= mBinding.recycler.getPaddingLeft() + mBinding.recycler.getPaddingRight();
+        int width = Math.max(1, (available - ResUtil.dp2px(ROW_HORIZONTAL_SPACING * (column - 1))) / column);
+        return new int[]{width, Math.round(width / 0.75f)};
+    }
+
+    private boolean isCompact() {
+        return getArguments() != null && getArguments().getBoolean("compact");
+    }
+
+    private int getColumn() {
+        return isCompact() ? 4 : Product.getColumn();
     }
 
     @Override

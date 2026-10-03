@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.fongmi.android.tv.ui.theme.JetStreamWallpaper
 
 /**
  * JetStream Scrim Overlays
@@ -68,8 +69,8 @@ fun jetStreamHorizontalScrimBrush(
 ): Brush {
     val colorScheme = MaterialTheme.colorScheme
     val resolvedStartColor = startColor ?: colorScheme.surface.copy(alpha = 0.88f)
-    val resolvedMiddleColor = middleColor ?: colorScheme.primaryContainer.copy(alpha = 0.24f)
-    val resolvedEndColor = endColor ?: colorScheme.tertiaryContainer.copy(alpha = 0.12f)
+    val resolvedMiddleColor = middleColor ?: colorScheme.surface.copy(alpha = 0.70f)
+    val resolvedEndColor = endColor ?: colorScheme.background.copy(alpha = 0.94f)
     return Brush.horizontalGradient(listOf(resolvedStartColor, resolvedMiddleColor, resolvedEndColor))
 }
 
@@ -147,15 +148,15 @@ fun JetStreamPageScrim(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
-    val colorScheme = MaterialTheme.colorScheme
+    val canvas = MaterialTheme.colorScheme.background.copy(alpha = JetStreamWallpaper.canvasAlpha)
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 jetStreamVerticalScrimBrush(
-                    startColor = colorScheme.background.copy(alpha = 0.82f),
-                    middleColor = colorScheme.surface.copy(alpha = 0.46f),
-                    endColor = colorScheme.background.copy(alpha = 0.78f)
+                    startColor = canvas,
+                    middleColor = canvas,
+                    endColor = canvas
                 )
             )
     ) {

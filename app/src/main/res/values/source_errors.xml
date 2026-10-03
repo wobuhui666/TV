@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_source_plugin_library">A source component failed to load. Some content may be unavailable. Update or change the source.</string>
+</resources>

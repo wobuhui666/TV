@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.fongmi.android.tv.ui.custom.JetStreamVodCardRootLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="196dp"
+    android:layout_width="232dp"
     android:layout_height="wrap_content"
     android:focusable="true"
     android:focusableInTouchMode="true"
@@ -10,7 +10,7 @@
     <com.fongmi.android.tv.ui.custom.JetStreamVodPosterLayout
         android:id="@+id/poster"
         android:layout_width="match_parent"
-        android:layout_height="110dp"
+        android:layout_height="130dp"
         android:duplicateParentState="true">
 
         <com.fongmi.android.tv.ui.custom.JetStreamPosterImageView
@@ -23,7 +23,7 @@
         android:id="@+id/name"
         android:layout_width="match_parent"
         android:layout_height="24dp"
-        android:layout_marginTop="5dp"
+        android:layout_marginTop="10dp"
         android:ellipsize="end"
         android:gravity="start|center_vertical"
         android:singleLine="true"
@@ -36,6 +36,6 @@
         android:ellipsize="end"
         android:gravity="start|center_vertical"
         android:singleLine="true"
-        android:textSize="11sp"
+        android:textSize="12sp"
         tools:text="2026 · 电影" />
 </com.fongmi.android.tv.ui.custom.JetStreamVodCardRootLayout>

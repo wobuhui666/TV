@@ -1,0 +1,7 @@
+{
+  "time": "2026-10-03T10:55:16.538633+00:00",
+  "installed_sha256": "da7a185f588248969dae3791bc5f0c99dd1f53babec96181ae9a5559fd524a93",
+  "production_sha256": "ea254083ad14410a2590afa7a0cf65f95213f6c4209470f8d668156ec6f2759c",
+  "source_manifest": "r2h-source-sha256.json",
+  "ui_only_wrapper": true
+}

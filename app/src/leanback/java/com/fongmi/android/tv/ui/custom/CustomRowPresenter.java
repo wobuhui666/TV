@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.custom;
 
 import android.annotation.SuppressLint;
+import android.view.ViewGroup;
 
 import androidx.leanback.widget.FocusHighlight;
 import androidx.leanback.widget.HorizontalGridView;
@@ -16,7 +17,8 @@ public class CustomRowPresenter extends ListRowPresenter {
     private final int horizontalInset;
 
     public CustomRowPresenter(int spacing) {
-        this(spacing, FocusHighlight.ZOOM_FACTOR_SMALL);
+        // Card views own their focus animation; do not run a second Leanback zoom.
+        this(spacing, FocusHighlight.ZOOM_FACTOR_NONE);
     }
 
     @SuppressLint("RestrictedApi")
@@ -45,6 +47,12 @@ public class CustomRowPresenter extends ListRowPresenter {
         ViewHolder vh = (ViewHolder) holder;
         vh.getGridView().setFocusScrollStrategy(strategy);
         vh.getGridView().setHorizontalSpacing(ResUtil.dp2px(spacing));
+        vh.getGridView().setClipChildren(false);
+        vh.getGridView().setClipToPadding(false);
+        if (vh.view instanceof ViewGroup row) {
+            row.setClipChildren(false);
+            row.setClipToPadding(false);
+        }
         if (horizontalInset > 0) {
             int inset = ResUtil.dp2px(horizontalInset);
             vh.getGridView().setPaddingRelative(inset, vh.getGridView().getPaddingTop(), inset, vh.getGridView().getPaddingBottom());

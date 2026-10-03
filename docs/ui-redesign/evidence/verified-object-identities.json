@@ -1,0 +1,58 @@
+{
+  "LiveActivity": {
+    "verified-live-before": {
+      "local_activity": "53943ee",
+      "player_view": "4100871"
+    },
+    "verified-theme-before": {
+      "local_activity": "53943ee",
+      "player_view": "4100871"
+    },
+    "verified-theme-pink": {
+      "local_activity": "53943ee",
+      "player_view": "4100871"
+    },
+    "verified-theme-blue": {
+      "local_activity": "53943ee",
+      "player_view": "4100871"
+    },
+    "verified-live-return": {
+      "local_activity": "53943ee",
+      "player_view": "4100871"
+    }
+  },
+  "VideoActivity": {
+    "verified-vod-before": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-background-pink": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-after-pink": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-after-green": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-detail-green-before": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-detail-pink-after": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-detail-blue-after": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    },
+    "verified-vod-final": {
+      "local_activity": "1635991",
+      "player_view": "1581994"
+    }
+  }
+}

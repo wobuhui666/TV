@@ -1,0 +1,21 @@
+{
+  "unit_test_suites": 45,
+  "unit_tests": {
+    "tests": 223,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_runtime_tests": [
+    {
+      "name": "com.fongmi.android.tv.api.loader.SourcePluginRuntimeTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0"
+    }
+  ],
+  "lint_issue_counts": {
+    "Warning": 311,
+    "Hint": 6
+  }
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- One geometry for video clipping and its focus foreground. -->
+    <dimen name="tv_video_corner_radius">16dp</dimen>
+    <dimen name="tv_video_focus_stroke">1dp</dimen>
+</resources>

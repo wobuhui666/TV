@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_search_results_title">“%1$s”的搜尋結果</string>
+    <string name="tv_search_result_count">%1$d 個條目 · %2$d 個來源</string>
+    <string name="tv_search_waiting">正在搜尋已啟用的來源…</string>
+    <string name="tv_search_empty">暫無結果，試試其他片名或切換搜尋源。</string>
+    <string name="tv_search_no_sources">請先啟用可搜尋的來源。</string>
+    <string name="tv_search_edit">修改搜尋</string>
+    <string name="tv_keep_hint">收藏的影視 · 長按確認鍵管理</string>
+    <string name="tv_vod_hint">瀏覽目前來源 · 在分類上按確認鍵篩選</string>
+    <string name="tv_history_delete_error">移除觀看記錄失敗，請重試。</string>
+</resources>

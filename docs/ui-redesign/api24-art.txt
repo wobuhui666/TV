@@ -1,0 +1,35 @@
+Android API=24 release=7.0 vm=2.1.0
+PASS actual Android API
+LEGACY_REGEX_CONTROL: IsHan rejected: U_ILLEGAL_ARGUMENT_ERROR
+PASS class initialization, title normalization
+PASS year regex
+PASS Chinese season regex
+PASS Roman season regex
+PASS English season regex
+PASS numeric episode regex
+PASS fallback normalizer without app Trans
+PASS episode: 庆余年 第12集
+PASS episode: 第１２集
+PASS episode: 12 集
+PASS episode: 第十二集
+PASS episode: 十二集
+PASS episode: Episode 12
+PASS episode: EP12
+PASS episode: Shepherd
+PASS episode: Special Episode
+PASS episode: 第一现场
+PASS episode: 集结号
+PASS episode: 第一集训队
+PASS episode: 第十二集上
+PASS episode: 十二集下
+PASS episode: 第十二集预告
+PASS episode: 第十二话（上）
+PASS episode: 𠮷野-１２
+PASS episode: null
+PASS identity compatibility
+PASS identity year rejection
+PASS identity equals
+PASS identity hashCode
+PASS identity key
+PASS: 31 production MediaMatcher/MediaIdentity checks on actual API24 ART
+LIMITATION: no full APK/native UI; Vod overloads and app-dependent Trans implementation are not exercised; production normalize() catches missing Trans and uses its fallback.

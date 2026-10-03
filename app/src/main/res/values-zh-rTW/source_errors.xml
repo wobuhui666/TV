@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_source_plugin_library">來源元件載入失敗，部分內容可能無法使用，請更新或更換來源。</string>
+</resources>

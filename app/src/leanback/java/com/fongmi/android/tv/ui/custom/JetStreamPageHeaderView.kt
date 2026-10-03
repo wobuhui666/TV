@@ -82,28 +82,23 @@ class JetStreamPageHeaderView @JvmOverloads constructor(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                    .padding(vertical = 8.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .fillMaxWidth()
                 ) {
-                    Text(
-                        text = eyebrowText().uppercase(),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.0.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
+                    if (eyebrow.isNotBlank() && eyebrow != title) {
+                        Text(eyebrow, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(6.dp))
+                    }
                     Text(
                         text = title.ifBlank { context.getString(R.string.home_setting) },
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 24.sp,
-                        lineHeight = 28.sp,
+                        fontSize = 30.sp,
+                        lineHeight = 36.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

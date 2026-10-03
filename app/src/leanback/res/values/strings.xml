@@ -125,4 +125,12 @@
     <string name="push_copy_url">Copy address</string>
     <string name="push_copied_url">Address copied to clipboard</string>
 
+    <!-- Playback drawer command names; current values are supplied by the player. -->
+    <string name="playback_command_speed">Playback speed</string>
+    <string name="playback_command_scale">Picture aspect ratio</string>
+    <string name="playback_command_player">Player</string>
+    <string name="playback_command_decode">Decoding mode</string>
+    <string name="playback_command_opening">Skip intro</string>
+    <string name="playback_command_ending">Skip outro</string>
+
 </resources>

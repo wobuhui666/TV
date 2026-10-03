@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_empty_content">暫無內容</string>
+    <string name="tv_empty_back_hint">按返回鍵繼續瀏覽</string>
+    <string name="tv_empty_favorites">還沒有收藏的影片</string>
+    <string name="tv_empty_discover_retry">發現內容暫不可用，按確認鍵重試</string>
+</resources>

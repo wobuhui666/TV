@@ -1,0 +1,17 @@
+--------- beginning of crash
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: FATAL EXCEPTION: Thread-14
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: Process: com.fongmi.android.tv, PID: 371674
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: java.lang.UnsatisfiedLinkError: dlopen failed: "/data/data/com.fongmi.android.tv/files/TV/.libwexproxyDrgKF4lal6" has bad ELF magic: 3c3f786d
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: 	at java.lang.Runtime.load0(Runtime.java:929)
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: 	at java.lang.System.load(System.java:1625)
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: 	at com.github.catvod.spider.GoProxy.<clinit>(SourceFile:2)
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: 	at com.github.catvod.spider.merge.OoOoO0O0o0oOoO0O.oOo0oOo0Oo0oO0Oo.run(SourceFile:11)
+10-03 21:05:45.583 371674 44432 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:1012)
+--------- beginning of main
+10-03 21:05:45.583 371674 44432 E JarLoader: Source plugin library failed on a background thread
+10-03 21:05:45.583 371674 44432 E JarLoader: java.lang.UnsatisfiedLinkError: dlopen failed: "/data/data/com.fongmi.android.tv/files/TV/.libwexproxyDrgKF4lal6" has bad ELF magic: 3c3f786d
+10-03 21:05:45.583 371674 44432 E JarLoader: 	at java.lang.Runtime.load0(Runtime.java:929)
+10-03 21:05:45.583 371674 44432 E JarLoader: 	at java.lang.System.load(System.java:1625)
+10-03 21:05:45.583 371674 44432 E JarLoader: 	at com.github.catvod.spider.GoProxy.<clinit>(SourceFile:2)
+10-03 21:05:45.583 371674 44432 E JarLoader: 	at com.github.catvod.spider.merge.OoOoO0O0o0oOoO0O.oOo0oOo0Oo0oO0Oo.run(SourceFile:11)
+10-03 21:05:45.583 371674 44432 E JarLoader: 	at java.lang.Thread.run(Thread.java:1012)

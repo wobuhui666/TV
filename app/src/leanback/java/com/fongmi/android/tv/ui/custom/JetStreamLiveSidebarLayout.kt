@@ -15,11 +15,11 @@ class JetStreamLiveSidebarLayout @JvmOverloads constructor(
 ) : LinearLayoutCompat(context, attrs, defStyleAttr) {
 
     init {
-        background = jetStreamOverlayBackground(
-            orientation = GradientDrawable.Orientation.LEFT_RIGHT,
-            cornerRadii = floatArrayOf(0f, 0f, jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), 0f, 0f)
-        )
-        elevation = jetStreamDp(12)
+        background = GradientDrawable().apply {
+            cornerRadius = jetStreamDp(16)
+            setColor(jetStreamColor(R.color.jetstream_overlay_surface))
+        }
+        elevation = 0f
         clipToOutline = true
     }
 }
@@ -32,7 +32,7 @@ class JetStreamLiveItemLayout @JvmOverloads constructor(
 
     init {
         applyJetStreamLiveItemSurface()
-        JetStreamAnimator.bindFocus(this, JetStreamAnimator.FOCUS_SCALE_LIST, 8)
+        JetStreamAnimator.bindFocus(this, 1.0f, 0)
     }
 }
 
@@ -43,7 +43,7 @@ class JetStreamLiveLeftRightLayout @JvmOverloads constructor(
 
     init {
         applyJetStreamLiveItemSurface()
-        JetStreamAnimator.bindFocus(this, JetStreamAnimator.FOCUS_SCALE_LIST, 8)
+        JetStreamAnimator.bindFocus(this, 1.0f, 0)
     }
 }
 
@@ -59,18 +59,18 @@ private fun View.applyJetStreamLiveItemSurface() {
 
 private fun View.jetStreamLiveItemBackground(): StateListDrawable {
     return StateListDrawable().apply {
-        addState(intArrayOf(android.R.attr.state_focused), jetStreamLiveItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_pressed), jetStreamLiveItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_selected), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_checked), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_activated), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(), jetStreamLiveItemDrawable(R.color.jetstream_surface_container_high, R.color.jetstream_outline_variant, 1))
+        addState(intArrayOf(android.R.attr.state_focused), jetStreamLiveItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 1))
+        addState(intArrayOf(android.R.attr.state_pressed), jetStreamLiveItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 1))
+        addState(intArrayOf(android.R.attr.state_selected), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary_container, 0))
+        addState(intArrayOf(android.R.attr.state_checked), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary_container, 0))
+        addState(intArrayOf(android.R.attr.state_activated), jetStreamLiveItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary_container, 0))
+        addState(intArrayOf(), jetStreamLiveItemDrawable(R.color.jetstream_overlay_surface, R.color.jetstream_overlay_surface, 0))
     }
 }
 
 private fun View.jetStreamLiveItemDrawable(colorRes: Int, strokeColorRes: Int, strokeWidthDp: Int): GradientDrawable {
     return GradientDrawable().apply {
-        cornerRadius = jetStreamDp(18)
+        cornerRadius = jetStreamDp(10)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
     }

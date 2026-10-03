@@ -1,0 +1,32 @@
+{
+  "memory": [
+    {
+      "file": "perf-memory-0.txt",
+      "total_pss_kb": 84253
+    },
+    {
+      "file": "perf-memory-1.txt",
+      "total_pss_kb": 84299
+    },
+    {
+      "file": "perf-memory-2.txt",
+      "total_pss_kb": 84386
+    },
+    {
+      "file": "perf-memory-3.txt",
+      "total_pss_kb": 84855
+    }
+  ],
+  "gfx_summary": [
+    "Total frames rendered: 500",
+    "Janky frames: 496 (99.20%)",
+    "50th percentile: 53ms",
+    "90th percentile: 77ms",
+    "95th percentile: 85ms",
+    "99th percentile: 101ms",
+    "Number Missed Vsync: 311",
+    "Number Slow UI thread: 257",
+    "Number Slow bitmap uploads: 5",
+    "Number Slow issue draw commands: 493"
+  ]
+}

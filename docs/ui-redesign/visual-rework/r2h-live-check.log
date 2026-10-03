@@ -1,0 +1,31 @@
+{"time": 1791025864.8105886, "start": "HomeActivity", "extras": ["-f", "0x04000000"]}
+{"time": 1791025867.2528305, "evidence": "1791025865511009690-1-start-HomeActivity", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["首页"], "id": "", "bounds": [204, 32, 328, 128]}]}
+
+{"time": 1791025868.8880558, "evidence": "1791025867329271519-1-nav-before", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["首页"], "id": "", "bounds": [204, 32, 328, 128]}]}
+{"time": 1791025869.0446675, "key": 22}
+{"time": 1791025871.0131805, "evidence": "1791025869397761018-2-nav-step", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["片库"], "id": "", "bounds": [344, 32, 468, 128]}]}
+{"time": 1791025871.1754992, "key": 22}
+{"time": 1791025873.1029925, "evidence": "1791025871526905727-3-nav-step", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["推荐"], "id": "", "bounds": [484, 32, 608, 128]}]}
+{"time": 1791025873.2835069, "key": 22}
+{"time": 1791025875.1955886, "evidence": "1791025873633855093-4-nav-step", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["直播"], "id": "", "bounds": [624, 32, 748, 128]}]}
+{"time": 1791025875.195852, "status": "PENDING", "next": "Repeat live open"}
+
+{"time": 1791025876.8413355, "evidence": "1791025875275214190-1-nav-before", "foreground": ["mResumedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}", "mFocusedActivity: ActivityRecord{f79d4e4 u0 com.fongmi.android.tv/.ui.activity.HomeActivity t14}"], "focus": [{"labels": ["直播"], "id": "", "bounds": [624, 32, 748, 128]}]}
+{"time": 1791025877.0202613, "key": 23}
+{"time": 1791025881.469351, "evidence": "1791025877370671487-2-live-opened", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["风景频道", "001", "11:11:17"], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+{"time": 1791025881.4697962, "status": "CHECKED", "check": "navigation opened activity with focus", "page": "live", "visual_review_required": true}
+
+{"time": 1791025885.7724683, "evidence": "1791025883514323911-1-live-ready", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+{"time": 1791025886.1986418, "key": 23}
+{"time": 1791025888.5918045, "evidence": "1791025886550840971-2-live-channel-list", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["001", "风景频道"], "id": "", "bounds": [456, 296, 1072, 392]}]}
+{"time": 1791025888.9783435, "key": 20}
+{"time": 1791025891.3598707, "evidence": "1791025889330901519-3-live-channel-next", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["002", "电影频道"], "id": "", "bounds": [456, 404, 1072, 500]}]}
+{"time": 1791025891.7760901, "key": 21}
+{"time": 1791025894.0831976, "evidence": "1791025892126407795-4-live-group-focus", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["精选频道"], "id": "", "bounds": [144, 404, 424, 500]}]}
+{"time": 1791025894.4653401, "key": 20}
+{"time": 1791025896.8094966, "evidence": "1791025894816160940-5-live-group-next", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["纪录频道"], "id": "", "bounds": [144, 512, 424, 608]}]}
+{"time": 1791025897.2003467, "key": 22}
+{"time": 1791025899.6501546, "evidence": "1791025897550721181-6-live-group-channel", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": ["004", "旅行频道"], "id": "", "bounds": [456, 296, 1072, 392]}]}
+{"time": 1791025899.9875565, "key": 4}
+{"time": 1791025902.5381122, "evidence": "1791025900337970689-7-live-sidebar-back", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+CHECKED live navigation and sidebar Back, images require review

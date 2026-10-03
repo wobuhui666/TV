@@ -1,54 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.fongmi.android.tv.ui.custom.JetStreamPageRootLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
+    android:layout_width="match_parent" android:layout_height="match_parent">
     <com.fongmi.android.tv.ui.custom.JetStreamPageBackgroundView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingStart="32dp"
-        android:paddingTop="32dp"
-        android:paddingEnd="32dp">
-
-        <com.fongmi.android.tv.ui.custom.JetStreamPagePanelLayout
-            android:id="@+id/recyclerPanel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="12dp"
-            android:paddingTop="10dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="10dp">
-
-            <com.fongmi.android.tv.ui.custom.JetStreamHorizontalGridView
-                android:id="@+id/recycler"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:focusOutEnd="false"
-                app:focusOutFront="false" />
-
-        </com.fongmi.android.tv.ui.custom.JetStreamPagePanelLayout>
-
-        <com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="24dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <com.fongmi.android.tv.ui.custom.JetStreamPageViewPager
-                android:id="@+id/pager"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-        </com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout>
-
-    </com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout>
+        android:layout_width="match_parent" android:layout_height="match_parent" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:paddingStart="48dp" android:paddingEnd="48dp"
+        android:paddingTop="32dp" android:paddingBottom="24dp">
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/edit" android:layout_width="wrap_content" android:layout_height="40dp"
+            android:layout_marginBottom="16dp" android:gravity="center" android:paddingStart="18dp" android:paddingEnd="18dp"
+            android:focusable="true" android:focusableInTouchMode="true" android:text="@string/tv_search_edit" />
+        <include android:id="@+id/results" layout="@layout/view_search_results"
+            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+    </LinearLayout>
 </com.fongmi.android.tv.ui.custom.JetStreamPageRootLayout>

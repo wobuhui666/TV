@@ -25,9 +25,9 @@ class JetStreamPlaybackTopBarLayout @JvmOverloads constructor(
     init {
         background = jetStreamOverlayBackground(
             orientation = GradientDrawable.Orientation.TOP_BOTTOM,
-            cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), jetStreamDp(28))
+            cornerRadii = FloatArray(8) { 0f }
         )
-        elevation = jetStreamDp(8)
+        elevation = 0f
         clipToOutline = true
     }
 }
@@ -233,9 +233,9 @@ private fun android.view.View.applyJetStreamPlaybackWidgetSurface() {
     val bottom = paddingBottom
     background = jetStreamOverlayBackground(
         orientation = GradientDrawable.Orientation.TL_BR,
-        cornerRadii = FloatArray(8) { jetStreamDp(28) }
+        cornerRadii = FloatArray(8) { jetStreamDp(12) }
     )
-    elevation = jetStreamDp(10)
+    elevation = 0f
     clipToOutline = true
     if (left == 0 && top == 0 && right == 0 && bottom == 0) {
         setPadding(jetStreamDpInt(20), jetStreamDpInt(18), jetStreamDpInt(20), jetStreamDpInt(18))
@@ -290,9 +290,9 @@ class JetStreamPlaybackPanelLayout @JvmOverloads constructor(
     init {
         background = jetStreamOverlayBackground(
             orientation = GradientDrawable.Orientation.TL_BR,
-            cornerRadii = FloatArray(8) { jetStreamDp(28) }
+            cornerRadii = FloatArray(8) { jetStreamDp(12) }
         )
-        elevation = jetStreamDp(10)
+        elevation = 0f
         clipToOutline = true
         if (paddingLeft == 0 && paddingTop == 0 && paddingRight == 0 && paddingBottom == 0) {
             setPadding(jetStreamDpInt(20), jetStreamDpInt(18), jetStreamDpInt(20), jetStreamDpInt(18))
@@ -309,9 +309,9 @@ class JetStreamLiveBottomBarLayout @JvmOverloads constructor(
     init {
         background = jetStreamOverlayBackground(
             orientation = GradientDrawable.Orientation.BOTTOM_TOP,
-            cornerRadii = floatArrayOf(jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), 0f, 0f, 0f, 0f)
+            cornerRadii = FloatArray(8) { 0f }
         )
-        elevation = jetStreamDp(8)
+        elevation = 0f
         clipToOutline = true
     }
 }
@@ -325,9 +325,9 @@ class JetStreamPlaybackControlBarLayout @JvmOverloads constructor(
     init {
         background = jetStreamOverlayBackground(
             orientation = GradientDrawable.Orientation.BOTTOM_TOP,
-            cornerRadii = floatArrayOf(jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), jetStreamDp(28), 0f, 0f, 0f, 0f)
+            cornerRadii = FloatArray(8) { 0f }
         )
-        elevation = jetStreamDp(12)
+        elevation = 0f
         clipToOutline = true
     }
 }
@@ -364,18 +364,43 @@ private fun LinearLayoutCompat.applyJetStreamPlaybackActionRowSurface() {
     val right = paddingRight
     val bottom = paddingBottom
     background = GradientDrawable().apply {
-        cornerRadius = jetStreamDp(24)
+        cornerRadius = jetStreamDp(12)
         setColor(jetStreamColor(R.color.jetstream_scrim_light))
     }
     minimumHeight = jetStreamDpInt(56)
     clipChildren = false
     clipToPadding = false
     clipToOutline = true
-    elevation = jetStreamDp(4)
+    elevation = 0f
     if (left == 0 && top == 0 && right == 0 && bottom == 0) {
         val padding = jetStreamDpInt(8)
         setPadding(padding, padding, padding, padding)
     } else {
         setPadding(left, top, right, bottom)
+    }
+}
+
+/** A labelled media row; the activity hides its heading together with the chip row. */
+class JetStreamPlaybackSectionLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : LinearLayoutCompat(context, attrs, defStyleAttr) {
+    init {
+        clipChildren = false
+        clipToPadding = false
+    }
+}
+
+class JetStreamPlaybackSectionTitleView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : MaterialTextView(context, attrs, defStyleAttr) {
+    init {
+        applyJetStreamPlaybackTextDefaults(attrs, defStyleAttr, R.color.jetstream_on_surface, 17f)
+        isFocusable = false
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
     }
 }

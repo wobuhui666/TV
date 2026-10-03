@@ -1,0 +1,66 @@
+{
+  "history": {
+    "vodName": "深空回声",
+    "vodRemarks": "第 2 集",
+    "position": 51241,
+    "duration": 120095
+  },
+  "controls_xml": [
+    {
+      "text": "深空回声：第 2 集",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "完整影片 • 导演：陈远",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "",
+      "content-desc": "暂停",
+      "focused": "false"
+    },
+    {
+      "text": "00:57",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "02:00",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "",
+      "content-desc": "上集",
+      "focused": "false"
+    },
+    {
+      "text": "",
+      "content-desc": "下集",
+      "focused": "false"
+    },
+    {
+      "text": "",
+      "content-desc": "循环",
+      "focused": "false"
+    },
+    {
+      "text": "播放列表",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "字幕 · 音轨",
+      "content-desc": "",
+      "focused": "false"
+    },
+    {
+      "text": "设置",
+      "content-desc": "",
+      "focused": "false"
+    }
+  ],
+  "note": "PNG was captured before XML; its controls were hidden. Use the recording plus UI XML and database record for resume evidence."
+}

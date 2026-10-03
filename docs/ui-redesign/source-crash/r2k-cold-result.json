@@ -1,0 +1,34 @@
+{
+  "same_pid_40s": true,
+  "guarded_native_error": true,
+  "samples": [
+    {
+      "time": "2026-10-03T13:05:56.982626+00:00",
+      "pid": "371674",
+      "foreground": [
+        "topResumedActivity=ActivityRecord{5143322 u0 com.fongmi.android.tv/.ui.activity.HomeActivity} t37}"
+      ]
+    },
+    {
+      "time": "2026-10-03T13:06:09.554950+00:00",
+      "pid": "371674",
+      "foreground": [
+        "topResumedActivity=ActivityRecord{5143322 u0 com.fongmi.android.tv/.ui.activity.HomeActivity} t37}"
+      ]
+    },
+    {
+      "time": "2026-10-03T13:06:21.889579+00:00",
+      "pid": "371674",
+      "foreground": [
+        "topResumedActivity=ActivityRecord{5143322 u0 com.fongmi.android.tv/.ui.activity.HomeActivity} t37}"
+      ]
+    },
+    {
+      "time": "2026-10-03T13:06:33.709709+00:00",
+      "pid": "371674",
+      "foreground": [
+        "topResumedActivity=ActivityRecord{5143322 u0 com.fongmi.android.tv/.ui.activity.HomeActivity} t37}"
+      ]
+    }
+  ]
+}

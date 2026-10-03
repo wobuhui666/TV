@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.fongmi.android.tv.ui.custom.JetStreamEmptyStateView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/empty_state"
     android:layout_width="360dp"
     android:layout_height="wrap_content"
-    android:minHeight="320dp"
-    android:text="@string/error_empty" />
+    android:minHeight="180dp"
+    android:text="@string/tv_empty_content" />

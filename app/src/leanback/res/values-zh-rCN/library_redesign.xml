@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="my_title">我的</string>
+    <string name="my_description">你的收藏、观看记录与电视工具</string>
+    <string name="my_keep_description">留住想看的影片</string>
+    <string name="my_history">观看记录</string>
+    <string name="my_history_description">当前源配置下的完整观看记录</string>
+    <string name="my_push_description">用手机发送影片链接到电视</string>
+    <string name="my_cast">投屏接收</string>
+    <string name="my_cast_description">在手机播放器中连接这台设备</string>
+    <string name="my_cast_instructions">手机与电视连接同一个网络，在手机播放器的投屏列表中选择“%1$s”。\n\n连接成功后，影片会自动在电视上播放。</string>
+    <string name="my_files">本地文件</string>
+    <string name="my_files_description">打开设备或外接存储中的影片</string>
+    <string name="my_settings_description">内容源、播放、字幕与外观</string>
+    <string name="my_history_hint">选择影片继续观看 · 长按管理记录</string>
+    <string name="my_history_empty">还没有观看记录</string>
+    <string name="my_history_delete_hint">选择要移除的记录 · 长按退出管理</string>
+    <string name="my_history_error">观看记录读取失败，请重试</string>
+    <string name="my_retry">重试</string>
+</resources>

@@ -18,12 +18,7 @@
         android:gravity="start|bottom"
         android:includeFontPadding="false"
         android:letterSpacing="-0.08"
-        android:shadowColor="#CC000000"
-        android:shadowDx="4"
-        android:shadowDy="5"
-        android:shadowRadius="2"
-        android:textColor="#E8FFFFFF"
-        android:textSize="100sp"
+                android:textSize="88sp"
         tools:text="1" />
 
     <com.fongmi.android.tv.ui.custom.JetStreamVodPosterLayout

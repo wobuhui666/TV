@@ -36,25 +36,25 @@ data class JetStreamAccentPalette(
 
 object JetStreamPalette {
 
-    @ColorInt private val SURFACE = 0xFF1A1C1E.toInt()
-    @ColorInt private val SURFACE_CONTAINER = 0xFF1E2022.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGH = 0xFF292B2D.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGHEST = 0xFF33353A.toInt()
-    @ColorInt private val ON_SURFACE = 0xFFE3E2E6.toInt()
-    @ColorInt private val ON_SURFACE_VARIANT = 0xFFC4C6CF.toInt()
-    @ColorInt private val OUTLINE = 0xFF8E9099.toInt()
-    @ColorInt private val OUTLINE_VARIANT = 0xFF44464F.toInt()
+    @ColorInt private val SURFACE = 0xFF17181C.toInt()
+    @ColorInt private val SURFACE_CONTAINER = 0xFF1D1F23.toInt()
+    @ColorInt private val SURFACE_CONTAINER_HIGH = 0xFF27292E.toInt()
+    @ColorInt private val SURFACE_CONTAINER_HIGHEST = 0xFF32343A.toInt()
+    @ColorInt private val ON_SURFACE = 0xFFF2F2F2.toInt()
+    @ColorInt private val ON_SURFACE_VARIANT = 0xFFB9BBC2.toInt()
+    @ColorInt private val OUTLINE = 0xFF898B93.toInt()
+    @ColorInt private val OUTLINE_VARIANT = 0xFF373940.toInt()
     @ColorInt private val ERROR = 0xFFFFB4AB.toInt()
     @ColorInt private val ON_ERROR = 0xFF690005.toInt()
     @ColorInt private val ERROR_CONTAINER = 0xFF93000A.toInt()
     @ColorInt private val ON_ERROR_CONTAINER = 0xFFFFDAD6.toInt()
-    @ColorInt private val BACKGROUND = 0xFF11131A.toInt()
-    @ColorInt private val ON_BACKGROUND = 0xFFE3E2E6.toInt()
+    @ColorInt private val BACKGROUND = 0xFF101114.toInt()
+    @ColorInt private val ON_BACKGROUND = 0xFFF2F2F2.toInt()
     @ColorInt private val SCRIM_LIGHT = 0x14FFFFFF
     @ColorInt private val SCRIM_MEDIUM = 0x29FFFFFF
     @ColorInt private val SCRIM_HEAVY = 0x3DFFFFFF
-    @ColorInt private val OVERLAY_SURFACE = 0xCC1A1C1E.toInt()
-    @ColorInt private val OVERLAY_SURFACE_LIGHT = 0x661A1C1E
+    @ColorInt private val OVERLAY_SURFACE = 0xF017181C.toInt()
+    @ColorInt private val OVERLAY_SURFACE_LIGHT = 0xC017181C.toInt()
     @ColorInt private val STAR_BLUE_SEED = 0xFF4870E0.toInt()
 
     private val controlStates = arrayOf(
@@ -192,9 +192,23 @@ object JetStreamPalette {
         return current().labelRes
     }
 
+    // Focus is deliberately neutral across presets. The chosen theme remains an
+    // accent for supplementary information, never a tint over the artwork.
+    private fun presentationPalette(): JetStreamAccentPalette {
+        val accent = current()
+        return accent.copy(
+            primary = 0xFFF2F2F2.toInt(), onPrimary = 0xFF17181C.toInt(),
+            primaryContainer = 0xFF41454E.toInt(), onPrimaryContainer = 0xFFF2F2F2.toInt(),
+            secondary = 0xFFD2D3D8.toInt(), onSecondary = 0xFF17181C.toInt(),
+            secondaryContainer = 0xFF35373D.toInt(), onSecondaryContainer = 0xFFF2F2F2.toInt(),
+            tertiary = accent.primary, onTertiary = accent.onPrimary,
+            tertiaryContainer = accent.primaryContainer, onTertiaryContainer = accent.onPrimaryContainer
+        )
+    }
+
     @JvmStatic
     fun colorScheme(): ColorScheme {
-        val palette = current()
+        val palette = presentationPalette()
         return darkColorScheme(
             primary = composeColor(palette.primary),
             onPrimary = composeColor(palette.onPrimary),
@@ -225,27 +239,27 @@ object JetStreamPalette {
 
     @JvmStatic
     @ColorInt
-    fun primaryInt(): Int = current().primary
+    fun primaryInt(): Int = presentationPalette().primary
 
     @JvmStatic
     @ColorInt
-    fun onPrimaryInt(): Int = current().onPrimary
+    fun onPrimaryInt(): Int = presentationPalette().onPrimary
 
     @JvmStatic
     @ColorInt
-    fun primaryContainerInt(): Int = current().primaryContainer
+    fun primaryContainerInt(): Int = presentationPalette().primaryContainer
 
     @JvmStatic
     @ColorInt
-    fun onPrimaryContainerInt(): Int = current().onPrimaryContainer
+    fun onPrimaryContainerInt(): Int = presentationPalette().onPrimaryContainer
 
     @JvmStatic
     @ColorInt
-    fun secondaryInt(): Int = current().secondary
+    fun secondaryInt(): Int = presentationPalette().secondary
 
     @JvmStatic
     @ColorInt
-    fun secondaryContainerInt(): Int = current().secondaryContainer
+    fun secondaryContainerInt(): Int = presentationPalette().secondaryContainer
 
     @JvmStatic
     @ColorInt
@@ -253,11 +267,11 @@ object JetStreamPalette {
 
     @JvmStatic
     @ColorInt
-    fun shadowColor(): Int = withAlpha(primaryInt(), 0.42f)
+    fun shadowColor(): Int = 0x40000000
 
     @JvmStatic
     fun controlText(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
@@ -273,31 +287,31 @@ object JetStreamPalette {
 
     @JvmStatic
     fun controlContainer(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
-                palette.primaryContainer,
-                palette.primaryContainer,
-                palette.secondaryContainer,
-                palette.secondaryContainer,
-                palette.secondaryContainer,
-                SURFACE_CONTAINER_HIGH
+                0xFF41454E.toInt(),
+                0xFF505560.toInt(),
+                0xFF35383F.toInt(),
+                0xFF35383F.toInt(),
+                0xFF35383F.toInt(),
+                0xFF24262B.toInt()
             )
         )
     }
 
     @JvmStatic
     fun controlOutline(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
-                palette.primary,
-                palette.primary,
-                palette.secondary,
-                palette.secondary,
-                palette.secondary,
+                0xFFC5C8D0.toInt(),
+                0xFFC5C8D0.toInt(),
+                OUTLINE,
+                OUTLINE,
+                OUTLINE,
                 OUTLINE_VARIANT
             )
         )
@@ -307,7 +321,7 @@ object JetStreamPalette {
     @ColorInt
     fun resolveColor(context: Context, @ColorRes colorRes: Int): Int {
         if (isDynamicSelector(colorRes)) return resolveColorStateList(context, colorRes).defaultColor
-        val palette = current()
+        val palette = presentationPalette()
         return when (colorRes) {
             R.color.jetstream_primary -> palette.primary
             R.color.jetstream_on_primary -> palette.onPrimary
@@ -444,7 +458,7 @@ object JetStreamPalette {
     }
 
     private fun primarySelectedText(@ColorInt defaultColor: Int): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
@@ -459,7 +473,7 @@ object JetStreamPalette {
     }
 
     private fun titleControlText(@ColorInt defaultColor: Int): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
@@ -474,7 +488,7 @@ object JetStreamPalette {
     }
 
     private fun fileIconTint(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             controlStates,
             intArrayOf(
@@ -489,7 +503,7 @@ object JetStreamPalette {
     }
 
     private fun switchThumb(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             arrayOf(
                 intArrayOf(-android.R.attr.state_enabled),
@@ -497,12 +511,12 @@ object JetStreamPalette {
                 intArrayOf(android.R.attr.state_focused),
                 intArrayOf()
             ),
-            intArrayOf(OUTLINE, palette.primary, palette.primary, ON_SURFACE_VARIANT)
+            intArrayOf(OUTLINE, palette.onPrimary, palette.primary, ON_SURFACE_VARIANT)
         )
     }
 
     private fun switchTrack(): ColorStateList {
-        val palette = current()
+        val palette = presentationPalette()
         return ColorStateList(
             arrayOf(
                 intArrayOf(-android.R.attr.state_enabled),

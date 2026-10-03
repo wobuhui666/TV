@@ -14,14 +14,14 @@ import java.util.WeakHashMap
 
 object JetStreamAnimator {
 
-    const val FOCUS_DURATION = 90L
+    const val FOCUS_DURATION = 120L
     const val PANEL_DURATION = 220L
     const val PAGE_DURATION = 260L
     const val EXIT_DURATION = 160L
 
-    const val FOCUS_SCALE_CARD = 1.08f
-    const val FOCUS_SCALE_LIST = 1.05f
-    const val FOCUS_SCALE_VIDEO = 1.03f
+    const val FOCUS_SCALE_CARD = 1.04f
+    const val FOCUS_SCALE_LIST = 1.04f
+    const val FOCUS_SCALE_VIDEO = 1.02f
 
     private val enterInterpolator = DecelerateInterpolator(1.8f)
     private val exitInterpolator = AccelerateInterpolator(1.2f)

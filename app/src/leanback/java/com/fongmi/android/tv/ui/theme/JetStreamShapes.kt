@@ -27,19 +27,19 @@ object JetStreamShapes {
     val Circle = RoundedCornerShape(50)
 
     // Chip Shape - 用于 Chip 组件
-    val Chip = RoundedCornerShape(24.dp)
+    val Chip = RoundedCornerShape(8.dp)
 
     // Button Shape - 用于按钮组件
-    val Button = RoundedCornerShape(24.dp)
+    val Button = RoundedCornerShape(12.dp)
 
     // Card Shape - 用于卡片组件
-    val Card = ExtraLarge
+    val Card = Small
 
     // Dialog Shape - 用于对话框
-    val Dialog = ExtraLarge
+    val Dialog = Large
 
     // Bottom Sheet Shape - 用于底部表单
-    val BottomSheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val BottomSheet = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
 }
 
 /**

@@ -124,54 +124,62 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:gravity="center"
-        android:minHeight="72dp"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:paddingStart="48dp"
-        android:paddingTop="14dp"
+        android:paddingTop="28dp"
         android:paddingEnd="48dp"
-        android:paddingBottom="14dp"
+        android:paddingBottom="32dp"
         android:visibility="gone"
         tools:visibility="visible">
 
-        <com.fongmi.android.tv.ui.custom.JetStreamLiveChannelNumberTextView
-            android:id="@+id/number"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            tools:text="005" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <com.fongmi.android.tv.ui.custom.JetStreamLogoImageView
-            android:id="@+id/logo"
-            android:layout_width="48dp"
-            android:layout_height="36dp"
-            android:layout_marginEnd="14dp"
-            android:scaleType="fitCenter"
-            android:visibility="gone" />
+            <com.fongmi.android.tv.ui.custom.JetStreamLogoImageView
+                android:id="@+id/logo"
+                android:layout_width="44dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="16dp"
+                android:scaleType="fitCenter"
+                android:visibility="gone" />
 
-        <com.fongmi.android.tv.ui.custom.JetStreamLiveChannelNameTextView
-            android:id="@+id/name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:maxEms="48"
-            android:singleLine="true"
-            tools:text="民視" />
+            <com.fongmi.android.tv.ui.custom.JetStreamLiveChannelNumberTextView
+                android:id="@+id/number"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                tools:text="005" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamLiveChannelNameTextView
+                android:id="@+id/name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textSize="24sp"
+                tools:text="CCTV-1 综合" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamPlaybackSecondaryTextView
+                android:id="@+id/line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:textSize="13sp"
+                tools:text="来源 1" />
+        </LinearLayout>
 
         <com.fongmi.android.tv.ui.custom.JetStreamPlaybackSecondaryTextView
             android:id="@+id/play"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:layout_weight="1"
+            android:layout_marginTop="10dp"
             android:singleLine="true"
-            tools:text="正在播放：食神" />
-
-        <com.fongmi.android.tv.ui.custom.JetStreamPlaybackSecondaryTextView
-            android:id="@+id/line"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="來源 1" />
-
+            android:ellipsize="end"
+            android:textSize="16sp"
+            tools:text="正在播放：人与自然" />
     </com.fongmi.android.tv.ui.custom.JetStreamLiveBottomBarLayout>
 </com.fongmi.android.tv.ui.custom.JetStreamPlaybackOverlayRootLayout>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="my_title">My library</string>
+    <string name="my_description">Your collection, watch history and TV tools</string>
+    <string name="my_keep_description">Save something for later</string>
+    <string name="my_history">Watch history</string>
+    <string name="my_history_description">All history for this source configuration</string>
+    <string name="my_push_description">Send a video link from your phone</string>
+    <string name="my_cast">Cast to this TV</string>
+    <string name="my_cast_description">Connect from your phone’s video player</string>
+    <string name="my_cast_instructions">Connect your phone and TV to the same network, then select “%1$s” in your player’s cast menu.\n\nThe video will start on your TV when connected.</string>
+    <string name="my_files">Local files</string>
+    <string name="my_files_description">Open videos on this device or external storage</string>
+    <string name="my_settings_description">Sources, playback, subtitles and appearance</string>
+    <string name="my_history_hint">Select to resume · Hold OK to manage history</string>
+    <string name="my_history_empty">No watch history yet</string>
+    <string name="my_history_delete_hint">Select to remove · Hold OK to finish</string>
+    <string name="my_history_error">Could not load watch history. Try again.</string>
+    <string name="my_retry">Try again</string>
+</resources>

@@ -1,10 +1,13 @@
 package com.fongmi.android.tv.ui.holder;
 
+import android.view.View;
+
 import androidx.annotation.NonNull;
 
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterVodRectBinding;
 import com.fongmi.android.tv.ui.base.BaseVodHolder;
+import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.ImgUtil;
 
@@ -17,6 +20,10 @@ public class VodRectHolder extends BaseVodHolder {
         super(binding.getRoot());
         this.binding = binding;
         this.listener = listener;
+        binding.getRoot().setOnFocusChangeListener((view, focused) -> {
+            JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 0);
+            binding.metadata.setVisibility(focused ? View.VISIBLE : View.INVISIBLE);
+        });
     }
 
     public VodRectHolder size(int[] size) {
@@ -28,6 +35,7 @@ public class VodRectHolder extends BaseVodHolder {
 
     @Override
     public void initView(Vod item) {
+        binding.metadata.setVisibility(binding.getRoot().hasFocus() ? View.VISIBLE : View.INVISIBLE);
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());

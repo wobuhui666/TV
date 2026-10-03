@@ -88,6 +88,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        mBinding.title.setText(VodConfig.get().getSite(getKey()).getName());
         setRecyclerView();
         setTypes();
         setPager();
@@ -133,6 +134,7 @@ public class VodActivity extends BaseActivity implements TypeAdapter.OnClickList
         if (mOldView != null) mOldView.setSelected(false);
         if ((mOldView = child != null ? child.itemView : null) == null) return;
         mOldView.setSelected(true);
+        App.removeCallbacks(mRunnable);
         App.post(mRunnable, 100);
     }
 

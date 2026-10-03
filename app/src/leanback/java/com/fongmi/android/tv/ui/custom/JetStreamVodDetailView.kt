@@ -5,44 +5,39 @@ import android.graphics.drawable.Drawable
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.util.AttributeSet
-import android.view.KeyEvent
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.appcompat.widget.AppCompatImageView
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
@@ -59,10 +54,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.fongmi.android.tv.R
-import com.fongmi.android.tv.ui.components.JetStreamGlassCard
-import com.fongmi.android.tv.ui.theme.JetStreamAnimations
-import com.fongmi.android.tv.ui.theme.JetStreamShapes
-import com.fongmi.android.tv.ui.theme.JetStreamSpacing
+import com.fongmi.android.tv.ui.components.TvActionButton
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
 class JetStreamVodDetailView @JvmOverloads constructor(
@@ -72,6 +64,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
 ) : AbstractComposeView(context, attrs, defStyleAttr) {
 
     interface Listener {
+        fun onWatch()
         fun onSummary()
         fun onKeep()
         fun onChange()
@@ -88,6 +81,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
     )
 
     private enum class DetailAction {
+        WATCH,
         SUMMARY,
         KEEP,
         CHANGE
@@ -108,9 +102,8 @@ class JetStreamVodDetailView @JvmOverloads constructor(
     private var summaryEnabled by mutableStateOf(false)
     private var keepSelected by mutableStateOf(false)
     private var selectedAction by mutableStateOf(0)
-    private var detailFocused by mutableStateOf(false)
+    private var entryFocusToken by mutableStateOf(0L)
     private var logoLoadFailed by mutableStateOf(false)
-    private var centerPressed = false
 
     init {
         isFocusable = true
@@ -127,54 +120,22 @@ class JetStreamVodDetailView @JvmOverloads constructor(
 
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-        detailFocused = gainFocus
-        if (gainFocus) normalizeSelectedAction()
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> return handleCenterKey(event)
+        if (gainFocus) {
+            normalizeSelectedAction()
+            entryFocusToken++
         }
-        if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
-        return when (event.keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (moveSelection(-1)) true
-                else listener?.let {
-                    it.onFocusVideo()
-                    true
-                } ?: super.dispatchKeyEvent(event)
-            }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                moveSelection(1) || super.dispatchKeyEvent(event)
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                listener?.let {
-                    it.onFocusList()
-                    true
-                } ?: super.dispatchKeyEvent(event)
-            }
-            KeyEvent.KEYCODE_DPAD_UP -> super.dispatchKeyEvent(event)
-            else -> super.dispatchKeyEvent(event)
-        }
-    }
-
-    // ACTION_UP 触发，吞掉长按 repeat，避免焦点停在“收藏”上长按 OK 时反复开关收藏。
-    private fun handleCenterKey(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            if (event.repeatCount == 0) centerPressed = true
-            return true
-        }
-        if (event.action == KeyEvent.ACTION_UP) {
-            if (!centerPressed) return true
-            centerPressed = false
-            performSelectedAction()
-            return true
-        }
-        return true
     }
 
     fun setListener(listener: Listener?) {
         this.listener = listener
+    }
+
+    fun restoreActionFocus() {
+        if (!isShown || !isEnabled || !requestFocus()) return
+        normalizeSelectedAction()
+        // The saved Android focus may be the Compose host rather than its button.
+        // Restore the remembered action after making the detail surface visible.
+        entryFocusToken++
     }
 
     fun setTitle(title: CharSequence?) {
@@ -210,28 +171,24 @@ class JetStreamVodDetailView @JvmOverloads constructor(
     }
 
     fun setActions(summaryEnabled: Boolean, keepSelected: Boolean) {
+        val previousAction = selectedAction
         this.summaryEnabled = summaryEnabled
         this.keepSelected = keepSelected
         normalizeSelectedAction()
+        if (previousAction != selectedAction && hasFocus()) entryFocusToken++
     }
 
     @Composable
     private fun DetailSurface() {
-        JetStreamGlassCard(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = JetStreamSpacing.CardPaddingLarge, vertical = 16.dp)
-            ) {
-                TitleBlock()
-                Spacer(Modifier.height(8.dp))
-                MetadataRow()
-                Spacer(Modifier.height(8.dp))
-                PeopleBlock()
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.height(10.dp))
-                ActionRow()
-            }
+        Column(modifier = Modifier.fillMaxSize()) {
+            TitleBlock()
+            Spacer(Modifier.height(6.dp))
+            MetadataRow()
+            Spacer(Modifier.height(6.dp))
+            PeopleBlock()
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(6.dp))
+            ActionRow()
         }
     }
 
@@ -241,7 +198,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
+                    .height(48.dp),
                 factory = { context ->
                     AppCompatImageView(context).apply {
                         scaleType = ImageView.ScaleType.FIT_START
@@ -272,9 +229,10 @@ class JetStreamVodDetailView @JvmOverloads constructor(
             Text(
                 text = title,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 26.sp,
+                fontSize = 24.sp,
+                lineHeight = 28.sp,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -283,7 +241,8 @@ class JetStreamVodDetailView @JvmOverloads constructor(
             Text(
                 text = remark.toString(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 15.sp,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -292,45 +251,23 @@ class JetStreamVodDetailView @JvmOverloads constructor(
 
     @Composable
     private fun MetadataRow() {
-        val items = listOf(tmdbRating, doubanRating, site, year, area, type).filter { it.isNotBlank() }
+        val items = listOf(year, type, area, tmdbRating, doubanRating, site).filter { it.isNotBlank() }
         if (items.isEmpty()) return
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items.forEach { MetadataChip(it.toString()) }
-        }
-    }
-
-    @Composable
-    private fun MetadataChip(text: String) {
-        val colorScheme = MaterialTheme.colorScheme
-        Box(
-            modifier = Modifier
-                .height(30.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(colorScheme.secondaryContainer.copy(alpha = 0.72f))
-                .padding(horizontal = 14.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                color = colorScheme.onSecondaryContainer,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = items.joinToString("  ·  "),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 
     @Composable
     private fun PeopleBlock() {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             ClickableInfoText(director, 1)
             ClickableInfoText(actor, 1)
@@ -348,8 +285,9 @@ class JetStreamVodDetailView @JvmOverloads constructor(
                 TextView(context).apply {
                     setTextColor(textColor)
                     setLinkTextColor(linkColor)
-                    textSize = 15f
+                    textSize = 13f
                     includeFontPadding = false
+                    applyJetStreamTypeface()
                     highlightColor = android.graphics.Color.TRANSPARENT
                     movementMethod = LinkMovementMethod.getInstance()
                     setLineSpacing(2f, 1.0f)
@@ -369,103 +307,71 @@ class JetStreamVodDetailView @JvmOverloads constructor(
     @Composable
     private fun ActionRow() {
         val specs = actions()
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            specs.forEachIndexed { index, spec ->
-                ActionButton(
-                    spec = spec,
-                    active = detailFocused && selectedAction == index,
-                    onClick = {
-                        selectedAction = index
+        val requesters = remember { List(4) { FocusRequester() } }
+        LaunchedEffect(entryFocusToken) {
+            if (entryFocusToken > 0L && hasFocus()) requesters[selectedAction].requestFocus()
+        }
+        fun actionModifier(index: Int, modifier: Modifier): Modifier = modifier
+            .focusRequester(requesters[index])
+            .onFocusChanged { if (it.isFocused) selectedAction = index }
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.DirectionLeft -> {
+                        if (index <= 1 || specs.subList(1, index).none { it.enabled }) {
+                            listener?.onFocusVideo()
+                            true
+                        } else false
+                    }
+                    Key.DirectionDown -> {
+                        if (index > 0) {
+                            listener?.onFocusList()
+                            true
+                        } else false
+                    }
+                    else -> false
+                }
+            }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton(specs.first(), actionModifier(0, Modifier.fillMaxWidth())) {
+                performAction(DetailAction.WATCH)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                specs.drop(1).forEachIndexed { index, spec ->
+                    ActionButton(spec, actionModifier(index + 1, Modifier.weight(1f))) {
                         performAction(spec.action)
                     }
-                )
+                }
             }
         }
     }
 
     @Composable
-    private fun ActionButton(spec: ActionSpec, active: Boolean, onClick: () -> Unit) {
-        val colorScheme = MaterialTheme.colorScheme
-        val interactionSource = remember { MutableInteractionSource() }
-        val scale by animateFloatAsState(
-            if (active) JetStreamAnimations.FocusScaleMedium else 1.0f,
-            animationSpec = JetStreamAnimations.ScaleSpring,
-            label = "detailActionScale"
-        )
-        val background by animateColorAsState(
-            targetValue = when {
-                !spec.enabled -> colorScheme.surfaceVariant.copy(alpha = 0.42f)
-                active -> colorScheme.primaryContainer
-                spec.selected -> colorScheme.secondaryContainer
-                else -> colorScheme.surfaceVariant.copy(alpha = 0.78f)
-            },
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "detailActionBackground"
-        )
-        val contentColor by animateColorAsState(
-            targetValue = when {
-                !spec.enabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                active -> colorScheme.onPrimaryContainer
-                spec.selected -> colorScheme.onSecondaryContainer
-                else -> colorScheme.onSurfaceVariant
-            },
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "detailActionContent"
-        )
-        Row(
-            modifier = Modifier
-                .requiredHeight(48.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .clip(JetStreamShapes.Button)
-                .background(background)
-                .clickable(
-                    enabled = spec.enabled,
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                )
-                .padding(start = JetStreamSpacing.ButtonHorizontalPadding, end = 22.dp),
-            verticalAlignment = Alignment.CenterVertically
+    private fun ActionButton(spec: ActionSpec, modifier: Modifier, onClick: () -> Unit) {
+        val primary = spec.action == DetailAction.WATCH
+        TvActionButton(
+            onClick = onClick,
+            modifier = modifier.height(40.dp),
+            enabled = spec.enabled,
+            selected = spec.selected,
+            contentPadding = PaddingValues(horizontal = if (primary) 16.dp else 8.dp, vertical = 6.dp)
         ) {
             Icon(
                 painter = painterResource(id = spec.icon),
-                contentDescription = spec.label,
-                modifier = Modifier.requiredSize(20.dp),
-                tint = contentColor
+                contentDescription = null,
+                modifier = Modifier.requiredSize(if (primary) 20.dp else 16.dp)
             )
-            Spacer(Modifier.width(JetStreamSpacing.IconPadding))
+            Spacer(Modifier.width(if (primary) 8.dp else 5.dp))
             Text(
                 text = spec.label,
-                color = contentColor,
-                fontSize = 15.sp,
+                fontSize = if (primary) 15.sp else 12.sp,
                 fontWeight = FontWeight.Medium,
-                lineHeight = 20.sp,
+                lineHeight = 18.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
             )
         }
-    }
-
-    private fun performSelectedAction() {
-        actions().getOrNull(selectedAction)?.let { performAction(it.action) }
-    }
-
-    private fun moveSelection(step: Int): Boolean {
-        val specs = actions()
-        var index = selectedAction + step
-        while (index in specs.indices) {
-            if (specs[index].enabled) {
-                selectedAction = index
-                return true
-            }
-            index += step
-        }
-        return false
     }
 
     private fun normalizeSelectedAction() {
@@ -479,6 +385,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
         val spec = actions().firstOrNull { it.action == action } ?: return
         if (!spec.enabled) return
         when (spec.action) {
+            DetailAction.WATCH -> listener?.onWatch()
             DetailAction.SUMMARY -> listener?.onSummary()
             DetailAction.KEEP -> listener?.onKeep()
             DetailAction.CHANGE -> listener?.onChange()
@@ -487,6 +394,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
 
     private fun actions(): List<ActionSpec> {
         return listOf(
+            ActionSpec(DetailAction.WATCH, context.getString(R.string.playback_watch_fullscreen), R.drawable.ic_playback_fullscreen, true),
             ActionSpec(DetailAction.SUMMARY, context.getString(R.string.detail_desc), R.drawable.msr_info, summaryEnabled),
             ActionSpec(
                 action = DetailAction.KEEP,

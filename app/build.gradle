@@ -163,6 +163,7 @@ dependencies {
     leanbackImplementation platform(libs.compose.bom)
     leanbackImplementation libs.compose.foundation
     leanbackImplementation libs.compose.material3
+    leanbackImplementation libs.compose.tv.material
     leanbackImplementation libs.compose.ui
     mobileImplementation libs.biometric
     mobileImplementation libs.zxing.android.embedded

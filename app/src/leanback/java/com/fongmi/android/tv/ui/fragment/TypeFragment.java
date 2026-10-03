@@ -48,7 +48,7 @@ import java.util.List;
 
 public class TypeFragment extends BaseFragment implements CustomScroller.Callback, VodPresenter.OnClickListener, SwipeRefreshLayout.OnRefreshListener {
 
-    private static final int PAGE_HORIZONTAL_PADDING = 128;
+    private static final int PAGE_HORIZONTAL_PADDING = 96;
     private static final int ROW_HORIZONTAL_SPACING = 16;
 
     private HashMap<String, String> mExtends;
@@ -149,6 +149,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         selector.addPresenter(ListRow.class, new CustomRowPresenter(8, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ALIGNED), FilterPresenter.class);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(selector)));
         mBinding.recycler.setHeader(getActivity(), R.id.recyclerPanel, R.id.recycler);
+        mBinding.recycler.setPadding(ResUtil.dp2px(8), ResUtil.dp2px(12), ResUtil.dp2px(8), ResUtil.dp2px(48));
         mBinding.recycler.setVerticalSpacing(ResUtil.dp2px(16));
     }
 
@@ -240,7 +241,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     private int[] getPageSpec(Style style) {
         int column = Product.getColumn(style);
-        int space = ResUtil.dp2px(PAGE_HORIZONTAL_PADDING) + ResUtil.dp2px(ROW_HORIZONTAL_SPACING * (column - 1));
+        int space = ResUtil.dp2px(PAGE_HORIZONTAL_PADDING + 16) + ResUtil.dp2px(ROW_HORIZONTAL_SPACING * (column - 1));
         if (style.isOval()) space += ResUtil.dp2px(column * 16);
         return Product.getSpec(space, column, style);
     }

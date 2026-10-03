@@ -56,6 +56,7 @@ import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.ui.dialog.SpeedDialog;
 import com.fongmi.android.tv.ui.dialog.UaDialog;
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
+import com.fongmi.android.tv.ui.theme.JetStreamWallpaper;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.MpvLogCollector;
 import com.fongmi.android.tv.utils.Notify;
@@ -138,6 +139,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowValue(JetStreamSettingView.KEY_VOD, VodConfig.getDesc());
         setRowValue(JetStreamSettingView.KEY_LIVE, LiveConfig.getDesc());
         setRowValue(JetStreamSettingView.KEY_WALL, WallConfig.getDesc());
+        setRowValue(JetStreamSettingView.KEY_WALL_VISIBLE, Setting.getSwitch(JetStreamWallpaper.isVisible()));
         setRowValue(JetStreamSettingView.KEY_TMDB_PROXY, getTmdbProxyStatus());
     }
 
@@ -283,6 +285,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_VOD -> onVod();
             case JetStreamSettingView.KEY_LIVE -> onLive();
             case JetStreamSettingView.KEY_WALL -> onWall();
+            case JetStreamSettingView.KEY_WALL_VISIBLE -> setWallVisible(!JetStreamWallpaper.isVisible());
             case JetStreamSettingView.KEY_TMDB_PROXY -> onTmdbProxy();
             case JetStreamSettingView.KEY_VOD_HOME -> onVodHome();
             case JetStreamSettingView.KEY_VOD_HISTORY -> onVodHistory();
@@ -373,6 +376,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case 0 -> VodConfig.load(config, getCallback());
             case 1 -> LiveConfig.load(config, getCallback());
             case 2 -> {
+                setWallVisible(true);
                 Setting.putWall(0);
                 WallConfig.load(config, getCallback());
             }
@@ -475,12 +479,19 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void setWallDefault() {
         Setting.putWall(Setting.getWall() == 4 ? 1 : Setting.getWall() + 1);
         Setting.putWallType(0);
+        setWallVisible(true);
         ConfigEvent.wall();
     }
 
     private void setWallRefresh() {
+        setWallVisible(true);
         Setting.putWall(0);
         WallConfig.get().load(getCallback());
+    }
+
+    private void setWallVisible(boolean visible) {
+        JetStreamWallpaper.setVisible(visible);
+        setRowValue(JetStreamSettingView.KEY_WALL_VISIBLE, Setting.getSwitch(visible));
     }
 
     private void setEngine() {
@@ -748,6 +759,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     private void setThemeColor(int color) {
         if (Setting.getThemeColor() == color) return;
         Setting.putThemeColor(color);
+        if (color == Setting.THEME_FOLLOW_WALLPAPER) JetStreamWallpaper.refreshColor();
         setThemeText();
         mBinding.settingView.refreshThemeSelection();
         RefreshEvent.theme();

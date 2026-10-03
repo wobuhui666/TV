@@ -1,9 +1,12 @@
 package com.fongmi.android.tv.api.loader;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.utils.Download;
+import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.crawler.Spider;
 import com.github.catvod.crawler.SpiderNull;
@@ -20,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import dalvik.system.DexClassLoader;
 
@@ -29,6 +33,7 @@ public class JarLoader {
     private final ConcurrentHashMap<String, Method> methods;
     private final ConcurrentHashMap<String, Spider> spiders;
     private final ConcurrentHashMap<String, Object> locks;
+    private final SourcePluginRuntime runtime;
     private volatile String recent;
 
     public JarLoader() {
@@ -36,6 +41,11 @@ public class JarLoader {
         methods = new ConcurrentHashMap<>();
         spiders = new ConcurrentHashMap<>();
         locks = new ConcurrentHashMap<>();
+        AtomicBoolean reported = new AtomicBoolean();
+        runtime = new SourcePluginRuntime(error -> {
+            Log.e("JarLoader", "Source plugin library failed on a background thread", error);
+            if (reported.compareAndSet(false, true)) App.post(() -> Notify.show(R.string.error_source_plugin_library));
+        });
     }
 
     public void clear() {
@@ -52,7 +62,7 @@ public class JarLoader {
     }
 
     private void load(String key, File file) {
-        if (Thread.interrupted()) return;
+        if (runtime.isCanceled()) return;
         if (!Path.exists(file)) return;
         // setReadOnly is best-effort only — do not abort load when it fails (API 30+ / some ROMs).
         try {
@@ -71,7 +81,9 @@ public class JarLoader {
         String libPath = Path.jar().getAbsolutePath();
         DexClassLoader loader = new DexClassLoader(jarPath, optPath, libPath, App.get().getClassLoader());
         invokeInit(loader);
+        if (runtime.isCanceled()) return;
         invokeProxy(key, loader);
+        if (runtime.isCanceled()) return;
         loaders.put(key, loader);
     }
 
@@ -91,6 +103,7 @@ public class JarLoader {
         try {
             Class<?> clz = loader.loadClass("com.github.catvod.spider.Proxy");
             Method method = clz.getMethod("proxy", Map.class);
+            if (runtime.isCanceled()) return;
             methods.put(key, method);
         } catch (Throwable e) {
             e.printStackTrace();
@@ -98,6 +111,15 @@ public class JarLoader {
     }
 
     public void parseJar(String key, String jar) {
+        if (loaders.containsKey(key)) return;
+        runtime.call(() -> {
+            parseJarInRuntime(key, jar);
+            return null;
+        });
+    }
+
+    private void parseJarInRuntime(String key, String jar) {
+        if (runtime.isCanceled()) return;
         if (loaders.containsKey(key)) return;
         if (jar.startsWith("assets")) jar = UrlUtil.convert(jar);
         Object lock = locks.computeIfAbsent(key, k -> new Object());
@@ -129,19 +151,34 @@ public class JarLoader {
     }
 
     public Spider getSpider(String key, String api, String ext, String jar) {
+        Spider cached = spiders.get(Util.md5(jar) + key);
+        if (cached != null) return cached;
+        try {
+            Spider spider = runtime.call(() -> getSpiderInRuntime(key, api, ext, jar));
+            return spider != null ? spider : new SpiderNull();
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return new SpiderNull();
+        }
+    }
+
+    private Spider getSpiderInRuntime(String key, String api, String ext, String jar) {
         String jaKey = Util.md5(jar);
         String spKey = jaKey + key;
         return spiders.computeIfAbsent(spKey, k -> {
             try {
                 parseJar(jaKey, jar);
+                if (runtime.isCanceled()) return null;
                 DexClassLoader loader = loaders.get(jaKey);
                 if (loader == null) return new SpiderNull();
                 Spider spider = (Spider) loader.loadClass("com.github.catvod.spider." + api.split("csp_")[1]).newInstance();
                 spider.siteKey = key;
                 spider.init(App.get(), ext);
+                if (runtime.isCanceled()) return null;
                 return spider;
             } catch (Throwable e) {
                 e.printStackTrace();
+                if (runtime.isCanceled()) return null;
                 return new SpiderNull();
             }
         });

@@ -10,11 +10,11 @@ import androidx.compose.animation.core.tween
 object JetStreamAnimations {
     // Duration constants
     const val DurationShort = 180
-    const val DurationMedium = 260
+    const val DurationMedium = 300
     const val DurationLong = 500
     const val DurationPanel = 220
     const val DurationExit = 160
-    const val DurationFocus = 90
+    const val DurationFocus = 120
 
     // Scale animations - 缩放动画
     val ScaleSpring: AnimationSpec<Float> = tween(durationMillis = DurationFocus)
@@ -25,7 +25,7 @@ object JetStreamAnimations {
 
     // Color animations - 颜色动画
     val ColorTween = tween<androidx.compose.ui.graphics.Color>(
-        durationMillis = DurationMedium
+        durationMillis = DurationFocus
     )
 
     // Size animations - 尺寸动画
@@ -39,9 +39,9 @@ object JetStreamAnimations {
     )
 
     // Focus scale values - 聚焦缩放值
-    const val FocusScaleSmall = 1.03f
-    const val FocusScaleMedium = 1.06f
-    const val FocusScaleLarge = 1.08f
+    const val FocusScaleSmall = 1.02f
+    const val FocusScaleMedium = 1.04f
+    const val FocusScaleLarge = 1.04f
 
     // Pressed scale values - 按下缩放值
     const val PressedScale = 0.96f

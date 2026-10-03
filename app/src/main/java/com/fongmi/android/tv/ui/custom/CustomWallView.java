@@ -1,8 +1,6 @@
 package com.fongmi.android.tv.ui.custom;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.util.AttributeSet;
@@ -18,7 +16,6 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
-import androidx.palette.graphics.Palette;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ViewWallBinding;
@@ -26,6 +23,7 @@ import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.FileUtil;
+import com.fongmi.android.tv.utils.WallColorUtil;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -39,7 +37,6 @@ import pl.droidsonroids.gif.GifDrawable;
 public class CustomWallView extends FrameLayout implements DefaultLifecycleObserver {
 
     private static final int[] WALL_PAPERS = {0, R.drawable.wallpaper_1, R.drawable.wallpaper_2, R.drawable.wallpaper_3, R.drawable.wallpaper_4};
-    private static final int[] WALL_COLORS = {0, 0xFF40C090, 0xFF4870E0, 0xFF48B0C0, 0xFF404040};
     private static final int TYPE_RES = 0;
     private static final int TYPE_GIF = 1;
     private static final int TYPE_VIDEO = 2;
@@ -97,8 +94,8 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
         else loadImage();
     }
 
-    private void theme() {
-        int newColor = getWallColor();
+    protected void theme() {
+        int newColor = WallColorUtil.getColor(Setting.getWall(), Setting.getWallType(), FileUtil.getWallCache());
         int oldColor = Setting.getWallColor();
         if (newColor == oldColor) return;
         Setting.putWallColor(newColor);
@@ -160,34 +157,6 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
 
     private boolean hasVideo() {
         return player != null && video != null && video.getVisibility() == VISIBLE && player.getMediaItemCount() > 0;
-    }
-
-    private int getWallColor() {
-        int wall = Setting.getWall();
-        int type = Setting.getWallType();
-        if (isBuiltIn(wall, type)) return WALL_COLORS[wall];
-        File file = FileUtil.getWallCache();
-        return file.exists() ? paletteColor(file) : WALL_COLORS[1];
-    }
-
-    private int paletteColor(File file) {
-        Bitmap bitmap = decodeBitmap(file);
-        if (bitmap == null) return WALL_COLORS[1];
-        Palette palette = Palette.from(bitmap).maximumColorCount(8).generate();
-        bitmap.recycle();
-        return swatchColor(palette);
-    }
-
-    private Bitmap decodeBitmap(File file) {
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inSampleSize = 8;
-        return BitmapFactory.decodeFile(file.getAbsolutePath(), opts);
-    }
-
-    private int swatchColor(Palette palette) {
-        Palette.Swatch swatch = palette.getVibrantSwatch();
-        if (swatch == null) swatch = palette.getDominantSwatch();
-        return swatch != null ? swatch.getRgb() : WALL_COLORS[1];
     }
 
     private boolean isBuiltIn(int wall, int type) {

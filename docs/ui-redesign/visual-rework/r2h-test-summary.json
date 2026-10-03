@@ -1,0 +1,13 @@
+{
+  "unit_test_suites": 44,
+  "unit_tests": {
+    "tests": 216,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_issue_counts": {
+    "Warning": 311,
+    "Hint": 6
+  }
+}

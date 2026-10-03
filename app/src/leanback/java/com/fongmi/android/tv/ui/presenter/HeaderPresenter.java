@@ -44,6 +44,7 @@ public class HeaderPresenter extends Presenter {
                     root.layout(inset, 0, inset + root.getMeasuredWidth(), root.getMeasuredHeight());
                 }
             };
+            wrapper.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             wrapper.setClipChildren(false);
             wrapper.setClipToPadding(false);
             wrapper.addView(root);

@@ -25,11 +25,6 @@ public class CustomSearchView extends CustomEditText {
     }
 
     @Override
-    public boolean isFocused() {
-        return true;
-    }
-
-    @Override
     protected void onFocusChanged(boolean gainFocus, int direction, @Nullable Rect previouslyFocusedRect) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
         if (gainFocus) startAnimation(flicker);

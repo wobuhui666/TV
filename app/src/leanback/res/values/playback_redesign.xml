@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_watch_fullscreen">Watch fullscreen</string>
+    <string name="playback_episodes">Episodes</string>
+    <string name="playback_episode_ranges">Episode range</string>
+    <string name="playback_sources">Sources</string>
+    <string name="playback_quality">Quality</string>
+    <string name="playback_related">Related titles</string>
+    <string name="playback_quick_sources">Switch source</string>
+    <string name="playback_live_guide">Live TV</string>
+    <string name="playback_live_navigation">Browse categories and channels</string>
+    <string name="playback_live_programs">Programme guide · Back to channels</string>
+    <string name="playback_live_now">LIVE</string>
+    <string name="playback_seek_hint">Left or right to preview · OK to seek · Back to cancel</string>
+</resources>

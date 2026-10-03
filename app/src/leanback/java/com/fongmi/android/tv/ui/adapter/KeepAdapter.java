@@ -34,7 +34,7 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
     }
 
     private void setLayoutSize() {
-        int space = ResUtil.dp2px(48) + ResUtil.dp2px(16 * (Product.getColumn() - 1));
+        int space = ResUtil.dp2px(112) + ResUtil.dp2px(16 * (Product.getColumn() - 1));
         int base = ResUtil.getScreenWidth() - space;
         width = base / Product.getColumn();
         height = (int) (width / 0.75f);

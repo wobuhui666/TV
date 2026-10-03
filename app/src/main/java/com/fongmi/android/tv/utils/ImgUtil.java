@@ -90,6 +90,11 @@ public class ImgUtil {
         load(text, url, view, true, false, true, callback);
     }
 
+    /** Preserve the source aspect ratio; the artwork view owns its final composition. */
+    public static void loadArtwork(String text, String url, ImageView view, @Nullable LoadCallback callback) {
+        load(text, url, view, true, false, false, true, callback);
+    }
+
     public static void clear(ImageView view) {
         Glide.with(App.get()).clear(view);
     }
@@ -99,7 +104,11 @@ public class ImgUtil {
     }
 
     private static void load(String text, String url, ImageView view, boolean vod, boolean blurred, boolean keepCurrentOnError, @Nullable LoadCallback callback) {
-        view.setScaleType(vod ? CENTER_CROP : FIT_CENTER);
+        load(text, url, view, vod, blurred, keepCurrentOnError, false, callback);
+    }
+
+    private static void load(String text, String url, ImageView view, boolean vod, boolean blurred, boolean keepCurrentOnError, boolean artwork, @Nullable LoadCallback callback) {
+        if (!artwork) view.setScaleType(vod ? CENTER_CROP : FIT_CENTER);
         if (!vod) view.setVisibility(TextUtils.isEmpty(url) ? View.GONE : View.VISIBLE);
         try {
             if (TextUtils.isEmpty(url) || !failed.canLoad(url)) {
@@ -110,7 +119,8 @@ public class ImgUtil {
                 return;
             }
             RequestBuilder<Drawable> builder = Glide.with(view).load(getUrl(url)).transition(DrawableTransitionOptions.withCrossFade(CROSS_FADE)).listener(getListener(text, url, view, vod, keepCurrentOnError, callback));
-            if (blurred) builder.transform(new CenterCrop(), new GaussianBlurTransformation()).into(view);
+            if (artwork) builder.dontTransform().dontAnimate().into(view);
+            else if (blurred) builder.transform(new CenterCrop(), new GaussianBlurTransformation()).into(view);
             else if (vod) builder.centerCrop().into(view);
             else builder.fitCenter().into(view);
         } catch (Throwable e) {

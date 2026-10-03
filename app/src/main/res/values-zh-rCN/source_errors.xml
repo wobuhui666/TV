@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_source_plugin_library">源组件加载失败，部分内容可能不可用，请更新或更换源。</string>
+</resources>

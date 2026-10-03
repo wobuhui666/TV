@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_empty_content">Nothing here yet</string>
+    <string name="tv_empty_back_hint">Press Back to continue browsing</string>
+    <string name="tv_empty_favorites">No saved titles yet</string>
+    <string name="tv_empty_discover_retry">Discover content is temporarily unavailable. Press OK to retry.</string>
+</resources>

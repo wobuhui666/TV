@@ -42,7 +42,7 @@ private fun View.jetStreamOverlayBackground(
             jetStreamColor(R.color.jetstream_overlay_surface_light)
         )
     ).apply {
-        setStroke(jetStreamDpInt(1), jetStreamColor(R.color.jetstream_outline_variant))
+        setStroke(0, 0)
     }
 }
 
@@ -53,7 +53,7 @@ private fun View.jetStreamSolidBackground(
     return GradientDrawable().apply {
         this.cornerRadii = cornerRadii
         setColor(jetStreamColor(colorRes))
-        setStroke(jetStreamDpInt(1), jetStreamColor(R.color.jetstream_outline_variant))
+        setStroke(0, 0)
     }
 }
 

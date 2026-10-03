@@ -13,14 +13,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:padding="32dp">
+        android:paddingStart="48dp"
+        android:paddingTop="32dp"
+        android:paddingEnd="48dp"
+        android:paddingBottom="24dp">
 
-        <com.fongmi.android.tv.ui.custom.JetStreamPagePanelLayout
-            android:layout_width="356dp"
+        <LinearLayout
+            android:layout_width="336dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="24dp"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:layout_marginEnd="32dp"
+            android:orientation="vertical">
+
+            <com.fongmi.android.tv.ui.custom.JetStreamHeroTitleTextView
+                android:layout_width="match_parent" android:layout_height="36dp"
+                android:layout_marginBottom="12dp" android:text="@string/home_search"
+                android:textSize="28sp" />
 
             <com.fongmi.android.tv.ui.custom.JetStreamSearchFieldLayout
                 android:layout_width="match_parent"
@@ -75,16 +82,18 @@
                 tools:itemCount="36"
                 tools:listitem="@layout/adapter_keyboard_text" />
 
-        </com.fongmi.android.tv.ui.custom.JetStreamPagePanelLayout>
+        </LinearLayout>
 
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:orientation="vertical"
+            android:clipChildren="false" android:clipToPadding="false">
         <com.fongmi.android.tv.ui.custom.JetStreamPageContentScrollView
             android:id="@+id/scroll"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:paddingStart="20dp"
             android:paddingEnd="4dp"
-            android:paddingBottom="20dp">
+            android:paddingBottom="12dp">
 
             <com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout
                 android:layout_width="match_parent"
@@ -109,7 +118,7 @@
                         android:id="@+id/recordRecycler"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="-8dp"
+                        android:paddingStart="0dp"
                         tools:itemCount="6"
                         tools:listitem="@layout/adapter_search_record" />
 
@@ -126,12 +135,15 @@
                     android:id="@+id/wordRecycler"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="-8dp"
+                    android:paddingStart="0dp"
                     tools:itemCount="10"
                     tools:listitem="@layout/adapter_search_word" />
 
             </com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout>
         </com.fongmi.android.tv.ui.custom.JetStreamPageContentScrollView>
-
+            <include android:id="@+id/results" layout="@layout/view_search_results"
+                android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+                android:visibility="gone" />
+        </LinearLayout>
     </com.fongmi.android.tv.ui.custom.JetStreamPageContentLayout>
 </com.fongmi.android.tv.ui.custom.JetStreamPageRootLayout>

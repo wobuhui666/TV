@@ -1,0 +1,23 @@
+Starting: Intent { cmp=com.fongmi.android.tv/.ui.activity.VideoActivity (has extras) }
+Status: ok
+Activity: com.fongmi.android.tv/.ui.activity.VideoActivity
+ThisTime: 1415
+TotalTime: 1415
+WaitTime: 1420
+Complete
+
+{"time": 1791023602.3915648, "evidence": "1791023599986584883-1-detail-normal", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [87, 91, 969, 587]}]}
+{"time": 1791023602.9002042, "key": 22}
+{"time": 1791023605.7984326, "evidence": "1791023603250699073-2-watch-action-before", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": ["全屏观看"], "id": "", "bounds": [1016, 398, 1824, 494]}]}
+{"time": 1791023606.2794373, "key": 23}
+{"time": 1791023608.9214725, "evidence": "1791023606631795736-3-watch-fullscreen", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+{"time": 1791023609.2920227, "key": 4}
+{"time": 1791023611.8503556, "evidence": "1791023609646985301-4-watch-action-restored", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": ["全屏观看"], "id": "", "bounds": [1016, 398, 1824, 494]}]}
+CHECKED R2G fullscreen Back restores the original watch action
+{"time": 1791023612.318645, "key": 21}
+{"time": 1791023615.0780666, "evidence": "1791023612671225813-5-window-focus-before", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [87, 91, 969, 587]}]}
+{"time": 1791023615.6421254, "key": 23}
+{"time": 1791023618.2174761, "evidence": "1791023615992468228-6-window-fullscreen", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+{"time": 1791023618.6556144, "key": 4}
+{"time": 1791023621.6152687, "evidence": "1791023619008537499-7-window-focus-restored", "foreground": ["mResumedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}", "mFocusedActivity: ActivityRecord{87d0580 u0 com.fongmi.android.tv/.ui.activity.VideoActivity t13}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [96, 96, 960, 582]}]}
+CHECKED R2G window entry still restores window focus

@@ -4,6 +4,6 @@
 
     <solid android:color="@color/black" />
 
-    <corners android:radius="28dp" />
+    <corners android:radius="@dimen/tv_video_corner_radius" />
 
 </shape>

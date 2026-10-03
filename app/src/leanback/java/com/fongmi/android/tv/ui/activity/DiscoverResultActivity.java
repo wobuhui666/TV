@@ -101,7 +101,7 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
 
     private void add(List<Vod> items) {
         if (items.isEmpty()) return;
-        int width = (ResUtil.getScreenWidth() - ResUtil.dp2px(96 + 16 * (COLUMN - 1))) / COLUMN;
+        int width = (ResUtil.getScreenWidth() - ResUtil.dp2px(112 + 16 * (COLUMN - 1))) / COLUMN;
         VodPresenter presenter = new VodPresenter(this, Style.rect(), new int[]{width, Math.round(width / 0.75f)});
         for (List<Vod> part : Lists.partition(items, COLUMN)) {
             ArrayObjectAdapter row = new ArrayObjectAdapter(presenter);

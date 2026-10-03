@@ -5,21 +5,16 @@ import android.graphics.Bitmap
 import android.graphics.Rect
 import android.util.AttributeSet
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,7 +45,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -62,8 +56,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fongmi.android.tv.ui.components.TvFocusableSurface
+import com.fongmi.android.tv.ui.components.TvActionButton
 import com.fongmi.android.tv.R
-import com.fongmi.android.tv.ui.theme.JetStreamAnimations
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 import kotlinx.coroutines.delay
 
@@ -286,7 +281,7 @@ class JetStreamPushView @JvmOverloads constructor(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
                     .background(colorScheme.surface)
-                    .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.52f), RoundedCornerShape(20.dp))
+
                     .padding(
                         start = if (compact) 20.dp else 24.dp,
                         top = if (compact) 4.dp else 8.dp,
@@ -313,112 +308,43 @@ class JetStreamPushView @JvmOverloads constructor(
 
     @Composable
     private fun CopyAddressButton(compact: Boolean = false) {
-        val colorScheme = MaterialTheme.colorScheme
-        val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
-        val scale by animateFloatAsState(
-            targetValue = if (focused) 1.08f else 1f,
-            animationSpec = JetStreamAnimations.ScaleSpring,
-            label = "pushCopyScale"
-        )
-        val background by animateColorAsState(
-            targetValue = if (focused) colorScheme.outlineVariant else Color.Transparent,
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "pushCopyBackground"
-        )
-        Box(
-            modifier = Modifier
-                .size(if (compact) 44.dp else 52.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .clip(RoundedCornerShape(12.dp))
-                .background(background)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = {
-                        if (listener?.onCopyAddress() == true) showCopied()
-                    }
-                ),
-            contentAlignment = Alignment.Center
+        TvActionButton(
+            onClick = { if (listener?.onCopyAddress() == true) showCopied() },
+            modifier = Modifier.size(if (compact) 44.dp else 52.dp),
+            contentPadding = PaddingValues(10.dp)
         ) {
             Icon(
-                painter = painterResource(id = if (copied) R.drawable.msr_check else R.drawable.msr_content_copy),
-                contentDescription = stringResource(id = R.string.push_copy_url),
-                modifier = Modifier.size(if (compact) 20.dp else 22.dp),
-                tint = if (copied) colorScheme.tertiary else colorScheme.onSurfaceVariant
+                painterResource(if (copied) R.drawable.msr_check else R.drawable.msr_content_copy),
+                contentDescription = stringResource(R.string.push_copy_url),
+                modifier = Modifier.size(22.dp)
             )
         }
     }
 
     @Composable
     private fun PushClipboardButton(focusRequester: FocusRequester? = null, compact: Boolean = false) {
-        val colorScheme = MaterialTheme.colorScheme
         var pushed by remember { mutableStateOf(false) }
-        val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
-        val scale by animateFloatAsState(
-            targetValue = when {
-                pushed -> 0.95f
-                focused -> 1.02f
-                else -> 1f
-            },
-            animationSpec = JetStreamAnimations.ScaleSpring,
-            label = "pushClipboardScale"
-        )
-        val background by animateColorAsState(
-            targetValue = when {
-                pushed -> colorScheme.tertiaryContainer
-                focused -> colorScheme.primary
-                else -> colorScheme.primaryContainer
-            },
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "pushClipboardBackground"
-        )
-        val contentColor by animateColorAsState(
-            targetValue = when {
-                pushed -> colorScheme.onTertiaryContainer
-                focused -> colorScheme.onPrimary
-                else -> colorScheme.onPrimaryContainer
-            },
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "pushClipboardContent"
-        )
-
         LaunchedEffect(pushed) {
             if (pushed) {
                 delay(2000L)
                 pushed = false
             }
         }
-
-        Row(
-            modifier = Modifier
-                .height(if (compact) 52.dp else 56.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .clip(CircleShape)
-                .background(background)
-                .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = {
-                        if (listener?.onPushClipboard() == true) pushed = true
-                    }
-                )
-                .padding(horizontal = if (compact) 24.dp else 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        TvActionButton(
+            onClick = { if (listener?.onPushClipboard() == true) pushed = true },
+            modifier = Modifier.height(if (compact) 52.dp else 56.dp)
+                .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
+            selected = pushed,
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Icon(
-                painter = painterResource(id = if (pushed) R.drawable.msr_check else R.drawable.msr_content_paste),
+                painterResource(if (pushed) R.drawable.msr_check else R.drawable.msr_content_paste),
                 contentDescription = null,
-                modifier = Modifier.size(if (compact) 23.dp else 25.dp),
-                tint = contentColor
+                modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = stringResource(id = if (pushed) R.string.push_clip_sent else R.string.push_clip),
-                color = contentColor,
+                text = stringResource(if (pushed) R.string.push_clip_sent else R.string.push_clip),
                 fontSize = if (compact) 17.sp else 18.sp,
                 lineHeight = 24.sp,
                 fontWeight = FontWeight.Medium,
@@ -473,7 +399,7 @@ class JetStreamPushView @JvmOverloads constructor(
                 .shadow(22.dp, panelShape, clip = false)
                 .clip(panelShape)
                 .background(colorScheme.surface)
-                .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.32f), panelShape)
+
                 .padding(
                     horizontal = if (compact) 32.dp else 56.dp,
                     vertical = if (compact) 28.dp else 56.dp
@@ -518,52 +444,35 @@ class JetStreamPushView @JvmOverloads constructor(
 
     @Composable
     private fun QrImageCard(compact: Boolean = false) {
-        val colorScheme = MaterialTheme.colorScheme
-        val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
-        val shape = RoundedCornerShape(if (compact) 22.dp else 28.dp)
-        val scale by animateFloatAsState(
-            targetValue = if (focused) 1.05f else 1f,
-            animationSpec = JetStreamAnimations.ScaleSpring,
-            label = "pushQrScale"
-        )
-        val borderColor by animateColorAsState(
-            targetValue = if (focused) colorScheme.primary else Color.Transparent,
-            animationSpec = JetStreamAnimations.ColorTween,
-            label = "pushQrBorder"
-        )
-        Box(
-            modifier = Modifier
-                .size(if (compact) 220.dp else 288.dp)
-                .graphicsLayer(scaleX = scale, scaleY = scale)
-                .shadow(14.dp, shape, clip = false)
-                .clip(shape)
-                .background(Color.White)
-                .border(3.dp, borderColor, shape)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = { listener?.onOpenAddress() }
-                )
-                .padding(if (compact) 16.dp else 20.dp),
-            contentAlignment = Alignment.Center
+        val shape = RoundedCornerShape(16.dp)
+        TvFocusableSurface(
+            onClick = { listener?.onOpenAddress() },
+            modifier = Modifier.size(if (compact) 220.dp else 288.dp),
+            shape = shape
         ) {
-            val bitmap = qrImage
-            if (bitmap == null) {
-                Text(
-                    text = "QR",
-                    color = Color.Black,
-                    fontSize = 22.sp,
-                    lineHeight = 26.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            } else {
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+            Box(
+                modifier = Modifier.fillMaxSize().padding(6.dp)
+                    .clip(RoundedCornerShape(12.dp)).background(Color.White)
+                    .padding(if (compact) 16.dp else 20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val bitmap = qrImage
+                if (bitmap == null) {
+                    Text(
+                        text = "QR",
+                        color = Color.Black,
+                        fontSize = 22.sp,
+                        lineHeight = 26.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                } else {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
         }
     }

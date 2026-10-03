@@ -1,0 +1,6 @@
+{"time": 1791026385.4301698, "evidence": "1791026383888600236-1-discover-final-empty", "foreground": ["mResumedActivity: ActivityRecord{226219a u0 com.fongmi.android.tv/.ui.activity.DiscoverActivity t14}", "mFocusedActivity: ActivityRecord{226219a u0 com.fongmi.android.tv/.ui.activity.DiscoverActivity t14}"], "focus": []}
+{"time": 1791026385.6410172, "longpress": 23}
+{"time": 1791026388.1570327, "evidence": "1791026386641419910-2-discover-final-held-ok", "foreground": ["mResumedActivity: ActivityRecord{226219a u0 com.fongmi.android.tv/.ui.activity.DiscoverActivity t14}", "mFocusedActivity: ActivityRecord{226219a u0 com.fongmi.android.tv/.ui.activity.DiscoverActivity t14}"], "focus": [{"labels": ["发现内容暂不可用，按确认键重试", "按返回键继续浏览"], "id": "com.fongmi.android.tv:id/progressLayout", "bounds": [0, 0, 1920, 1000]}]}
+{"time": 1791026388.3669546, "key": 4}
+{"time": 1791026390.9512625, "evidence": "1791026388717310919-3-discover-back-to-live", "foreground": ["mResumedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}", "mFocusedActivity: ActivityRecord{8aa1622 u0 com.fongmi.android.tv/.ui.activity.LiveActivity t14}"], "focus": [{"labels": [], "id": "com.fongmi.android.tv:id/video", "bounds": [0, 0, 1920, 1080]}]}
+PASS: missing-key empty state survives held OK and Back returns. Retry-success not tested.

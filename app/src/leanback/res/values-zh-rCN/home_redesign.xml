@@ -1,0 +1,16 @@
+<resources>
+    <string name="home_tab_home">首页</string>
+    <string name="home_tab_library">片库</string>
+    <string name="home_tab_my">我的</string>
+    <string name="home_continue_watching">继续观看</string>
+    <string name="home_source_recommendations">来自 %1$s</string>
+    <string name="home_hero_kicker">为你呈现</string>
+    <string name="home_hero_more">立即观看</string>
+    <string name="home_history_remaining">剩余 %1$d 分钟</string>
+    <string name="home_history_watched">已看完</string>
+    <string name="home_choose_source">选择内容源</string>
+    <string name="home_empty_source">下一部好片，从这里开始。</string>
+    <string name="home_empty_source_hint">选择内容源，浏览电影与剧集。你的观看记录会保留在这里。</string>
+    <string name="home_change_source">切换内容源</string>
+    <string name="home_hero_position">第 %1$d 部，共 %2$d 部</string>
+</resources>

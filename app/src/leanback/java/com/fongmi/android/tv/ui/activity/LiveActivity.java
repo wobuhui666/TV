@@ -168,6 +168,12 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     @Override
+    protected void onThemeChanged() {
+        // BaseActivity already refreshes JetStreamThemeController; Compose updates in place.
+        // Keep the PlayerView and its service connection, including while this page is stopped.
+    }
+
+    @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
         mClock = Clock.create(mBinding.widget.clock);
@@ -351,31 +357,16 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void setWidth(Live live) {
-        int padding = ResUtil.dp2px(52);
-        if (live.getWidth() == 0) for (Group item : live.getGroups()) live.setWidth(Math.max(live.getWidth(), ResUtil.getTextWidth(item.getName(), 16)));
-        int width = live.getWidth() == 0 ? 0 : Math.min(live.getWidth() + padding, ResUtil.getScreenWidth() / 4);
-        setWidth(mBinding.group, width);
+        setWidth(mBinding.group, ResUtil.dp2px(152));
     }
 
     private Group setWidth(Group group) {
-        int logo = ResUtil.dp2px(60);
-        int padding = ResUtil.dp2px(64);
-        if (group.isKeep()) group.setWidth(0);
-        if (group.getWidth() == 0) for (Channel item : group.getChannel()) group.setWidth(Math.max(group.getWidth(), (item.getLogo().isEmpty() ? 0 : logo) + ResUtil.getTextWidth(item.getNumber() + item.getName(), 16)));
-        int width = group.getWidth() == 0 ? 0 : Math.min(group.getWidth() + padding, ResUtil.getScreenWidth() / 2);
-        setWidth(mBinding.channel, width);
+        setWidth(mBinding.channel, ResUtil.dp2px(312));
         return group;
     }
 
     private void setWidth(Epg epg) {
-        int padding = ResUtil.dp2px(52);
-        if (epg.getList().isEmpty()) return;
-        int minWidth = ResUtil.getTextWidth(epg.getList().get(0).getTime(), 14);
-        if (epg.getWidth() == 0) for (EpgData item : epg.getList()) epg.setWidth(Math.max(epg.getWidth(), ResUtil.getTextWidth(item.getTitle(), 16)));
-        int maxWidth = ResUtil.getScreenWidth() / 2;
-        int minContentWidth = Math.min(minWidth + padding, maxWidth);
-        int width = epg.getWidth() == 0 ? 0 : Math.clamp(epg.getWidth() + padding, minContentWidth, maxWidth);
-        setWidth(mBinding.epgData, width);
+        setWidth(mBinding.epgData, ResUtil.dp2px(464));
     }
 
     private void setWidth(View view, int width) {
@@ -644,6 +635,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         int position = clampPosition(mChannel.getData(mViewModel.getZoneId()).getSelected(), mEpgDataAdapter.getItemCount());
         if (position == RecyclerView.NO_POSITION) return;
         mBinding.epgData.setSelectedPosition(position);
+        mBinding.liveGuideTitle.setText(item.getName());
+        mBinding.liveGuideSubtitle.setText(R.string.playback_live_programs);
         mBinding.epgData.setVisibility(View.VISIBLE);
         mBinding.channel.setVisibility(View.GONE);
         mBinding.group.setVisibility(View.GONE);
@@ -652,6 +645,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void hideEpg() {
+        mBinding.liveGuideTitle.setText(R.string.playback_live_guide);
+        mBinding.liveGuideSubtitle.setText(R.string.playback_live_navigation);
         mBinding.channel.setVisibility(View.VISIBLE);
         mBinding.group.setVisibility(View.VISIBLE);
         mBinding.epgData.setVisibility(View.GONE);
@@ -1159,6 +1154,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     private void syncJetStreamControl() {
         if (mBinding == null) return;
+        mBinding.control.jetstream.setLiveMode(true);
         boolean owner = service() != null && isOwner();
         boolean playing = owner && player().isPlaying();
         mBinding.control.jetstream.setPlayer(controller());

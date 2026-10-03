@@ -1,0 +1,25 @@
+{
+  "FATAL EXCEPTION": [],
+  "Fatal signal": [],
+  "ANR in com.fongmi": [],
+  "Unable to start activity": [],
+  "NullPointerException": [
+    {
+      "file": "blocker-no-config-logcat.txt",
+      "lines": [
+        "10-02 04:30:17.502  3944  3964 W System.err: java.lang.NullPointerException: Parameter specified as non-null is null: method okhttp3.Request$Builder.url, parameter url",
+        "10-02 04:30:17.503  3944  3963 W System.err: java.lang.NullPointerException: Parameter specified as non-null is null: method okhttp3.Request$Builder.url, parameter url"
+      ]
+    },
+    {
+      "file": "blocker-home-transitions-logcat.txt",
+      "lines": [
+        "10-02 04:30:17.502  3944  3964 W System.err: java.lang.NullPointerException: Parameter specified as non-null is null: method okhttp3.Request$Builder.url, parameter url",
+        "10-02 04:30:17.503  3944  3963 W System.err: java.lang.NullPointerException: Parameter specified as non-null is null: method okhttp3.Request$Builder.url, parameter url"
+      ]
+    }
+  ],
+  "IllegalStateException": [],
+  "OutOfMemoryError": [],
+  "CrashActivity": []
+}

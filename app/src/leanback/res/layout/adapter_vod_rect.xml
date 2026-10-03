@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.fongmi.android.tv.ui.custom.JetStreamVodCardRootLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:focusable="true"
@@ -12,67 +11,52 @@
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:duplicateParentState="true">
-
         <com.fongmi.android.tv.ui.custom.JetStreamPosterImageView
             android:id="@+id/image"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-
-        <com.fongmi.android.tv.ui.custom.JetStreamVodScrimView
-            android:id="@+id/scrim"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_gravity="bottom" />
-
-        <com.fongmi.android.tv.ui.custom.JetStreamMetadataPillView
-            android:id="@+id/year"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|start"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:singleLine="true"
-            android:visibility="gone"
-            tools:text="2022"
-            tools:visibility="visible" />
-
-        <com.fongmi.android.tv.ui.custom.JetStreamMetadataPillView
-            android:id="@+id/site"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp"
-            android:ellipsize="end"
-            android:maxWidth="112dp"
-            android:singleLine="true"
-            android:visibility="gone"
-            tools:text="泥巴"
-            tools:visibility="visible" />
-
-        <com.fongmi.android.tv.ui.custom.JetStreamMetadataPillView
-            android:id="@+id/remark"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|start"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="8dp"
-            android:ellipsize="end"
-            android:maxWidth="120dp"
-            android:singleLine="true"
-            tools:text="1080p" />
-
     </com.fongmi.android.tv.ui.custom.JetStreamVodPosterLayout>
 
     <com.fongmi.android.tv.ui.custom.JetStreamVodTitleTextView
         android:id="@+id/name"
         android:layout_width="match_parent"
-        android:layout_height="28dp"
-        android:layout_marginTop="4dp"
+        android:layout_height="26dp"
+        android:layout_marginTop="8dp"
         android:duplicateParentState="true"
         android:ellipsize="end"
-        android:gravity="center"
+        android:gravity="start|center_vertical"
         android:singleLine="true"
-        tools:text="蜘蛛人" />
+        android:textSize="16sp" />
 
+    <com.fongmi.android.tv.ui.custom.JetStreamListItemContentLayout
+        android:id="@+id/metadata"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:orientation="horizontal"
+        android:visibility="invisible">
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/year"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="8dp"
+            android:singleLine="true"
+            android:textSize="12sp" />
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/remark"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textSize="12sp" />
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/site"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="6dp"
+            android:maxWidth="64dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textSize="12sp" />
+    </com.fongmi.android.tv.ui.custom.JetStreamListItemContentLayout>
 </com.fongmi.android.tv.ui.custom.JetStreamVodCardRootLayout>
