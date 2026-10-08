@@ -457,13 +457,17 @@ public final class HistoryActionsIntegrationTest {
             if (menu == null || !menu.isShowing()) return false;
             AlertDialog dialog = (AlertDialog) field(menu, "dialog");
             result.set(dialog);
-            return dialog.findViewById(R.id.history_actions_continue).hasFocus();
-        }, "native menu defaults to Continue watching");
+            View initial = dialog.findViewById(R.id.history_actions_continue);
+            // requestFocus() selects a child before WindowManager transfers keyboard input to the dialog.
+            return dialog.getWindow() != null && dialog.getWindow().getDecorView().hasWindowFocus()
+                    && initial.isLaidOut() && initial.isShown() && initial.hasFocus();
+        }, "native menu owns input focus and defaults to Continue watching");
         return result.get();
     }
 
     private void delete(AlertDialog dialog) {
         press(KeyEvent.KEYCODE_DPAD_DOWN);
+        await(() -> dialog.findViewById(R.id.history_actions_search).hasFocus(), "Down from Continue reaches source search");
         press(KeyEvent.KEYCODE_DPAD_DOWN);
         await(() -> dialog.findViewById(R.id.history_actions_delete).hasFocus(), "single-record delete action");
         press(KeyEvent.KEYCODE_DPAD_CENTER);
