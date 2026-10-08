@@ -26,7 +26,9 @@ public final class PosterSourceResults {
     private final String preferredSite;
     private final Kind expectedKind;
     private final Comparator<Candidate> evidence;
+    private final Comparator<Candidate> retention;
     private final Map<String, Integer> sourceOrder = new LinkedHashMap<>();
+    private final Map<String, Integer> sourcePriority = new LinkedHashMap<>();
 
     public PosterSourceResults(SearchRelevance.Query query, String preferredSite) {
         this(query, preferredSite, List.of());
@@ -37,11 +39,22 @@ public final class PosterSourceResults {
     }
 
     public PosterSourceResults(SearchRelevance.Query query, String preferredSite, List<String> orderedSites, String expectedType) {
-        for (String site : orderedSites) sourceOrder.putIfAbsent(site, sourceOrder.size());
+        this(query, preferredSite, orderedSites, expectedType, List.of());
+    }
+
+    public PosterSourceResults(SearchRelevance.Query query, String preferredSite, List<String> orderedSites,
+                               String expectedType, List<String> priorityKeys) {
+        if (orderedSites != null) for (String site : orderedSites) sourceOrder.putIfAbsent(site, sourceOrder.size());
+        if (priorityKeys != null) for (String site : priorityKeys) {
+            if (site != null && !site.isBlank()) sourcePriority.putIfAbsent(site, sourcePriority.size());
+        }
         this.query = query;
         this.preferredSite = preferredSite == null ? "" : preferredSite;
         this.expectedKind = kind(expectedType);
         this.evidence = expectedKind == Kind.UNKNOWN ? TITLE_EVIDENCE : TYPED_EVIDENCE;
+        // min(retention) is the weakest entry. Reserve room for explicitly preferred sources
+        // even when they answer after 120 stronger-scoring fallback results have arrived.
+        this.retention = sourcePriority.isEmpty() ? evidence : priorityOrder().reversed().thenComparing(evidence);
     }
 
     public void add(List<Vod> items) {
@@ -79,8 +92,8 @@ public final class PosterSourceResults {
                 if (evidence.compare(value, old) > 0) candidates.put(id, value);
             } else if (candidates.size() < LIMIT) candidates.put(id, value);
             else {
-                Candidate weakest = candidates.values().stream().min(evidence).orElse(null);
-                if (weakest != null && evidence.compare(value, weakest) > 0) {
+                Candidate weakest = candidates.values().stream().min(retention).orElse(null);
+                if (weakest != null && retention.compare(value, weakest) > 0) {
                     candidates.remove(key(weakest.vod));
                     candidates.put(id, value);
                 }
@@ -90,13 +103,18 @@ public final class PosterSourceResults {
 
     public List<Candidate> snapshot(boolean smart) {
         List<Candidate> result = new ArrayList<>(candidates.values());
-        if (smart) result.sort(evidence.reversed()
-                .thenComparingInt(it -> preferredSite.equals(it.vod.getSiteKey()) ? 0 : 1));
-        else result.sort(Comparator.comparingInt(it -> sourceOrder.getOrDefault(it.vod.getSiteKey(), Integer.MAX_VALUE)));
+        Comparator<Candidate> order = smart ? evidence.reversed()
+                .thenComparingInt(it -> preferredSite.equals(it.vod.getSiteKey()) ? 0 : 1)
+                : Comparator.comparingInt(it -> sourceOrder.getOrDefault(it.vod.getSiteKey(), Integer.MAX_VALUE));
+        result.sort(sourcePriority.isEmpty() ? order : priorityOrder().thenComparing(order));
         return result;
     }
 
     public int hiddenCount() { return rejected.size(); }
+
+    private Comparator<Candidate> priorityOrder() {
+        return Comparator.comparingInt(it -> sourcePriority.getOrDefault(it.vod.getSiteKey(), Integer.MAX_VALUE));
+    }
 
     private static Kind kind(String value) {
         String text = Trans.t2s(false, value == null ? "" : value);
