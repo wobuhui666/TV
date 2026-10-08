@@ -82,7 +82,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [CONFIG.md](docs/CONFIG.md) | 点播、直播、解析、代理、DoH、弹幕与配置示例。 |
-| [原生海报墙与选源](docs/native-discovery.md) | 可选首页、搜索过滤、详情选源、智能匹配与 TMDB 网络兼容。 |
+| [原生海报墙与选源](docs/native-discovery.md) | 可选首页、我的片单、继续观看菜单、轮播控制、搜索过滤、详情选源与 TMDB 网络兼容。 |
 | [诊断与工具](docs/practical-improvements.md) | 缓存管理、诊断包、来源健康、网盘检查和播放体验改进。 |
 | [OTA 更新](docs/ota-updates.md) | 手动更新、重要版本云控、镜像下载和发布流程。 |
 | [SPIDER.md](docs/SPIDER.md) | Java、JavaScript、Python 爬虫接口与返回结构。 |

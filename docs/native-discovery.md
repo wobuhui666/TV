@@ -95,4 +95,6 @@
 
 ## 验证与截图
 
+继续观看菜单、首页片单和轮播控制已通过完整 CI、8 项本地片单状态单测及 38 项 ARM64 redroid Android 集成与回归测试。用例、原生界面截图、源码和 APK 校验和见[原生首页易用性验收](testing/reports/2026-10-08-native-usability/README.md)。
+
 来源优先级已通过完整 CI、68 项本地单测和 16 项 ARM64 redroid Android 集成测试；用例与截图见 [来源优先级验证记录](testing/reports/2026-10-08-poster-source-priority/README.md)。测试覆盖实际运行的 Android 原生界面与集成行为，不代表实体三星硬件验收。此前海报墙、搜索过滤及 TMDB 网络兼容在该环境中的验证见 [原生发现页验证记录](testing/reports/2026-10-07-native-discovery/README.md)。
