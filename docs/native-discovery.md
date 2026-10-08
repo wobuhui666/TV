@@ -68,4 +68,4 @@
 
 ## 验证与截图
 
-CI 与 11 项三星 ARM64 真机集成测试已通过。测试范围、设备、限制与实际界面截图见 [验证记录](testing/reports/2026-10-07-native-discovery/README.md)。
+来源优先级已通过完整 CI、68 项本地单测和 16 项三星 ARM64 真机集成测试；用例与截图见 [来源优先级验证记录](testing/reports/2026-10-08-poster-source-priority/README.md)。此前海报墙、搜索过滤及 TMDB 网络兼容的验证见 [原生发现页验证记录](testing/reports/2026-10-07-native-discovery/README.md)。
