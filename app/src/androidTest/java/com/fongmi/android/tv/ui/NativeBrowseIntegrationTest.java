@@ -73,7 +73,7 @@ import static org.junit.Assert.*;
 /** Real native activities and D-pad events, using in-memory posters and a deliberately offline client. */
 @RunWith(AndroidJUnit4.class)
 public final class NativeBrowseIntegrationTest {
-    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1"};
+    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1", "browse_history_actions", "browse_poster_keep_shelf", "browse_hero_rotation"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final List<Activity> previousActivities = new ArrayList<>();
@@ -172,6 +172,9 @@ public final class NativeBrowseIntegrationTest {
             assertNotNull(field(wall, "mPosterHome"));
             assertFalse(((JetStreamPageProgressLayout) wall.findViewById(R.id.progressLayout)).isProgress());
             assertFalse(containsWebView(wall.getWindow().getDecorView()));
+            BrowseExperienceSettings.putHistoryActionsEnabled(true);
+            BrowseExperienceSettings.putPosterKeepShelfEnabled(true);
+            BrowseExperienceSettings.putHeroRotationMode(BrowseExperienceSettings.HERO_ROTATION_MANUAL);
         });
 
         HomeActivity restored = changeHomeMode(wall, BrowseExperienceSettings::restoreOriginal, false);
@@ -179,6 +182,9 @@ public final class NativeBrowseIntegrationTest {
             assertNull(field(restored, "mPosterHome"));
             assertFalse(BrowseExperienceSettings.isDetailSourcesEnabled());
             assertFalse(BrowseExperienceSettings.isSmartSourceEnabled());
+            assertFalse(BrowseExperienceSettings.isHistoryActionsEnabled());
+            assertFalse(BrowseExperienceSettings.isPosterKeepShelfEnabled());
+            assertEquals(BrowseExperienceSettings.HERO_ROTATION_ORIGINAL, BrowseExperienceSettings.getHeroRotationMode());
             assertEquals(0, BrowseExperienceSettings.getSearchFilterMode());
             assertFalse(containsWebView(restored.getWindow().getDecorView()));
         });

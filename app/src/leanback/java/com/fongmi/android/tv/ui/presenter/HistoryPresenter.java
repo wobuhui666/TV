@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.presenter;
 
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import com.fongmi.android.tv.databinding.AdapterHistoryBinding;
 import com.fongmi.android.tv.utils.ContinueWatchingProgress;
 import com.fongmi.android.tv.utils.HistoryProgressText;
 import com.fongmi.android.tv.utils.ImgUtil;
+import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 
 public class HistoryPresenter extends Presenter {
@@ -39,6 +41,14 @@ public class HistoryPresenter extends Presenter {
         void onItemDelete(History item);
 
         boolean onLongClick();
+
+        default boolean onLongClick(History item) {
+            return onLongClick();
+        }
+
+        default boolean onLongClick(History item, KeyEvent openingKey) {
+            return onLongClick(item);
+        }
     }
 
     private void setLayoutSize() {
@@ -54,9 +64,17 @@ public class HistoryPresenter extends Presenter {
         this.delete = delete;
     }
 
-    private void setClickListener(View root, History item) {
-        root.setOnLongClickListener(view -> listener.onLongClick());
-        root.setOnClickListener(view -> {
+    private void setClickListener(ViewHolder holder, History item) {
+        // A history refresh may rebind this card while its confirmation key is still held.
+        holder.view.setOnKeyListener((view, keyCode, event) -> {
+            if (KeyUtil.isEnterKey(event)) {
+                if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) holder.openingKey = new KeyEvent(event);
+                else if (event.getAction() == KeyEvent.ACTION_UP) holder.openingKey = null;
+            }
+            return false;
+        });
+        holder.view.setOnLongClickListener(view -> listener.onLongClick(item, holder.openingKey));
+        holder.view.setOnClickListener(view -> {
             if (isDelete()) listener.onItemDelete(item);
             else listener.onItemClick(item);
         });
@@ -76,7 +94,7 @@ public class HistoryPresenter extends Presenter {
         History item = (History) object;
         boolean same = item.getVodName().equals(item.getVodRemarks());
         ViewHolder holder = (ViewHolder) viewHolder;
-        setClickListener(holder.view, item);
+        setClickListener(holder, item);
         holder.binding.name.setText(item.getVodName());
         holder.binding.remark.setText(item.getVodRemarks());
         holder.binding.delete.setVisibility(!delete ? View.GONE : View.VISIBLE);
@@ -96,12 +114,17 @@ public class HistoryPresenter extends Presenter {
     @Override
     public void onUnbindViewHolder(@NonNull Presenter.ViewHolder viewHolder) {
         ViewHolder holder = (ViewHolder) viewHolder;
+        holder.view.setOnClickListener(null);
+        holder.view.setOnLongClickListener(null);
+        holder.view.setOnKeyListener(null);
+        holder.openingKey = null;
         ImgUtil.clear(holder.binding.image);
     }
 
     public static class ViewHolder extends Presenter.ViewHolder {
 
         private final AdapterHistoryBinding binding;
+        private KeyEvent openingKey;
 
         public ViewHolder(@NonNull AdapterHistoryBinding binding) {
             super(binding.getRoot());

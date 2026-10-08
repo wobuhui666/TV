@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browse_keep_shelf">首页我的片单</string>
+    <string name="browse_history_actions">继续观看卡片菜单</string>
+    <string name="browse_hero_rotation">海报主视觉轮播</string>
+    <string name="browse_hero_rotation_original">原有轮播</string>
+    <string name="browse_hero_rotation_focus">聚焦时暂停</string>
+    <string name="browse_hero_rotation_manual">仅手动切换</string>
+</resources>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fongmi.android.tv.ui.custom.JetStreamDialogSurfaceLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <com.fongmi.android.tv.ui.custom.JetStreamStrongLabelTextView
+        android:id="@+id/history_actions_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:accessibilityHeading="true"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textSize="22sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:id="@+id/history_actions_episode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="14sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:id="@+id/history_actions_progress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="14sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:id="@+id/history_actions_source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="14sp" />
+
+    <com.fongmi.android.tv.ui.custom.MaterialPlaybackChoiceButton
+        android:id="@+id/history_actions_continue"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="20dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:nextFocusUp="@id/history_actions_continue"
+        android:nextFocusDown="@id/history_actions_search"
+        android:text="@string/history_actions_continue" />
+
+    <com.fongmi.android.tv.ui.custom.MaterialPlaybackChoiceButton
+        android:id="@+id/history_actions_search"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:nextFocusUp="@id/history_actions_continue"
+        android:nextFocusDown="@id/history_actions_delete"
+        android:text="@string/history_actions_search" />
+
+    <com.fongmi.android.tv.ui.custom.MaterialPlaybackChoiceButton
+        android:id="@+id/history_actions_delete"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:nextFocusUp="@id/history_actions_search"
+        android:nextFocusDown="@id/history_actions_cancel"
+        android:text="@string/history_actions_delete" />
+
+    <com.fongmi.android.tv.ui.custom.MaterialPlaybackTextButton
+        android:id="@+id/history_actions_cancel"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:nextFocusUp="@id/history_actions_delete"
+        android:nextFocusDown="@id/history_actions_cancel"
+        android:text="@string/history_actions_cancel" />
+</com.fongmi.android.tv.ui.custom.JetStreamDialogSurfaceLayout>

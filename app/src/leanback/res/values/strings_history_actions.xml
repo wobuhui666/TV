@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_actions_title">Watch history</string>
+    <string name="history_actions_episode">Episode: %1$s</string>
+    <string name="history_actions_episode_unknown">Not available</string>
+    <string name="history_actions_source">Source: %1$s</string>
+    <string name="history_actions_continue">Continue watching</string>
+    <string name="history_actions_search">Find other sources</string>
+    <string name="history_actions_delete">Remove this record</string>
+    <string name="history_actions_cancel">Cancel</string>
+    <string name="history_actions_hint">Select to resume · Hold OK or press Menu for this record</string>
+    <string name="history_actions_back">Back</string>
+</resources>

@@ -519,6 +519,9 @@ class JetStreamSettingView @JvmOverloads constructor(
                 label = context.getString(R.string.browse_section),
                 rows = listOf(
                     RowSpec(KEY_BROWSE_HOME, context.getString(R.string.browse_home)),
+                    RowSpec(KEY_BROWSE_KEEP_SHELF, context.getString(R.string.browse_keep_shelf), toggle = true),
+                    RowSpec(KEY_BROWSE_HISTORY_ACTIONS, context.getString(R.string.browse_history_actions), toggle = true),
+                    RowSpec(KEY_BROWSE_HERO_ROTATION, context.getString(R.string.browse_hero_rotation)),
                     RowSpec(KEY_BROWSE_FILTER, context.getString(R.string.browse_search_filter)),
                     RowSpec(KEY_BROWSE_SOURCES, context.getString(R.string.browse_detail_sources), toggle = true),
                     RowSpec(KEY_BROWSE_PRIORITY, context.getString(R.string.poster_source_priority_title)),
@@ -623,6 +626,9 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val SECTION_SOURCE = "source"
         const val SECTION_BROWSE = "browse"
         const val KEY_BROWSE_HOME = "browse_home"
+        const val KEY_BROWSE_KEEP_SHELF = "browse_keep_shelf"
+        const val KEY_BROWSE_HISTORY_ACTIONS = "browse_history_actions"
+        const val KEY_BROWSE_HERO_ROTATION = "browse_hero_rotation"
         const val KEY_BROWSE_FILTER = "browse_filter"
         const val KEY_BROWSE_SOURCES = "browse_sources"
         const val KEY_BROWSE_PRIORITY = "browse_source_priority"

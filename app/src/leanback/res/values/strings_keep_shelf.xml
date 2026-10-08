@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_keep_shelf_title">我的片单</string>
+    <string name="home_keep_shelf_more">查看全部</string>
+    <string name="home_keep_shelf_failed">暂时无法读取片单，请重试。</string>
+    <string name="home_keep_shelf_retry">重试读取</string>
+</resources>

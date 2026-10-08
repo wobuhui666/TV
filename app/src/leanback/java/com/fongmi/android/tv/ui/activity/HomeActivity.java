@@ -62,6 +62,7 @@ import com.fongmi.android.tv.ui.custom.CustomSelector;
 import com.fongmi.android.tv.ui.custom.CustomTitleView;
 import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.custom.JetStreamHomeNavView;
+import com.fongmi.android.tv.ui.dialog.HistoryActionsDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.ui.home.PosterHomeController;
 import com.fongmi.android.tv.ui.presenter.FeaturedVodPresenter;
@@ -71,12 +72,12 @@ import com.fongmi.android.tv.ui.presenter.ProgressPresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.fongmi.android.tv.utils.Clock;
 import com.fongmi.android.tv.utils.FileChooser;
+import com.fongmi.android.tv.utils.HistoryTaskQueue;
 import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
-import com.fongmi.android.tv.utils.Task;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
@@ -88,7 +89,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
 import java.util.function.BooleanSupplier;
 
 public class HomeActivity extends BaseActivity implements CustomTitleView.Listener, VodPresenter.OnClickListener, JetStreamHomeNavView.Listener, HistoryPresenter.OnClickListener {
@@ -113,7 +113,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private long mRefreshFocusGeneration;
     private int mRefreshFocusCid;
     private final HistoryRequestState mHistoryRequests = new HistoryRequestState();
-    private Future<?> mHistoryTask;
+    private final HistoryTaskQueue mHistoryTasks = new HistoryTaskQueue();
+    private HistoryActionsDialog mHistoryActions;
+    private Runnable mHistoryActionFocus;
     private int mHistoryCid;
     private long mHistoryFocusGeneration;
 
@@ -154,6 +156,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 if (mBinding.toolbar.hasFocus()) mBinding.recycler.scrollToPosition(0);
                 else if (mBinding.recycler.getSelectedPosition() > 0) mBinding.recycler.setWindowAlignmentOffset(ResUtil.dp2px(16));
             });
+            mPosterHome.setKeepShelfFocusFallback(() -> requestRecyclerFocus());
         }
         mClock = Clock.create(mBinding.clock);
         mBinding.progressLayout.showProgress();
@@ -669,15 +672,16 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         HistoryRequestState.Request request = mHistoryRequests.begin(VodConfig.getCid(), renew);
         if (mHistoryCid != request.cid()) {
             // Do not leave the previous config's history clickable while its replacement loads.
+            if (mHistoryActions != null) mHistoryActions.dismiss();
+            mHistoryActionFocus = null;
             applyHistory(new ArrayList<>(), false);
             mHistoryCid = request.cid();
         }
-        mHistoryTask = Task.submit(() -> {
+        mHistoryTasks.replaceQuery(() -> {
             List<History> items = History.get(request.cid());
             if (Thread.currentThread().isInterrupted()) return;
             App.post(() -> {
                 if (isFinishing() || isDestroyed() || !mHistoryRequests.isCurrent(request, VodConfig.getCid())) return;
-                mHistoryTask = null;
                 applyHistory(items, request.renew());
                 mHistoryRequests.applied(request, VodConfig.getCid());
             });
@@ -686,8 +690,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void cancelHistoryLoad() {
         mHistoryRequests.invalidate();
-        if (mHistoryTask != null) mHistoryTask.cancel(true);
-        mHistoryTask = null;
+        mHistoryTasks.cancelQuery();
     }
 
     private void applyHistory(List<History> items, boolean renew) {
@@ -702,6 +705,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         int header = mAdapter.indexOf(R.string.home_history);
         if (header >= 0) mAdapter.notifyArrayItemRangeChanged(header, 1);
         if (items.isEmpty()) mPresenter.setDelete(false);
+        if (mHistoryActions != null && mHistoryActions.isShowing()) return;
+        if (mHistoryActionFocus != null) {
+            restoreHistoryActionFocus();
+            return;
+        }
         if (selectedHistoryPosition == RecyclerView.NO_POSITION) {
             if (mInitialFocusPending || mBinding.nav.hasFocus()) requestNavFocus();
             return;
@@ -764,6 +772,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 break;
             case HISTORY:
                 getHistory();
+                break;
+            case KEEP:
+                if (mPosterHome != null) mPosterHome.refreshKeepShelf();
                 break;
             case SIZE:
                 getVideo();
@@ -853,6 +864,10 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemDelete(History item) {
+        if (BrowseExperienceSettings.isHistoryActionsEnabled()) {
+            onLongClick(item);
+            return;
+        }
         if (item.getCid() != VodConfig.getCid() || mHistoryAdapter.indexOf(item) < 0) return;
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
@@ -870,9 +885,92 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public boolean onLongClick() {
+        if (BrowseExperienceSettings.isHistoryActionsEnabled()) {
+            int position = getSelectedHistoryPosition(getHistoryIndex());
+            if (position >= 0 && position < mHistoryAdapter.size()) onLongClick((History) mHistoryAdapter.get(position));
+            return true;
+        }
         if (mPresenter.isDelete()) clearHistory();
         else setHistoryDelete(true);
         return true;
+    }
+
+    @Override
+    public boolean onLongClick(History item) {
+        return onLongClick(item, null);
+    }
+
+    @Override
+    public boolean onLongClick(History item, KeyEvent openingKey) {
+        if (!BrowseExperienceSettings.isHistoryActionsEnabled()) return onLongClick();
+        int cid = item.getCid();
+        String key = item.getKey();
+        int position = findHistoryPosition(cid, key);
+        if (!canRestoreHistoryFocus() || cid != VodConfig.getCid() || position < 0) return true;
+        if (mHistoryActions != null && mHistoryActions.isShowing()) return true;
+        if (mPresenter.isDelete()) setHistoryDelete(false);
+        mHistoryActions = HistoryActionsDialog.show(this, item, openingKey, new HistoryActionsDialog.Listener() {
+            @Override public void onDelete(int selectedCid, String selectedKey) {
+                deleteHistoryAction(selectedCid, selectedKey);
+            }
+
+            @Override public void onClosed(boolean restoreFocus) {
+                mHistoryActions = null;
+                if (!restoreFocus) return;
+                long generation = ++mHistoryFocusGeneration;
+                mHistoryActionFocus = () -> {
+                    if (generation != mHistoryFocusGeneration || cid != VodConfig.getCid()) return;
+                    int selected = findHistoryPosition(cid, key);
+                    requestHistoryFocus(selected >= 0 ? selected : clampHistoryPosition(position));
+                };
+                restoreHistoryActionFocus();
+            }
+        });
+        return true;
+    }
+
+    private int findHistoryPosition(int cid, String key) {
+        for (int i = 0; i < mHistoryAdapter.size(); i++) {
+            History item = (History) mHistoryAdapter.get(i);
+            if (item.getCid() == cid && item.getKey().equals(key)) return i;
+        }
+        return RecyclerView.NO_POSITION;
+    }
+
+    private void restoreHistoryActionFocus() {
+        if (mHistoryActionFocus == null || !canRestoreHistoryFocus()) return;
+        Runnable restore = mHistoryActionFocus;
+        mHistoryActionFocus = null;
+        restore.run();
+    }
+
+    private void deleteHistoryAction(int cid, String key) {
+        if (isFinishing() || isDestroyed() || cid != VodConfig.getCid() || findHistoryPosition(cid, key) < 0) return;
+        mHistoryFocusGeneration++;
+        cancelHistoryLoad();
+        mHistoryTasks.write(() -> {
+            try {
+                AppDatabase database = AppDatabase.get();
+                database.runInTransaction(() -> {
+                    // History.key is globally unique. If it moved to another config, its shared tracks belong there.
+                    if (database.getHistoryDao().find(cid, key) == null) return;
+                    database.getHistoryDao().delete(cid, key);
+                    database.getTrackDao().delete(key);
+                });
+            } catch (Exception error) {
+                App.post(() -> {
+                    if (!isFinishing() && !isDestroyed()) Notify.show(R.string.tv_history_delete_error);
+                });
+            } finally {
+                App.post(RefreshEvent::history);
+            }
+        });
+        List<History> remaining = new ArrayList<>();
+        for (int i = 0; i < mHistoryAdapter.size(); i++) {
+            History item = (History) mHistoryAdapter.get(i);
+            if (item.getCid() != cid || !item.getKey().equals(key)) remaining.add(item);
+        }
+        applyHistory(remaining, false);
     }
 
     @Override
@@ -895,7 +993,15 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (KeyUtil.isActionDown(event)) {
             mInitialFocusPending = false;
             mHistoryFocusGeneration++;
+            mHistoryActionFocus = null;
             if (mFeaturedPresenter != null) mFeaturedPresenter.onUserInteraction();
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU && BrowseExperienceSettings.isHistoryActionsEnabled()) {
+            int position = getSelectedHistoryPosition(getHistoryIndex());
+            if (position >= 0 && position < mHistoryAdapter.size()) {
+                if (KeyUtil.isActionDown(event) && event.getRepeatCount() == 0) onLongClick((History) mHistoryAdapter.get(position), event);
+                return true;
+            }
         }
         if (KeyUtil.isMenuKey(event)) showDialog();
         if (KeyUtil.isActionDown(event) && KeyUtil.isUpKey(event) && isContentFocused()) {
@@ -919,6 +1025,10 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && mHistoryActionFocus != null) {
+            restoreHistoryActionFocus();
+            return;
+        }
         if (hasFocus && mBinding != null && (mInitialFocusPending || mBinding.nav.hasFocus())) {
             requestNavFocus();
         }
@@ -931,13 +1041,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             recreate();
             return;
         }
+        if (mPosterHome != null) mPosterHome.resumeKeepShelf();
+        if (BrowseExperienceSettings.isHistoryActionsEnabled() && mPresenter.isDelete()) setHistoryDelete(false);
         mClock.start();
     }
 
     @Override
     protected void onPause() {
+        if (mPosterHome != null) mPosterHome.pauseKeepShelf();
         super.onPause();
         mHistoryFocusGeneration++;
+        mHistoryActionFocus = null;
         mClock.stop();
     }
 
@@ -992,6 +1106,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
         mHistoryRequests.close();
+        mHistoryTasks.close();
         DLNARendererService.stop(this);
         LiveConfig.get().clear();
         VodConfig.get().clear();

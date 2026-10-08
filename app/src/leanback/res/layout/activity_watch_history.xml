@@ -9,6 +9,7 @@
             <LinearLayout android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:visibility="gone">
                 <com.fongmi.android.tv.ui.custom.JetStreamLargeBodyTextView android:id="@+id/empty_text" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/my_history_empty" />
                 <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView android:id="@+id/retry" android:layout_width="160dp" android:layout_height="48dp" android:layout_marginTop="24dp" android:text="@string/my_retry" android:focusable="true" android:visibility="gone" />
+                <com.fongmi.android.tv.ui.custom.MaterialPlaybackTextButton android:id="@+id/history_actions_back" android:layout_width="160dp" android:layout_height="48dp" android:layout_marginTop="16dp" android:text="@string/history_actions_back" android:focusable="true" android:focusableInTouchMode="true" android:visibility="gone" />
             </LinearLayout>
         </FrameLayout>
     </LinearLayout>
