@@ -3,8 +3,11 @@ package com.fongmi.android.tv.test;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -34,10 +37,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -171,6 +178,128 @@ public final class PosterSourcePriorityIntegrationTest {
                 value(() -> PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()).stream().map(Site::getKey).toList()));
     }
 
+    @Test(timeout = 45_000) public void removingPriorityKeepsTheSourceAndStaleEditorsCannotWriteAnotherConfig() {
+        Config firstConfig = value(() -> VodConfig.get().getConfig());
+        List<Site> originalSites = value(() -> VodConfig.get().getSites());
+        main(() -> PosterSourcePrioritySetting.putOrderedKeys(List.of(key("b"), key("a"), key("c"))));
+        Editor removal = openEditor();
+        click(rowAction(removal.dialog, 0, "b", R.id.priorityRemove));
+        await(() -> recycler(removal.dialog).getAdapter().getItemCount() == 2, "remove changes the draft list");
+        assertEquals("Removal still needs Save", List.of(key("b"), key("a"), key("c")), value(PosterSourcePrioritySetting::getOrderedKeys));
+        click(removal.dialog.findViewById(R.id.save));
+        await(() -> !removal.dialog.isShowing() && changes.get() == 1, "removed priority saved once");
+        assertEquals(List.of(key("a"), key("c")), value(PosterSourcePrioritySetting::getOrderedKeys));
+        main(() -> {
+            assertSame("Priority editing must not replace the source configuration", originalSites, VodConfig.get().getSites());
+            assertEquals(List.of(key("a"), key("b"), key("c"), key("d"), key("disabled")),
+                    VodConfig.get().getSites().stream().map(Site::getKey).toList());
+            assertTrue("The removed source remains searchable", originalSites.get(1).isSearchable());
+            assertFalse("Disabled sources stay disabled", originalSites.get(4).isSearchable());
+            assertEquals("The removed priority becomes fallback", List.of(key("a"), key("c"), key("b"), key("d")),
+                    PosterSourcePrioritySetting.orderSites(originalSites).stream().map(Site::getKey).toList());
+        });
+
+        Config secondConfig = new Config().url("https://priority-ui-fixture.invalid/" + UUID.randomUUID());
+        main(() -> {
+            // Deliberately reuse the source keys: availability filtering cannot conceal a cross-write.
+            VodConfig.get().config(secondConfig);
+            PosterSourcePrioritySetting.putOrderedKeys(List.of(key("d"), key("b")));
+            VodConfig.get().config(firstConfig);
+        });
+        Object beforeRejectedSave = value(() -> Prefers.getPrefers().getAll().get(PREFERENCE));
+        Editor stale = openEditor();
+        click(rowAction(stale.dialog, 0, "a", R.id.priorityMoveDown));
+        assertRow(stale.dialog, 1, "a");
+        main(() -> VodConfig.get().config(secondConfig));
+        click(stale.dialog.findViewById(R.id.save));
+        await(() -> !stale.dialog.isShowing() && activity.hasWindowFocus(), "stale editor closes after a configuration switch");
+        assertEquals("Rejected Save never restarts source search", 1, changes.get());
+        assertEquals(List.of(key("d"), key("b")), value(PosterSourcePrioritySetting::getOrderedKeys));
+        assertEquals("Neither configuration is rewritten", beforeRejectedSave, value(() -> Prefers.getPrefers().getAll().get(PREFERENCE)));
+        main(() -> VodConfig.get().config(firstConfig));
+        assertEquals(List.of(key("a"), key("c")), value(PosterSourcePrioritySetting::getOrderedKeys));
+    }
+
+    @Test(timeout = 45_000) public void longPriorityListClipsPartialRowsAndKeepsTheFooterClickable() {
+        List<Site> manySites = new ArrayList<>();
+        List<String> expected = new ArrayList<>();
+        for (int index = 1; index <= 20; index++) {
+            String suffix = "source-" + index;
+            Site site = site(suffix, true);
+            site.setName("示例播放源 " + index);
+            manySites.add(site);
+            expected.add(key(suffix));
+        }
+        manySites.add(site("fallback", true));
+        main(() -> {
+            setField(VodConfig.class, VodConfig.get(), "sites", manySites);
+            PosterSourcePrioritySetting.putOrderedKeys(expected);
+            // Keep every screenshot pixel synthetic, including the dialog's transparent corners.
+            TextView background = new TextView(activity);
+            background.setBackgroundColor(Color.BLACK);
+            activity.setContentView(background);
+        });
+        Editor editor = openEditor();
+        RecyclerView list = value(() -> recycler(editor.dialog));
+        View save = value(() -> editor.dialog.findViewById(R.id.save));
+        View cancel = value(() -> editor.dialog.findViewById(R.id.cancel));
+        await(() -> list.getAdapter().getItemCount() == 20 && list.findViewHolderForAdapterPosition(0) != null
+                && list.canScrollVertically(1), "twenty priority rows exceed the viewport");
+        Rect saveBefore = value(() -> screenBounds(save));
+        Rect cancelBefore = value(() -> screenBounds(cancel));
+        main(() -> {
+            View first = list.findViewHolderForAdapterPosition(0).itemView;
+            list.scrollBy(0, first.getHeight() / 2 + list.getPaddingTop());
+        });
+        await(() -> !list.isLayoutRequested() && !list.isComputingLayout()
+                && list.getScrollState() == RecyclerView.SCROLL_STATE_IDLE, "partial-row scroll settles");
+        main(() -> {
+            Rect viewport = screenBounds(list);
+            viewport.left += list.getPaddingLeft();
+            viewport.top += list.getPaddingTop();
+            viewport.right -= list.getPaddingRight();
+            viewport.bottom -= list.getPaddingBottom();
+            int partialRows = 0;
+            for (int index = 0; index < list.getChildCount(); index++) {
+                View row = list.getChildAt(index);
+                Rect full = screenBounds(row);
+                if (!Rect.intersects(full, viewport)) continue;
+                if (full.top < viewport.top || full.bottom > viewport.bottom) partialRows++;
+                assertTrue("Scrolled rows cannot draw into the controls or footer", viewport.contains(visibleScreenBounds(row)));
+            }
+            assertTrue("The fixture must expose actual partly clipped rows", partialRows > 0);
+            for (int id : new int[]{R.id.add, R.id.reset}) {
+                assertTrue("Header controls stay above the list", screenBounds(editor.dialog.findViewById(id)).bottom <= viewport.top);
+            }
+            assertTrue("Save remains below the list", screenBounds(save).top >= viewport.bottom);
+            assertTrue("Cancel remains below the list", screenBounds(cancel).top >= viewport.bottom);
+            assertEquals("Scrolling never moves Save", saveBefore, screenBounds(save));
+            assertEquals("Scrolling never moves Cancel", cancelBefore, screenBounds(cancel));
+            assertEquals("Save is fully visible", saveBefore, visibleScreenBounds(save));
+            assertEquals("Cancel is fully visible", cancelBefore, visibleScreenBounds(cancel));
+        });
+        captureFixtureDialog(editor.dialog);
+
+        main(() -> ((LinearLayoutManager) list.getLayoutManager()).scrollToPositionWithOffset(19, 0));
+        await(() -> {
+            RecyclerView.ViewHolder last = list.findViewHolderForAdapterPosition(19);
+            return last != null && visible(last.itemView.findViewById(R.id.priorityMoveUp));
+        }, "last priority remains reachable by scrolling");
+        click(value(() -> list.findViewHolderForAdapterPosition(19).itemView.findViewById(R.id.priorityMoveUp)));
+        await(() -> focusedRank(editor.dialog) == 18, "last source moves up without losing its remote focus");
+        main(() -> {
+            assertEquals(saveBefore, screenBounds(save));
+            assertEquals(cancelBefore, screenBounds(cancel));
+            assertTrue(visible(save) && visible(cancel));
+        });
+        Collections.swap(expected, 18, 19);
+        tap(save);
+        await(() -> !editor.dialog.isShowing() && changes.get() == 1, "a footer tap saves after scrolling the entire list");
+        assertEquals(expected, value(PosterSourcePrioritySetting::getOrderedKeys));
+        assertSame(manySites, value(() -> VodConfig.get().getSites()));
+        assertEquals("The fallback source remains configured", 21, value(() -> VodConfig.get().getSites().size()).intValue());
+    }
+
     private Editor openEditor() {
         Editor editor = value(() -> {
             try {
@@ -255,15 +384,23 @@ public final class PosterSourcePriorityIntegrationTest {
         return view != null && view.isShown() && view.getLocalVisibleRect(new Rect());
     }
 
+    private static Rect screenBounds(View view) {
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        return new Rect(location[0], location[1], location[0] + view.getWidth(), location[1] + view.getHeight());
+    }
+
+    private static Rect visibleScreenBounds(View view) {
+        Rect rect = new Rect();
+        assertTrue("The control is visibly laid out", view != null && view.isShown() && view.getLocalVisibleRect(rect));
+        int[] location = new int[2];
+        view.getLocationOnScreen(location);
+        rect.offset(location[0], location[1]);
+        return rect;
+    }
+
     private void tap(View view) {
-        Rect bounds = value(() -> {
-            Rect rect = new Rect();
-            assertTrue("The pointer target is visibly laid out", view != null && view.isShown() && view.getLocalVisibleRect(rect));
-            int[] location = new int[2];
-            view.getLocationOnScreen(location);
-            rect.offset(location[0], location[1]);
-            return rect;
-        });
+        Rect bounds = value(() -> visibleScreenBounds(view));
         long downTime = SystemClock.uptimeMillis();
         MotionEvent down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, bounds.exactCenterX(), bounds.exactCenterY(), 0);
         down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
@@ -274,6 +411,35 @@ public final class PosterSourcePriorityIntegrationTest {
         up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
         try { instrumentation.sendPointerSync(up); }
         finally { up.recycle(); }
+    }
+
+    /** Optional review evidence; capture/storage failure must not replace the functional assertions. */
+    private void captureFixtureDialog(AlertDialog dialog) {
+        Bitmap screen = null;
+        Bitmap cropped = null;
+        File output = null;
+        try {
+            File directory = instrumentation.getTargetContext().getExternalFilesDir(null);
+            if (directory == null) return;
+            output = new File(directory, "priority-editor.png");
+            if (output.exists() && !output.delete()) return;
+            SystemClock.sleep(250); // Let the window's entry animation finish; never wait for global idle.
+            screen = instrumentation.getUiAutomation().takeScreenshot();
+            if (screen == null) return;
+            Rect bounds = value(() -> screenBounds(dialog.getWindow().getDecorView()));
+            if (!bounds.intersect(0, 0, screen.getWidth(), screen.getHeight())) return;
+            cropped = Bitmap.createBitmap(screen, bounds.left, bounds.top, bounds.width(), bounds.height());
+            try (FileOutputStream stream = new FileOutputStream(output)) {
+                if (!cropped.compress(Bitmap.CompressFormat.PNG, 100, stream)) throw new IOException("Screenshot encoding failed");
+            }
+            Log.i("PriorityEditorFixture", "Saved priority-editor.png");
+        } catch (IOException | RuntimeException error) {
+            if (output != null && output.exists()) output.delete();
+            Log.w("PriorityEditorFixture", "Optional screenshot unavailable: " + error.getClass().getSimpleName());
+        } finally {
+            if (cropped != null && cropped != screen) cropped.recycle();
+            if (screen != null) screen.recycle();
+        }
     }
 
     private void press(int code) { instrumentation.sendKeyDownUpSync(code); }
