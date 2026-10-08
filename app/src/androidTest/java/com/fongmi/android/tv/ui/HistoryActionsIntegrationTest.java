@@ -30,6 +30,7 @@ import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.activity.CollectActivity;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.activity.WatchHistoryActivity;
@@ -104,7 +105,8 @@ public final class HistoryActionsIntegrationTest {
             for (String name : VOD_FIELDS) vodState.put(name, field(VodConfig.get(), name));
             configuration = config(cid);
             otherConfiguration = config(otherCid);
-            fixtureSite = Site.objectFrom("{\"key\":\"" + sourceKey + "\",\"name\":\"History test source\",\"searchable\":0}");
+            fixtureSite = Site.get(sourceKey, "History test source");
+            fixtureSite.setSearchable(0);
             useConfiguration(configuration);
             previousClient = OkHttp.client();
             previousTmdbClient = (OkHttpClient) field(TmdbNetwork.class, "client");
@@ -178,6 +180,9 @@ public final class HistoryActionsIntegrationTest {
             assertTrue(text(dialog, R.id.history_actions_episode).contains("Episode 3"));
             assertTrue(text(dialog, R.id.history_actions_progress).contains("01:05"));
             assertTrue(text(dialog, R.id.history_actions_source).contains("History test source"));
+        });
+        NativeUiEvidence.capture("history-card-menu");
+        main(() -> {
             first.setCreateTime(second.getCreateTime() + 1000);
             AppDatabase.get().getHistoryDao().update(first);
             invoke(activity, "load");

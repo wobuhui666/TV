@@ -32,6 +32,7 @@ import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
+import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.presenter.DiscoverHeroPresenter;
 import com.fongmi.android.tv.ui.presenter.VodPresenter;
 import com.github.catvod.utils.Prefers;
@@ -132,6 +133,7 @@ public final class DiscoverHeroRotationTest {
     public void focusPausedModeStaysStillUntilBlurAndKeepsManualNavigation() {
         mount(BrowseExperienceSettings.HERO_ROTATION_FOCUS_PAUSED, normalItems());
         main(() -> assertTrue(holder.view.requestFocus()));
+        NativeUiEvidence.capture("hero-focus-paused");
         assertTitleStays("First film", FULL_ROTATION_WAIT);
         keyAndClick(KeyEvent.KEYCODE_DPAD_LEFT, "Third film");
         main(() -> assertTrue(other.requestFocus()));

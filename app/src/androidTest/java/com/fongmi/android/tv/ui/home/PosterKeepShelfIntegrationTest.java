@@ -31,6 +31,7 @@ import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.PosterKeepShelfState;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.activity.DiscoverDetailActivity;
 import com.fongmi.android.tv.ui.activity.KeepActivity;
 import com.fongmi.android.tv.ui.activity.MyActivity;
@@ -322,6 +323,7 @@ public final class PosterKeepShelfIntegrationTest {
         Instrumentation.ActivityMonitor video = block(VideoActivity.class);
         Instrumentation.ActivityMonitor all = block(KeepActivity.class);
         focusCard(0);
+        NativeUiEvidence.capture("poster-keep-shelf");
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER);
         await(() -> discovery.getHits() == 1, "discovery favorite opens native discovery detail");
         focusCard(1);
