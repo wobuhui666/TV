@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="poster_source_priority_title">播放来源优先级</string>
+    <string name="poster_source_priority_short">来源优先级</string>
+    <string name="poster_source_priority_hint">海报选源时优先查找和展示这些来源，其他来源仍会补充结果。不会自动播放。</string>
+    <string name="poster_source_priority_add">添加来源</string>
+    <string name="poster_source_priority_add_title">添加优先来源</string>
+    <string name="poster_source_priority_add_selected">添加所选</string>
+    <string name="poster_source_priority_reset">恢复默认顺序</string>
+    <string name="poster_source_priority_save">保存</string>
+    <string name="poster_source_priority_cancel">取消</string>
+    <string name="poster_source_priority_up">前移</string>
+    <string name="poster_source_priority_down">后移</string>
+    <string name="poster_source_priority_remove">移除</string>
+    <string name="poster_source_priority_up_description">前移 %1$s</string>
+    <string name="poster_source_priority_down_description">后移 %1$s</string>
+    <string name="poster_source_priority_first_description">%1$s 已是第一优先</string>
+    <string name="poster_source_priority_last_description">%1$s 已是最后一项</string>
+    <string name="poster_source_priority_remove_description">移除 %1$s 的优先级</string>
+    <string name="poster_source_priority_rank_description">第 %1$d 优先：%2$s</string>
+    <string name="poster_source_priority_empty">还未指定优先来源\n添加常用来源，然后用前移、后移调整顺序。</string>
+    <string name="poster_source_priority_no_sites">当前配置没有可搜索的来源。\n请先配置片源，或开启片源的搜索开关。</string>
+    <string name="poster_source_priority_default_status">当前配置 · 按原有顺序查找 %1$d 个来源</string>
+    <string name="poster_source_priority_status">当前配置 · %1$d 个优先来源 · 其余 %2$d 个继续补充</string>
+    <string name="poster_source_priority_limit">最多优先 %1$d 个来源，请先移除一个再添加。</string>
+    <string name="poster_source_priority_config_changed">配置已切换，请重新打开当前配置的来源优先级。</string>
+</resources>
