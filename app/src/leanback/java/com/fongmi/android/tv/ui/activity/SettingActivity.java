@@ -39,6 +39,8 @@ import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.SourceSelectionSetting;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.PosterSourcePrioritySetting;
+import com.fongmi.android.tv.ui.dialog.PosterSourcePriorityDialog;
 import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.fongmi.android.tv.source.SourceSelectionMode;
 import com.fongmi.android.tv.ui.base.BaseActivity;
@@ -256,6 +258,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     }
 
     private void refreshBrowseRows() {
+        int priorityCount = PosterSourcePrioritySetting.getOrderedKeys().size();
+        setRowValue(JetStreamSettingView.KEY_BROWSE_PRIORITY, priorityCount == 0 ? getString(R.string.poster_source_priority_default)
+                : getString(R.string.poster_source_priority_count, priorityCount));
         setRowValue(JetStreamSettingView.KEY_TMDB_RECOVERY, Setting.getSwitch(TmdbNetwork.isRouteRecoveryEnabled()));
         setRowValue(JetStreamSettingView.KEY_BROWSE_HOME, getString(BrowseExperienceSettings.isPosterHomeEnabled() ? R.string.browse_home_posters : R.string.browse_home_original));
         int[] modes = {R.string.browse_filter_original, R.string.browse_filter_relevant, R.string.browse_filter_strict};
@@ -378,6 +383,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_INCOGNITO -> setIncognito();
             case JetStreamSettingView.KEY_TMDB_RECOVERY -> { TmdbNetwork.setRouteRecoveryEnabled(!TmdbNetwork.isRouteRecoveryEnabled()); refreshBrowseRows(); }
             case JetStreamSettingView.KEY_BROWSE_HOME -> { BrowseExperienceSettings.putPosterHomeEnabled(!BrowseExperienceSettings.isPosterHomeEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_BROWSE_PRIORITY -> PosterSourcePriorityDialog.show(this, this::refreshBrowseRows);
             case JetStreamSettingView.KEY_BROWSE_FILTER -> setBrowseFilter();
             case JetStreamSettingView.KEY_BROWSE_SOURCES -> { BrowseExperienceSettings.putDetailSourcesEnabled(!BrowseExperienceSettings.isDetailSourcesEnabled()); refreshBrowseRows(); }
             case JetStreamSettingView.KEY_BROWSE_SMART -> { BrowseExperienceSettings.putSmartSourceEnabled(!BrowseExperienceSettings.isSmartSourceEnabled()); refreshBrowseRows(); }
@@ -459,6 +465,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
                 Notify.dismiss();
                 refreshSourceRows();
                 refreshDanmakuRows();
+                refreshBrowseRows();
                 setCacheText();
             }
 
@@ -1040,6 +1047,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     public void onConfigEvent(ConfigEvent event) {
         refreshSourceRows();
         refreshDanmakuRows();
+        refreshBrowseRows();
     }
 
     @Override

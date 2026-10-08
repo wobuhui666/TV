@@ -24,4 +24,9 @@
     <string name="poster_source_priority_status">当前配置 · %1$d 个优先来源 · 其余 %2$d 个继续补充</string>
     <string name="poster_source_priority_limit">最多优先 %1$d 个来源，请先移除一个再添加。</string>
     <string name="poster_source_priority_config_changed">配置已切换，请重新打开当前配置的来源优先级。</string>
+    <string name="poster_source_priority_default">原有顺序</string>
+    <string name="poster_source_priority_count">已指定 %1$d 个</string>
+    <string name="poster_source_priority_button_default">来源优先级 · 未指定</string>
+    <string name="poster_source_priority_button_count">来源优先级 · %1$d 个</string>
+    <string name="poster_source_priority_site">优先 %1$d · %2$s</string>
 </resources>

@@ -21,6 +21,7 @@ public final class BrowseExperienceSettings {
     public static void putSmartSourceEnabled(boolean enabled) { Prefers.put(SMART, enabled); }
 
     public static void restoreOriginal() {
+        PosterSourcePrioritySetting.clear();
         putPosterHomeEnabled(false);
         putSearchFilterMode(0);
         putDetailSourcesEnabled(false);
