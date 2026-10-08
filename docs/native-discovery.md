@@ -56,9 +56,11 @@
 
 豆瓣与 TMDB 独立加载；某个服务失败时保留其他已加载内容。首页本轮加载最长 24 秒，失败后可从页面末尾重试，也可继续使用顶部入口。推荐数据只是选片信息，实际播放仍来自自己配置的片源。
 
-## 三星 TMDB 网络兼容
+## TMDB 网络兼容
 
-在三星 SM-F900F 的实际网络中，自定义反代域和优选域都解析到同一组不可达的 Cloudflare IP，出现 TCP 超时；另一默认反代出现 TLS 连接重置。保持原反代域名与严格证书校验，使用可达的标准 Cloudflare 边缘后，真机请求返回 HTTP 200。
+在 ARM64 redroid Android 测试环境的网络中，自定义反代域和优选域都解析到同一组不可达的 Cloudflare IP，出现 TCP 超时；另一默认反代出现 TLS 连接重置。保持原反代域名与严格证书校验，使用可达的标准 Cloudflare 边缘后，该环境中的请求返回 HTTP 200。
+
+**验证环境勘误（2026-10-08）：**此前仅按系统报出的 `ro.product.model=SM_F900F` 将该端点标为“三星真机”。对同一 ADB 端点补查发现 `ro.hardware=redroid`，网络接口为容器 veth，应归类为 redroid Android 测试环境。这些网络现象和修复结果仅描述该环境，不能推广为实体三星设备的兼容性结论。
 
 **设置 → 来源 → TMDB 网络兼容**默认开启，也可单独关闭。仅在 TMDB 元数据／图片的原路失败，且 DNS 结果确认为 Cloudflare 网段时尝试有限的边缘路由；保留原 URL、Host、SNI 与证书校验，不切换到另一家反代，不把 API key 发送给其他域名。显式 hosts 与代理设置优先。成功路线短期缓存，失效后回到正常路由。
 
@@ -68,4 +70,4 @@
 
 ## 验证与截图
 
-来源优先级已通过完整 CI、68 项本地单测和 16 项三星 ARM64 真机集成测试；用例与截图见 [来源优先级验证记录](testing/reports/2026-10-08-poster-source-priority/README.md)。此前海报墙、搜索过滤及 TMDB 网络兼容的验证见 [原生发现页验证记录](testing/reports/2026-10-07-native-discovery/README.md)。
+来源优先级已通过完整 CI、68 项本地单测和 16 项 ARM64 redroid Android 集成测试；用例与截图见 [来源优先级验证记录](testing/reports/2026-10-08-poster-source-priority/README.md)。测试覆盖实际运行的 Android 原生界面与集成行为，不代表实体三星硬件验收。此前海报墙、搜索过滤及 TMDB 网络兼容在该环境中的验证见 [原生发现页验证记录](testing/reports/2026-10-07-native-discovery/README.md)。
