@@ -267,6 +267,21 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowValue(JetStreamSettingView.KEY_BROWSE_FILTER, getString(modes[BrowseExperienceSettings.getSearchFilterMode()]));
         setRowValue(JetStreamSettingView.KEY_BROWSE_SOURCES, Setting.getSwitch(BrowseExperienceSettings.isDetailSourcesEnabled()));
         setRowValue(JetStreamSettingView.KEY_BROWSE_SMART, Setting.getSwitch(BrowseExperienceSettings.isSmartSourceEnabled()));
+        setRowValue(JetStreamSettingView.KEY_BROWSE_HISTORY_ACTIONS, Setting.getSwitch(BrowseExperienceSettings.isHistoryActionsEnabled()));
+        setRowValue(JetStreamSettingView.KEY_BROWSE_KEEP_SHELF, Setting.getSwitch(BrowseExperienceSettings.isPosterKeepShelfEnabled()));
+        setRowVisible(JetStreamSettingView.KEY_BROWSE_KEEP_SHELF, BrowseExperienceSettings.isPosterHomeEnabled());
+        int[] rotationModes = {R.string.browse_hero_rotation_original, R.string.browse_hero_rotation_focus, R.string.browse_hero_rotation_manual};
+        setRowValue(JetStreamSettingView.KEY_BROWSE_HERO_ROTATION, getString(rotationModes[BrowseExperienceSettings.getHeroRotationMode()]));
+    }
+
+    private void setHeroRotation() {
+        String[] modes = {getString(R.string.browse_hero_rotation_original), getString(R.string.browse_hero_rotation_focus), getString(R.string.browse_hero_rotation_manual)};
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.browse_hero_rotation)
+                .setSingleChoiceItems(modes, BrowseExperienceSettings.getHeroRotationMode(), (dialog, which) -> {
+                    BrowseExperienceSettings.putHeroRotationMode(which);
+                    refreshBrowseRows();
+                    dialog.dismiss();
+                }).show();
     }
 
     private void setBrowseFilter() {
@@ -387,6 +402,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_BROWSE_FILTER -> setBrowseFilter();
             case JetStreamSettingView.KEY_BROWSE_SOURCES -> { BrowseExperienceSettings.putDetailSourcesEnabled(!BrowseExperienceSettings.isDetailSourcesEnabled()); refreshBrowseRows(); }
             case JetStreamSettingView.KEY_BROWSE_SMART -> { BrowseExperienceSettings.putSmartSourceEnabled(!BrowseExperienceSettings.isSmartSourceEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_BROWSE_HISTORY_ACTIONS -> { BrowseExperienceSettings.putHistoryActionsEnabled(!BrowseExperienceSettings.isHistoryActionsEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_BROWSE_KEEP_SHELF -> { BrowseExperienceSettings.putPosterKeepShelfEnabled(!BrowseExperienceSettings.isPosterKeepShelfEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_BROWSE_HERO_ROTATION -> setHeroRotation();
             case JetStreamSettingView.KEY_BROWSE_RESTORE -> { BrowseExperienceSettings.restoreOriginal(); refreshBrowseRows(); Notify.show(R.string.browse_restored); }
             case JetStreamSettingView.KEY_SOURCE_MODE -> setSourceMode();
             case JetStreamSettingView.KEY_SOURCE_CROSS_SITE -> setSourceCrossSite();

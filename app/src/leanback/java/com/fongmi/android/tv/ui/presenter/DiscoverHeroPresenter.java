@@ -8,6 +8,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
@@ -24,6 +25,7 @@ import com.fongmi.android.tv.bean.DiscoverHero;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterDiscoverHeroBinding;
+import com.fongmi.android.tv.setting.BrowseExperienceSettings;
 import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.custom.JetStreamFeaturedIndicatorDotView;
 import com.fongmi.android.tv.ui.theme.JetStreamAmbient;
@@ -80,11 +82,13 @@ public final class DiscoverHeroPresenter extends Presenter {
         private final Handler handler = new Handler(Looper.getMainLooper());
         private final List<Vod> items = new ArrayList<>();
         private final Runnable rotate;
+        private final ViewTreeObserver.OnWindowFocusChangeListener windowFocusListener;
         private ShapeableImageView front;
-        private int index;
-        private int bindGeneration;
+        private int index = -1;
         private int artworkGeneration;
         private String displayedArtwork;
+        private boolean attached;
+        private boolean windowFocusListenerRegistered;
 
         private Holder(AdapterDiscoverHeroBinding binding, VodPresenter.OnClickListener listener) {
             super(binding.getRoot());
@@ -93,7 +97,11 @@ public final class DiscoverHeroPresenter extends Presenter {
             this.front = binding.imageA;
             binding.details.setVisibility(View.INVISIBLE);
             this.rotate = () -> {
-                if (this.binding.getRoot().hasWindowFocus()) show(index + 1, true);
+                if (canRotate()) show(index + 1, true);
+                schedule();
+            };
+            this.windowFocusListener = hasFocus -> {
+                if (hasFocus) publishArtwork(displayedArtwork);
                 schedule();
             };
             setListeners();
@@ -104,6 +112,7 @@ public final class DiscoverHeroPresenter extends Presenter {
                 view.setSelected(hasFocus);
                 binding.action.animate().cancel();
                 binding.action.animate().alpha(hasFocus ? 1f : 0.76f).setDuration(160).start();
+                schedule();
             });
             binding.getRoot().setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN || items.size() < 2) return false;
@@ -121,7 +130,9 @@ public final class DiscoverHeroPresenter extends Presenter {
             });
             binding.getRoot().setOnClickListener(view -> {
                 Vod item = current();
-                if (item != null) listener.onItemClick(item, front);
+                // A pending or failed image must not animate the preceding film into this detail page.
+                if (item != null) listener.onItemClick(item,
+                        TextUtils.equals(displayedArtwork, item.getBackdrop()) ? front : null);
             });
         }
 
@@ -131,10 +142,6 @@ public final class DiscoverHeroPresenter extends Presenter {
             items.clear();
             items.addAll(hero.getItems());
             index = findIndex(previousId);
-            bindGeneration++;
-            artworkGeneration++;
-            binding.imageA.animate().cancel();
-            binding.imageB.animate().cancel();
             binding.details.animate().cancel();
             binding.getRoot().setSelected(binding.getRoot().hasFocus());
             bindIndicator(items.size());
@@ -144,15 +151,7 @@ public final class DiscoverHeroPresenter extends Presenter {
                 return;
             }
             binding.details.setVisibility(View.VISIBLE);
-            Vod item = current();
-            if (item != null && TextUtils.equals(displayedArtwork, item.getBackdrop())) {
-                binding.details.setAlpha(1f);
-                bindText(item);
-                updateIndicator();
-                publishArtwork(displayedArtwork);
-            } else {
-                show(index, false);
-            }
+            show(index, false);
             schedule();
         }
 
@@ -161,73 +160,92 @@ public final class DiscoverHeroPresenter extends Presenter {
             index = Math.floorMod(position, items.size());
             Vod item = current();
             if (item == null) return;
-            if (animate) {
-                int generation = bindGeneration;
-                binding.details.animate().cancel();
-                binding.details.animate().alpha(0f).setDuration(TEXT_FADE / 2).withEndAction(() -> {
-                    if (generation != bindGeneration || item != current()) return;
-                    bindText(item);
-                    binding.details.animate().alpha(1f).setDuration(TEXT_FADE).start();
-                }).start();
-            } else {
-                binding.details.setAlpha(1f);
-                bindText(item);
-            }
+            // Commit the visible name and click destination in one UI operation. A delayed fade-out
+            // callback used to leave the previous title clickable as the newly selected film.
+            binding.details.animate().cancel();
+            bindText(item);
+            binding.details.setAlpha(animate ? 0.7f : 1f);
+            if (animate) binding.details.animate().alpha(1f).setDuration(TEXT_FADE).start();
             updateIndicator();
+            showArtwork(item, animate);
+        }
+
+        private void showArtwork(Vod item, boolean animate) {
+            cancelPendingArtwork();
             String artwork = item.getBackdrop();
-            if (!animate) {
-                artworkGeneration++;
-                ShapeableImageView back = front == binding.imageA ? binding.imageB : binding.imageA;
-                back.animate().cancel();
-                ImgUtil.clear(back);
-                back.setAlpha(0f);
-                back.setVisibility(View.GONE);
-                front.setAlpha(1f);
-                front.setVisibility(View.VISIBLE);
-                ImgUtil.load(item.getName(), artwork, front);
-                displayedArtwork = artwork;
+            if (TextUtils.equals(displayedArtwork, artwork) && front.getDrawable() != null) {
                 publishArtwork(artwork);
                 return;
             }
+            if (!attached || !binding.getRoot().isAttachedToWindow()) return;
             ShapeableImageView next = front == binding.imageA ? binding.imageB : binding.imageA;
             ShapeableImageView old = front;
-            next.animate().cancel();
-            ImgUtil.clear(next);
-            next.setAlpha(0f);
             next.setVisibility(View.INVISIBLE);
-            loadArtwork(item, artwork, next, old, ++artworkGeneration);
+            loadArtwork(item, artwork, next, old, animate, artworkGeneration);
         }
 
-        private void loadArtwork(Vod item, String artwork, ShapeableImageView next, ShapeableImageView old, int generation) {
+        private void loadArtwork(Vod item, String artwork, ShapeableImageView next, ShapeableImageView old,
+                                 boolean animate, int generation) {
             try {
                 Glide.with(next).load(ImgUtil.getUrl(artwork)).centerCrop().listener(new RequestListener<>() {
                     @Override
                     public boolean onLoadFailed(@Nullable GlideException e, Object model, @NonNull Target<Drawable> target, boolean firstResource) {
-                        if (generation == artworkGeneration) next.setVisibility(View.GONE);
+                        if (!isCurrentArtwork(item, generation)) return true;
+                        next.setImageResource(R.drawable.artwork);
+                        displayArtwork(null, next, old, animate, generation);
                         return true;
                     }
 
                     @Override
                     public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource source, boolean firstResource) {
-                        if (generation != artworkGeneration || item != current()) {
-                            next.setVisibility(View.GONE);
-                            return false;
-                        }
-                        old.animate().cancel();
-                        front = next;
-                        displayedArtwork = artwork;
-                        next.setVisibility(View.VISIBLE);
-                        next.animate().alpha(1f).setDuration(IMAGE_FADE).start();
-                        old.animate().alpha(0f).setDuration(IMAGE_FADE).withEndAction(() -> {
-                            if (old != front) old.setVisibility(View.GONE);
-                        }).start();
-                        publishArtwork(artwork);
-                        return false;
+                        // Suppress Glide's own target update too: this view may have been reused.
+                        if (!isCurrentArtwork(item, generation)) return true;
+                        next.setImageDrawable(resource);
+                        displayArtwork(artwork, next, old, animate, generation);
+                        return true;
                     }
                 }).into(next);
-            } catch (Throwable e) {
-                next.setVisibility(View.GONE);
+            } catch (RuntimeException e) {
+                if (!isCurrentArtwork(item, generation)) return;
+                next.setImageResource(R.drawable.artwork);
+                displayArtwork(null, next, old, animate, generation);
             }
+        }
+
+        private boolean isCurrentArtwork(Vod item, int generation) {
+            return attached && binding.getRoot().isAttachedToWindow()
+                    && generation == artworkGeneration && item == current();
+        }
+
+        private void displayArtwork(String artwork, ShapeableImageView next, ShapeableImageView old,
+                                    boolean animate, int generation) {
+            old.animate().cancel();
+            front = next;
+            displayedArtwork = artwork;
+            next.setVisibility(View.VISIBLE);
+            if (animate && old.getDrawable() != null) {
+                next.animate().alpha(1f).setDuration(IMAGE_FADE).start();
+                old.animate().alpha(0f).setDuration(IMAGE_FADE).withEndAction(() -> {
+                    if (generation == artworkGeneration && old != front) old.setVisibility(View.GONE);
+                }).start();
+            } else {
+                next.setAlpha(1f);
+                old.setAlpha(0f);
+                old.setVisibility(View.GONE);
+            }
+            publishArtwork(artwork);
+        }
+
+        private void cancelPendingArtwork() {
+            artworkGeneration++;
+            binding.imageA.animate().withEndAction(null).cancel();
+            binding.imageB.animate().withEndAction(null).cancel();
+            ShapeableImageView back = front == binding.imageA ? binding.imageB : binding.imageA;
+            ImgUtil.clear(back);
+            back.setImageDrawable(null);
+            back.setAlpha(0f);
+            back.setVisibility(View.GONE);
+            front.setAlpha(1f);
         }
 
         private void bindText(Vod item) {
@@ -289,11 +307,13 @@ public final class DiscoverHeroPresenter extends Presenter {
         }
 
         private void clearArtwork() {
-            artworkGeneration++;
+            cancelPendingArtwork();
             displayedArtwork = null;
             front = binding.imageA;
             ImgUtil.clear(binding.imageA);
             ImgUtil.clear(binding.imageB);
+            binding.imageA.setImageDrawable(null);
+            binding.imageB.setImageDrawable(null);
             binding.imageA.setAlpha(1f);
             binding.imageA.setVisibility(View.GONE);
             binding.imageB.setAlpha(0f);
@@ -301,12 +321,21 @@ public final class DiscoverHeroPresenter extends Presenter {
         }
 
         private void publishArtwork(String artwork) {
-            if (binding.getRoot().isAttachedToWindow() && binding.getRoot().hasWindowFocus()) JetStreamAmbient.push(artwork);
+            if (!TextUtils.isEmpty(artwork) && attached && binding.getRoot().isAttachedToWindow()
+                    && binding.getRoot().hasWindowFocus()) JetStreamAmbient.push(artwork);
+        }
+
+        private boolean canRotate() {
+            if (!attached || items.size() < 2 || !binding.getRoot().isAttachedToWindow()
+                    || !binding.getRoot().isShown() || !binding.getRoot().hasWindowFocus()) return false;
+            int mode = BrowseExperienceSettings.getHeroRotationMode();
+            if (mode == BrowseExperienceSettings.HERO_ROTATION_MANUAL) return false;
+            return mode != BrowseExperienceSettings.HERO_ROTATION_FOCUS_PAUSED || !binding.getRoot().hasFocus();
         }
 
         private void schedule() {
-            handler.removeCallbacks(rotate);
-            if (items.size() > 1 && binding.getRoot().isAttachedToWindow()) handler.postDelayed(rotate, AUTO_DELAY);
+            stop();
+            if (canRotate()) handler.postDelayed(rotate, AUTO_DELAY);
         }
 
         private void restart() {
@@ -319,28 +348,39 @@ public final class DiscoverHeroPresenter extends Presenter {
         }
 
         private void attach() {
+            if (attached) {
+                schedule();
+                return;
+            }
+            attached = true;
+            ViewTreeObserver observer = binding.getRoot().getViewTreeObserver();
+            if (!windowFocusListenerRegistered && observer.isAlive()) {
+                observer.addOnWindowFocusChangeListener(windowFocusListener);
+                windowFocusListenerRegistered = true;
+            }
             Vod item = current();
-            if (item != null) publishArtwork(item.getBackdrop());
+            if (item != null) showArtwork(item, false);
             restart();
         }
 
         private void detach() {
+            attached = false;
             stop();
+            ViewTreeObserver observer = binding.getRoot().getViewTreeObserver();
+            if (windowFocusListenerRegistered && observer.isAlive()) observer.removeOnWindowFocusChangeListener(windowFocusListener);
+            windowFocusListenerRegistered = false;
+            binding.details.animate().cancel();
+            binding.details.setAlpha(1f);
+            binding.action.animate().cancel();
+            clearArtwork();
         }
 
         private void unbind() {
             detach();
-            bindGeneration++;
-            artworkGeneration++;
-            displayedArtwork = null;
             items.clear();
-            binding.details.animate().cancel();
-            binding.imageA.animate().cancel();
-            binding.imageB.animate().cancel();
-            binding.action.animate().cancel();
+            index = -1;
+            binding.details.setVisibility(View.INVISIBLE);
             JetStreamAnimator.reset(binding.getRoot());
-            ImgUtil.clear(binding.imageA);
-            ImgUtil.clear(binding.imageB);
         }
     }
 }

@@ -1,0 +1,107 @@
+{
+  "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+  "ci": "https://github.com/wobuhui666/TV/actions/runs/37844303329",
+  "environment": {
+    "ro.product.model": "SM-F900F",
+    "ro.hardware": "redroid",
+    "ro.build.version.release": "13",
+    "ro.build.version.sdk": "33",
+    "ro.product.cpu.abilist": "arm64-v8a"
+  },
+  "apks": [
+    {
+      "role": "app",
+      "bytes": 101611504,
+      "sha256": "d851a86eeed243f134d0aac5024596c5cfc5a16439c9c5ad0f9cfdcd2ecb402b",
+      "unchangedNonSignatureEntries": 1844,
+      "certificateSha256": "2d58850f504afb0a85b7a9953a4a00d8a0dbde67ec591beb08761f9fb5582a06"
+    },
+    {
+      "role": "test",
+      "bytes": 816516,
+      "sha256": "a3aa3750d3d7ee082a3ee356a477bbd542ad7571d0e4b75dc4a0ab8c5d431435",
+      "unchangedNonSignatureEntries": 19,
+      "certificateSha256": "2d58850f504afb0a85b7a9953a4a00d8a0dbde67ec591beb08761f9fb5582a06"
+    }
+  ],
+  "localStateTests": 8,
+  "androidTests": 38,
+  "androidFailures": 0,
+  "androidSkipped": 0,
+  "suites": [
+    {
+      "suite": "history-menu",
+      "expected": 9,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 13.48,
+      "exitCode": 0,
+      "successStatuses": 9
+    },
+    {
+      "suite": "hero-rotation",
+      "expected": 6,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 73.81,
+      "exitCode": 0,
+      "successStatuses": 6
+    },
+    {
+      "suite": "keep-shelf",
+      "expected": 7,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 6.33,
+      "exitCode": 0,
+      "successStatuses": 7
+    },
+    {
+      "suite": "native-browse",
+      "expected": 8,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 12.1,
+      "exitCode": 0,
+      "successStatuses": 8
+    },
+    {
+      "suite": "priority-editor",
+      "expected": 3,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 6.43,
+      "exitCode": 0,
+      "successStatuses": 3
+    },
+    {
+      "suite": "source-search",
+      "expected": 5,
+      "passed": true,
+      "sourceCommit": "6d1b70b67e5b351d2918dc635f61f9c4341d0e1e",
+      "seconds": 3.83,
+      "exitCode": 0,
+      "successStatuses": 5
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "history-card-menu.png",
+      "sha256": "ca33790267e3f3126b38b146ad6ebbe52ab3e7ed5df9a15387d0a60efbcd3918",
+      "width": 1080,
+      "height": 750
+    },
+    {
+      "file": "poster-keep-shelf.png",
+      "sha256": "d82205a0acc3ddf15d98de64620e94622e8f881389db52e875ccfbb21a6678f4",
+      "width": 1080,
+      "height": 750
+    },
+    {
+      "file": "hero-focus-paused.png",
+      "sha256": "41a55b3c136876f9d3bf35ecb06709a5c39aab89e0726b08953320c5b3d54621",
+      "width": 750,
+      "height": 1080
+    }
+  ]
+}

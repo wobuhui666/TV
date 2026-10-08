@@ -49,6 +49,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private static final long DEADLINE_MS = 24_000;
     private final Activity activity;
     private final Listener listener;
+    private final PosterKeepShelfController keepShelf;
     private final Object requestTag = new Object();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Map<DiscoverApi.Row, List<Vod>> content = new EnumMap<>(DiscoverApi.Row.class);
@@ -66,6 +67,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     public PosterHomeController(Activity activity, Listener listener) {
         this.activity = activity;
         this.listener = listener;
+        keepShelf = new PosterKeepShelfController(activity);
         shelves.add(new Shelf(R.string.home_wall_trending, DiscoverApi.Row.TMDB_DAY));
         shelves.add(new Shelf(R.string.home_wall_movie_shelf, DiscoverApi.Row.DOUBAN_HOT_MOVIE));
         shelves.add(new Shelf(R.string.home_wall_tv_shelf, DiscoverApi.Row.DOUBAN_HOT_TV));
@@ -80,12 +82,14 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         selector.addPresenter(Categories.class, new CategoriesPresenter());
         selector.addPresenter(Shelf.class, new ShelfPresenter());
         selector.addPresenter(Footer.class, new FooterPresenter());
+        keepShelf.register(selector);
     }
 
     public void attach(ArrayObjectAdapter adapter) {
         page = adapter;
         page.add(0, hero);
         page.add(1, categories);
+        keepShelf.attach(page);
         page.addAll(page.size(), shelves);
         page.add(footer);
         render();
@@ -99,10 +103,28 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     public boolean isFocusable(Object row) {
         if (row == hero) return !hero.value.isEmpty();
         if (row instanceof Shelf shelf) return !shelf.items.isEmpty();
+        if (keepShelf.isRow(row)) return keepShelf.isFocusable();
         return row == categories || row == footer;
     }
 
+    public void setKeepShelfFocusFallback(Runnable fallback) {
+        keepShelf.setFocusFallback(fallback);
+    }
+
+    public void resumeKeepShelf() {
+        keepShelf.resume();
+    }
+
+    public void pauseKeepShelf() {
+        keepShelf.pause();
+    }
+
+    public void refreshKeepShelf() {
+        keepShelf.refresh();
+    }
+
     public void refresh() {
+        refreshKeepShelf();
         if (closed || page == null || pending > 0) return;
         int request = ++generation;
         pending = shelves.size();
@@ -173,6 +195,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     public void close() {
+        keepShelf.close();
         closed = true;
         generation++;
         pending = 0;

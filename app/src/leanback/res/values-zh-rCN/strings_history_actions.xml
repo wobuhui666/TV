@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_actions_title">观看记录</string>
+    <string name="history_actions_episode">集数：%1$s</string>
+    <string name="history_actions_episode_unknown">暂无</string>
+    <string name="history_actions_source">来源：%1$s</string>
+    <string name="history_actions_continue">继续观看</string>
+    <string name="history_actions_search">查找其他来源</string>
+    <string name="history_actions_delete">删除这一条</string>
+    <string name="history_actions_cancel">取消</string>
+    <string name="history_actions_hint">选择影片继续观看 · 长按或按菜单键查看这一条的操作</string>
+    <string name="history_actions_back">返回</string>
+</resources>

@@ -19,6 +19,9 @@ public abstract class KeepDao extends BaseDao<Keep> {
     @Query("SELECT * FROM Keep WHERE type IN (0, 2) ORDER BY createTime DESC")
     public abstract List<Keep> getVodAndDiscover();
 
+    @Query("SELECT * FROM Keep WHERE type = 2 OR (type = 0 AND cid = :cid) ORDER BY createTime DESC, `key` ASC LIMIT :limit")
+    public abstract List<Keep> getPosterShelf(int cid, int limit);
+
     @Query("SELECT * FROM Keep WHERE type = 1 ORDER BY createTime DESC")
     public abstract List<Keep> getLive();
 
