@@ -19,6 +19,8 @@ import com.fongmi.android.tv.databinding.AdapterPosterSourceBinding;
 import com.fongmi.android.tv.databinding.ViewPosterSourcesBinding;
 import com.fongmi.android.tv.model.DiscoverSourceSearch;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.PosterSourcePrioritySetting;
+import com.fongmi.android.tv.ui.dialog.PosterSourcePriorityDialog;
 import com.fongmi.android.tv.source.PosterSourceResults;
 import com.fongmi.android.tv.source.PosterSourceResults.Candidate;
 import com.fongmi.android.tv.source.SearchRelevance;
@@ -40,6 +42,7 @@ final class PosterSourcesController {
     private boolean movie;
     private int seasons, selectedSeason;
     private boolean running;
+    private List<String> priorities = List.of();
 
     PosterSourcesController(DiscoverDetailActivity activity, ViewPosterSourcesBinding binding, Runnable close) {
         this.activity = activity;
@@ -47,16 +50,20 @@ final class PosterSourcesController {
         binding.results.setLayoutManager(new LinearLayoutManager(activity));
         binding.results.setAdapter(adapter);
         binding.results.setItemAnimator(null);
-        TouchFocus.bind(binding.smart, binding.retry, binding.season, binding.fullSearch, binding.close);
+        TouchFocus.bind(binding.smart, binding.retry, binding.priority, binding.season, binding.fullSearch, binding.close);
         binding.retry.setOnClickListener(view -> start());
         binding.smart.setOnClickListener(view -> {
             BrowseExperienceSettings.putSmartSourceEnabled(!BrowseExperienceSettings.isSmartSourceEnabled());
             start();
         });
+        binding.priority.setOnClickListener(view -> PosterSourcePriorityDialog.show(activity, () -> {
+            start();
+            binding.priority.requestFocus();
+        }));
         binding.season.setOnClickListener(view -> chooseSeason());
         binding.fullSearch.setOnClickListener(view -> { stop(); SearchActivity.start(activity, title); });
         binding.close.setOnClickListener(view -> close.run());
-        for (View control : new View[]{binding.smart, binding.retry, binding.season, binding.fullSearch, binding.close}) {
+        for (View control : new View[]{binding.smart, binding.retry, binding.priority, binding.season, binding.fullSearch, binding.close}) {
             control.setOnFocusChangeListener((view, focused) -> {
                 if (focused && results != null) render();
             });
@@ -74,6 +81,9 @@ final class PosterSourcesController {
     }
 
     private void updateControls() {
+        int priorityCount = PosterSourcePrioritySetting.getOrderedKeys().size();
+        binding.priority.setText(priorityCount == 0 ? activity.getString(R.string.poster_source_priority_button_default)
+                : activity.getString(R.string.poster_source_priority_button_count, priorityCount));
         binding.smart.setText(BrowseExperienceSettings.isSmartSourceEnabled() ? R.string.poster_sources_ranked : R.string.poster_sources_order);
         binding.season.setVisibility(!movie && seasons > 1 ? View.VISIBLE : View.GONE);
         binding.season.setText(selectedSeason == 0 ? activity.getString(R.string.poster_sources_all_seasons)
@@ -101,11 +111,12 @@ final class PosterSourcesController {
     void start() {
         search.stop();
         updateControls();
-        List<Site> sites = VodConfig.get().getSites().stream().filter(Site::isSearchable).toList();
+        priorities = PosterSourcePrioritySetting.getOrderedKeys();
+        List<Site> sites = PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites());
         List<String> aliases = originalTitle.isEmpty() || originalTitle.equals(title) ? List.of() : List.of(originalTitle);
         // A series premiere year is not the release year of every later season.
         SearchRelevance.Query query = new SearchRelevance.Query(title, aliases, movie ? year : "", selectedSeason == 0 ? null : selectedSeason);
-        results = new PosterSourceResults(query, VodConfig.get().getHome().getKey(), sites.stream().map(Site::getKey).toList(), movie ? "movie" : "tv");
+        results = new PosterSourceResults(query, VodConfig.get().getHome().getKey(), sites.stream().map(Site::getKey).toList(), movie ? "movie" : "tv", priorities);
         adapter.update(List.of());
         if (sites.isEmpty()) {
             running = false;
@@ -118,7 +129,7 @@ final class PosterSourcesController {
         if (BrowseExperienceSettings.isSmartSourceEnabled()) queries.addAll(aliases);
         running = true;
         binding.status.setText(activity.getString(R.string.poster_sources_progress, 0, 0, sites.size() * queries.size()));
-        search.start(sites, queries, new DiscoverSourceSearch.Listener() {
+        search.start(sites, queries, priorities, new DiscoverSourceSearch.Listener() {
             @Override public void onResult(Result result, int returned, int total) {
                 if (result != null) results.add(result.getList());
                 render();
@@ -188,7 +199,9 @@ final class PosterSourcesController {
         @Override public void onBindViewHolder(@NonNull SourceHolder holder, int position) {
             Candidate item = items.get(position);
             Vod vod = item.vod();
-            holder.row.site.setText(vod.getSiteName());
+            int priority = priorities.indexOf(vod.getSiteKey());
+            holder.row.site.setText(priority < 0 ? vod.getSiteName()
+                    : activity.getString(R.string.poster_source_priority_site, priority + 1, vod.getSiteName()));
             holder.row.name.setText(vod.getName());
             List<String> parts = new ArrayList<>();
             if (!vod.getYear().isEmpty()) parts.add(vod.getYear());

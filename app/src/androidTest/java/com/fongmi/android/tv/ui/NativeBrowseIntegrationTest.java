@@ -30,9 +30,11 @@ import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.PosterSourcePrioritySetting;
 import com.fongmi.android.tv.source.PosterSourceResults;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
 import com.fongmi.android.tv.ui.activity.DiscoverDetailActivity;
@@ -58,6 +60,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -70,7 +73,7 @@ import static org.junit.Assert.*;
 /** Real native activities and D-pad events, using in-memory posters and a deliberately offline client. */
 @RunWith(AndroidJUnit4.class)
 public final class NativeBrowseIntegrationTest {
-    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources"};
+    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final List<Activity> previousActivities = new ArrayList<>();
@@ -82,7 +85,9 @@ public final class NativeBrowseIntegrationTest {
     private OkHttpClient originalTmdbClient;
     private OkHttpClient offlineClient;
     private Object savedSites;
+    private Config savedConfig;
     private boolean replacedSites;
+    private boolean replacedConfig;
     private boolean prepared;
 
     @Before public void setup() {
@@ -136,6 +141,7 @@ public final class NativeBrowseIntegrationTest {
                 cache.clear();
                 cache.putAll(savedCache);
                 if (replacedSites) setField(VodConfig.get(), "sites", savedSites);
+                if (replacedConfig) VodConfig.get().config(savedConfig);
                 SharedPreferences.Editor editor = Prefers.getPrefers().edit();
                 for (String key : PREFERENCES) {
                     Object value = preferences.get(key);
@@ -409,7 +415,7 @@ public final class NativeBrowseIntegrationTest {
                 assertContains("Overflowing source card pixels must be clipped before the controls/footer", viewport, new RectF(visible));
             }
             assertTrue("The fixture must exercise actual partial-row clipping, not only complete cards", clippedVisibleCards > 0);
-            for (int id : new int[]{R.id.heading, R.id.smart, R.id.retry}) {
+            for (int id : new int[]{R.id.heading, R.id.smart, R.id.retry, R.id.priority}) {
                 RectF control = screenBounds(panel.findViewById(id));
                 assertTrue("The source header controls remain above the scrolling viewport", control.bottom <= viewport.top + 1.5f);
             }
@@ -493,6 +499,87 @@ public final class NativeBrowseIntegrationTest {
         });
         press(KeyEvent.KEYCODE_BACK);
         await(() -> detail.hasWindowFocus() && !detail.isFinishing(), "BACK from editable search returns to the poster detail");
+    }
+
+    @Test(timeout = 60000)
+    public void posterPriorityEntryRestartsSearchAndKeepsFocusStableUntilLeavingResults() {
+        Site fallback = Site.get("native-priority-fallback", "示例补充来源");
+        Site preferred = Site.get("native-priority-preferred", "示例常用来源");
+        fallback.setSearchable(1);
+        preferred.setSearchable(1);
+        main(() -> {
+            savedConfig = VodConfig.get().getConfig();
+            replacedConfig = true;
+            VodConfig.get().config(new Config().url("https://native-priority-fixture.invalid/" + UUID.randomUUID()));
+            savedSites = field(VodConfig.get(), "sites");
+            replacedSites = true;
+            setField(VodConfig.get(), "sites", new ArrayList<>(List.of(fallback, preferred)));
+            PosterSourcePrioritySetting.putOrderedKeys(List.of(preferred.getKey()));
+            BrowseExperienceSettings.putDetailSourcesEnabled(true);
+            BrowseExperienceSettings.putSmartSourceEnabled(true);
+        });
+        DiscoverDetailActivity detail = launchDetail(true);
+        await(detail::hasWindowFocus, "poster detail for the source-priority fixture");
+        tapView(value(() -> detail.findViewById(R.id.search)));
+        View panel = value(() -> detail.findViewById(R.id.sourcePanel));
+        Object controller = value(() -> field(detail, "sources"));
+        View priority = value(() -> panel.findViewById(R.id.priority));
+        RecyclerView list = value(() -> panel.findViewById(R.id.results));
+        await(() -> panel.isShown() && !(boolean) field(controller, "running"), "offline queries finish before feeding transient results");
+        main(() -> {
+            assertEquals(detail.getString(R.string.poster_source_priority_button_count, 1), ((TextView) priority).getText().toString());
+            Vod early = poster("shared", "星河旅人", "movie");
+            early.setSite(fallback);
+            ((PosterSourceResults) field(controller, "results")).add(List.of(early));
+            invoke(controller, "render");
+        });
+        await(() -> list.findViewHolderForAdapterPosition(0) != null, "early fallback source is displayed");
+        press(KeyEvent.KEYCODE_DPAD_UP);
+        main(() -> assertTrue(list.findViewHolderForAdapterPosition(0).itemView.requestFocus()));
+        await(list::hasFocus, "remote focus stays on the fallback source");
+        main(() -> {
+            Vod late = poster("shared", "星河旅人", "movie");
+            late.setYear(""); // Less metadata must not override the user's explicit source preference.
+            late.setSite(preferred);
+            Vod wrongYear = poster("wrong-year", "星河旅人", "movie");
+            wrongYear.setYear("1984");
+            wrongYear.setSite(preferred);
+            Vod wrongTitle = poster("wrong-title", "山海之间", "movie");
+            wrongTitle.setSite(preferred);
+            Vod wrongKind = poster("wrong-kind", "星河旅人", "tv");
+            wrongKind.setSite(preferred);
+            ((PosterSourceResults) field(controller, "results")).add(List.of(late, wrongYear, wrongTitle, wrongKind));
+            invoke(controller, "render");
+        });
+        await(() -> list.getAdapter().getItemCount() == 2, "only the matching preferred and fallback sources remain");
+        main(() -> {
+            assertEquals(fallback.getName(), rowText(list, 0, R.id.site));
+            assertTrue("A later preferred answer must not move the card under the remote", list.findViewHolderForAdapterPosition(0).itemView.hasFocus());
+            assertTrue(priority.requestFocus());
+        });
+        await(() -> detail.getString(R.string.poster_source_priority_site, 1, preferred.getName()).equals(rowText(list, 0, R.id.site)),
+                "leaving the result list applies the preferred order");
+        Object previousRound = value(() -> field(controller, "results"));
+
+        tapView(priority);
+        awaitTextBounds(detail.getString(R.string.poster_source_priority_title));
+        Rect reset = awaitTextBounds(detail.getString(R.string.poster_source_priority_reset));
+        tap(reset.exactCenterX(), reset.exactCenterY());
+        assertEquals("Reset is still a draft before Save", List.of(preferred.getKey()), value(PosterSourcePrioritySetting::getOrderedKeys));
+        Rect save = awaitTextBounds(detail.getString(R.string.poster_source_priority_save));
+        tap(save.exactCenterX(), save.exactCenterY());
+        await(() -> detail.hasWindowFocus() && priority.hasFocus() && field(controller, "results") != previousRound,
+                "saving from the real rail entry starts a fresh round and restores control focus");
+        main(() -> {
+            assertTrue(PosterSourcePrioritySetting.getOrderedKeys().isEmpty());
+            assertEquals(List.of(), field(controller, "priorities"));
+            assertEquals(detail.getString(R.string.poster_source_priority_button_default), ((TextView) priority).getText().toString());
+            assertEquals(List.of(fallback, preferred), PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()));
+            PosterSourcePrioritySetting.putOrderedKeys(List.of(preferred.getKey()));
+            BrowseExperienceSettings.restoreOriginal();
+            assertTrue("Restore original browsing also clears this configuration's optional source priority",
+                    PosterSourcePrioritySetting.getOrderedKeys().isEmpty());
+        });
     }
 
     private HomeActivity changeHomeMode(HomeActivity previous, Runnable change, boolean enabled) {

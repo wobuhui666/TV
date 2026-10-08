@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fongmi.android.tv.ui.custom.JetStreamDialogSurfaceLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <com.fongmi.android.tv.ui.custom.JetStreamStrongLabelTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/poster_source_priority_title"
+        android:textSize="22sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/poster_source_priority_hint"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/add"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusLeft="@id/add"
+            android:nextFocusUp="@id/add"
+            android:text="@string/poster_source_priority_add" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/reset"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusRight="@id/reset"
+            android:nextFocusUp="@id/reset"
+            android:text="@string/poster_source_priority_reset" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:clipChildren="true"
+        android:clipToPadding="true">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:overScrollMode="never"
+            android:padding="3dp" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:lineSpacingExtra="6dp"
+            android:padding="12dp"
+            android:text="@string/poster_source_priority_empty"
+            android:textSize="14sp" />
+    </FrameLayout>
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:accessibilityLiveRegion="polite"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/cancel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusLeft="@id/cancel"
+            android:nextFocusDown="@id/cancel"
+            android:text="@string/poster_source_priority_cancel" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamPrimaryButtonTextView
+            android:id="@+id/save"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:nextFocusRight="@id/save"
+            android:nextFocusDown="@id/save"
+            android:text="@string/poster_source_priority_save" />
+    </LinearLayout>
+</com.fongmi.android.tv.ui.custom.JetStreamDialogSurfaceLayout>

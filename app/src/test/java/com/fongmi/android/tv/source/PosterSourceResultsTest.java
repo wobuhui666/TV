@@ -296,6 +296,158 @@ public class PosterSourceResultsTest {
         assertEquals(0, tv.hiddenCount());
     }
 
+    @Test
+    public void explicitSourcePriorityOutranksSmartEvidenceAndTheHomeSource() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "2021", null),
+                "home", List.of("home", "second", "first"), "movie", List.of("first", "second"));
+        Vod first = vod("first", "1", "Dune", "");
+        Vod second = vod("second", "1", "沙丘", "2021");
+        Vod home = vod("home", "1", "沙丘", "2021");
+        second.setTypeName("电影");
+        home.setTypeName("电影");
+        results.add(List.of(home, second, first));
+
+        assertTrue(results.snapshot(true).get(0).match().score() < results.snapshot(true).get(1).match().score());
+        assertFalse(results.snapshot(true).get(0).match().confident());
+        for (boolean smart : new boolean[]{false, true}) {
+            assertEquals(List.of(first, second, home), results.snapshot(smart).stream().map(PosterSourceResults.Candidate::vod).toList());
+        }
+    }
+
+    @Test
+    public void explicitPriorityStillRejectsWrongTitlesYearsSeasonsAndKinds() {
+        PosterSourceResults movie = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of(), "2021", null),
+                "priority", List.of("priority", "fallback"), "movie", List.of("priority"));
+        Vod wrongKind = vod("priority", "kind", "沙丘", "2021");
+        wrongKind.setTypeName("电视剧");
+        Vod correct = vod("fallback", "correct", "沙丘", "2021");
+        correct.setTypeName("电影");
+        movie.add(List.of(vod("priority", "title", "爱情公寓", "2021"), vod("priority", "year", "沙丘", "1984"),
+                vod("priority", "review", "沙丘 / 影评", "2021"), wrongKind, correct));
+
+        assertEquals(1, movie.snapshot(true).size());
+        assertSame(correct, movie.snapshot(true).get(0).vod());
+        assertEquals(4, movie.hiddenCount());
+
+        PosterSourceResults series = new PosterSourceResults(new SearchRelevance.Query("庆余年", List.of(), "", 2),
+                "priority", List.of("priority", "fallback"), "tv", List.of("priority"));
+        Vod secondSeason = vod("fallback", "season2", "庆余年 第二季", "2024");
+        series.add(List.of(vod("priority", "season1", "庆余年 第一季", "2019"), secondSeason));
+        assertEquals(1, series.snapshot(true).size());
+        assertSame(secondSeason, series.snapshot(true).get(0).vod());
+        assertEquals(1, series.hiddenCount());
+    }
+
+    @Test
+    public void fallbackSourcesKeepTheirOriginalSmartOrConfigurationOrder() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "", null),
+                "home", List.of("a", "home", "priority"), "", List.of("priority"));
+        Vod priority = vod("priority", "1", "Dune", "");
+        Vod a = vod("a", "1", "沙丘", "");
+        Vod home = vod("home", "1", "沙丘", "");
+        results.add(List.of(home, priority, a));
+
+        assertEquals(List.of(priority, a, home), results.snapshot(false).stream().map(PosterSourceResults.Candidate::vod).toList());
+        assertEquals(List.of(priority, home, a), results.snapshot(true).stream().map(PosterSourceResults.Candidate::vod).toList());
+    }
+
+    @Test
+    public void matchesInsideTheSamePreferredSourceKeepTheirOriginalOrdering() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "", null),
+                "", List.of("priority"), "", List.of("priority"));
+        Vod alias = vod("priority", "alias", "Dune", "");
+        Vod exact = vod("priority", "exact", "沙丘", "");
+        results.add(List.of(alias, exact));
+
+        assertSame(alias, results.snapshot(false).get(0).vod());
+        assertSame(exact, results.snapshot(true).get(0).vod());
+    }
+
+    @Test
+    public void fullCandidateListAdmitsALaterWeakerMatchFromAPreferredSource() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "", null),
+                "fallback", List.of("fallback", "second", "first"), "", List.of("first", "second"));
+        List<Vod> early = new ArrayList<>();
+        for (int i = 0; i < 140; i++) early.add(vod("fallback", "exact-" + i, "沙丘", ""));
+        results.add(early);
+        Vod second = vod("second", "alias", "Dune", "");
+        Vod first = vod("first", "alias", "Dune", "");
+        results.add(List.of(second));
+        results.add(List.of(first));
+
+        for (boolean smart : new boolean[]{false, true}) {
+            List<PosterSourceResults.Candidate> ordered = results.snapshot(smart);
+            assertEquals(120, ordered.size());
+            assertSame(first, ordered.get(0).vod());
+            assertSame(second, ordered.get(1).vod());
+            assertEquals(118, ordered.stream().filter(it -> it.vod().getSiteKey().equals("fallback")).count());
+        }
+    }
+
+    @Test
+    public void aLateFallbackCannotEvictAlreadyMatchingPreferredCandidates() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "", null),
+                "fallback", List.of("fallback", "priority"), "", List.of("priority"));
+        List<Vod> early = new ArrayList<>();
+        for (int i = 0; i < 120; i++) early.add(vod("priority", "alias-" + i, "Dune", ""));
+        results.add(early);
+        results.add(List.of(vod("fallback", "exact", "沙丘", ""), vod("priority", "wrong", "沙丘 / 影评", "")));
+
+        assertEquals(120, results.snapshot(true).size());
+        assertTrue(results.snapshot(true).stream().allMatch(it -> it.vod().getSiteKey().equals("priority")));
+        Vod strongerSameSource = vod("priority", "exact", "沙丘", "");
+        results.add(List.of(strongerSameSource));
+        assertEquals(120, results.snapshot(true).size());
+        assertSame(strongerSameSource, results.snapshot(true).get(0).vod());
+    }
+
+    @Test
+    public void aLateFirstPriorityDisplacesSecondPriorityWhenNoFallbackRemains() {
+        PosterSourceResults results = new PosterSourceResults(new SearchRelevance.Query("沙丘", List.of("Dune"), "", null),
+                "second", List.of("second", "first"), "", List.of("first", "second"));
+        List<Vod> early = new ArrayList<>();
+        for (int i = 0; i < 120; i++) early.add(vod("second", "exact-" + i, "沙丘", ""));
+        results.add(early);
+        Vod first = vod("first", "late", "Dune", "");
+        results.add(List.of(first));
+
+        assertEquals(120, results.snapshot(true).size());
+        assertSame(first, results.snapshot(true).get(0).vod());
+        assertEquals(119, results.snapshot(true).stream().filter(it -> it.vod().getSiteKey().equals("second")).count());
+    }
+
+    @Test
+    public void anEmptyExplicitPriorityRetainsLegacySortingAndBoundedAdmission() {
+        SearchRelevance.Query query = new SearchRelevance.Query("沙丘", List.of("Dune"), "", null);
+        PosterSourceResults legacy = new PosterSourceResults(query, "home", List.of("a", "home"), "movie");
+        PosterSourceResults empty = new PosterSourceResults(query, "home", List.of("a", "home"), "movie", List.of());
+        PosterSourceResults absent = new PosterSourceResults(query, "home", List.of("a", "home"), "movie", null);
+        List<Vod> items = new ArrayList<>();
+        for (int i = 0; i < 140; i++) items.add(vod(i % 2 == 0 ? "home" : "a", "alias-" + i, "Dune", ""));
+        items.add(vod("home", "exact", "沙丘", ""));
+        items.add(vod("home", "review", "沙丘 / 影评", ""));
+        for (PosterSourceResults target : List.of(legacy, empty, absent)) target.add(items);
+
+        for (boolean smart : new boolean[]{false, true}) {
+            assertEquals(legacy.snapshot(smart), empty.snapshot(smart));
+            assertEquals(legacy.snapshot(smart), absent.snapshot(smart));
+        }
+        assertEquals(legacy.hiddenCount(), empty.hiddenCount());
+        assertEquals(legacy.hiddenCount(), absent.hiddenCount());
+    }
+
+    @Test
+    public void explicitPriorityIsCopiedAndInvalidOrRepeatedKeysCannotReorderIt() {
+        List<String> priority = new ArrayList<>(Arrays.asList("b", null, "", "a", "b", " "));
+        PosterSourceResults results = new PosterSourceResults(SearchRelevance.Query.of("沙丘"), "a", List.of("a", "b"), "", priority);
+        priority.clear();
+        priority.add("a");
+        results.add(List.of(vod("a", "1", "沙丘", ""), vod("b", "1", "沙丘", "")));
+
+        assertEquals("b", results.snapshot(true).get(0).vod().getSiteKey());
+        assertEquals("b", results.snapshot(false).get(0).vod().getSiteKey());
+    }
+
     private static PosterSourceResults typedResults(String title, String type) {
         return new PosterSourceResults(SearchRelevance.Query.of(title), "", List.of(), type);
     }

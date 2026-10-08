@@ -521,6 +521,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                     RowSpec(KEY_BROWSE_HOME, context.getString(R.string.browse_home)),
                     RowSpec(KEY_BROWSE_FILTER, context.getString(R.string.browse_search_filter)),
                     RowSpec(KEY_BROWSE_SOURCES, context.getString(R.string.browse_detail_sources), toggle = true),
+                    RowSpec(KEY_BROWSE_PRIORITY, context.getString(R.string.poster_source_priority_title)),
                     RowSpec(KEY_BROWSE_SMART, context.getString(R.string.browse_smart_sources), toggle = true),
                     RowSpec(KEY_BROWSE_RESTORE, context.getString(R.string.browse_restore))
                 )
@@ -624,6 +625,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_BROWSE_HOME = "browse_home"
         const val KEY_BROWSE_FILTER = "browse_filter"
         const val KEY_BROWSE_SOURCES = "browse_sources"
+        const val KEY_BROWSE_PRIORITY = "browse_source_priority"
         const val KEY_BROWSE_SMART = "browse_smart"
         const val KEY_BROWSE_RESTORE = "browse_restore"
         const val SECTION_PLAYBACK = "playback"
