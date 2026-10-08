@@ -4,7 +4,7 @@
 
 **CI、本地 68 项单测与 16 项 ARM64 redroid Android 集成测试全部通过；集成测试 0 失败、0 跳过。**
 
-**验证环境勘误（2026-10-08）：**此前仅按系统报出的 `ro.product.model=SM_F900F` 将该端点标为“三星真机”。对同一 ADB 端点补查发现 `ro.hardware=redroid`，网络接口为容器 veth，故更正环境归类。下列测试数量、Android 实际运行结果及 APK SHA-256 校验记录保持不变；它们不构成实体三星硬件验收。
+**验证环境勘误（2026-10-08）：**此前仅按系统报出的 `ro.product.model=SM-F900F` 将该端点标为“三星真机”。对同一 ADB 端点补查发现 `ro.hardware=redroid`，网络接口为容器 veth，故更正环境归类。下列测试数量、Android 实际运行结果及 APK SHA-256 校验记录保持不变；它们不构成实体三星硬件验收。
 
 ## 构建与单元测试
 
@@ -27,7 +27,7 @@
 
 ## Android 集成验证
 
-目标环境：redroid，Android API 33，ARM64；系统报出的型号为 `SM_F900F`。使用独立的 `com.fongmi.android.tv.preview` 及其测试包，不覆盖正式应用。
+目标环境：redroid，Android API 33，ARM64；系统报出的型号为 `SM-F900F`。使用独立的 `com.fongmi.android.tv.preview` 及其测试包，不覆盖正式应用。
 
 验证包固定取自上述成功 CI 提交。重签名流程保留并逐项校验所有非签名 ZIP 条目的路径与内容，核对应用／测试目标包和源码提交；安装后再次读取设备上实际 APK 的 SHA-256，两者均与已核验产物一致：
 

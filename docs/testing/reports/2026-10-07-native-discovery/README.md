@@ -2,7 +2,7 @@
 
 测试环境：ARM64 redroid Android。使用独立的 `com.fongmi.android.tv.preview` 验证包，没有覆盖正式应用。
 
-**验证环境勘误（2026-10-08）：**此前仅按系统报出的 `ro.product.model=SM_F900F` 将该端点标为“三星真机”。对同一 ADB 端点补查发现 `ro.hardware=redroid`，网络接口为容器 veth，故更正环境归类。下列 Android 集成测试结果与截图仍为实际运行所得，不能作为实体三星硬件验收记录。
+**验证环境勘误（2026-10-08）：**此前仅按系统报出的 `ro.product.model=SM-F900F` 将该端点标为“三星真机”。对同一 ADB 端点补查发现 `ro.hardware=redroid`，网络接口为容器 veth，故更正环境归类。下列 Android 集成测试结果与截图仍为实际运行所得，不能作为实体三星硬件验收记录。
 
 ## 构建与测试
 
