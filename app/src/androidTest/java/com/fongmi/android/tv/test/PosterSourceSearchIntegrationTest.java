@@ -58,6 +58,7 @@ public final class PosterSourceSearchIntegrationTest {
         } finally {
             if (server != null) {
                 server.releaseOld.countDown();
+                server.releaseScheduled.countDown();
                 server.stop();
             }
         }
@@ -115,6 +116,84 @@ public final class PosterSourceSearchIntegrationTest {
         assertEquals("new-only", next.results.snapshot(true).get(0).vod().getId());
         next.assertHealthy(1);
         assertEquals(2, server.apiRequests.get());
+        assertEquals(0, server.unexpectedRequests.get());
+        assertNull("Local fixture failed", server.failure.get());
+    }
+
+    @Test(timeout = 30_000) public void preferredSourceAliasesEnterTheSixSlotsBeforeFallbackTitles() throws Exception {
+        List<Site> sites = scheduledSites();
+        Collector collector = scheduledCollector(sites);
+        List<String> priorities = List.of(sites.get(5).getKey(), sites.get(3).getKey(), sites.get(1).getKey(), sites.get(5).getKey());
+        instrumentation.runOnMainSync(() -> search.start(sites, List.of("沙丘", "Dune", "沙丘"), priorities, collector));
+
+        assertFirstScheduledWave(List.of("/schedule/priority-a|沙丘", "/schedule/priority-a|Dune",
+                "/schedule/priority-b|沙丘", "/schedule/priority-b|Dune", "/schedule/priority-c|沙丘", "/schedule/priority-c|Dune"));
+        server.releaseScheduled.countDown();
+        assertCompleteScheduledRound(collector, sites);
+    }
+
+    @Test(timeout = 30_000) public void anEmptyPriorityKeepsAllPrimaryTitlesAheadOfAliases() throws Exception {
+        List<Site> sites = scheduledSites();
+        Collector collector = scheduledCollector(sites);
+        instrumentation.runOnMainSync(() -> search.start(sites, List.of("沙丘", "Dune"), List.of(), collector));
+
+        assertFirstScheduledWave(List.of("/schedule/fallback-a|沙丘", "/schedule/priority-c|沙丘",
+                "/schedule/fallback-b|沙丘", "/schedule/priority-b|沙丘", "/schedule/fallback-c|沙丘", "/schedule/priority-a|沙丘"));
+        server.releaseScheduled.countDown();
+        assertCompleteScheduledRound(collector, sites);
+    }
+
+    @Test(timeout = 30_000) public void cancellingAPriorityWaveDropsQueuedFallbackAndItsLateCallbacks() throws Exception {
+        List<Site> sites = scheduledSites();
+        Collector old = scheduledCollector(sites);
+        List<String> priorities = List.of(sites.get(5).getKey(), sites.get(3).getKey(), sites.get(1).getKey());
+        instrumentation.runOnMainSync(() -> search.start(sites, List.of("沙丘", "Dune"), priorities, old));
+        assertFirstScheduledWave(List.of("/schedule/priority-a|沙丘", "/schedule/priority-a|Dune",
+                "/schedule/priority-b|沙丘", "/schedule/priority-b|Dune", "/schedule/priority-c|沙丘", "/schedule/priority-c|Dune"));
+
+        instrumentation.runOnMainSync(search::stop);
+        Site nextSite = site("a");
+        Collector next = new Collector(SearchRelevance.Query.of("新片"), nextSite.getKey(), List.of(nextSite.getKey()));
+        instrumentation.runOnMainSync(() -> search.start(List.of(nextSite), List.of("new-round"), List.of(nextSite.getKey()), next));
+        await(next.complete, "Cancelled priority HTTP calls kept all six slots occupied", 8);
+        next.assertHealthy(1);
+
+        server.releaseScheduled.countDown();
+        await(server.scheduledResponsesClosed, "Cancelled priority responses were not closed", 5);
+        assertFalse("Cancelled priority round delivered a late callback", old.anyCallback.await(500, TimeUnit.MILLISECONDS));
+        assertEquals(0, old.resultCallbacks.get());
+        assertEquals(0, old.completionCallbacks.get());
+        assertEquals(List.of("new-only"), next.ids);
+        assertEquals("Queued fallback requests escaped cancellation", 6, server.scheduledSnapshot().size());
+        assertEquals(7, server.apiRequests.get());
+        assertEquals(0, server.unexpectedRequests.get());
+        assertNull("Local fixture failed", server.failure.get());
+    }
+
+    private List<Site> scheduledSites() {
+        return List.of(site("schedule/fallback-a"), site("schedule/priority-c"), site("schedule/fallback-b"),
+                site("schedule/priority-b"), site("schedule/fallback-c"), site("schedule/priority-a"));
+    }
+
+    private Collector scheduledCollector(List<Site> sites) {
+        return new Collector(new SearchRelevance.Query("沙丘", List.of("Dune"), "2021", null),
+                sites.get(0).getKey(), sites.stream().map(Site::getKey).toList());
+    }
+
+    private void assertFirstScheduledWave(List<String> expected) throws Exception {
+        await(server.scheduledFirstWave, "The scheduler did not fill its first six HTTP slots", 8);
+        // All six handlers hold their response. No later job may consume a seventh slot.
+        assertFalse("Search exceeded the global six-slot budget", server.scheduledBeyondBudget.await(150, TimeUnit.MILLISECONDS));
+        assertEquals(expected.stream().sorted().toList(), server.scheduledSnapshot().stream().sorted().toList());
+    }
+
+    private void assertCompleteScheduledRound(Collector collector, List<Site> sites) throws Exception {
+        await(collector.complete, "Fallback title and alias queries did not finish", 15);
+        collector.assertHealthy(12);
+        assertEquals(12, server.apiRequests.get());
+        assertEquals("Duplicate source/keyword query reached HTTP", 12, server.scheduledSnapshot().stream().distinct().count());
+        assertEquals("Fallback results must remain available", sites.stream().map(Site::getKey).sorted().toList(),
+                collector.results.snapshot(false).stream().map(item -> item.vod().getSiteKey()).distinct().sorted().toList());
         assertEquals(0, server.unexpectedRequests.get());
         assertNull("Local fixture failed", server.failure.get());
     }
@@ -189,12 +268,22 @@ public final class PosterSourceSearchIntegrationTest {
         final CountDownLatch oldArrived = new CountDownLatch(1);
         final CountDownLatch releaseOld = new CountDownLatch(1);
         final CountDownLatch oldResponseClosed = new CountDownLatch(1);
+        final CountDownLatch scheduledFirstWave = new CountDownLatch(6);
+        final CountDownLatch scheduledBeyondBudget = new CountDownLatch(1);
+        final CountDownLatch releaseScheduled = new CountDownLatch(1);
+        final CountDownLatch scheduledResponsesClosed = new CountDownLatch(6);
+        final List<String> scheduledRequests = new ArrayList<>();
 
         Fixture() { super("127.0.0.1", 0); }
 
+        List<String> scheduledSnapshot() {
+            synchronized (scheduledRequests) { return new ArrayList<>(scheduledRequests); }
+        }
+
         @Override public Response serve(IHTTPSession session) {
             try {
-                if (session.getMethod() != Method.GET || !(session.getUri().equals("/a") || session.getUri().equals("/b"))
+                boolean scheduled = session.getUri().startsWith("/schedule/");
+                if (session.getMethod() != Method.GET || !(scheduled || session.getUri().equals("/a") || session.getUri().equals("/b"))
                         || session.getParms().containsKey("ids")) {
                     unexpectedRequests.incrementAndGet();
                     return newFixedLengthResponse(Response.Status.NOT_FOUND, "text/plain", "Unexpected fixture request");
@@ -204,22 +293,24 @@ public final class PosterSourceSearchIntegrationTest {
                 if (keyword.equals("old-round")) {
                     oldArrived.countDown();
                     if (!releaseOld.await(20, TimeUnit.SECONDS)) throw new IOException("Old response was never released");
-                    byte[] data = response(List.of(item("old-only", "旧片", "2020"))).getBytes(StandardCharsets.UTF_8);
-                    return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", new ByteArrayInputStream(data) {
-                        @Override public void close() throws IOException {
-                            try { super.close(); }
-                            finally { oldResponseClosed.countDown(); }
-                        }
-                    }, data.length);
+                    return json(List.of(item("old-only", "旧片", "2020")), oldResponseClosed);
                 }
                 if (keyword.equals("new-round")) return json(List.of(item("new-only", "新片", "2026")));
                 if (!keyword.equals("沙丘") && !keyword.equals("Dune")) throw new IOException("Unexpected fixture keyword");
+                if (scheduled) {
+                    synchronized (scheduledRequests) {
+                        scheduledRequests.add(session.getUri() + "|" + keyword);
+                        if (scheduledRequests.size() > 6 && releaseScheduled.getCount() != 0) scheduledBeyondBudget.countDown();
+                    }
+                    scheduledFirstWave.countDown();
+                    if (!releaseScheduled.await(20, TimeUnit.SECONDS)) throw new IOException("Scheduled responses were never released");
+                }
                 List<JSONObject> items = new ArrayList<>();
                 items.add(item("shared", keyword, "2021"));
                 items.add(item("wrong-year", keyword, "1984"));
                 items.add(item("wrong-title", "完美世界", "2021"));
                 if (keyword.equals("Dune")) items.add(item("alias-only", "Dune", "2021"));
-                return json(items);
+                return scheduled ? json(items, scheduledResponsesClosed) : json(items);
             } catch (Throwable error) {
                 failure.compareAndSet(null, error);
                 return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "text/plain", "Local fixture failure");
@@ -233,6 +324,16 @@ public final class PosterSourceSearchIntegrationTest {
 
         private Response json(List<JSONObject> items) throws Exception {
             return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", response(items));
+        }
+
+        private Response json(List<JSONObject> items, CountDownLatch closed) throws Exception {
+            byte[] data = response(items).getBytes(StandardCharsets.UTF_8);
+            return newFixedLengthResponse(Response.Status.OK, "application/json; charset=utf-8", new ByteArrayInputStream(data) {
+                @Override public void close() throws IOException {
+                    try { super.close(); }
+                    finally { closed.countDown(); }
+                }
+            }, data.length);
         }
 
         private String response(List<JSONObject> items) throws Exception {
