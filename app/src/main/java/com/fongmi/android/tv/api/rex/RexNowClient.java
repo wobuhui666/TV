@@ -255,9 +255,13 @@ public final class RexNowClient {
 
     /** [manifest 日期, 今天, 昨天, ...]（去重，东八区）。 */
     static List<String> dates(@Nullable String manifestDate) {
+        return dates(manifestDate, System.currentTimeMillis());
+    }
+
+    static List<String> dates(@Nullable String manifestDate, long now) {
         List<String> values = new ArrayList<>();
         if (manifestDate != null && !manifestDate.isEmpty()) values.add(manifestDate);
-        for (String recent : RexFeedDate.recent(RexFeedDate.MAX_BACKTRACK_DAYS)) if (!values.contains(recent)) values.add(recent);
+        for (String recent : RexFeedDate.recentFrom(now, RexFeedDate.MAX_BACKTRACK_DAYS)) if (!values.contains(recent)) values.add(recent);
         return values;
     }
 

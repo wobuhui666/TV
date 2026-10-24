@@ -123,9 +123,14 @@ public class RexNowMappingTest {
 
     @Test
     public void datesPrefersManifestDateThenRecent() {
-        List<String> dates = RexNowClient.dates("20261018");
+        List<String> dates = RexNowClient.dates("20261018", epoch(2026, 10, 24, 4, 0));
         assertEquals("20261018", dates.get(0));
         assertEquals(7, dates.size());
+        assertEquals("20261024", dates.get(1));
+        List<String> olderManifest = RexNowClient.dates("20261018", epoch(2026, 10, 25, 4, 0));
+        assertEquals("20261018", olderManifest.get(0));
+        assertEquals("20261025", olderManifest.get(1));
+        assertEquals(8, olderManifest.size());
         assertEquals("", RexNowClient.manifestDate("{\"schemaVersion\":2,\"date\":\"20261018\"}"));
         assertEquals("20261018", RexNowClient.manifestDate("{\"schemaVersion\":1,\"date\":\"20261018\"}"));
     }
