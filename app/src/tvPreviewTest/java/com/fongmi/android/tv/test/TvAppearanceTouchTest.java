@@ -15,6 +15,7 @@ import androidx.core.graphics.ColorUtils;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.Direction;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
@@ -226,6 +227,13 @@ public class TvAppearanceTouchTest {
             try (FileWriter writer = new FileWriter(new File(output, "result.txt"))) {
                 writer.write("PASS: production PosterHomeController/RexSpotlightPresenter/RexPosterPresenter with offline Rex feeds; dark/light palettes; first touch clicks and long press; D-pad continuity; Rex horizontal rail and vertical grid swipe; search/detail/dialog/TV Material settings; retained native title/switch and new dialog theme; theme toggle and recreation.\n");
             }
+        } catch (Exception | AssertionError failure) {
+            try {
+                capture("failure-" + activity.page);
+            } catch (Throwable captureFailure) {
+                failure.addSuppressed(captureFailure);
+            }
+            throw failure;
         } finally {
             main(() -> { activity.finish(); Setting.putLightTheme(false); Setting.putThemeColor(Setting.THEME_DEFAULT); });
         }
@@ -286,11 +294,20 @@ public class TvAppearanceTouchTest {
     }
 
     private void scrollSettingsToAppearance() {
-        int x = device.getDisplayWidth() * 3 / 4;
-        for (int i = 0; i < 12 && !device.hasObject(By.text("浅色")); i++) {
-            device.swipe(x, device.getDisplayHeight() * 4 / 5,
-                    x, device.getDisplayHeight() / 4, 35);
-            SystemClock.sleep(450);
+        for (int i = 0; i < 40 && !device.hasObject(By.text("浅色")); i++) {
+            UiObject2 content = null;
+            for (UiObject2 candidate : device.findObjects(By.scrollable(true))) {
+                Rect bounds = candidate.getVisibleBounds();
+                if (bounds.centerX() > device.getDisplayWidth() / 2 && bounds.height() > device.getDisplayHeight() / 3) {
+                    content = candidate;
+                    break;
+                }
+            }
+            assertNotNull("Production settings exposes its content scroll container", content);
+            // Small, slow gestures cannot fling past the appearance row between checks.
+            boolean moved = content.scroll(Direction.DOWN, .2f, 400);
+            SystemClock.sleep(300);
+            if (!moved) break;
         }
         assertTrue("Production settings scrolls to the appearance actions", device.hasObject(By.text("浅色")));
     }

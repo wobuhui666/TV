@@ -29,6 +29,9 @@ collect() {
     adb shell dumpsys dropbox --print data_app_crash > "$out/dropbox-java-crashes.txt" 2>&1 || true
     adb shell dumpsys dropbox --print data_app_native_crash > "$out/dropbox-native-crashes.txt" 2>&1 || true
     adb exec-out run-as "$pkg" tar -c -f - files/diagnostics > "$out/app-diagnostics.tar" 2> "$out/app-diagnostics-collection.txt" || true
+    adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
+    adb shell uiautomator dump /sdcard/tv-ui-last.xml >/dev/null 2>&1 || true
+    adb pull /sdcard/tv-ui-last.xml "$out/last-hierarchy.xml" >/dev/null 2>&1 || true
     adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' > "$out/focus.txt" || true
 }
 trap collect EXIT
