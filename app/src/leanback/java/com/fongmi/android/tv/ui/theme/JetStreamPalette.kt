@@ -38,25 +38,25 @@ data class JetStreamAccentPalette(
 
 object JetStreamPalette {
 
-    @ColorInt private val SURFACE get() = if (RexTheme.isLight) 0xFFF9FAFF.toInt() else 0xFF1A1C1E.toInt()
-    @ColorInt private val SURFACE_CONTAINER get() = if (RexTheme.isLight) 0xFFEEF1F8.toInt() else 0xFF1E2022.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGH get() = if (RexTheme.isLight) 0xFFE6EAF3.toInt() else 0xFF292B2D.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGHEST get() = if (RexTheme.isLight) 0xFFDDE2EE.toInt() else 0xFF33353A.toInt()
-    @ColorInt private val ON_SURFACE get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
-    @ColorInt private val ON_SURFACE_VARIANT get() = if (RexTheme.isLight) 0xFF4D5669.toInt() else 0xFFC4C6CF.toInt()
-    @ColorInt private val OUTLINE get() = if (RexTheme.isLight) 0xFF70798B.toInt() else 0xFF8E9099.toInt()
-    @ColorInt private val OUTLINE_VARIANT get() = if (RexTheme.isLight) 0xFFCAD1DF.toInt() else 0xFF44464F.toInt()
-    @ColorInt private val ERROR get() = if (RexTheme.isLight) 0xFFBA1A1A.toInt() else 0xFFFFB4AB.toInt()
-    @ColorInt private val ON_ERROR get() = if (RexTheme.isLight) 0xFFFFFFFF.toInt() else 0xFF690005.toInt()
-    @ColorInt private val ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFFFFDAD6.toInt() else 0xFF93000A.toInt()
-    @ColorInt private val ON_ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFF410002.toInt() else 0xFFFFDAD6.toInt()
-    @ColorInt private val BACKGROUND get() = if (RexTheme.isLight) 0xFFF3F5FA.toInt() else 0xFF11131A.toInt()
-    @ColorInt private val ON_BACKGROUND get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
-    @ColorInt private val SCRIM_LIGHT get() = if (RexTheme.isLight) 0x141A2030 else 0x14FFFFFF
-    @ColorInt private val SCRIM_MEDIUM get() = if (RexTheme.isLight) 0x291A2030 else 0x29FFFFFF
-    @ColorInt private val SCRIM_HEAVY get() = if (RexTheme.isLight) 0x3D1A2030 else 0x3DFFFFFF
-    @ColorInt private val OVERLAY_SURFACE get() = if (RexTheme.isLight) 0xF2F9FAFF.toInt() else 0xCC1A1C1E.toInt()
-    @ColorInt private val OVERLAY_SURFACE_LIGHT get() = if (RexTheme.isLight) 0xDDF9FAFF.toInt() else 0x661A1C1E
+    @get:ColorInt private val SURFACE get() = if (RexTheme.isLight) 0xFFF9FAFF.toInt() else 0xFF1A1C1E.toInt()
+    @get:ColorInt private val SURFACE_CONTAINER get() = if (RexTheme.isLight) 0xFFEEF1F8.toInt() else 0xFF1E2022.toInt()
+    @get:ColorInt private val SURFACE_CONTAINER_HIGH get() = if (RexTheme.isLight) 0xFFE6EAF3.toInt() else 0xFF292B2D.toInt()
+    @get:ColorInt private val SURFACE_CONTAINER_HIGHEST get() = if (RexTheme.isLight) 0xFFDDE2EE.toInt() else 0xFF33353A.toInt()
+    @get:ColorInt private val ON_SURFACE get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
+    @get:ColorInt private val ON_SURFACE_VARIANT get() = if (RexTheme.isLight) 0xFF4D5669.toInt() else 0xFFC4C6CF.toInt()
+    @get:ColorInt private val OUTLINE get() = if (RexTheme.isLight) 0xFF70798B.toInt() else 0xFF8E9099.toInt()
+    @get:ColorInt private val OUTLINE_VARIANT get() = if (RexTheme.isLight) 0xFFCAD1DF.toInt() else 0xFF44464F.toInt()
+    @get:ColorInt private val ERROR get() = if (RexTheme.isLight) 0xFFBA1A1A.toInt() else 0xFFFFB4AB.toInt()
+    @get:ColorInt private val ON_ERROR get() = if (RexTheme.isLight) 0xFFFFFFFF.toInt() else 0xFF690005.toInt()
+    @get:ColorInt private val ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFFFFDAD6.toInt() else 0xFF93000A.toInt()
+    @get:ColorInt private val ON_ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFF410002.toInt() else 0xFFFFDAD6.toInt()
+    @get:ColorInt private val BACKGROUND get() = if (RexTheme.isLight) 0xFFF3F5FA.toInt() else 0xFF11131A.toInt()
+    @get:ColorInt private val ON_BACKGROUND get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
+    @get:ColorInt private val SCRIM_LIGHT get() = if (RexTheme.isLight) 0x141A2030 else 0x14FFFFFF
+    @get:ColorInt private val SCRIM_MEDIUM get() = if (RexTheme.isLight) 0x291A2030 else 0x29FFFFFF
+    @get:ColorInt private val SCRIM_HEAVY get() = if (RexTheme.isLight) 0x3D1A2030 else 0x3DFFFFFF
+    @get:ColorInt private val OVERLAY_SURFACE get() = if (RexTheme.isLight) 0xF2F9FAFF.toInt() else 0xCC1A1C1E.toInt()
+    @get:ColorInt private val OVERLAY_SURFACE_LIGHT get() = if (RexTheme.isLight) 0xDDF9FAFF.toInt() else 0x661A1C1E
     @ColorInt private val STAR_BLUE_SEED = 0xFF4870E0.toInt()
 
     private val controlStates = arrayOf(

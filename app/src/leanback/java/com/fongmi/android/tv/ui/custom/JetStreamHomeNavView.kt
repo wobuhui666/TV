@@ -71,6 +71,7 @@ class JetStreamHomeNavView @JvmOverloads constructor(
     private var currentSelectedKey by mutableStateOf("")
     private var focusedIndex by mutableStateOf(0)
     private var navFocused by mutableStateOf(false)
+    private var centerPressed = false
     private var centerLongPressed = false
 
     init {
@@ -95,7 +96,10 @@ class JetStreamHomeNavView @JvmOverloads constructor(
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         navFocused = gainFocus
         if (gainFocus) normalizeFocus()
-        else centerLongPressed = false
+        else {
+            centerPressed = false
+            centerLongPressed = false
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -129,15 +133,18 @@ class JetStreamHomeNavView @JvmOverloads constructor(
 
     private fun handleCenterKey(event: KeyEvent): Boolean {
         normalizeFocus()
-        if (event.action == KeyEvent.ACTION_DOWN && event.isLongPress) {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) centerPressed = true
+        if (event.action == KeyEvent.ACTION_DOWN && event.isLongPress && !centerLongPressed) {
             centerLongPressed = true
             clickNav(focusedIndex, true)
             return true
         }
         if (event.action == KeyEvent.ACTION_UP) {
+            if (!centerPressed) return true
+            centerPressed = false
             if (centerLongPressed) {
                 centerLongPressed = false
-            } else {
+            } else if (!event.isCanceled) {
                 clickNav(focusedIndex, false)
             }
             return true

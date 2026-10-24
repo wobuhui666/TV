@@ -50,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -146,6 +148,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         if (restoreFocus || restoreSectionFocus) {
             focusedSectionKey = null
             focusedRowKey = null
+            focusedActionKey = null
             post {
                 if (isShown && isEnabled) {
                     requestFocus()
@@ -161,6 +164,9 @@ class JetStreamSettingView @JvmOverloads constructor(
 
     fun showSection(sectionKey: String) {
         selectedSectionKey = sectionKey
+        focusedSectionKey = null
+        focusedRowKey = null
+        focusedActionKey = null
     }
 
     fun requestInitialFocus() {
@@ -190,7 +196,10 @@ class JetStreamSettingView @JvmOverloads constructor(
         val center = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
         if (center) {
             if (event.action == KeyEvent.ACTION_DOWN) {
-                if (event.repeatCount == 0) centerPressed = true
+                if (event.repeatCount == 0) {
+                    centerPressed = true
+                    event.startTracking()
+                }
                 if (event.isLongPress && !centerLongPressed) {
                     centerLongPressed = true
                     activateFocused(true)
@@ -228,10 +237,14 @@ class JetStreamSettingView @JvmOverloads constructor(
                     focusedActionKey = null
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> focusedActionKey = row.actions.getOrNull((actionIndex + 1).coerceAtMost(row.actions.lastIndex))?.key
-                KeyEvent.KEYCODE_DPAD_LEFT -> if (actionIndex > 0) focusedActionKey = row.actions[actionIndex - 1].key else {
-                    focusedSectionKey = selectedSectionKey
-                    focusedRowKey = null
-                    focusedActionKey = null
+                KeyEvent.KEYCODE_DPAD_LEFT -> when {
+                    actionIndex > 0 -> focusedActionKey = row.actions[actionIndex - 1].key
+                    actionIndex == 0 -> focusedActionKey = null
+                    else -> {
+                        focusedSectionKey = selectedSectionKey
+                        focusedRowKey = null
+                        focusedActionKey = null
+                    }
                 }
             }
         }
@@ -241,7 +254,7 @@ class JetStreamSettingView @JvmOverloads constructor(
     private fun activateFocused(longClick: Boolean) {
         focusedSectionKey?.let { selectSection(it); return }
         val row = visibleRows().firstOrNull { it.key == focusedRowKey } ?: visibleRows().firstOrNull() ?: return
-        triggerSettingAction(focusedActionKey ?: row.actions.firstOrNull()?.key ?: row.key, longClick)
+        triggerSettingAction(focusedActionKey ?: row.key, longClick)
     }
 
     private fun selectSection(key: String) {
@@ -264,7 +277,7 @@ class JetStreamSettingView @JvmOverloads constructor(
     }
 
     private fun isActionAvailable(key: String): Boolean {
-        sections().flatMap { it.rows }.filter { isRowVisible(it.key) }.forEach { row ->
+        visibleRows().forEach { row ->
             if (row.key == key || row.actions.any { action -> action.key == key }) return true
         }
         return false
@@ -566,9 +579,13 @@ class JetStreamSettingView @JvmOverloads constructor(
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     private fun ActionChip(rowKey: String, action: ActionSpec) {
+        val bringIntoView = remember { BringIntoViewRequester() }
         val interactionSource = remember { MutableInteractionSource() }
         val focused = hostFocused && focusedSectionKey == null && focusedActionKey == action.key
         val selected = action.selected
+        LaunchedEffect(focused) {
+            if (focused) bringIntoView.bringIntoView()
+        }
         val scale by animateFloatAsState(
             if (focused) JetStreamAnimations.FocusScaleMedium else 1.0f,
             animationSpec = JetStreamAnimations.ScaleSpring,
@@ -600,6 +617,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         Row(
             modifier = Modifier
                 .height(38.dp)
+                .bringIntoViewRequester(bringIntoView)
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(RoundedCornerShape(19.dp))
                 .background(background)

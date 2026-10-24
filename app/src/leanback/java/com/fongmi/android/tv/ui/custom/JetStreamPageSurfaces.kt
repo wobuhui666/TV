@@ -1110,6 +1110,7 @@ class JetStreamSearchInputView @JvmOverloads constructor(
         setTextColor(jetStreamColorStateList(R.color.jetstream_list_title_text))
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
         applyJetStreamTypeface()
+        applyJetStreamCursor()
         if (hasNoPadding()) setPadding(jetStreamDpInt(10), 0, jetStreamDpInt(10), 0)
     }
 }

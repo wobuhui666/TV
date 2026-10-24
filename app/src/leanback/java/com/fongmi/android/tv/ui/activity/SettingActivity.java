@@ -281,6 +281,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             return;
         }
         switch (key) {
+            case JetStreamSettingView.KEY_THEME_MODE -> RexTheme.setLight(!RexTheme.isLight());
             case JetStreamSettingView.KEY_THEME_DARK -> RexTheme.setLight(false);
             case JetStreamSettingView.KEY_THEME_LIGHT -> RexTheme.setLight(true);
             case JetStreamSettingView.KEY_VOD -> onVod();

@@ -30,6 +30,8 @@ jobs:
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - name: Checkout Media3 fork
         uses: actions/checkout@v4
         with:

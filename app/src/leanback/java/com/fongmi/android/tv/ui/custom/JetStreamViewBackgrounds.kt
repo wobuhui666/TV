@@ -1,6 +1,8 @@
 package com.fongmi.android.tv.ui.custom
 
 import android.content.Context
+import android.os.Build
+import android.widget.EditText
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.View
@@ -87,4 +89,16 @@ internal fun TextView.applyJetStreamTypeface() {
     val family = jetStreamTypeface(context) ?: return
     val style = typeface?.style ?: Typeface.NORMAL
     if (style == Typeface.NORMAL) typeface = family else setTypeface(family, style)
+}
+
+/** Theme-aware cursor and selection for TV text input; the shared drawable is white. */
+internal fun TextView.applyJetStreamCursor() {
+    if (this !is EditText) return
+    highlightColor = JetStreamPalette.primaryInt().let { (it and 0x00FFFFFF) or 0x40000000 }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        textCursorDrawable = GradientDrawable().apply {
+            setColor(JetStreamPalette.primaryInt())
+            setSize(jetStreamDpInt(2), jetStreamDpInt(24))
+        }
+    }
 }

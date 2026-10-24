@@ -537,6 +537,7 @@ private fun TextView.applyJetStreamDialogInputSurface(
     setHintTextColor(jetStreamColorStateList(R.color.jetstream_list_supporting_text))
     setTextColor(jetStreamColorStateList(R.color.jetstream_list_title_text))
     applyJetStreamTypeface()
+    applyJetStreamCursor()
     background = StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), jetStreamDialogInputDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
         addState(intArrayOf(), jetStreamDialogInputDrawable(R.color.jetstream_surface_container_high, R.color.jetstream_outline_variant, 1))

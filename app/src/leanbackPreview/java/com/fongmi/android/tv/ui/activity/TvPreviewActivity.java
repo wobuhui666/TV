@@ -22,7 +22,7 @@ import com.fongmi.android.tv.ui.theme.RexTheme;
 import java.util.Arrays;
 
 /** Offline fixtures composed of the same TV layouts and controls shipped in the app. */
-public class TvPreviewActivity extends BaseActivity implements JetStreamSettingView.Listener {
+public class TvPreviewActivity extends BaseActivity implements JetStreamSettingView.Listener, CustomKeyDownVod.Listener {
     public static volatile TvPreviewActivity current;
     public JetStreamHomeNavView nav;
     public JetStreamChipRow chips;
@@ -33,6 +33,11 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public int lastChip = -1;
     public int cardClicks;
     public int cardLongClicks;
+    public int singleTaps;
+    public int doubleTaps;
+    public long seekTime;
+    public JetStreamVodControlView controls;
+    public CustomKeyDownVod gestures;
     public String page = "home";
     private FrameLayout root;
 
@@ -88,6 +93,22 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             RecyclerView words = content.findViewById(R.id.wordRecycler);
             words.setLayoutManager(new GridLayoutManager(this, 2));
             words.setAdapter(new CardAdapter(8));
+            return;
+        }
+        if (name.equals("playback")) {
+            root.removeAllViews();
+            View video = new View(this);
+            video.setBackgroundColor(0xFF172238);
+            root.addView(video, new FrameLayout.LayoutParams(-1, -1));
+            gestures = CustomKeyDownVod.create(this);
+            gestures.setFull(true);
+            video.setOnTouchListener((view, event) -> gestures.onTouchEvent(event));
+            controls = new JetStreamVodControlView(this);
+            controls.setMediaTitle("星际旅途", "第 3 集 · 4K", "离线播放控件预览");
+            controls.setPlaybackState(false, false);
+            controls.setControlsVisible(true);
+            root.addView(controls, new FrameLayout.LayoutParams(-1, -1));
+            controls.requestFocus();
             return;
         }
         LinearLayout layout = column();
@@ -158,10 +179,21 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
 
     @Override public void onSettingAction(String key) {
         lastAction = key;
+        if (key.equals(JetStreamSettingView.KEY_THEME_MODE)) RexTheme.setLight(!RexTheme.isLight());
         if (key.equals(JetStreamSettingView.KEY_THEME_LIGHT)) RexTheme.setLight(true);
         if (key.equals(JetStreamSettingView.KEY_THEME_DARK)) RexTheme.setLight(false);
     }
     @Override public void onSettingLongAction(String key) { lastAction = "long-" + key; }
+
+    @Override public void onSeeking(long time) { seekTime = time; }
+    @Override public void onSeekEnd(long time) { seekTime = time; }
+    @Override public boolean onSpeedUp() { return false; }
+    @Override public void onSpeedEnd() { }
+    @Override public void onKeyUp() { if (controls != null) controls.setControlsVisible(true); }
+    @Override public void onKeyDown() { if (controls != null) controls.setControlsVisible(true); }
+    @Override public void onKeyCenter() { }
+    @Override public void onSingleTap() { singleTaps++; if (controls != null) controls.setControlsVisible(true); }
+    @Override public void onDoubleTap() { doubleTaps++; }
 
     private class CardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private final int count;

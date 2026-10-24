@@ -101,7 +101,7 @@ public class TvAppearanceTouchTest {
                 assertEquals(3, activity.lastChip);
                 capture(theme + "-03-chips-touch-dpad");
                 Rect chipBounds = text("动漫").getVisibleBounds();
-                device.swipe(chipBounds.centerX(), chipBounds.centerY(), chipBounds.centerX(), chipBounds.centerY(), 90);
+                device.swipe(chipBounds.centerX(), chipBounds.centerY(), chipBounds.centerX(), chipBounds.centerY(), 130);
                 SystemClock.sleep(350);
                 assertEquals("chip-long-3", activity.lastAction);
 
@@ -141,6 +141,22 @@ public class TvAppearanceTouchTest {
                 capture(theme + "-08-dialog");
                 text("关闭").click();
 
+                main(() -> activity.showPage("playback"));
+                capture(theme + "-09-playback");
+                main(() -> activity.controls.setVisibility(View.GONE));
+                int centerX = device.getDisplayWidth() / 2;
+                int centerY = device.getDisplayHeight() / 2;
+                device.click(centerX, centerY);
+                SystemClock.sleep(700);
+                assertTrue("Video receives single tap after DOWN", activity.singleTaps > 0);
+                int oldDoubles = activity.doubleTaps;
+                device.click(centerX, centerY); SystemClock.sleep(90); device.click(centerX, centerY);
+                SystemClock.sleep(500);
+                assertEquals(oldDoubles + 1, activity.doubleTaps);
+                device.swipe(centerX - 250, centerY, centerX + 250, centerY, 12);
+                SystemClock.sleep(500);
+                assertTrue("Swipe uses the existing seek callback", activity.seekTime > 0);
+                main(() -> activity.gestures.reset());
                 main(() -> activity.showPage("settings"));
                 capture(theme + "-09-settings");
                 text(light ? "深色" : "浅色").click();
@@ -148,14 +164,16 @@ public class TvAppearanceTouchTest {
                 assertEquals(!light, RexTheme.isLight());
                 main(() -> assertTrue("Settings host remains focused after switching", activity.settings.isFocused()));
                 capture(theme + "-10-settings-switched");
-                device.pressDPadLeft(); device.pressDPadCenter();
+                if (light) device.pressDPadRight(); else device.pressDPadLeft();
+                device.pressDPadCenter();
                 SystemClock.sleep(400);
-                assertFalse("D-pad selects dark mode after touch on light", RexTheme.isLight());
+                assertEquals("D-pad moves from the touched appearance chip", light, RexTheme.isLight());
                 text(light ? "浅色" : "深色").click();
                 SystemClock.sleep(350);
                 assertEquals(light, RexTheme.isLight());
                 main(() -> { activity.cardClicks = 0; activity.cardLongClicks = 0; });
             }
+            verifyGestureCancellation();
             main(() -> RexTheme.setLight(true));
             main(() -> activity.recreate());
             SystemClock.sleep(1200);
@@ -170,6 +188,22 @@ public class TvAppearanceTouchTest {
         }
     }
 
+    private void verifyGestureCancellation() {
+        main(() -> activity.showPage("playback"));
+        int before = activity.singleTaps;
+        main(() -> {
+            long time = SystemClock.uptimeMillis();
+            android.view.MotionEvent down = android.view.MotionEvent.obtain(time, time, android.view.MotionEvent.ACTION_DOWN, 200, 200, 0);
+            android.view.MotionEvent cancel = android.view.MotionEvent.obtain(time, time + 20, android.view.MotionEvent.ACTION_CANCEL, 200, 200, 0);
+            assertTrue("Gesture stream claims DOWN", activity.gestures.onTouchEvent(down));
+            activity.gestures.onTouchEvent(cancel);
+            down.recycle(); cancel.recycle();
+        });
+        SystemClock.sleep(600);
+        assertEquals("Canceled gesture must not activate a tap", before, activity.singleTaps);
+        main(() -> activity.gestures.reset());
+    }
+
     private void verifyPaletteContrast() {
         main(() -> {
             for (com.fongmi.android.tv.ui.theme.JetStreamAccentPalette preset : JetStreamPalette.presets()) {
@@ -181,6 +215,10 @@ public class TvAppearanceTouchTest {
                 assertTrue("Text/surface contrast", ColorUtils.calculateContrast(text, surface) >= 4.5);
                 assertTrue("Focus contrast for " + preset.getValue(), ColorUtils.calculateContrast(onContainer, container) >= 4.5);
                 assertEquals(surface, JetStreamPalette.resolveColorStateList(activity, R.color.jetstream_surface).getDefaultColor());
+            }
+            for (int seed : new int[] {0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF}) {
+                Setting.putThemeColor(seed);
+                assertTrue("Custom light/dark focus contrast", ColorUtils.calculateContrast(JetStreamPalette.onPrimaryContainerInt(), JetStreamPalette.primaryContainerInt()) >= 4.5);
             }
             Setting.putThemeColor(Setting.THEME_DEFAULT);
         });

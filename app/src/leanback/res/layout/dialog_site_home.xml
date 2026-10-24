@@ -41,8 +41,7 @@
             android:nextFocusUp="@id/search"
             android:nextFocusDown="@id/change"
             android:padding="8dp"
-            android:src="@drawable/ic_site_search"
-            app:tint="@color/white" />
+            android:src="@drawable/ic_site_search" />
 
         <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
             android:id="@+id/change"
@@ -54,8 +53,7 @@
             android:nextFocusUp="@id/search"
             android:nextFocusDown="@id/select"
             android:padding="8dp"
-            android:src="@drawable/ic_site_change"
-            app:tint="@color/white" />
+            android:src="@drawable/ic_site_change" />
 
         <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
             android:id="@+id/select"
@@ -67,8 +65,7 @@
             android:nextFocusUp="@id/change"
             android:nextFocusDown="@id/cancel"
             android:padding="8dp"
-            android:src="@drawable/ic_site_select"
-            app:tint="@color/white" />
+            android:src="@drawable/ic_site_select" />
 
         <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
             android:id="@+id/cancel"
@@ -80,8 +77,7 @@
             android:nextFocusUp="@id/select"
             android:nextFocusDown="@id/mode"
             android:padding="8dp"
-            android:src="@drawable/ic_site_cancel"
-            app:tint="@color/white" />
+            android:src="@drawable/ic_site_cancel" />
 
         <com.fongmi.android.tv.ui.custom.JetStreamRoundChipImageView
             android:id="@+id/mode"
@@ -93,7 +89,6 @@
             android:nextFocusUp="@id/cancel"
             android:nextFocusDown="@id/mode"
             android:padding="8dp"
-            app:tint="@color/white"
             tools:src="@drawable/ic_site_list" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>

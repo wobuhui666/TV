@@ -20,7 +20,7 @@
 
     <style name="Theme.App" parent="Theme.Base" />
 
-    <style name="Theme.App.Light" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.Light.Base" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">#2B4690</item>
         <item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorSurface">#F9FAFF</item>
@@ -34,6 +34,8 @@
         <item name="android:fontFamily">@font/misans</item>
         <item name="fontFamily">@font/misans</item>
     </style>
+
+    <style name="Theme.App.Light" parent="Theme.Light.Base" />
 
     <style name="Theme.Crash" parent="Theme.Base">
         <item name="android:windowBackground">@color/jetstream_background</item>

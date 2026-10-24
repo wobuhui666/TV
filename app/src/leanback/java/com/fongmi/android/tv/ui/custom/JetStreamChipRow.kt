@@ -149,6 +149,10 @@ class JetStreamChipRow @JvmOverloads constructor(
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         rowFocused = gainFocus
         if (gainFocus) normalizeFocus()
+        else {
+            centerPressed = false
+            centerLongPressed = false
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -176,7 +180,7 @@ class JetStreamChipRow @JvmOverloads constructor(
                 // 消费 DOWN 后系统不会自动跟踪长按，需显式开启 isLongPress 才会置位
                 event.startTracking()
             }
-            if (event.isLongPress && longClickListener != null) {
+            if (event.isLongPress && !centerLongPressed && longClickListener != null) {
                 centerLongPressed = true
                 longClickChip(focusedIndex)
             }
@@ -186,7 +190,7 @@ class JetStreamChipRow @JvmOverloads constructor(
             if (!centerPressed) return true
             centerPressed = false
             if (centerLongPressed) centerLongPressed = false
-            else clickChip(focusedIndex)
+            else if (!event.isCanceled) clickChip(focusedIndex)
             return true
         }
         return true

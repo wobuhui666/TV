@@ -94,8 +94,13 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
             else listener.onKeyUp();
         } else {
             reset();
-            if (dx < 0) listener.onKeyLeft(0);
-            else listener.onKeyRight(0);
+            if (dx < 0) {
+                listener.onSeeking(-Constant.INTERVAL_SEEK);
+                listener.onKeyLeft(-Constant.INTERVAL_SEEK);
+            } else {
+                listener.onSeeking(Constant.INTERVAL_SEEK);
+                listener.onKeyRight(Constant.INTERVAL_SEEK);
+            }
         }
         return true;
     }
