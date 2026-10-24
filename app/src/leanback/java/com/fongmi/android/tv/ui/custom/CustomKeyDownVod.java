@@ -56,6 +56,7 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     }
 
     public void setFull(boolean full) {
+        if (this.full && !full) cancelGesture();
         this.full = full;
     }
 
@@ -137,6 +138,10 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     public void reset() {
         pendingSeek.clear();
+        cancelGesture();
+    }
+
+    private void cancelGesture() {
         swipe.reset();
         long now = android.os.SystemClock.uptimeMillis();
         MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);

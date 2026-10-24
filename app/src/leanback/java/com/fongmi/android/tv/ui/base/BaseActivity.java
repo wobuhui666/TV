@@ -5,6 +5,7 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.graphics.drawable.ColorDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -14,11 +15,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.ui.custom.CustomWallView;
 import com.fongmi.android.tv.ui.theme.JetStreamThemeController;
+import com.fongmi.android.tv.ui.theme.JetStreamPalette;
 import com.fongmi.android.tv.ui.theme.RexTheme;
 import com.fongmi.android.tv.utils.Util;
 
@@ -36,6 +40,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         if (RexTheme.isLight()) setTheme(R.style.Theme_App_Light);
         super.onCreate(savedInstanceState);
+        applyThemeWindow();
         setContentView(getBinding().getRoot());
         EventBus.getDefault().register(this);
         initView(savedInstanceState);
@@ -103,7 +108,15 @@ public abstract class BaseActivity extends AppCompatActivity {
     public void onThemeEvent(RefreshEvent event) {
         if (event.getType() != RefreshEvent.Type.THEME) return;
         JetStreamThemeController.refresh();
+        applyThemeWindow();
         onThemeChanged();
+    }
+
+    private void applyThemeWindow() {
+        getWindow().setBackgroundDrawable(new ColorDrawable(JetStreamPalette.resolveColor(this, R.color.jetstream_background)));
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(RexTheme.isLight());
+        controller.setAppearanceLightNavigationBars(RexTheme.isLight());
     }
 
     protected void onThemeChanged() {

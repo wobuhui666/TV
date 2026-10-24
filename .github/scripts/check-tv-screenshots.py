@@ -19,7 +19,7 @@ with Image.open(root / "light-01-home.png") as light, Image.open(root / "dark-01
 assert "PASS:" in (root / "result.txt").read_text()
 print("PASS: complete screenshots, nonblank UI, distinct light/dark backgrounds and interaction assertions")
 
-scenes = ["11-home-layout", "03-chips-touch-dpad", "06-search", "07-detail", "08-dialog", "09-playback", "09-settings"]
+scenes = ["11-home-layout", "03-chips-touch-dpad", "06-search", "07-detail", "08-dialog", "09-playback", "09-settings", "12-library"]
 sheet = Image.new("RGB", (960, len(scenes) * 294), "#e7e9ef")
 draw = ImageDraw.Draw(sheet)
 for row, scene in enumerate(scenes):

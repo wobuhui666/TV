@@ -183,6 +183,8 @@ public class TvAppearanceTouchTest {
                 assertEquals(light, RexTheme.isLight());
                 main(() -> activity.showPage("home-layout"));
                 capture(theme + "-11-home-layout");
+                main(() -> activity.showPage("library"));
+                capture(theme + "-12-library");
                 main(() -> { activity.cardClicks = 0; activity.cardLongClicks = 0; });
             }
             verifyGestureCancellation();
@@ -213,6 +215,15 @@ public class TvAppearanceTouchTest {
         });
         SystemClock.sleep(600);
         assertEquals("Canceled gesture must not activate a tap", before, activity.singleTaps);
+        main(() -> {
+            long time = SystemClock.uptimeMillis();
+            android.view.MotionEvent down = android.view.MotionEvent.obtain(time, time, android.view.MotionEvent.ACTION_DOWN, 200, 200, 0);
+            activity.gestures.onTouchEvent(down);
+            activity.gestures.setFull(false);
+            down.recycle();
+        });
+        SystemClock.sleep(600);
+        assertEquals("Leaving full screen cancels a pending tap", before, activity.singleTaps);
         main(() -> activity.gestures.reset());
     }
 

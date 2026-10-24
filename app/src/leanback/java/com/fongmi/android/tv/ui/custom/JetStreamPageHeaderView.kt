@@ -76,7 +76,7 @@ class JetStreamPageHeaderView @JvmOverloads constructor(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 12.dp)
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
             ) {
                 Column(
                     modifier = Modifier

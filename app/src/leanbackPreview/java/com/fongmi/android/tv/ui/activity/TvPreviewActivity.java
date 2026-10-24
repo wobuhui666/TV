@@ -100,6 +100,16 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             nav.requestFocus();
             return;
         }
+        if (name.equals("library")) {
+            root.removeAllViews();
+            View content = getLayoutInflater().inflate(R.layout.activity_keep, root, false);
+            root.addView(content);
+            grid = content.findViewById(R.id.recycler);
+            grid.setLayoutManager(new GridLayoutManager(this, 5));
+            grid.setAdapter(new CardAdapter(20));
+            ((ProgressLayout) content.findViewById(R.id.progressLayout)).showContent();
+            return;
+        }
         if (name.equals("search")) {
             root.removeAllViews();
             View content = getLayoutInflater().inflate(R.layout.activity_search, root, false);
