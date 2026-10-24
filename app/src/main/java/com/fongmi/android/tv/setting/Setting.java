@@ -120,6 +120,14 @@ public class Setting {
         Prefers.put("wall_type", Math.clamp(type, MIN_WALL_TYPE, MAX_WALL_TYPE));
     }
 
+    public static boolean isLightTheme() {
+        return Prefers.getBoolean("tv_light_theme", false);
+    }
+
+    public static void putLightTheme(boolean light) {
+        Prefers.put("tv_light_theme", light);
+    }
+
     public static int getThemeColor() {
         return Prefers.getInt("theme_color", THEME_DEFAULT);
     }

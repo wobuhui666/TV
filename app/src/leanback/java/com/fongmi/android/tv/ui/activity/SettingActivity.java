@@ -69,6 +69,7 @@ import com.fongmi.android.tv.ui.dialog.SpeedDialog;
 import com.fongmi.android.tv.ui.dialog.UaDialog;
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
 import com.fongmi.android.tv.ui.theme.JetStreamWallpaper;
+import com.fongmi.android.tv.ui.theme.RexTheme;
 import com.fongmi.android.tv.utils.FileUtil;
 import com.fongmi.android.tv.utils.MpvLogCollector;
 import com.fongmi.android.tv.utils.Notify;
@@ -351,6 +352,9 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             return;
         }
         switch (key) {
+            case JetStreamSettingView.KEY_THEME_MODE -> RexTheme.setLight(!RexTheme.isLight());
+            case JetStreamSettingView.KEY_THEME_DARK -> RexTheme.setLight(false);
+            case JetStreamSettingView.KEY_THEME_LIGHT -> RexTheme.setLight(true);
             case JetStreamSettingView.KEY_VOD -> onVod();
             case JetStreamSettingView.KEY_LIVE -> onLive();
             case JetStreamSettingView.KEY_WALL -> onWall();
@@ -882,6 +886,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     }
 
     private void setThemeText() {
+        setRowValue(JetStreamSettingView.KEY_THEME_MODE, getString(RexTheme.isLight() ? R.string.theme_mode_light : R.string.theme_mode_dark));
         setRowValue(JetStreamSettingView.KEY_THEME_COLOR, getString(JetStreamPalette.currentLabelRes()));
     }
 
@@ -1140,6 +1145,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     @Override
     protected void onThemeChanged() {
         if (mBinding == null) return;
+        setTheme(RexTheme.isLight() ? R.style.Theme_App_Light : R.style.Theme_App);
         setThemeText();
         mBinding.settingView.refreshThemeSelection();
     }

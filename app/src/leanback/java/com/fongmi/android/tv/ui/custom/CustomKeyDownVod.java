@@ -15,6 +15,7 @@ import com.fongmi.android.tv.utils.KeyUtil;
 public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     private final GestureDetector detector;
+    private final TouchSwipeDetector swipe;
     private final Listener listener;
     private final PendingSeek pendingSeek;
     private boolean changeSpeed;
@@ -26,6 +27,7 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     private CustomKeyDownVod(Activity activity) {
         this.detector = new GestureDetector(activity, this);
+        this.swipe = new TouchSwipeDetector(activity);
         this.listener = (Listener) activity;
         this.pendingSeek = new PendingSeek(listener::onSeekEnd, new PendingSeek.Scheduler() {
             @Override
@@ -42,11 +44,20 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
 
     public boolean onTouchEvent(MotionEvent e) {
         if (!full) return false;
-        return detector.onTouchEvent(e);
+        int direction = swipe.onTouchEvent(e);
+        if (direction != TouchSwipeDetector.NONE) {
+            MotionEvent cancel = MotionEvent.obtain(e);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            detector.onTouchEvent(cancel);
+            cancel.recycle();
+            onSwipe(direction);
+        } else detector.onTouchEvent(e);
+        return true;
     }
 
     public void setFull(boolean full) {
         if (!full) endSpeed();
+        if (this.full && !full) cancelGesture();
         this.full = full;
     }
 
@@ -88,6 +99,19 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     }
 
     @Override
+    public boolean onDown(@NonNull MotionEvent event) {
+        return true;
+    }
+
+    private void onSwipe(int direction) {
+        if (direction == TouchSwipeDetector.RIGHT || direction == TouchSwipeDetector.LEFT) {
+            listener.onSeeking(pendingSeek.add(direction == TouchSwipeDetector.RIGHT ? Constant.INTERVAL_SEEK : -Constant.INTERVAL_SEEK));
+            pendingSeek.post(250);
+        } else if (direction == TouchSwipeDetector.UP) listener.onKeyUp();
+        else listener.onKeyDown();
+    }
+
+    @Override
     public boolean onDoubleTap(@NonNull MotionEvent e) {
         listener.onDoubleTap();
         return true;
@@ -122,6 +146,15 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     public void reset() {
         endSpeed();
         pendingSeek.clear();
+        cancelGesture();
+    }
+
+    private void cancelGesture() {
+        swipe.reset();
+        long now = android.os.SystemClock.uptimeMillis();
+        MotionEvent cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0, 0, 0);
+        detector.onTouchEvent(cancel);
+        cancel.recycle();
     }
 
     private void endSpeed() {

@@ -19,6 +19,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +56,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +72,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
@@ -98,6 +102,7 @@ import com.fongmi.android.tv.ui.components.MaterialSettingsButtonStyle
 import com.fongmi.android.tv.ui.components.tvContentFade
 import com.fongmi.android.tv.ui.components.TvActionButton
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
+import com.fongmi.android.tv.ui.components.tvTouchInput
 import com.fongmi.android.tv.ui.theme.JetStreamAnimations
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 import kotlin.math.roundToLong
@@ -888,7 +893,9 @@ class JetStreamVodControlView @JvmOverloads constructor(
                 // Button's minimum row size and padding offset it inside a fixed square.
                 IconButton(
                     onClick = { listener?.onShowControls(); onClick() },
-                    modifier = focusModifier.size(44.dp).semantics { this.selected = selected },
+                    modifier = focusModifier.size(44.dp)
+                        .tvTouchInput(enabled, { listener?.onShowControls(); onClick() }, interactionSource = interactionSource)
+                        .semantics { this.selected = selected },
                     enabled = enabled,
                     scale = IconButtonDefaults.scale(focusedScale = JetStreamAnimations.FocusScaleMedium),
                     interactionSource = interactionSource
@@ -929,6 +936,8 @@ class JetStreamVodControlView @JvmOverloads constructor(
     ) {
         val interactionSource = remember { MutableInteractionSource() }
         val focused by interactionSource.collectIsFocusedAsState()
+        val touchFocusRequester = remember { FocusRequester() }
+        val currentProgress by rememberUpdatedState(progress)
         val height by animateDpAsState(if (focused) 8.dp else 4.dp, animationSpec = tween(JetStreamAnimations.DurationFocus), label = "indicatorHeight")
         val colorScheme = MaterialTheme.colorScheme
         val progressColor = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.92f)
@@ -951,8 +960,48 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
         Canvas(
             modifier = modifier
-                .height(height)
+                .height(32.dp)
                 .padding(horizontal = 4.dp)
+                .focusRequester(touchFocusRequester)
+                .pointerInput(durationMs) {
+                    if (durationMs <= 0L) return@pointerInput
+                    detectTapGestures(onTap = { offset ->
+                        touchFocusRequester.requestFocus()
+                        val fraction = (offset.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                        onSeekProgressChange(fraction)
+                        onSelectedChange(false)
+                        listener?.onSeekTo((durationMs * fraction).roundToLong())
+                        listener?.onShowControls()
+                    })
+                }
+                .pointerInput(durationMs) {
+                    if (durationMs <= 0L) return@pointerInput
+                    var fraction = currentProgress
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            touchFocusRequester.requestFocus()
+                            fraction = (offset.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                            onSeekProgressChange(fraction)
+                            onSelectedChange(true)
+                            listener?.onShowControls()
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            fraction = (change.position.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                            onSeekProgressChange(fraction)
+                            listener?.onShowControls()
+                        },
+                        onDragEnd = {
+                            onSelectedChange(false)
+                            listener?.onSeekTo((durationMs * fraction).roundToLong())
+                            listener?.onShowControls()
+                        },
+                        onDragCancel = {
+                            onSelectedChange(false)
+                            onSeekProgressChange(currentProgress)
+                        }
+                    )
+                }
                 .onPreviewKeyEvent { event ->
                     if (consumeSeekConfirmKey(event.nativeKeyEvent)) return@onPreviewKeyEvent true
                     if (event.type != KeyEventType.KeyDown || durationMs <= 0) return@onPreviewKeyEvent false
@@ -1002,14 +1051,14 @@ class JetStreamVodControlView @JvmOverloads constructor(
                 color = trackColor,
                 start = Offset(0f, y),
                 end = Offset(size.width, y),
-                strokeWidth = size.height,
+                strokeWidth = height.roundToPx().toFloat(),
                 cap = StrokeCap.Round
             )
             drawLine(
                 color = progressColor,
                 start = Offset(0f, y),
                 end = Offset(size.width * displayProgress.coerceIn(0f, 1f), y),
-                strokeWidth = size.height,
+                strokeWidth = height.roundToPx().toFloat(),
                 cap = StrokeCap.Round
             )
         }

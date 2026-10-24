@@ -1,0 +1,4 @@
+<resources>
+    <item name="jetstream_touch_direct_bound" type="id" />
+    <item name="jetstream_theme_bindings" type="id" />
+</resources>

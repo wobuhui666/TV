@@ -65,6 +65,7 @@ import com.fongmi.android.tv.ui.components.TvActionButton
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
 import com.fongmi.android.tv.ui.components.JetStreamPageScrim
 import com.fongmi.android.tv.ui.theme.JetStreamPalette
+import com.fongmi.android.tv.ui.theme.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 import com.fongmi.android.tv.ui.theme.JetStreamSpacing
 
@@ -112,6 +113,9 @@ class JetStreamSettingView @JvmOverloads constructor(
     init {
         isFocusable = true
         isFocusableInTouchMode = true
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            defaultFocusHighlightEnabled = false
+        }
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
     }
 
@@ -152,6 +156,8 @@ class JetStreamSettingView @JvmOverloads constructor(
 
     fun showSection(sectionKey: String) {
         selectedSectionKey = sectionKey
+        focusedSectionKey = null
+        focusedRowKey = null
     }
 
     fun requestInitialFocus() {
@@ -189,11 +195,14 @@ class JetStreamSettingView @JvmOverloads constructor(
         val firstRowFocusRequester = remember(selectedSection?.key, selectedRows.firstOrNull()?.key) { FocusRequester() }
 
         LaunchedEffect(visibleSections.map { it.key }, selectedSectionKey) {
-            if (selectedSection == null) return@LaunchedEffect
-            if (selectedSection.key != selectedSectionKey) selectedSectionKey = selectedSection.key
+            // A queued composition must not overwrite a newer showSection request.
+            val currentSections = sections().filter { section -> section.rows.any { isRowVisible(it.key) } }
+            if (currentSections.none { it.key == selectedSectionKey }) {
+                selectedSectionKey = currentSections.firstOrNull()?.key ?: return@LaunchedEffect
+            }
         }
         LaunchedEffect(initialFocusRequest, selectedSection?.key, selectedRows.firstOrNull()?.key) {
-            if (initialFocusRequest > 0 && selectedRows.isNotEmpty() && hasFocus()) runCatching { firstRowFocusRequester.requestFocus() }
+            if (initialFocusRequest > 0 && selectedSection?.key == selectedSectionKey && selectedRows.isNotEmpty() && hasFocus()) runCatching { firstRowFocusRequester.requestFocus() }
         }
 
         JetStreamPageScrim(modifier = Modifier.fillMaxSize()) {
@@ -439,7 +448,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         ) {
             if (action.swatch != null) {
                 val swatchColor = Color(action.swatch.toLong() and 0xFFFFFFFF)
-                Box(Modifier.size(18.dp).clip(CircleShape).background(swatchColor).border(1.dp, Color.White.copy(alpha = 0.48f), CircleShape))
+                Box(Modifier.size(18.dp).clip(CircleShape).background(swatchColor).border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.48f), CircleShape))
             } else if (action.icon != null) {
                 Icon(painterResource(action.icon), contentDescription = null, modifier = Modifier.size(20.dp))
             }
@@ -607,6 +616,10 @@ class JetStreamSettingView @JvmOverloads constructor(
                     RowSpec(KEY_ECH, context.getString(R.string.setting_ech), toggle = true),
                     RowSpec(KEY_ECH_INFO, context.getString(R.string.setting_ech_info)),
                     RowSpec(KEY_CF_PREFERRED, context.getString(R.string.setting_cf_preferred)),
+                    RowSpec(KEY_THEME_MODE, context.getString(R.string.setting_theme_mode), actions = listOf(
+                        ActionSpec(KEY_THEME_DARK, context.getString(R.string.theme_mode_dark), selected = !RexTheme.isLight),
+                        ActionSpec(KEY_THEME_LIGHT, context.getString(R.string.theme_mode_light), selected = RexTheme.isLight)
+                    )),
                     RowSpec(KEY_THEME_COLOR, context.getString(R.string.setting_theme_color), actions = themeActions()),
                     RowSpec(KEY_SIZE, context.getString(R.string.setting_size)),
                     RowSpec(KEY_BACKUP, context.getString(R.string.setting_backup)),
@@ -709,6 +722,9 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_ECH = "ech"
         const val KEY_ECH_INFO = "ech_info"
         const val KEY_CF_PREFERRED = "cf_preferred"
+        const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_THEME_DARK = "theme_dark"
+        const val KEY_THEME_LIGHT = "theme_light"
         const val KEY_THEME_COLOR = "theme_color"
         const val KEY_SIZE = "size"
         const val KEY_BACKUP = "backup"

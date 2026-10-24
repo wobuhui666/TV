@@ -133,4 +133,7 @@
     <string name="playback_command_opening">Skip intro</string>
     <string name="playback_command_ending">Skip outro</string>
 
+    <string name="setting_theme_mode">Appearance</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_light">Light</string>
 </resources>

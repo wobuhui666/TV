@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <com.fongmi.android.tv.ui.custom.JetStreamVodScrimView
+        <com.fongmi.android.tv.ui.custom.JetStreamRexScrimView
             android:id="@+id/scrim"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />

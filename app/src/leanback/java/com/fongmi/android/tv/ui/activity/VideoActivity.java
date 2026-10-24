@@ -340,7 +340,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onThemeChanged() {
-        // BaseActivity already refreshes JetStreamThemeController; Compose updates in place.
+        // BaseActivity refreshes the Android theme, Compose and bound native controls in place.
         // Recreating for a color change would detach the active player and reset playback UI.
     }
 
@@ -436,7 +436,10 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.control.action.opening.setOnClickListener(view -> onOpening());
         mBinding.control.action.ending.setOnLongClickListener(view -> onEndingReset());
         mBinding.control.action.opening.setOnLongClickListener(view -> onOpeningReset());
-        mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
+        mBinding.video.setOnTouchListener((view, event) -> {
+            com.fongmi.android.tv.ui.custom.JetStreamTouch.focusDirect(view, event);
+            return mKeyDown.onTouchEvent(event);
+        });
     }
 
     private void setRecyclerView() {

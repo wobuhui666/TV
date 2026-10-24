@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fongmi.android.tv.ui.theme.JetStreamShapes
+import com.fongmi.android.tv.ui.rex.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamSpacing
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
@@ -71,7 +72,7 @@ class JetStreamQrCodeView @JvmOverloads constructor(
                     if (bitmap == null) {
                         Text(
                             text = "QR",
-                            color = Color.White,
+                            color = if (RexTheme.isLight()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )

@@ -78,6 +78,9 @@ class JetStreamPlaybackWidgetTextView @JvmOverloads constructor(
 
     init {
         applyJetStreamPlaybackWidgetSurface()
+        val colors = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.textColor), defStyleAttr, 0)
+        bindJetStreamTextColor(colors, R.color.jetstream_on_surface)
+        colors.recycle()
     }
 }
 
@@ -262,6 +265,7 @@ private fun MaterialTextView.applyJetStreamPlaybackTextDefaults(
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
     val hasLetterSpacing = typedArray.hasValue(3)
+    bindJetStreamTextColor(typedArray, defaultTextColorRes)
     typedArray.recycle()
 
     includeFontPadding = false
@@ -272,12 +276,14 @@ private fun MaterialTextView.applyJetStreamPlaybackTextDefaults(
 }
 
 private fun MaterialTextView.applyJetStreamPlaybackTextShadow() {
-    setShadowLayer(2f, 1.5f, 1.5f, jetStreamColor(R.color.jetstream_overlay_surface))
+    bindJetStreamTheme { setShadowLayer(2f, 1.5f, 1.5f, jetStreamColor(R.color.jetstream_overlay_surface)) }
 }
 
 private fun AppCompatImageView.applyJetStreamPlaybackIconTint() {
     if (ImageViewCompat.getImageTintList(this) == null) {
-        ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(jetStreamColor(R.color.jetstream_on_surface)))
+        bindJetStreamTheme {
+            ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(jetStreamColor(R.color.jetstream_on_surface)))
+        }
     }
 }
 
@@ -366,6 +372,8 @@ private fun LinearLayoutCompat.applyJetStreamPlaybackActionRowSurface() {
     background = GradientDrawable().apply {
         cornerRadius = jetStreamDp(12)
         setColor(jetStreamColor(R.color.jetstream_scrim_light))
+    }.also { drawable ->
+        bindJetStreamTheme { drawable.setColor(jetStreamColor(R.color.jetstream_scrim_light)) }
     }
     minimumHeight = jetStreamDpInt(56)
     clipChildren = false

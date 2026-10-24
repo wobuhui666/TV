@@ -5,6 +5,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.ColorUtils
 import com.fongmi.android.tv.R
+import com.fongmi.android.tv.event.RefreshEvent
 import com.fongmi.android.tv.ui.theme.JetStreamWallpaper
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -39,6 +40,11 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onWallpaperVisibility(event: JetStreamWallpaper.VisibilityEvent) {
         refreshCanvas()
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onThemeEvent(event: RefreshEvent) {
+        if (event.type == RefreshEvent.Type.THEME) refreshCanvas()
     }
 
     override fun onDetachedFromWindow() {

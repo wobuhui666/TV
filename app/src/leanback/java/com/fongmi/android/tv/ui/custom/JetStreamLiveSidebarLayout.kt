@@ -18,6 +18,8 @@ class JetStreamLiveSidebarLayout @JvmOverloads constructor(
         background = GradientDrawable().apply {
             cornerRadius = jetStreamDp(16)
             setColor(jetStreamColor(R.color.jetstream_overlay_surface))
+        }.also { drawable ->
+            bindJetStreamTheme { drawable.setColor(jetStreamColor(R.color.jetstream_overlay_surface)) }
         }
         elevation = 0f
         clipToOutline = true
@@ -73,5 +75,10 @@ private fun View.jetStreamLiveItemDrawable(colorRes: Int, strokeColorRes: Int, s
         cornerRadius = jetStreamDp(10)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }

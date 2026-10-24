@@ -30,6 +30,7 @@ object JetStreamAnimator {
     @JvmStatic
     @JvmOverloads
     fun bindFocus(view: View, scale: Float = FOCUS_SCALE_CARD, elevationDp: Int = 12) {
+        JetStreamTouch.bindDirectTouch(view)
         view.setOnFocusChangeListener { target, focused ->
             animateFocus(target, focused, scale, elevationDp)
         }

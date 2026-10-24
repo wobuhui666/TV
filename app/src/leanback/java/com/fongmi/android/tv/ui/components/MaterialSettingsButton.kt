@@ -80,7 +80,8 @@ fun MaterialSettingsButton(
         onClick = onClick,
         onLongClick = onLongClick,
         enabled = active,
-        modifier = modifier.heightIn(min = 48.dp).focusProperties { canFocus = active }.semantics { this.selected = selected },
+        modifier = modifier.heightIn(min = 48.dp).focusProperties { canFocus = active }
+            .tvTouchInput(active, onClick, onLongClick, interactions).semantics { this.selected = selected },
         shape = ButtonDefaults.shape(shape = shape),
         scale = ButtonDefaults.scale(focusedScale = focusedScale),
         colors = ButtonDefaults.colors(

@@ -29,16 +29,25 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
+import com.fongmi.android.tv.ui.rex.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamAnimations
+import com.fongmi.android.tv.ui.theme.JetStreamPalette
+import com.fongmi.android.tv.ui.theme.JetStreamThemeController
 
 /** Neutral focus treatment shared by TV actions; state never changes measured geometry. */
 object TvFocusStyle {
-    val Container = Color(0xFF24262B)
-    val SelectedContainer = Color(0xFF35383F)
-    val FocusedContainer = Color(0xFF41454E)
-    val PressedContainer = Color(0xFF505560)
-    val Content = Color(0xFFF2F2F2)
-    val FocusOutline = Color(0xFFC5C8D0)
+    private val light: Boolean
+        get() {
+            // These getters also style Views, but Compose callers must observe refreshes.
+            JetStreamThemeController.version
+            return RexTheme.isLight()
+        }
+    val Container get() = if (light) JetStreamPalette.colorScheme().surfaceContainer else Color(0xFF24262B)
+    val SelectedContainer get() = if (light) JetStreamPalette.colorScheme().surfaceContainerHigh else Color(0xFF35383F)
+    val FocusedContainer get() = if (light) JetStreamPalette.colorScheme().surfaceContainerHighest else Color(0xFF41454E)
+    val PressedContainer get() = if (light) JetStreamPalette.colorScheme().outlineVariant else Color(0xFF505560)
+    val Content get() = if (light) JetStreamPalette.colorScheme().onSurface else Color(0xFFF2F2F2)
+    val FocusOutline get() = if (light) JetStreamPalette.colorScheme().outline else Color(0xFFC5C8D0)
     val Shape = RoundedCornerShape(10.dp)
 }
 
@@ -67,7 +76,8 @@ fun TvActionButton(
     Button(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = modifier.heightIn(min = 40.dp).focusProperties { canFocus = active },
+        modifier = modifier.heightIn(min = 40.dp).focusProperties { canFocus = active }
+            .tvTouchInput(active, onClick, onLongClick, interactions),
         enabled = active,
         shape = ButtonDefaults.shape(shape = shape),
         scale = ButtonDefaults.scale(focusedScale = focusedScale),
@@ -117,6 +127,7 @@ fun TvFocusableSurface(
     interactionSource: MutableInteractionSource? = null,
     // Full-width rows keep their bounds; compact navigation can opt into scaling.
     focusedScale: Float = 1f,
+    touchEnabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
     val active = enabled && LocalTvContentActive.current
@@ -126,7 +137,8 @@ fun TvFocusableSurface(
     Surface(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = modifier.focusProperties { canFocus = active },
+        modifier = modifier.focusProperties { canFocus = active }
+            .tvTouchInput(active && touchEnabled, onClick, onLongClick, interactions),
         enabled = active,
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         scale = ClickableSurfaceDefaults.scale(focusedScale = focusedScale),

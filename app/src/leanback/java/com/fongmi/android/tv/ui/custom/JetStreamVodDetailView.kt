@@ -67,6 +67,7 @@ import androidx.tv.material3.darkColorScheme
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
 import androidx.tv.material3.Text as TvText
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
+import com.fongmi.android.tv.ui.components.tvTouchInput
 import com.fongmi.android.tv.utils.TmdbLogoTransformation
 
 private const val DETAIL_ACTION_FOCUSED_SCALE = 1.02f
@@ -390,6 +391,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
         val buttonModifier = modifier
             .height(40.dp)
             .focusProperties { canFocus = spec.enabled }
+            .tvTouchInput(spec.enabled, onClick)
             .semantics { selected = spec.selected }
         if (primary) {
             Button(

@@ -14,6 +14,7 @@ import com.fongmi.android.tv.utils.KeyUtil;
 public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
 
     private final GestureDetector detector;
+    private final TouchSwipeDetector swipe;
     private final StringBuilder text;
     private final Listener listener;
     private long holdTime;
@@ -34,10 +35,19 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         this.text = new StringBuilder();
         this.listener = (Listener) context;
         this.detector = new GestureDetector(context, this);
+        this.swipe = new TouchSwipeDetector(context);
     }
 
     public boolean onTouchEvent(MotionEvent e) {
-        return detector.onTouchEvent(e);
+        int direction = swipe.onTouchEvent(e);
+        if (direction != TouchSwipeDetector.NONE) {
+            MotionEvent cancel = MotionEvent.obtain(e);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            detector.onTouchEvent(cancel);
+            cancel.recycle();
+            onSwipe(direction);
+        } else detector.onTouchEvent(e);
+        return true;
     }
 
     public boolean hasEvent(KeyEvent event) {
@@ -75,6 +85,23 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         text.append(getNumber(keyCode));
         listener.onShow(text.toString());
         App.post(runnable, 2000);
+    }
+
+    @Override
+    public boolean onDown(@NonNull MotionEvent event) {
+        return true;
+    }
+
+    private void onSwipe(int direction) {
+        if (!listener.dispatch(false)) return;
+        if (direction == TouchSwipeDetector.UP) listener.onKeyDown();
+        else if (direction == TouchSwipeDetector.DOWN) listener.onKeyUp();
+        else {
+            long time = direction == TouchSwipeDetector.LEFT ? subTime() : addTime();
+            listener.onSeeking(time);
+            if (direction == TouchSwipeDetector.LEFT) listener.onKeyLeft(time);
+            else listener.onKeyRight(time);
+        }
     }
 
     @Override

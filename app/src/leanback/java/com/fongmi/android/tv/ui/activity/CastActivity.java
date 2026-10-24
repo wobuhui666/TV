@@ -108,6 +108,11 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     @Override
+    protected void onThemeChanged() {
+        // BaseActivity refreshes colors in place; retain the active DLNA session and player.
+    }
+
+    @Override
     protected void initView(Bundle savedInstanceState) {
         super.initView(savedInstanceState);
         bound = bindService(new Intent(this, DLNARendererService.class), mRendererConnection, Context.BIND_AUTO_CREATE);
@@ -134,7 +139,10 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
-        mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
+        mBinding.video.setOnTouchListener((view, event) -> {
+            com.fongmi.android.tv.ui.custom.JetStreamTouch.focusDirect(view, event);
+            return mKeyDown.onTouchEvent(event);
+        });
     }
 
     private void setVideoView() {

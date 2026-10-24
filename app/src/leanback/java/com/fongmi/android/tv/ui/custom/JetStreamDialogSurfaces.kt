@@ -44,12 +44,17 @@ object JetStreamDialogDecor {
     fun tintButtons(dialog: AlertDialog) {
         for (which in intArrayOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)) {
             val button = dialog.getButton(which) ?: continue
-            button.setTextColor(JetStreamPalette.controlText())
+            button.bindJetStreamTheme { button.setTextColor(JetStreamPalette.controlText()) }
             button.background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
                     cornerRadius = button.jetStreamDp(12)
                     setColor(TvFocusStyle.FocusedContainer.toArgb())
                     setStroke(button.jetStreamDpInt(2), TvFocusStyle.FocusOutline.toArgb())
+                }.also { drawable ->
+                    button.bindJetStreamTheme {
+                        drawable.setColor(TvFocusStyle.FocusedContainer.toArgb())
+                        drawable.setStroke(button.jetStreamDpInt(2), TvFocusStyle.FocusOutline.toArgb())
+                    }
                 })
                 addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
             }
@@ -287,8 +292,11 @@ class JetStreamSwitch @JvmOverloads constructor(
 ) : MaterialSwitch(context, attrs, defStyleAttr) {
 
     init {
-        thumbTintList = jetStreamColorStateList(R.color.jetstream_switch_thumb)
-        trackTintList = jetStreamColorStateList(R.color.jetstream_switch_track)
+        JetStreamTouch.bindDirectTouch(this)
+        bindJetStreamTheme {
+            thumbTintList = jetStreamColorStateList(R.color.jetstream_switch_thumb)
+            trackTintList = jetStreamColorStateList(R.color.jetstream_switch_track)
+        }
         trackTintMode = PorterDuff.Mode.SRC_IN
         minimumWidth = maxOf(minimumWidth, jetStreamDpInt(52))
         minimumHeight = maxOf(minimumHeight, jetStreamDpInt(32))
@@ -302,10 +310,12 @@ class JetStreamSlider @JvmOverloads constructor(
 ) : Slider(context, attrs, defStyleAttr) {
 
     init {
-        haloTintList = jetStreamColorStateList(R.color.jetstream_scrim_medium)
-        thumbTintList = jetStreamColorStateList(R.color.jetstream_primary)
-        trackActiveTintList = jetStreamColorStateList(R.color.jetstream_primary)
-        trackInactiveTintList = jetStreamColorStateList(R.color.jetstream_outline_variant)
+        bindJetStreamTheme {
+            haloTintList = jetStreamColorStateList(R.color.jetstream_scrim_medium)
+            thumbTintList = jetStreamColorStateList(R.color.jetstream_primary)
+            trackActiveTintList = jetStreamColorStateList(R.color.jetstream_primary)
+            trackInactiveTintList = jetStreamColorStateList(R.color.jetstream_outline_variant)
+        }
         trackHeight = jetStreamDpInt(6)
         isFocusable = true
         isFocusableInTouchMode = true
@@ -352,8 +362,10 @@ class JetStreamCheckBox @JvmOverloads constructor(
 ) : MaterialCheckBox(context, attrs, defStyleAttr) {
 
     init {
-        buttonTintList = JetStreamPalette.controlText()
-        buttonIconTintList = JetStreamPalette.controlContainer()
+        bindJetStreamTheme {
+            buttonTintList = JetStreamPalette.controlText()
+            buttonIconTintList = JetStreamPalette.controlContainer()
+        }
         JetStreamAnimator.bindFocus(this, 1f, 0)
     }
 }
@@ -366,9 +378,9 @@ class JetStreamCircularProgressIndicator @JvmOverloads constructor(
 
     init {
         isIndeterminate = true
-        setIndicatorColor(jetStreamColor(R.color.jetstream_primary))
+        bindJetStreamTheme { setIndicatorColor(jetStreamColor(R.color.jetstream_primary)) }
         setIndicatorSize(resources.getDimensionPixelSize(R.dimen.progress_indicator_size))
-        setTrackColor(jetStreamColor(R.color.jetstream_outline_variant))
+        bindJetStreamTheme { setTrackColor(jetStreamColor(R.color.jetstream_outline_variant)) }
         setTrackCornerRadius(resources.getDimensionPixelSize(R.dimen.progress_indicator_corner_radius))
         setTrackThickness(resources.getDimensionPixelSize(R.dimen.progress_indicator_track_thickness))
     }
@@ -382,7 +394,7 @@ class JetStreamSmallCircularProgressIndicator @JvmOverloads constructor(
 
     init {
         isIndeterminate = true
-        setIndicatorColor(jetStreamColor(R.color.jetstream_primary))
+        bindJetStreamTheme { setIndicatorColor(jetStreamColor(R.color.jetstream_primary)) }
         setIndicatorSize(jetStreamDpInt(32))
         setTrackThickness(jetStreamDpInt(2))
     }
@@ -513,6 +525,7 @@ class JetStreamDialogListRecyclerView @JvmOverloads constructor(
         val framed = typedArray.getBoolean(R.styleable.JetStreamDialogListRecyclerView_jetStreamListFramed, true)
         typedArray.recycle()
 
+        JetStreamTouch.install(this)
         clipChildren = false
         clipToPadding = false
         overScrollMode = View.OVER_SCROLL_NEVER
@@ -565,9 +578,12 @@ private fun TextView.applyJetStreamDialogInputSurface(
 
     includeFontPadding = true
     if (!hasTextSize && !hasTextAppearance) setTextSize(TypedValue.COMPLEX_UNIT_SP, defaultTextSizeSp)
-    setHintTextColor(jetStreamColor(R.color.jetstream_on_surface_variant))
-    setTextColor(jetStreamColor(R.color.jetstream_on_surface))
+    bindJetStreamTheme {
+        setHintTextColor(jetStreamColor(R.color.jetstream_on_surface_variant))
+        setTextColor(jetStreamColor(R.color.jetstream_on_surface))
+    }
     applyJetStreamTypeface()
+    applyJetStreamCursor()
     background = StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), jetStreamDialogInputDrawable(R.color.jetstream_surface_container_high, R.color.jetstream_primary, 2))
         addState(intArrayOf(), jetStreamDialogInputDrawable(R.color.jetstream_surface_container_high, R.color.jetstream_outline_variant, 1))
@@ -585,6 +601,7 @@ private fun MaterialTextView.applyJetStreamDialogTextDefaults(
     val hasTextColor = typedArray.hasValue(0)
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
+    bindJetStreamTextColor(typedArray, defaultTextColorRes)
     typedArray.recycle()
 
     if (!hasTextColor) setTextColor(jetStreamColorStateList(defaultTextColorRes))
@@ -599,10 +616,17 @@ private fun View.applyJetStreamSubtitleIconSurface() {
             cornerRadius = jetStreamDp(10)
             setColor(TvFocusStyle.FocusedContainer.toArgb())
             setStroke(jetStreamDpInt(2), TvFocusStyle.FocusOutline.toArgb())
+        }.also { drawable ->
+            bindJetStreamTheme {
+                drawable.setColor(TvFocusStyle.FocusedContainer.toArgb())
+                drawable.setStroke(jetStreamDpInt(2), TvFocusStyle.FocusOutline.toArgb())
+            }
         })
         addState(intArrayOf(), GradientDrawable().apply {
             cornerRadius = jetStreamDp(10)
             setColor(TvFocusStyle.Container.toArgb())
+        }.also { drawable ->
+            bindJetStreamTheme { drawable.setColor(TvFocusStyle.Container.toArgb()) }
         })
     }
     minimumWidth = jetStreamDpInt(40)
@@ -612,7 +636,7 @@ private fun View.applyJetStreamSubtitleIconSurface() {
 
 private fun AppCompatImageView.applyJetStreamControlIconTint() {
     if (ImageViewCompat.getImageTintList(this) == null) {
-        ImageViewCompat.setImageTintList(this, JetStreamPalette.controlText())
+        bindJetStreamTheme { ImageViewCompat.setImageTintList(this, JetStreamPalette.controlText()) }
     }
 }
 
@@ -626,11 +650,13 @@ private fun MaterialButton.applyJetStreamDialogButtonSurface() {
     iconSize = jetStreamDpInt(20)
     iconPadding = jetStreamDpInt(8)
     setPaddingRelative(maxOf(paddingStart, jetStreamDpInt(16)), paddingTop, maxOf(paddingEnd, jetStreamDpInt(16)), paddingBottom)
-    setTextColor(JetStreamPalette.controlText())
-    backgroundTintList = JetStreamPalette.controlContainer()
-    iconTint = JetStreamPalette.controlText()
-    rippleColor = jetStreamColorStateList(R.color.jetstream_scrim_medium)
-    strokeColor = JetStreamPalette.controlOutline()
+    bindJetStreamTheme {
+        setTextColor(JetStreamPalette.controlText())
+        backgroundTintList = JetStreamPalette.controlContainer()
+        iconTint = JetStreamPalette.controlText()
+        rippleColor = jetStreamColorStateList(R.color.jetstream_scrim_medium)
+        strokeColor = JetStreamPalette.controlOutline()
+    }
     strokeWidth = jetStreamDpInt(2)
     shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(jetStreamDp(10)).build()
     applyJetStreamTypeface()
@@ -639,12 +665,14 @@ private fun MaterialButton.applyJetStreamDialogButtonSurface() {
 private fun Chip.applyJetStreamFilterChipSurface() {
     isCheckable = true
     isCheckedIconVisible = true
-    setTextColor(JetStreamPalette.controlText())
-    checkedIconTint = JetStreamPalette.controlText()
-    chipBackgroundColor = JetStreamPalette.controlContainer()
-    chipStrokeColor = JetStreamPalette.controlOutline()
-    chipStrokeWidth = jetStreamDp(1)
-    rippleColor = jetStreamColorStateList(R.color.jetstream_scrim_medium)
+    bindJetStreamTheme {
+        setTextColor(JetStreamPalette.controlText())
+        checkedIconTint = JetStreamPalette.controlText()
+        chipBackgroundColor = JetStreamPalette.controlContainer()
+        chipStrokeColor = JetStreamPalette.controlOutline()
+        chipStrokeWidth = jetStreamDp(1)
+        rippleColor = jetStreamColorStateList(R.color.jetstream_scrim_medium)
+    }
     shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(jetStreamDp(10)).build()
     applyJetStreamTypeface()
 }
@@ -742,6 +770,11 @@ private fun View.jetStreamSettingControlRowDrawable(colorRes: Int, strokeColorRe
         } else {
             setStroke(0, Color.TRANSPARENT)
         }
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            if (strokeWidthDp > 0) drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }
 
@@ -749,6 +782,10 @@ private fun View.jetStreamSheetToolbarDrawable(): GradientDrawable {
     return GradientDrawable().apply {
         cornerRadius = jetStreamDp(24)
         setColor(jetStreamColor(R.color.jetstream_scrim_light))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(R.color.jetstream_scrim_light))
+        }
     }
 }
 
@@ -756,6 +793,10 @@ private fun View.jetStreamDialogRowDrawable(): GradientDrawable {
     return GradientDrawable().apply {
         cornerRadius = jetStreamDp(24)
         setColor(jetStreamColor(R.color.jetstream_scrim_light))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(R.color.jetstream_scrim_light))
+        }
     }
 }
 
@@ -764,5 +805,10 @@ private fun View.jetStreamDialogInputDrawable(colorRes: Int, strokeColorRes: Int
         cornerRadius = jetStreamDp(20)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }

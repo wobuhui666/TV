@@ -45,6 +45,7 @@ public class CustomRowPresenter extends ListRowPresenter {
     protected void initializeRowViewHolder(RowPresenter.ViewHolder holder) {
         super.initializeRowViewHolder(holder);
         ViewHolder vh = (ViewHolder) holder;
+        JetStreamTouch.install(vh.getGridView());
         vh.getGridView().setFocusScrollStrategy(strategy);
         vh.getGridView().setHorizontalSpacing(ResUtil.dp2px(spacing));
         vh.getGridView().setClipChildren(false);

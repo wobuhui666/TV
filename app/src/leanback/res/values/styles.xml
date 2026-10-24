@@ -20,6 +20,23 @@
 
     <style name="Theme.App" parent="Theme.Base" />
 
+    <style name="Theme.Light.Base" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">#2B4690</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSurface">#F9FAFF</item>
+        <item name="colorOnSurface">#1A2030</item>
+        <item name="android:windowBackground">#F3F5FA</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowAnimationStyle">@style/JetStreamActivityAnim</item>
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="android:fontFamily">@font/misans</item>
+        <item name="fontFamily">@font/misans</item>
+    </style>
+
+    <style name="Theme.App.Light" parent="Theme.Light.Base" />
+
     <style name="Theme.Crash" parent="Theme.Base">
         <item name="android:windowBackground">@color/jetstream_background</item>
         <item name="android:windowDisablePreview">true</item>

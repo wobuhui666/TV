@@ -108,6 +108,7 @@ class JetStreamPageRecyclerView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        JetStreamTouch.install(this)
     }
 }
 
@@ -119,6 +120,7 @@ class JetStreamHorizontalGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        JetStreamTouch.install(this)
     }
 }
 
@@ -130,6 +132,7 @@ class JetStreamVerticalGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        JetStreamTouch.install(this)
     }
 }
 
@@ -141,6 +144,7 @@ class JetStreamTypeGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        JetStreamTouch.install(this)
     }
 }
 
@@ -331,14 +335,14 @@ class JetStreamHomeTitleView @JvmOverloads constructor(
             addState(intArrayOf(android.R.attr.state_pressed), jetStreamChipDrawable(8, R.color.jetstream_primary_container, R.color.jetstream_primary, 0))
             addState(intArrayOf(), android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
         }
-        setTextColor(jetStreamColorStateList(R.color.jetstream_control_text))
+        bindJetStreamTheme { setTextColor(jetStreamColorStateList(R.color.jetstream_control_text)) }
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
         setPaddingRelative(jetStreamDpInt(10), 0, jetStreamDpInt(10), 0)
         val arrow = AppCompatResources.getDrawable(context, R.drawable.msr_expand_more)?.mutate()
         arrow?.setBounds(0, 0, jetStreamDpInt(16), jetStreamDpInt(16))
         setCompoundDrawablesRelative(null, null, arrow, null)
         compoundDrawablePadding = jetStreamDpInt(6)
-        TextViewCompat.setCompoundDrawableTintList(this, jetStreamColorStateList(R.color.jetstream_control_text))
+        bindJetStreamTheme { TextViewCompat.setCompoundDrawableTintList(this, jetStreamColorStateList(R.color.jetstream_control_text)) }
     }
 
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
@@ -358,6 +362,8 @@ class JetStreamMetadataPillView @JvmOverloads constructor(
             cornerRadius = jetStreamDp(12)
             setColor(jetStreamColor(R.color.jetstream_overlay_surface))
             setStroke(0, Color.TRANSPARENT)
+        }.also { drawable ->
+            bindJetStreamTheme { drawable.setColor(jetStreamColor(R.color.jetstream_overlay_surface)) }
         }
         gravity = Gravity.CENTER
         minHeight = jetStreamDpInt(24)
@@ -381,6 +387,8 @@ class JetStreamHeroActionLayout @JvmOverloads constructor(
         background = GradientDrawable().apply {
             cornerRadius = jetStreamDp(18)
             setColor(jetStreamColor(R.color.jetstream_primary))
+        }.also { drawable ->
+            bindJetStreamTheme { drawable.setColor(jetStreamColor(R.color.jetstream_primary)) }
         }
         elevation = 0f
         clipToOutline = true
@@ -389,7 +397,7 @@ class JetStreamHeroActionLayout @JvmOverloads constructor(
     override fun onViewAdded(child: View?) {
         super.onViewAdded(child)
         if (child is ImageView && ImageViewCompat.getImageTintList(child) == null) {
-            ImageViewCompat.setImageTintList(child, ColorStateList.valueOf(jetStreamColor(R.color.jetstream_on_primary)))
+            child.bindJetStreamTheme { ImageViewCompat.setImageTintList(child, ColorStateList.valueOf(jetStreamColor(R.color.jetstream_on_primary))) }
         }
     }
 }
@@ -701,6 +709,8 @@ class JetStreamVodScrimView @JvmOverloads constructor(
             intArrayOf(Color.TRANSPARENT, jetStreamColor(R.color.jetstream_overlay_surface))
         ).apply {
             cornerRadii = floatArrayOf(0f, 0f, 0f, 0f, jetStreamDp(16), jetStreamDp(16), jetStreamDp(16), jetStreamDp(16))
+        }.also { drawable ->
+            bindJetStreamTheme { drawable.setColors(intArrayOf(Color.TRANSPARENT, jetStreamColor(R.color.jetstream_overlay_surface))) }
         }
     }
 }
@@ -785,7 +795,7 @@ class JetStreamRoundTypeView @JvmOverloads constructor(
 
     init {
         applyJetStreamRoundItemSurface(attrs, 0)
-        TextViewCompat.setCompoundDrawableTintList(this, jetStreamColorStateList(R.color.jetstream_control_text))
+        bindJetStreamTheme { TextViewCompat.setCompoundDrawableTintList(this, jetStreamColorStateList(R.color.jetstream_control_text)) }
         JetStreamAnimator.bindFocus(this, 1.0f, 0)
     }
 }
@@ -1128,7 +1138,7 @@ class JetStreamSearchMicView @JvmOverloads constructor(
     init {
         applyJetStreamSearchIconSurface()
         background = jetStreamInputBackground(cornerRadiusDp = 22)
-        ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_on_surface))
+        bindJetStreamTheme { ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_on_surface)) }
     }
 }
 
@@ -1144,10 +1154,13 @@ class JetStreamSearchInputView @JvmOverloads constructor(
         val hasLetterSpacing = typedArray.hasValue(0)
         typedArray.recycle()
         if (!hasLetterSpacing) letterSpacing = 0f
-        setHintTextColor(jetStreamColor(R.color.jetstream_on_surface_variant))
-        setTextColor(jetStreamColor(R.color.jetstream_on_surface))
+        bindJetStreamTheme {
+            setHintTextColor(jetStreamColor(R.color.jetstream_on_surface_variant))
+            setTextColor(jetStreamColor(R.color.jetstream_on_surface))
+        }
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
         applyJetStreamTypeface()
+        applyJetStreamCursor()
         if (hasNoPadding()) setPadding(jetStreamDpInt(10), 0, jetStreamDpInt(10), 0)
     }
 }
@@ -1341,6 +1354,7 @@ private fun MaterialTextView.applyJetStreamBodyText(
     val hasTextSize = typedArray.hasValue(1)
     val hasLetterSpacing = typedArray.hasValue(2)
     val hasLineSpacingExtra = typedArray.hasValue(3)
+    bindJetStreamTextColor(typedArray, R.color.jetstream_on_surface_variant)
     typedArray.recycle()
 
     if (!hasTextColor) setTextColor(jetStreamColor(R.color.jetstream_on_surface_variant))
@@ -1364,6 +1378,7 @@ private fun MaterialTextView.applyJetStreamLabelText(
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
     val hasTextStyle = typedArray.hasValue(3)
+    bindJetStreamTextColor(typedArray, defaultTextColorRes)
     typedArray.recycle()
 
     if (!hasTextColor) setTextColor(jetStreamColorStateList(defaultTextColorRes))
@@ -1380,9 +1395,10 @@ private fun MaterialTextView.applyJetStreamVodTitleText(attrs: AttributeSet?, de
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
     val hasTextStyle = typedArray.hasValue(3)
+    if (hasTextColor) bindJetStreamTextColor(typedArray, R.color.jetstream_on_surface_variant)
     typedArray.recycle()
 
-    if (!hasTextColor) setTextColor(jetStreamVodTitleTextColor())
+    if (!hasTextColor) bindJetStreamTheme { setTextColor(jetStreamVodTitleTextColor()) }
     if (!hasTextSize && !hasTextAppearance) setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
     if (!hasTextStyle) setTypeface(typeface, Typeface.NORMAL)
     includeFontPadding = false
@@ -1433,6 +1449,7 @@ private fun MaterialTextView.applyJetStreamControlTextDefaults(attrs: AttributeS
     val hasTextColor = typedArray.hasValue(0)
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
+    bindJetStreamTextColor(typedArray, R.color.jetstream_control_text)
     typedArray.recycle()
 
     if (!hasTextColor) setTextColor(jetStreamColorStateList(R.color.jetstream_control_text))
@@ -1441,7 +1458,7 @@ private fun MaterialTextView.applyJetStreamControlTextDefaults(attrs: AttributeS
 }
 
 private fun MaterialTextView.applyJetStreamTextShadow() {
-    setShadowLayer(2f, 1.5f, 1.5f, jetStreamColor(R.color.jetstream_overlay_surface))
+    bindJetStreamTheme { setShadowLayer(2f, 1.5f, 1.5f, jetStreamColor(R.color.jetstream_overlay_surface)) }
 }
 
 private fun View.applyJetStreamChipContainerSurface() {
@@ -1466,13 +1483,17 @@ private fun AppCompatImageView.applyJetStreamChipIconSurface() {
 
 private fun AppCompatImageView.applyJetStreamControlIconTint() {
     if (ImageViewCompat.getImageTintList(this) == null) {
-        ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_control_text))
+        bindJetStreamTheme {
+            ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_control_text))
+        }
     }
 }
 
 private fun AppCompatImageView.applyJetStreamFileIconTint() {
     if (ImageViewCompat.getImageTintList(this) == null) {
-        ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_file_icon_tint))
+        bindJetStreamTheme {
+            ImageViewCompat.setImageTintList(this, jetStreamColorStateList(R.color.jetstream_file_icon_tint))
+        }
     }
 }
 
@@ -1515,6 +1536,11 @@ private fun View.jetStreamMediaItemDrawable(colorRes: Int, strokeColorRes: Int, 
         cornerRadius = jetStreamDp(18)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }
 
@@ -1534,6 +1560,11 @@ private fun View.jetStreamRoundItemDrawable(colorRes: Int, strokeColorRes: Int, 
         cornerRadius = jetStreamDp(12)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }
 
@@ -1553,6 +1584,11 @@ private fun View.jetStreamChipDrawable(cornerRadiusDp: Int, colorRes: Int, strok
         cornerRadius = jetStreamDp(cornerRadiusDp)
         setColor(jetStreamColor(colorRes))
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
+        }
     }
 }
 
@@ -1592,6 +1628,10 @@ private fun View.jetStreamFocusDrawable(cornerRadiusDp: Int, strokeWidthDp: Int)
         cornerRadius = jetStreamDp(cornerRadiusDp)
         setColor(Color.TRANSPARENT)
         setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(R.color.jetstream_primary))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(R.color.jetstream_primary))
+        }
     }
 }
 
@@ -1600,6 +1640,10 @@ private fun View.jetStreamDiscoverPanelBackground(cornerRadiusDp: Int): Gradient
         cornerRadius = jetStreamDp(cornerRadiusDp)
         setColor(jetStreamColor(R.color.jetstream_surface_container))
         setStroke(0, Color.TRANSPARENT)
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(R.color.jetstream_surface_container))
+        }
     }
 }
 
@@ -1618,6 +1662,10 @@ private fun View.jetStreamVideoWindowFocusDrawable(): GradientDrawable {
         cornerRadius = resources.getDimension(R.dimen.tv_video_corner_radius)
         setColor(Color.TRANSPARENT)
         setStroke(resources.getDimensionPixelSize(R.dimen.tv_video_focus_stroke).coerceAtLeast(1), jetStreamColor(R.color.jetstream_primary))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setStroke(resources.getDimensionPixelSize(R.dimen.tv_video_focus_stroke).coerceAtLeast(1), jetStreamColor(R.color.jetstream_primary))
+        }
     }
 }
 
@@ -1662,6 +1710,10 @@ private fun View.jetStreamOvalFocusDrawable(): GradientDrawable {
         shape = GradientDrawable.OVAL
         setColor(Color.TRANSPARENT)
         setStroke(jetStreamDpInt(3), jetStreamColor(R.color.jetstream_primary))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setStroke(jetStreamDpInt(3), jetStreamColor(R.color.jetstream_primary))
+        }
     }
 }
 
@@ -1701,5 +1753,9 @@ private fun View.jetStreamIndicatorDotDrawable(colorRes: Int): GradientDrawable 
     return GradientDrawable().apply {
         shape = GradientDrawable.OVAL
         setColor(jetStreamColor(colorRes))
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+        }
     }
 }

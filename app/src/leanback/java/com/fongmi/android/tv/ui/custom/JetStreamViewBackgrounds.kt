@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.custom
 
 import android.content.Context
+import android.widget.EditText
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
@@ -12,6 +13,7 @@ import androidx.annotation.ColorRes
 import androidx.core.content.res.ResourcesCompat
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.ui.theme.JetStreamPalette
+import com.fongmi.android.tv.ui.theme.RexTheme
 
 internal fun View.jetStreamDialogBackground(cornerRadii: FloatArray): GradientDrawable {
     return jetStreamSolidBackground(R.color.jetstream_surface, cornerRadii)
@@ -46,6 +48,10 @@ private fun View.jetStreamOverlayBackground(
         )
     ).apply {
         setStroke(0, 0)
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColors(intArrayOf(jetStreamColor(R.color.jetstream_overlay_surface), jetStreamColor(R.color.jetstream_overlay_surface_light)))
+        }
     }
 }
 
@@ -57,6 +63,10 @@ private fun View.jetStreamSolidBackground(
         this.cornerRadii = cornerRadii
         setColor(jetStreamColor(colorRes))
         setStroke(0, 0)
+    }.also { drawable ->
+        bindJetStreamTheme {
+            drawable.setColor(jetStreamColor(colorRes))
+        }
     }
 }
 
@@ -98,4 +108,24 @@ internal fun TextView.applyJetStreamTypeface() {
     val family = jetStreamTypeface(context) ?: return
     val style = typeface?.style ?: Typeface.NORMAL
     if (style == Typeface.NORMAL) typeface = family else setTypeface(family, style)
+}
+
+/** Theme-aware cursor and selection for TV text input; the shared drawable is white. */
+internal fun TextView.applyJetStreamCursor() {
+    if (this !is EditText) return
+    val defaultHighlight = highlightColor
+    bindJetStreamTheme {
+        if (RexTheme.isLight) {
+            highlightColor = JetStreamPalette.primaryInt().let { (it and 0x00FFFFFF) or 0x40000000 }
+        } else {
+            val colors = context.obtainStyledAttributes(intArrayOf(android.R.attr.textColorHighlight))
+            highlightColor = colors.getColor(0, defaultHighlight)
+            colors.recycle()
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            textCursorDrawable = textCursorDrawable?.mutate()?.apply {
+                if (RexTheme.isLight) setTint(JetStreamPalette.primaryInt()) else setTintList(null)
+            }
+        }
+    }
 }

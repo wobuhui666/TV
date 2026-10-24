@@ -2,11 +2,13 @@ package com.fongmi.android.tv.ui.rex;
 
 import androidx.annotation.ColorInt;
 
+import com.fongmi.android.tv.event.RefreshEvent;
+import com.fongmi.android.tv.setting.Setting;
+
 /**
  * Rex 行的主题单一挂钩。
  *
- * <p>本轮恒深色呈现（与现有 UI 融合）：全局浅色模式立项后，只需要改这里
- * （{@link #isLight()} 接到全局开关、需要的 token 在这里分流）。
+ * <p>{@link #isLight()} 读取与 Compose / View 共用的全局外观偏好。
  * 叠加在剧照上的大字恒用白字 + 阴影，两套主题一致（由底部 scrim 保证可读性）。
  */
 public final class RexTheme {
@@ -15,7 +17,13 @@ public final class RexTheme {
     }
 
     public static boolean isLight() {
-        return false;
+        return Setting.isLightTheme();
+    }
+
+    public static void setLight(boolean light) {
+        if (isLight() == light) return;
+        Setting.putLightTheme(light);
+        RefreshEvent.theme();
     }
 
     /** 精选大卡片名：恒定白。 */
@@ -40,5 +48,11 @@ public final class RexTheme {
     @ColorInt
     public static int spotlightShadowColor() {
         return 0xB3000000;
+    }
+
+    /** 图片上的白字保持深色底部渐变，与页面外观模式无关。 */
+    @ColorInt
+    public static int spotlightScrimColor() {
+        return 0xF017181C;
     }
 }

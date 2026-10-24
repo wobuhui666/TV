@@ -19,11 +19,11 @@
 
 ## Compose 自定义控件的焦点（重要坑）
 
-leanback 的 JetStream Compose 控件（`JetStreamChipRow` / `JetStreamHomeNavView` / `JetStreamVodControlView` 等）都继承 `AbstractComposeView`，靠 `isFocusable=true` + 重写 `onFocusChanged(gainFocus)` 把**宿主 View 当唯一焦点体**，用内部 `focusedIndex` 状态画高亮（`focused = rowFocused && index==focusedIndex`），按键在 View 层 `dispatchKeyEvent` 处理。
+leanback 的 JetStream Compose 控件（`JetStreamChipRow` / `JetStreamHomeNavView` / `JetStreamVodControlView` / `JetStreamVodDetailView` 等）继承 `AbstractComposeView`，保留宿主 View 的焦点入口，再通过 `FocusRequester` 交给对应的 TV Material 子控件。按钮自身处理遥控器确认、长按、语义与焦点动画。
 
-- **坑**：若在 `Content()` 里用 `FocusRequester.requestFocus()` 把 Compose 焦点丢给子 composable（chip / item），宿主 `AbstractComposeView` 的 `isFocused` 会变 false（只剩 `hasFocus`），`onFocusChanged(false)` 触发 → `rowFocused=false` → **高亮消失**；但 `hasFocus` 仍在，`dispatchKeyEvent` / `onPreviewKeyEvent` 照常处理按键 → 表现为「看不到焦点却能盲选」。
-- **原因**：`View.onFocusChanged` 的 gainFocus 反映的是宿主 View 自身 `isFocused()`（不含子节点），子节点拿走 Compose 焦点就等于宿主失焦。
-- **做法**：高亮只依赖宿主 `onFocusChanged` 的 gainFocus + 受控 index，**绝不让子节点 requestFocus**。正例见 `JetStreamHomeNavView`（无子节点抢焦点，高亮稳定）。
+- **状态判断**：子控件取得焦点后，宿主 `isFocused()` 会变 false，但 `hasFocus()` 仍为 true。判断整块 Compose 控件是否持有焦点应使用 `hasFocus()`，不能用宿主 `onFocusChanged(false)` 隐藏子控件的高亮。
+- **记忆位置**：使用子控件 `Modifier.onFocusChanged` 更新当前 index/key；再次从 View 层进入时请求该子控件焦点。延迟请求和滚动后的请求须检查宿主仍持有焦点，避免抢回已经移开的焦点。
+- **触屏**：TV Material 1.0 只处理遥控器按键；使用 `ui/components/TvTouchInput.kt` 的 `tvTouchInput` 给同一焦点目标补轻点与长按，在触发动作前请求对应子控件的实际焦点。不要再叠加 `clickable` / `focusable` 创建第二个焦点目标。
 
 ## 快速编译验证（leanback）
 
