@@ -293,14 +293,17 @@ class JetStreamSettingView @JvmOverloads constructor(
         val listState = rememberLazyListState()
 
         LaunchedEffect(visibleSections.map { it.key }, selectedSectionKey) {
-            if (selectedSection == null) return@LaunchedEffect
-            if (selectedSection.key != selectedSectionKey) selectedSectionKey = selectedSection.key
+            // Content can have been composed before showSection() changes the key.
+            // Only recover an unavailable section; never restore that stale snapshot.
+            if (visibleSections.none { it.key == selectedSectionKey }) {
+                selectedSectionKey = visibleSections.firstOrNull()?.key ?: return@LaunchedEffect
+            }
         }
         LaunchedEffect(selectedSection?.key) {
             listState.scrollToItem(0)
         }
         LaunchedEffect(initialFocusRequest) {
-            if (initialFocusRequest > 0 && focusedSectionKey == null && focusedRowKey == null) focusedRowKey = selectedRows.firstOrNull()?.key
+            if (initialFocusRequest > 0 && focusedSectionKey == null && focusedRowKey == null) focusedRowKey = visibleRows().firstOrNull()?.key
         }
         LaunchedEffect(focusedRowKey, selectedSection?.key) {
             val index = selectedRows.indexOfFirst { it.key == focusedRowKey }
