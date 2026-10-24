@@ -620,6 +620,8 @@ public class TvAppearanceTouchTest {
     }
 
     private void verifySwitchTint() {
+        assertEquals("Retained switch label follows the current appearance",
+                JetStreamPalette.resolveColor(activity, R.color.jetstream_on_surface), activity.nativeSwitch.getCurrentTextColor());
         assertNotNull(activity.nativeSwitch.getThumbTintList());
         assertNotNull(activity.nativeSwitch.getTrackTintList());
         for (int[] state : new int[][] {{android.R.attr.state_enabled}, {android.R.attr.state_enabled, android.R.attr.state_checked}}) {

@@ -294,6 +294,7 @@ class JetStreamSwitch @JvmOverloads constructor(
     init {
         JetStreamTouch.bindDirectTouch(this)
         bindJetStreamTheme {
+            setTextColor(jetStreamColor(R.color.jetstream_on_surface))
             thumbTintList = jetStreamColorStateList(R.color.jetstream_switch_thumb)
             trackTintList = jetStreamColorStateList(R.color.jetstream_switch_track)
         }
