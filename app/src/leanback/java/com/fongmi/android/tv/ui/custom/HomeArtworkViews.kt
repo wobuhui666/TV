@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import androidx.appcompat.widget.AppCompatImageView
 import com.fongmi.android.tv.R
@@ -61,6 +62,13 @@ class HomeContinueCardLayout @JvmOverloads constructor(
         foreground = jetStreamFocusForeground(cornerRadiusDp = 10, strokeWidthDp = 3)
         clipToOutline = true
         JetStreamAnimator.bindFocus(this, JetStreamAnimator.FOCUS_SCALE_CARD, 0)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        // Leanback installs its smaller default outline after creating row children.
+        // Keep the progress strip clipped to this card's own rounded background.
+        outlineProvider = ViewOutlineProvider.BACKGROUND
     }
 }
 
