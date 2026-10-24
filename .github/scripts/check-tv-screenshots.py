@@ -10,7 +10,10 @@ for theme in ("dark", "light"):
     for screenshot in screenshots:
         with Image.open(screenshot) as image:
             assert image.size == (1920, 1080), (screenshot, image.size)
-            assert max(ImageStat.Stat(image.convert("RGB")).stddev) > 10, f"Blank screenshot: {screenshot}"
+            # Native control probes intentionally occupy a small part of the screen.
+            # Reject solid frames without treating sparse, high-contrast UI as blank.
+            variation = max(ImageStat.Stat(image.convert("RGB")).stddev)
+            assert variation > 3, f"Blank screenshot: {screenshot} (variation={variation:.2f})"
 with Image.open(root / "light-01-home.png") as light, Image.open(root / "dark-01-home.png") as dark:
     region = (0, 0, 120, 1080)
     light_mean = sum(ImageStat.Stat(light.crop(region).convert("RGB")).mean) / 3
