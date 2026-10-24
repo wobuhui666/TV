@@ -777,6 +777,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(CircleShape)
                 .background(background)
+                .border(1.dp, if (focused) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.36f), CircleShape)
                 .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
                 .clickable(
                     enabled = enabled,

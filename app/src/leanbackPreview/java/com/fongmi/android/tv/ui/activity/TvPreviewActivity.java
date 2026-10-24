@@ -6,7 +6,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
+import androidx.appcompat.widget.LinearLayoutCompat;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -61,11 +61,11 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
 
     public int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
-    private LinearLayout column() {
+    private LinearLayoutCompat column() {
         root.removeAllViews();
         root.addView(new JetStreamPageBackgroundView(this), new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout layout = new JetStreamPageContentLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
+        LinearLayoutCompat layout = new JetStreamPageContentLayout(this);
+        layout.setOrientation(LinearLayoutCompat.VERTICAL);
         layout.setPadding(dp(32), dp(24), dp(32), dp(24));
         root.addView(layout, new FrameLayout.LayoutParams(-1, -1));
         return layout;
@@ -132,7 +132,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             controls.requestFocus();
             return;
         }
-        LinearLayout layout = column();
+        LinearLayoutCompat layout = column();
         if (name.equals("detail")) {
             detail = new JetStreamVodDetailView(this);
             detail.setTitle("星际旅途 · 测试影片");
@@ -145,23 +145,23 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
                 public void onFocusVideo() { }
                 public void onFocusList() { chips.requestFocus(); }
             });
-            layout.addView(detail, new LinearLayout.LayoutParams(-1, dp(310)));
+            layout.addView(detail, new LinearLayoutCompat.LayoutParams(-1, dp(310)));
             addChips(layout);
             detail.requestFocus();
             return;
         }
         nav = new JetStreamHomeNavView(this);
         setupNavigation();
-        layout.addView(nav, new LinearLayout.LayoutParams(-1, dp(48)));
+        layout.addView(nav, new LinearLayoutCompat.LayoutParams(-1, dp(48)));
         JetStreamSectionHeaderView title = new JetStreamSectionHeaderView(this);
         title.setText("为你推荐 · 离线预览");
-        layout.addView(title, new LinearLayout.LayoutParams(-1, dp(58)));
+        layout.addView(title, new LinearLayoutCompat.LayoutParams(-1, dp(58)));
         addChips(layout);
         grid = new JetStreamPageRecyclerView(this);
         grid.setLayoutManager(new GridLayoutManager(this, 5));
         grid.setAdapter(new CardAdapter(40));
         grid.setPadding(dp(4), dp(8), dp(4), dp(12));
-        layout.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
+        layout.addView(grid, new LinearLayoutCompat.LayoutParams(-1, 0, 1));
         nav.requestFocus();
     }
 
@@ -178,12 +178,12 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
         });
     }
 
-    private void addChips(LinearLayout layout) {
+    private void addChips(LinearLayoutCompat layout) {
         chips = new JetStreamChipRow(this);
         chips.setItems(Arrays.asList("全部", "电影", "剧集", "动漫", "纪录片", "综艺", "科幻", "冒险", "喜剧", "家庭", "经典", "新片"), 0);
         chips.setOnChipClickListener((JetStreamChipRow.OnChipClickListener) position -> { lastChip = position; chips.setSelectedPosition(position); });
         chips.setOnChipLongClickListener((JetStreamChipRow.OnChipLongClickListener) position -> lastAction = "chip-long-" + position);
-        layout.addView(chips, new LinearLayout.LayoutParams(-1, dp(48)));
+        layout.addView(chips, new LinearLayoutCompat.LayoutParams(-1, dp(48)));
     }
 
     public void showDialog() {

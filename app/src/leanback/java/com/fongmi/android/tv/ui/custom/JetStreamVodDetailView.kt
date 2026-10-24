@@ -13,6 +13,7 @@ import androidx.appcompat.widget.AppCompatImageView
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -424,6 +425,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(JetStreamShapes.Button)
                 .background(background)
+                .border(1.dp, if (active) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.36f), JetStreamShapes.Button)
                 .focusProperties { canFocus = false }
                 .clickable(
                     enabled = spec.enabled,

@@ -453,6 +453,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(RoundedCornerShape(22.dp))
                 .background(background)
+                .border(JetStreamBorders.Thin, if (focused) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(22.dp))
                 .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
@@ -508,6 +509,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(JetStreamShapes.Large)
                 .background(background)
+                .border(JetStreamBorders.Thin, if (focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.36f), JetStreamShapes.Large)
                 .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
