@@ -14,6 +14,7 @@ import com.fongmi.android.tv.utils.KeyUtil;
 public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
 
     private final GestureDetector detector;
+    private final TouchSwipeDetector swipe;
     private final StringBuilder text;
     private final Listener listener;
     private long holdTime;
@@ -34,10 +35,19 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         this.text = new StringBuilder();
         this.listener = (Listener) context;
         this.detector = new GestureDetector(context, this);
+        this.swipe = new TouchSwipeDetector(context);
     }
 
     public boolean onTouchEvent(MotionEvent e) {
-        return detector.onTouchEvent(e);
+        int direction = swipe.onTouchEvent(e);
+        if (direction != TouchSwipeDetector.NONE) {
+            MotionEvent cancel = MotionEvent.obtain(e);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            detector.onTouchEvent(cancel);
+            cancel.recycle();
+            onSwipe(direction);
+        } else detector.onTouchEvent(e);
+        return true;
     }
 
     public boolean hasEvent(KeyEvent event) {
@@ -82,27 +92,17 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         return true;
     }
 
-    @Override
-    public boolean onFling(MotionEvent start, @NonNull MotionEvent end, float velocityX, float velocityY) {
-        if (start == null || !listener.dispatch(false)) return false;
-        float dx = end.getX() - start.getX();
-        float dy = end.getY() - start.getY();
-        float threshold = App.get().getResources().getDisplayMetrics().density * 48;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return false;
-        if (Math.abs(dy) > Math.abs(dx)) {
-            if (dy < 0) listener.onKeyDown();
-            else listener.onKeyUp();
-        } else {
+    private void onSwipe(int direction) {
+        if (!listener.dispatch(false)) return;
+        if (direction == TouchSwipeDetector.UP) listener.onKeyDown();
+        else if (direction == TouchSwipeDetector.DOWN) listener.onKeyUp();
+        else {
             reset();
-            if (dx < 0) {
-                listener.onSeeking(-Constant.INTERVAL_SEEK);
-                listener.onKeyLeft(-Constant.INTERVAL_SEEK);
-            } else {
-                listener.onSeeking(Constant.INTERVAL_SEEK);
-                listener.onKeyRight(Constant.INTERVAL_SEEK);
-            }
+            long time = direction == TouchSwipeDetector.LEFT ? -Constant.INTERVAL_SEEK : Constant.INTERVAL_SEEK;
+            listener.onSeeking(time);
+            if (direction == TouchSwipeDetector.LEFT) listener.onKeyLeft(time);
+            else listener.onKeyRight(time);
         }
-        return true;
     }
 
     @Override

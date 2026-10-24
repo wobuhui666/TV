@@ -117,6 +117,10 @@ class JetStreamVodDetailView @JvmOverloads constructor(
     init {
         isFocusable = true
         isFocusableInTouchMode = true
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            // The host owns focus; each item already draws its own focus treatment.
+            defaultFocusHighlightEnabled = false
+        }
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
     }
 

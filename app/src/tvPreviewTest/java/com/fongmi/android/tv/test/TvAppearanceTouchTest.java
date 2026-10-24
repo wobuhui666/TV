@@ -158,9 +158,14 @@ public class TvAppearanceTouchTest {
                 device.click(centerX, centerY); SystemClock.sleep(90); device.click(centerX, centerY);
                 SystemClock.sleep(500);
                 assertEquals(oldDoubles + 1, activity.doubleTaps);
+                int oldSeeks = activity.seekEvents;
                 device.swipe(centerX - 250, centerY, centerX + 250, centerY, 12);
                 SystemClock.sleep(500);
-                assertTrue("Swipe uses the existing seek callback", activity.seekTime > 0);
+                assertEquals("Fast swipe seeks once", oldSeeks + 1, activity.seekEvents);
+                device.swipe(centerX + 250, centerY, centerX - 250, centerY, 120);
+                SystemClock.sleep(500);
+                assertEquals("Slow swipe also seeks once", oldSeeks + 2, activity.seekEvents);
+                assertTrue("Left swipe rewinds", activity.seekTime < 0);
                 main(() -> activity.gestures.reset());
                 main(() -> activity.showPage("settings"));
                 capture(theme + "-09-settings");

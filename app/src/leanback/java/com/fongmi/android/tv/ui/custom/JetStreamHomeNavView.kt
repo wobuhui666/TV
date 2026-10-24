@@ -77,6 +77,10 @@ class JetStreamHomeNavView @JvmOverloads constructor(
     init {
         isFocusable = true
         isFocusableInTouchMode = true
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            // The host owns focus; each item already draws its own focus treatment.
+            defaultFocusHighlightEnabled = false
+        }
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
     }
 
@@ -263,6 +267,9 @@ class JetStreamHomeNavView @JvmOverloads constructor(
         @DrawableRes
         private fun iconFor(resId: Int): Int {
             return when (resId) {
+                R.drawable.msr_home, R.drawable.msr_movie, R.drawable.msr_search,
+                R.drawable.msr_settings, R.drawable.msr_live_tv, R.drawable.msr_bookmark_border,
+                R.drawable.msr_cloud_upload -> resId
                 R.drawable.ic_home_live -> R.drawable.msr_live_tv
                 R.drawable.ic_home_search -> R.drawable.msr_search
                 R.drawable.ic_home_keep -> R.drawable.msr_bookmark_border

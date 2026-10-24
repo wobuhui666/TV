@@ -81,6 +81,10 @@ class JetStreamChipRow @JvmOverloads constructor(
         setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
         isFocusable = true
         isFocusableInTouchMode = true
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            // The host owns focus; each item already draws its own focus treatment.
+            defaultFocusHighlightEnabled = false
+        }
     }
 
     fun setItems(texts: List<String>, selected: Int) {

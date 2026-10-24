@@ -35,7 +35,8 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public int cardLongClicks;
     public int singleTaps;
     public int doubleTaps;
-    public long seekTime;
+    public volatile long seekTime;
+    public volatile int seekEvents;
     public JetStreamVodControlView controls;
     public CustomKeyDownVod gestures;
     public String page = "home";
@@ -210,7 +211,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     }
     @Override public void onSettingLongAction(String key) { lastAction = "long-" + key; }
 
-    @Override public void onSeeking(long time) { seekTime = time; }
+    @Override public void onSeeking(long time) { seekEvents++; seekTime = time; }
     @Override public void onSeekEnd(long time) { seekTime = time; }
     @Override public boolean onSpeedUp() { return false; }
     @Override public void onSpeedEnd() { }
