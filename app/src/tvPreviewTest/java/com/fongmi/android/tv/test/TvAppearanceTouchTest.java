@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.os.SystemClock;
+import android.os.Build;
 import android.view.KeyEvent;
 import android.view.View;
 import androidx.leanback.widget.HorizontalGridView;
@@ -18,7 +19,6 @@ import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.Direction;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
-import androidx.test.uiautomator.Until;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.activity.TvPreviewActivity;
@@ -48,9 +48,21 @@ public class TvAppearanceTouchTest {
     }
 
     private UiObject2 text(String text) {
-        UiObject2 item = device.wait(Until.findObject(By.text(text)), 8000);
+        long deadline = SystemClock.uptimeMillis() + 8000;
+        UiObject2 item;
+        do {
+            refreshAccessibility();
+            item = device.findObject(By.text(text));
+            if (item != null) break;
+            SystemClock.sleep(200);
+        } while (SystemClock.uptimeMillis() < deadline);
         assertNotNull("Missing visible control: " + text, item);
         return item;
+    }
+
+    private void refreshAccessibility() {
+        // API 34 can retain old Compose nodes after the pixels and scroll position change.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) instrumentation.getUiAutomation().clearCache();
     }
 
     private void capture(String name) throws Exception {
@@ -63,6 +75,7 @@ public class TvAppearanceTouchTest {
             assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream));
         }
         bitmap.recycle();
+        refreshAccessibility();
         device.dumpWindowHierarchy(new File(output, name + ".xml"));
     }
 
@@ -294,7 +307,9 @@ public class TvAppearanceTouchTest {
     }
 
     private void scrollSettingsToAppearance() {
-        for (int i = 0; i < 40 && !device.hasObject(By.text("浅色")); i++) {
+        for (int i = 0; i < 40; i++) {
+            refreshAccessibility();
+            if (device.hasObject(By.text("浅色"))) break;
             UiObject2 content = null;
             for (UiObject2 candidate : device.findObjects(By.scrollable(true))) {
                 Rect bounds = candidate.getVisibleBounds();
@@ -309,6 +324,7 @@ public class TvAppearanceTouchTest {
             content.scroll(Direction.DOWN, .2f, 400);
             SystemClock.sleep(300);
         }
+        refreshAccessibility();
         assertTrue("Production settings scrolls to the appearance actions", device.hasObject(By.text("浅色")));
     }
 
