@@ -49,6 +49,7 @@ jobs:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
         run: ./gradlew :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --max-workers=2 --console=plain
       - name: Upload preview APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tv-preview-apk

@@ -482,6 +482,7 @@ class JetStreamDialogListRecyclerView @JvmOverloads constructor(
         val framed = typedArray.getBoolean(R.styleable.JetStreamDialogListRecyclerView_jetStreamListFramed, true)
         typedArray.recycle()
 
+        JetStreamTouch.install(this)
         clipChildren = false
         clipToPadding = false
         overScrollMode = View.OVER_SCROLL_NEVER

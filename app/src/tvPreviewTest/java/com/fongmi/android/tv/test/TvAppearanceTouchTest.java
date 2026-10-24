@@ -127,6 +127,11 @@ public class TvAppearanceTouchTest {
 
                 main(() -> activity.showPage("search"));
                 text("A").click();
+                SystemClock.sleep(350);
+                main(() -> assertEquals("星际A", ((android.widget.TextView) activity.findViewById(R.id.keyword)).getText().toString()));
+                device.pressDPadRight(); device.pressDPadCenter();
+                SystemClock.sleep(350);
+                main(() -> assertEquals("星际AB", ((android.widget.TextView) activity.findViewById(R.id.keyword)).getText().toString()));
                 capture(theme + "-06-search");
                 main(() -> activity.showPage("detail"));
                 capture(theme + "-07-detail");
@@ -171,6 +176,8 @@ public class TvAppearanceTouchTest {
                 text(light ? "浅色" : "深色").click();
                 SystemClock.sleep(350);
                 assertEquals(light, RexTheme.isLight());
+                main(() -> activity.showPage("home-layout"));
+                capture(theme + "-11-home-layout");
                 main(() -> { activity.cardClicks = 0; activity.cardLongClicks = 0; });
             }
             verifyGestureCancellation();

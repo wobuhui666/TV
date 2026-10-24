@@ -82,6 +82,12 @@ android {
     }
 
     sourceSets {
+        // Both mode and ABI are flavor dimensions. Bind the TV preview explicitly
+        // so a partial flavor/build-type directory cannot silently be ignored.
+        preview {
+            java.srcDirs += 'src/leanbackPreview/java'
+            manifest.srcFile 'src/leanbackPreview/AndroidManifest.xml'
+        }
         if (providers.gradleProperty('tvPreview').isPresent()) {
             androidTest.java.srcDirs += 'src/tvPreviewTest/java'
         }
@@ -130,6 +136,10 @@ android {
 }
 
 androidComponents {
+    beforeVariants(selector().withBuildType('preview')) { variant ->
+        def mode = variant.productFlavors.find { it.first == 'mode' }?.second
+        variant.enable = mode == 'leanback'
+    }
     onVariants(selector().withBuildType('release')) { variant ->
         def flavors = variant.productFlavors.collectEntries { [(it.first): it.second] }
         def mode = flavors['mode'] ?: 'mode'

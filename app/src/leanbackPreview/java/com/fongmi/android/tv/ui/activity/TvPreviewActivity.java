@@ -83,13 +83,34 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             settings.requestInitialFocus();
             return;
         }
+        if (name.equals("home-layout")) {
+            root.removeAllViews();
+            View content = getLayoutInflater().inflate(R.layout.activity_home, root, false);
+            root.addView(content);
+            nav = content.findViewById(R.id.nav);
+            setupNavigation();
+            ((TextView) content.findViewById(R.id.title)).setText("TV 预览");
+            ((TextView) content.findViewById(R.id.clock)).setText("20:26");
+            JetStreamVerticalGridView nativeGrid = content.findViewById(R.id.recycler);
+            nativeGrid.setNumColumns(5);
+            nativeGrid.setAdapter(new CardAdapter(40));
+            ((ProgressLayout) content.findViewById(R.id.progressLayout)).showContent();
+            grid = nativeGrid;
+            nav.requestFocus();
+            return;
+        }
         if (name.equals("search")) {
             root.removeAllViews();
             View content = getLayoutInflater().inflate(R.layout.activity_search, root, false);
             root.addView(content);
             ((TextView) content.findViewById(R.id.keyword)).setText("星际");
             RecyclerView keyboard = content.findViewById(R.id.keyboard);
-            keyboard.setAdapter(new KeyboardAdapter());
+            TextView keyword = content.findViewById(R.id.keyword);
+            keyboard.setAdapter(new com.fongmi.android.tv.ui.adapter.KeyboardAdapter(new com.fongmi.android.tv.ui.adapter.KeyboardAdapter.OnClickListener() {
+                public void onTextClick(String text) { keyword.append(text); }
+                public void onIconClick(int id) { lastAction = "keyboard-" + id; }
+                public boolean onLongClick(int id) { lastAction = "keyboard-long-" + id; return true; }
+            }));
             RecyclerView words = content.findViewById(R.id.wordRecycler);
             words.setLayoutManager(new GridLayoutManager(this, 2));
             words.setAdapter(new CardAdapter(8));
@@ -130,16 +151,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             return;
         }
         nav = new JetStreamHomeNavView(this);
-        nav.setItems(Arrays.asList(
-            new JetStreamHomeNavView.NavItem("home", "首页", R.drawable.msr_home),
-            new JetStreamHomeNavView.NavItem("discover", "发现", R.drawable.msr_movie),
-            new JetStreamHomeNavView.NavItem("search", "搜索", R.drawable.msr_search),
-            new JetStreamHomeNavView.NavItem("settings", "设置", R.drawable.msr_settings)));
-        nav.setSelectedKey("home");
-        nav.setListener(new JetStreamHomeNavView.Listener() {
-            public void onNavClick(String key) { lastAction = key; }
-            public void onNavLongClick(String key) { lastAction = "long-" + key; }
-        });
+        setupNavigation();
         layout.addView(nav, new LinearLayout.LayoutParams(-1, dp(48)));
         JetStreamSectionHeaderView title = new JetStreamSectionHeaderView(this);
         title.setText("为你推荐 · 离线预览");
@@ -151,6 +163,19 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
         grid.setPadding(dp(4), dp(8), dp(4), dp(12));
         layout.addView(grid, new LinearLayout.LayoutParams(-1, 0, 1));
         nav.requestFocus();
+    }
+
+    private void setupNavigation() {
+        nav.setItems(Arrays.asList(
+            new JetStreamHomeNavView.NavItem("home", "首页", R.drawable.msr_home),
+            new JetStreamHomeNavView.NavItem("discover", "发现", R.drawable.msr_movie),
+            new JetStreamHomeNavView.NavItem("search", "搜索", R.drawable.msr_search),
+            new JetStreamHomeNavView.NavItem("settings", "设置", R.drawable.msr_settings)));
+        nav.setSelectedKey("home");
+        nav.setListener(new JetStreamHomeNavView.Listener() {
+            public void onNavClick(String key) { lastAction = key; }
+            public void onNavLongClick(String key) { lastAction = "long-" + key; }
+        });
     }
 
     private void addChips(LinearLayout layout) {
@@ -220,13 +245,4 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
         public int getItemCount() { return count; }
     }
 
-    private class KeyboardAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-        @NonNull public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
-            return new RecyclerView.ViewHolder(getLayoutInflater().inflate(R.layout.adapter_keyboard_text, parent, false)) {};
-        }
-        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-            ((TextView) holder.itemView).setText("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".substring(position, position + 1));
-        }
-        public int getItemCount() { return 36; }
-    }
 }
