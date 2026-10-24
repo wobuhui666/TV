@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
@@ -380,6 +381,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
                     active = detailFocused && selectedAction == index,
                     onClick = {
                         selectedAction = index
+                        requestFocus()
                         performAction(spec.action)
                     }
                 )
@@ -422,6 +424,7 @@ class JetStreamVodDetailView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(JetStreamShapes.Button)
                 .background(background)
+                .focusProperties { canFocus = false }
                 .clickable(
                     enabled = spec.enabled,
                     interactionSource = interactionSource,

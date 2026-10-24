@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,8 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
@@ -31,11 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fongmi.android.tv.R
-import com.fongmi.android.tv.ui.components.JetStreamRadialScrim
-import com.fongmi.android.tv.ui.components.jetStreamHorizontalScrimBrush
 import com.fongmi.android.tv.ui.theme.JetStreamBorders
 import com.fongmi.android.tv.ui.theme.JetStreamShapes
-import com.fongmi.android.tv.ui.theme.JetStreamSpacing
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
 class JetStreamPageHeaderView @JvmOverloads constructor(
@@ -89,27 +85,44 @@ class JetStreamPageHeaderView @JvmOverloads constructor(
                         .align(Alignment.CenterStart)
                         .fillMaxWidth()
                 ) {
-                    Text(
-                        text = eyebrowText().uppercase(),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.0.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
+                    if (eyebrow.isNotBlank()) {
+                        Row(
+                            modifier = Modifier
+                                .clip(JetStreamShapes.Button)
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Text(
+                                text = eyebrow.uppercase(),
+                                modifier = Modifier.padding(start = 7.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.0.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Text(
                         text = title.ifBlank { context.getString(R.string.home_setting) },
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 24.sp,
-                        lineHeight = 28.sp,
+                        fontSize = 28.sp,
+                        lineHeight = 34.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (subtitle.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             text = subtitle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -124,7 +137,4 @@ class JetStreamPageHeaderView @JvmOverloads constructor(
         }
     }
 
-    private fun eyebrowText(): String {
-        return eyebrow.ifBlank { title }.ifBlank { context.getString(R.string.home_setting) }
-    }
 }

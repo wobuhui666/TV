@@ -122,22 +122,28 @@ public class CustomRecyclerView extends RecyclerView {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        if (event.getPointerCount() != 1) return false;
-        switch (event.getAction()) {
+        if (event.getPointerCount() != 1) return super.dispatchTouchEvent(event);
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 x1 = y1 = 0;
                 break;
             case MotionEvent.ACTION_DOWN:
                 x1 = event.getX();
                 y1 = event.getY();
-                getParent().requestDisallowInterceptTouchEvent(true);
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                 break;
             case MotionEvent.ACTION_MOVE:
                 float x2 = event.getX();
                 float y2 = event.getY();
                 float offsetX = Math.abs(x2 - x1);
                 float offsetY = Math.abs(y2 - y1);
-                if (offsetX > offsetY && offsetX > touchSlop) getParent().requestDisallowInterceptTouchEvent(false);
+                LayoutManager manager = getLayoutManager();
+                if (manager != null && getParent() != null && Math.max(offsetX, offsetY) > touchSlop) {
+                    boolean ownAxis = offsetX > offsetY ? manager.canScrollHorizontally() : manager.canScrollVertically();
+                    getParent().requestDisallowInterceptTouchEvent(ownAxis);
+                }
                 break;
         }
         return super.dispatchTouchEvent(event);

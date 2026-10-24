@@ -125,4 +125,7 @@
     <string name="push_copy_url">复制地址</string>
     <string name="push_copied_url">已复制地址到剪贴板</string>
 
+    <string name="setting_theme_mode">外观模式</string>
+    <string name="theme_mode_dark">深色</string>
+    <string name="theme_mode_light">浅色</string>
 </resources>

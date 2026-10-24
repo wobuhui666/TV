@@ -105,6 +105,7 @@ class JetStreamPageRecyclerView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 
@@ -116,6 +117,7 @@ class JetStreamHorizontalGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 
@@ -127,6 +129,7 @@ class JetStreamVerticalGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 
@@ -138,6 +141,7 @@ class JetStreamTypeGridView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 
@@ -149,6 +153,7 @@ class JetStreamPageContentScrollView @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 
@@ -159,6 +164,7 @@ class JetStreamPageViewPager @JvmOverloads constructor(
 
     init {
         applyJetStreamScrollableSurface()
+        if (this is RecyclerView) JetStreamTouch.install(this)
     }
 }
 

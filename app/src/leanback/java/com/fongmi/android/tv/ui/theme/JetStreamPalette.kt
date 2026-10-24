@@ -8,6 +8,7 @@ import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.fongmi.android.tv.R
@@ -36,25 +37,25 @@ data class JetStreamAccentPalette(
 
 object JetStreamPalette {
 
-    @ColorInt private val SURFACE = 0xFF1A1C1E.toInt()
-    @ColorInt private val SURFACE_CONTAINER = 0xFF1E2022.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGH = 0xFF292B2D.toInt()
-    @ColorInt private val SURFACE_CONTAINER_HIGHEST = 0xFF33353A.toInt()
-    @ColorInt private val ON_SURFACE = 0xFFE3E2E6.toInt()
-    @ColorInt private val ON_SURFACE_VARIANT = 0xFFC4C6CF.toInt()
-    @ColorInt private val OUTLINE = 0xFF8E9099.toInt()
-    @ColorInt private val OUTLINE_VARIANT = 0xFF44464F.toInt()
-    @ColorInt private val ERROR = 0xFFFFB4AB.toInt()
-    @ColorInt private val ON_ERROR = 0xFF690005.toInt()
-    @ColorInt private val ERROR_CONTAINER = 0xFF93000A.toInt()
-    @ColorInt private val ON_ERROR_CONTAINER = 0xFFFFDAD6.toInt()
-    @ColorInt private val BACKGROUND = 0xFF11131A.toInt()
-    @ColorInt private val ON_BACKGROUND = 0xFFE3E2E6.toInt()
-    @ColorInt private val SCRIM_LIGHT = 0x14FFFFFF
-    @ColorInt private val SCRIM_MEDIUM = 0x29FFFFFF
-    @ColorInt private val SCRIM_HEAVY = 0x3DFFFFFF
-    @ColorInt private val OVERLAY_SURFACE = 0xCC1A1C1E.toInt()
-    @ColorInt private val OVERLAY_SURFACE_LIGHT = 0x661A1C1E
+    @ColorInt private val SURFACE get() = if (RexTheme.isLight) 0xFFF9FAFF.toInt() else 0xFF1A1C1E.toInt()
+    @ColorInt private val SURFACE_CONTAINER get() = if (RexTheme.isLight) 0xFFEEF1F8.toInt() else 0xFF1E2022.toInt()
+    @ColorInt private val SURFACE_CONTAINER_HIGH get() = if (RexTheme.isLight) 0xFFE6EAF3.toInt() else 0xFF292B2D.toInt()
+    @ColorInt private val SURFACE_CONTAINER_HIGHEST get() = if (RexTheme.isLight) 0xFFDDE2EE.toInt() else 0xFF33353A.toInt()
+    @ColorInt private val ON_SURFACE get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
+    @ColorInt private val ON_SURFACE_VARIANT get() = if (RexTheme.isLight) 0xFF4D5669.toInt() else 0xFFC4C6CF.toInt()
+    @ColorInt private val OUTLINE get() = if (RexTheme.isLight) 0xFF70798B.toInt() else 0xFF8E9099.toInt()
+    @ColorInt private val OUTLINE_VARIANT get() = if (RexTheme.isLight) 0xFFCAD1DF.toInt() else 0xFF44464F.toInt()
+    @ColorInt private val ERROR get() = if (RexTheme.isLight) 0xFFBA1A1A.toInt() else 0xFFFFB4AB.toInt()
+    @ColorInt private val ON_ERROR get() = if (RexTheme.isLight) 0xFFFFFFFF.toInt() else 0xFF690005.toInt()
+    @ColorInt private val ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFFFFDAD6.toInt() else 0xFF93000A.toInt()
+    @ColorInt private val ON_ERROR_CONTAINER get() = if (RexTheme.isLight) 0xFF410002.toInt() else 0xFFFFDAD6.toInt()
+    @ColorInt private val BACKGROUND get() = if (RexTheme.isLight) 0xFFF3F5FA.toInt() else 0xFF11131A.toInt()
+    @ColorInt private val ON_BACKGROUND get() = if (RexTheme.isLight) 0xFF1A2030.toInt() else 0xFFE3E2E6.toInt()
+    @ColorInt private val SCRIM_LIGHT get() = if (RexTheme.isLight) 0x141A2030 else 0x14FFFFFF
+    @ColorInt private val SCRIM_MEDIUM get() = if (RexTheme.isLight) 0x291A2030 else 0x29FFFFFF
+    @ColorInt private val SCRIM_HEAVY get() = if (RexTheme.isLight) 0x3D1A2030 else 0x3DFFFFFF
+    @ColorInt private val OVERLAY_SURFACE get() = if (RexTheme.isLight) 0xF2F9FAFF.toInt() else 0xCC1A1C1E.toInt()
+    @ColorInt private val OVERLAY_SURFACE_LIGHT get() = if (RexTheme.isLight) 0xDDF9FAFF.toInt() else 0x661A1C1E
     @ColorInt private val STAR_BLUE_SEED = 0xFF4870E0.toInt()
 
     private val controlStates = arrayOf(
@@ -180,11 +181,29 @@ object JetStreamPalette {
     @JvmStatic
     fun current(): JetStreamAccentPalette {
         val value = Setting.getThemeColor()
-        return when (value) {
+        val palette = when (value) {
             Setting.THEME_DEFAULT -> defaultPalette
             Setting.THEME_FOLLOW_WALLPAPER -> wallpaperPalette()
             else -> fixedPresets.firstOrNull { it.value == value } ?: fromSeed(value, R.string.setting_custom, value)
         }
+        return if (RexTheme.isLight) lightAccent(palette) else palette
+    }
+
+    private fun lightAccent(palette: JetStreamAccentPalette): JetStreamAccentPalette {
+        return palette.copy(
+            primary = palette.primaryContainer,
+            onPrimary = 0xFFFFFFFF.toInt(),
+            primaryContainer = palette.onPrimaryContainer,
+            onPrimaryContainer = palette.onPrimary,
+            secondary = palette.secondaryContainer,
+            onSecondary = 0xFFFFFFFF.toInt(),
+            secondaryContainer = palette.onSecondaryContainer,
+            onSecondaryContainer = palette.onSecondary,
+            tertiary = palette.tertiaryContainer,
+            onTertiary = 0xFFFFFFFF.toInt(),
+            tertiaryContainer = palette.onTertiaryContainer,
+            onTertiaryContainer = palette.onTertiary
+        )
     }
 
     @JvmStatic
@@ -195,7 +214,8 @@ object JetStreamPalette {
     @JvmStatic
     fun colorScheme(): ColorScheme {
         val palette = current()
-        return darkColorScheme(
+        val scheme = if (RexTheme.isLight) lightColorScheme() else darkColorScheme()
+        return scheme.copy(
             primary = composeColor(palette.primary),
             onPrimary = composeColor(palette.onPrimary),
             primaryContainer = composeColor(palette.primaryContainer),
@@ -208,18 +228,21 @@ object JetStreamPalette {
             onTertiary = composeColor(palette.onTertiary),
             tertiaryContainer = composeColor(palette.tertiaryContainer),
             onTertiaryContainer = composeColor(palette.onTertiaryContainer),
-            error = JetStreamColors.Error,
-            onError = JetStreamColors.OnError,
-            errorContainer = JetStreamColors.ErrorContainer,
-            onErrorContainer = JetStreamColors.OnErrorContainer,
-            background = JetStreamColors.Background,
-            onBackground = JetStreamColors.OnBackground,
-            surface = JetStreamColors.Surface,
-            onSurface = JetStreamColors.OnSurface,
-            onSurfaceVariant = JetStreamColors.OnSurfaceVariant,
-            surfaceVariant = JetStreamColors.SurfaceContainer,
-            outline = JetStreamColors.Outline,
-            outlineVariant = JetStreamColors.OutlineVariant
+            error = composeColor(ERROR),
+            onError = composeColor(ON_ERROR),
+            errorContainer = composeColor(ERROR_CONTAINER),
+            onErrorContainer = composeColor(ON_ERROR_CONTAINER),
+            background = composeColor(BACKGROUND),
+            onBackground = composeColor(ON_BACKGROUND),
+            surface = composeColor(SURFACE),
+            onSurface = composeColor(ON_SURFACE),
+            onSurfaceVariant = composeColor(ON_SURFACE_VARIANT),
+            surfaceVariant = composeColor(SURFACE_CONTAINER),
+            outline = composeColor(OUTLINE),
+            outlineVariant = composeColor(OUTLINE_VARIANT),
+            surfaceContainer = composeColor(SURFACE_CONTAINER),
+            surfaceContainerHigh = composeColor(SURFACE_CONTAINER_HIGH),
+            surfaceContainerHighest = composeColor(SURFACE_CONTAINER_HIGHEST)
         )
     }
 
@@ -372,7 +395,9 @@ object JetStreamPalette {
             R.color.jetstream_on_tertiary,
             R.color.jetstream_tertiary_container,
             R.color.jetstream_on_tertiary_container -> ColorStateList.valueOf(resolveColor(context, colorRes))
-            else -> ContextCompat.getColorStateList(context, colorRes) ?: ColorStateList.valueOf(resolveColor(context, colorRes))
+            else -> if (context.resources.getResourceEntryName(colorRes).startsWith("jetstream_"))
+                ColorStateList.valueOf(resolveColor(context, colorRes))
+            else ContextCompat.getColorStateList(context, colorRes) ?: ColorStateList.valueOf(resolveColor(context, colorRes))
         }
     }
 

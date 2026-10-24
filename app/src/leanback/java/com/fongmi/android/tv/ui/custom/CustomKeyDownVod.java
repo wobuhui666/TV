@@ -81,6 +81,26 @@ public class CustomKeyDownVod extends GestureDetector.SimpleOnGestureListener {
     }
 
     @Override
+    public boolean onDown(@NonNull MotionEvent event) {
+        return true;
+    }
+
+    @Override
+    public boolean onFling(MotionEvent start, @NonNull MotionEvent end, float velocityX, float velocityY) {
+        if (start == null) return false;
+        float dx = end.getX() - start.getX();
+        float dy = end.getY() - start.getY();
+        float threshold = App.get().getResources().getDisplayMetrics().density * 48;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return false;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            listener.onSeeking(pendingSeek.add(dx > 0 ? Constant.INTERVAL_SEEK : -Constant.INTERVAL_SEEK));
+            pendingSeek.post(250);
+        } else if (dy < 0) listener.onKeyUp();
+        else listener.onKeyDown();
+        return true;
+    }
+
+    @Override
     public boolean onDoubleTap(@NonNull MotionEvent e) {
         listener.onDoubleTap();
         return true;

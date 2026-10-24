@@ -78,6 +78,29 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
     }
 
     @Override
+    public boolean onDown(@NonNull MotionEvent event) {
+        return true;
+    }
+
+    @Override
+    public boolean onFling(MotionEvent start, @NonNull MotionEvent end, float velocityX, float velocityY) {
+        if (start == null || !listener.dispatch(false)) return false;
+        float dx = end.getX() - start.getX();
+        float dy = end.getY() - start.getY();
+        float threshold = App.get().getResources().getDisplayMetrics().density * 48;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return false;
+        if (Math.abs(dy) > Math.abs(dx)) {
+            if (dy < 0) listener.onKeyDown();
+            else listener.onKeyUp();
+        } else {
+            reset();
+            if (dx < 0) listener.onKeyLeft(0);
+            else listener.onKeyRight(0);
+        }
+        return true;
+    }
+
+    @Override
     public boolean onDoubleTap(@NonNull MotionEvent e) {
         if (listener.dispatch(false)) listener.onDoubleTap();
         return true;

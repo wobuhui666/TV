@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.fongmi.android.tv.ui.components.JetStreamRadialScrim
 import com.fongmi.android.tv.ui.components.jetStreamVerticalScrimBrush
 import com.fongmi.android.tv.ui.theme.JetStreamAmbient
+import com.fongmi.android.tv.ui.theme.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
 class JetStreamPageBackgroundView @JvmOverloads constructor(
@@ -44,9 +45,10 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
     override fun Content() {
         JetStreamTheme {
             val colorScheme = MaterialTheme.colorScheme
+            val light = RexTheme.isLight
             val backdrop = JetStreamAmbient.backdrop
             val glowColor by animateColorAsState(
-                targetValue = (JetStreamAmbient.color?.let { Color(it) } ?: colorScheme.primary).copy(alpha = 0.22f),
+                targetValue = (JetStreamAmbient.color?.let { Color(it) } ?: colorScheme.primary).copy(alpha = if (light) 0.10f else 0.22f),
                 animationSpec = tween(durationMillis = 220),
                 label = "ambientGlow"
             )
@@ -72,7 +74,7 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
-                            alpha = 0.26f,
+                            alpha = if (light) 0.08f else 0.26f,
                             filterQuality = FilterQuality.Low
                         )
                     }
@@ -86,7 +88,7 @@ class JetStreamPageBackgroundView @JvmOverloads constructor(
                 )
                 JetStreamRadialScrim(
                     modifier = Modifier.fillMaxSize(),
-                    centerColor = colorScheme.tertiary.copy(alpha = 0.16f),
+                    centerColor = colorScheme.tertiary.copy(alpha = if (light) 0.06f else 0.16f),
                     edgeColor = Color.Transparent,
                     centerFraction = Offset(0.86f, 0.72f),
                     radiusFraction = 0.66f

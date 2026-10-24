@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -229,11 +230,17 @@ class JetStreamChipRow @JvmOverloads constructor(
     }
 
     private fun clickChip(index: Int) {
-        if (index in items.indices) clickListener?.invoke(index)
+        if (index !in items.indices) return
+        focusedIndex = index
+        requestFocus()
+        clickListener?.invoke(index)
     }
 
     private fun longClickChip(index: Int) {
-        if (index in items.indices) longClickListener?.invoke(index)
+        if (index !in items.indices) return
+        focusedIndex = index
+        requestFocus()
+        longClickListener?.invoke(index)
     }
 
     @Composable
@@ -320,6 +327,7 @@ class JetStreamChipRow @JvmOverloads constructor(
                     if (focused) Modifier.border(JetStreamBorders.Medium, border, JetStreamShapes.Chip)
                     else Modifier
                 )
+                .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,

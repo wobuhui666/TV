@@ -81,7 +81,21 @@ android {
         }
     }
 
+    sourceSets {
+        if (providers.gradleProperty('tvPreview').isPresent()) {
+            androidTest.java.srcDirs += 'src/tvPreviewTest/java'
+        }
+    }
+
+    testBuildType = providers.gradleProperty('tvPreview').isPresent() ? 'preview' : 'debug'
+
     buildTypes {
+        preview {
+            initWith debug
+            applicationIdSuffix '.preview'
+            versionNameSuffix '-preview'
+            matchingFallbacks = ['debug']
+        }
         release {
             minifyEnabled = false
             shrinkResources = false
@@ -175,5 +189,6 @@ dependencies {
     androidTestImplementation libs.junit
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
     coreLibraryDesugaring libs.desugar
 }

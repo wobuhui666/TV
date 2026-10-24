@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,6 +95,7 @@ class JetStreamHomeNavView @JvmOverloads constructor(
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         navFocused = gainFocus
         if (gainFocus) normalizeFocus()
+        else centerLongPressed = false
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -146,6 +148,7 @@ class JetStreamHomeNavView @JvmOverloads constructor(
     private fun clickNav(index: Int, longClick: Boolean) {
         if (index !in items.indices) return
         focusedIndex = index
+        requestFocus()
         val key = items[index].key
         if (longClick) listener?.onNavLongClick(key) else listener?.onNavClick(key)
     }
@@ -221,6 +224,7 @@ class JetStreamHomeNavView @JvmOverloads constructor(
                     )
                     else Modifier
                 )
+                .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,

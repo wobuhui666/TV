@@ -2,6 +2,8 @@ package com.fongmi.android.tv.ui.custom
 
 import android.content.Context
 import android.util.AttributeSet
+import android.graphics.Rect
+import android.view.KeyEvent
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,7 +13,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,8 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.setting.Setting
 import com.fongmi.android.tv.ui.components.JetStreamPageScrim
+import com.fongmi.android.tv.ui.theme.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamPalette
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 import com.fongmi.android.tv.ui.theme.JetStreamAnimations
@@ -108,6 +109,10 @@ class JetStreamSettingView @JvmOverloads constructor(
     private var selectedSectionKey by mutableStateOf(SECTION_SOURCE)
     private var focusedSectionKey by mutableStateOf<String?>(null)
     private var focusedRowKey by mutableStateOf<String?>(null)
+    private var hostFocused by mutableStateOf(false)
+    private var focusedActionKey by mutableStateOf<String?>(null)
+    private var centerPressed = false
+    private var centerLongPressed = false
     private var initialFocusRequest by mutableIntStateOf(0)
     private var themeRefreshToken by mutableIntStateOf(0)
     private val rowValues = mutableStateMapOf<String, String>()
@@ -168,12 +173,93 @@ class JetStreamSettingView @JvmOverloads constructor(
         }
     }
 
+    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+        hostFocused = gainFocus
+        if (!gainFocus) {
+            centerPressed = false
+            centerLongPressed = false
+        }
+    }
+
+    private fun visibleSections() = sections().filter { section -> section.rows.any { isRowVisible(it.key) } }
+    private fun visibleRows() = visibleSections().firstOrNull { it.key == selectedSectionKey }?.rows.orEmpty().filter { isRowVisible(it.key) }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val navigation = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT)
+        val center = event.keyCode in listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+        if (center) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) centerPressed = true
+                if (event.isLongPress && !centerLongPressed) {
+                    centerLongPressed = true
+                    activateFocused(true)
+                }
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                if (centerPressed && !centerLongPressed && !event.isCanceled) activateFocused(false)
+                centerPressed = false
+                centerLongPressed = false
+            }
+            return true
+        }
+        if (!navigation) return super.dispatchKeyEvent(event)
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        val sections = visibleSections()
+        val rows = visibleRows()
+        if (focusedSectionKey != null) {
+            val index = sections.indexOfFirst { it.key == focusedSectionKey }.coerceAtLeast(0)
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> selectSection(sections.getOrNull((index - 1).coerceAtLeast(0))?.key ?: return true)
+                KeyEvent.KEYCODE_DPAD_DOWN -> selectSection(sections.getOrNull((index + 1).coerceAtMost(sections.lastIndex))?.key ?: return true)
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    focusedSectionKey = null
+                    focusedRowKey = rows.firstOrNull()?.key
+                    focusedActionKey = null
+                }
+            }
+        } else {
+            val index = rows.indexOfFirst { it.key == focusedRowKey }.coerceAtLeast(0)
+            val row = rows.getOrNull(index) ?: return true
+            val actionIndex = row.actions.indexOfFirst { it.key == focusedActionKey }
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    val step = if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP) -1 else 1
+                    focusedRowKey = rows[(index + step).coerceIn(0, rows.lastIndex)].key
+                    focusedActionKey = null
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> focusedActionKey = row.actions.getOrNull((actionIndex + 1).coerceAtMost(row.actions.lastIndex))?.key
+                KeyEvent.KEYCODE_DPAD_LEFT -> if (actionIndex > 0) focusedActionKey = row.actions[actionIndex - 1].key else {
+                    focusedSectionKey = selectedSectionKey
+                    focusedRowKey = null
+                    focusedActionKey = null
+                }
+            }
+        }
+        return true
+    }
+
+    private fun activateFocused(longClick: Boolean) {
+        focusedSectionKey?.let { selectSection(it); return }
+        val row = visibleRows().firstOrNull { it.key == focusedRowKey } ?: visibleRows().firstOrNull() ?: return
+        triggerSettingAction(focusedActionKey ?: row.actions.firstOrNull()?.key ?: row.key, longClick)
+    }
+
     private fun selectSection(key: String) {
-        if (sections().any { it.key == key && it.rows.any { row -> isRowVisible(row.key) } }) selectedSectionKey = key
+        if (visibleSections().none { it.key == key }) return
+        selectedSectionKey = key
+        focusedSectionKey = key
+        focusedRowKey = null
+        focusedActionKey = null
+        requestFocus()
     }
 
     private fun triggerSettingAction(key: String, longClick: Boolean) {
         if (!isActionAvailable(key)) return
+        val row = visibleRows().firstOrNull { it.key == key || it.actions.any { action -> action.key == key } }
+        focusedSectionKey = null
+        focusedRowKey = row?.key
+        focusedActionKey = key.takeIf { it != row?.key }
+        requestFocus()
         if (longClick) listener?.onSettingLongAction(key) else listener?.onSettingAction(key)
     }
 
@@ -190,7 +276,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         val visibleSections = sections.filter { section -> section.rows.any { isRowVisible(it.key) } }
         val selectedSection = visibleSections.firstOrNull { it.key == selectedSectionKey } ?: visibleSections.firstOrNull()
         val selectedRows = selectedSection?.rows.orEmpty().filter { isRowVisible(it.key) }
-        val firstRowFocusRequester = remember(selectedSection?.key, selectedRows.firstOrNull()?.key) { FocusRequester() }
+
         val listState = rememberLazyListState()
 
         LaunchedEffect(visibleSections.map { it.key }, selectedSectionKey) {
@@ -200,8 +286,12 @@ class JetStreamSettingView @JvmOverloads constructor(
         LaunchedEffect(selectedSection?.key) {
             listState.scrollToItem(0)
         }
-        LaunchedEffect(initialFocusRequest, selectedSection?.key, selectedRows.firstOrNull()?.key) {
-            if (initialFocusRequest > 0 && selectedRows.isNotEmpty() && hasFocus()) runCatching { firstRowFocusRequester.requestFocus() }
+        LaunchedEffect(initialFocusRequest) {
+            if (initialFocusRequest > 0 && focusedSectionKey == null && focusedRowKey == null) focusedRowKey = selectedRows.firstOrNull()?.key
+        }
+        LaunchedEffect(focusedRowKey, selectedSection?.key) {
+            val index = selectedRows.indexOfFirst { it.key == focusedRowKey }
+            if (index >= 0) listState.animateScrollToItem(index)
         }
 
         JetStreamPageScrim(modifier = Modifier.fillMaxSize()) {
@@ -221,7 +311,6 @@ class JetStreamSettingView @JvmOverloads constructor(
                 ContentPanel(
                     section = selectedSection,
                     rows = selectedRows,
-                    firstRowFocusRequester = firstRowFocusRequester,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
@@ -283,7 +372,6 @@ class JetStreamSettingView @JvmOverloads constructor(
     private fun ContentPanel(
         section: SectionSpec?,
         rows: List<RowSpec>,
-        firstRowFocusRequester: FocusRequester,
         modifier: Modifier,
         contentPadding: PaddingValues,
         listState: androidx.compose.foundation.lazy.LazyListState
@@ -311,10 +399,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 verticalArrangement = Arrangement.spacedBy(JetStreamSpacing.Medium)
             ) {
                 items(rows, key = { it.key }) { row ->
-                    SettingRow(
-                        row = row,
-                        focusRequester = if (row.key == rows.firstOrNull()?.key) firstRowFocusRequester else null
-                    )
+                    SettingRow(row)
                 }
             }
         }
@@ -324,7 +409,7 @@ class JetStreamSettingView @JvmOverloads constructor(
     @Composable
     private fun SectionButton(section: SectionSpec, selected: Boolean, onClick: () -> Unit) {
         val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
+        val focused = hostFocused && focusedSectionKey == section.key
         val scale by animateFloatAsState(
             if (focused) JetStreamAnimations.FocusScaleMedium else 1.0f,
             animationSpec = JetStreamAnimations.ScaleSpring,
@@ -348,9 +433,6 @@ class JetStreamSettingView @JvmOverloads constructor(
             animationSpec = JetStreamAnimations.ColorTween,
             label = "sectionText"
         )
-        LaunchedEffect(focused) {
-            if (focused) focusedSectionKey = section.key
-        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -358,6 +440,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(RoundedCornerShape(22.dp))
                 .background(background)
+                .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -379,9 +462,9 @@ class JetStreamSettingView @JvmOverloads constructor(
 
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
-    private fun SettingRow(row: RowSpec, focusRequester: FocusRequester?) {
+    private fun SettingRow(row: RowSpec) {
         val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
+        val focused = hostFocused && focusedSectionKey == null && focusedRowKey == row.key && focusedActionKey == null
         val scale by animateFloatAsState(
             if (focused) JetStreamAnimations.FocusScaleSmall else 1.0f,
             animationSpec = JetStreamAnimations.ScaleSpring,
@@ -404,10 +487,6 @@ class JetStreamSettingView @JvmOverloads constructor(
         )
         val value = rowValues[row.key].orEmpty()
         val onText = context.getString(R.string.setting_on)
-        val requesterModifier = focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier
-        LaunchedEffect(focused) {
-            if (focused) focusedRowKey = row.key
-        }
 
         Row(
             modifier = Modifier
@@ -416,7 +495,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 .graphicsLayer(scaleX = scale, scaleY = scale)
                 .clip(JetStreamShapes.Large)
                 .background(background)
-                .then(requesterModifier)
+                .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -488,7 +567,7 @@ class JetStreamSettingView @JvmOverloads constructor(
     @Composable
     private fun ActionChip(rowKey: String, action: ActionSpec) {
         val interactionSource = remember { MutableInteractionSource() }
-        val focused by interactionSource.collectIsFocusedAsState()
+        val focused = hostFocused && focusedSectionKey == null && focusedActionKey == action.key
         val selected = action.selected
         val scale by animateFloatAsState(
             if (focused) JetStreamAnimations.FocusScaleMedium else 1.0f,
@@ -518,9 +597,6 @@ class JetStreamSettingView @JvmOverloads constructor(
             animationSpec = JetStreamAnimations.ColorTween,
             label = "chipOutline"
         )
-        LaunchedEffect(focused) {
-            if (focused) focusedRowKey = rowKey
-        }
         Row(
             modifier = Modifier
                 .height(38.dp)
@@ -528,6 +604,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                 .clip(RoundedCornerShape(19.dp))
                 .background(background)
                 .border(JetStreamBorders.Thin, outlineColor, RoundedCornerShape(19.dp))
+                .focusProperties { canFocus = false }
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -704,6 +781,10 @@ class JetStreamSettingView @JvmOverloads constructor(
                 key = SECTION_APP,
                 label = context.getString(R.string.setting_section_app),
                 rows = listOf(
+                    RowSpec(KEY_THEME_MODE, context.getString(R.string.setting_theme_mode), actions = listOf(
+                        ActionSpec(KEY_THEME_DARK, context.getString(R.string.theme_mode_dark), selected = !RexTheme.isLight),
+                        ActionSpec(KEY_THEME_LIGHT, context.getString(R.string.theme_mode_light), selected = RexTheme.isLight)
+                    )),
                     RowSpec(KEY_INCOGNITO, context.getString(R.string.setting_incognito), toggle = true),
                     RowSpec(KEY_SOURCE_MODE, context.getString(R.string.setting_source_mode)),
                     RowSpec(KEY_SOURCE_CROSS_SITE, context.getString(R.string.setting_source_cross_site), toggle = true),
@@ -727,6 +808,9 @@ class JetStreamSettingView @JvmOverloads constructor(
     }
 
     companion object {
+        const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_THEME_DARK = "theme_dark"
+        const val KEY_THEME_LIGHT = "theme_light"
         const val SECTION_SOURCE = "source"
         const val SECTION_PLAYBACK = "playback"
         const val SECTION_DECODE = "decode"
