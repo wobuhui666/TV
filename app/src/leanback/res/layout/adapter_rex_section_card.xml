@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fongmi.android.tv.ui.custom.JetStreamRexSectionCard xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rexSectionCard"
+    android:layout_width="480dp"
+    android:layout_height="434dp">
+
+    <FrameLayout
+        android:id="@+id/hero"
+        android:layout_width="match_parent"
+        android:layout_height="270dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true">
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamRexSectionScrim
+            android:id="@+id/scrim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="40dp">
+
+            <com.fongmi.android.tv.ui.custom.JetStreamRexCardLabelTextView
+                android:id="@+id/section"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textSize="22sp"
+                tools:text="近一月 · 热门综艺" />
+
+            <com.fongmi.android.tv.ui.custom.JetStreamRexCardTitleTextView
+                android:id="@+id/name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:textSize="14sp"
+                tools:text="你好，星期六" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <com.fongmi.android.tv.ui.custom.JetStreamRexSectionRail
+        android:id="@+id/posters"
+        android:layout_width="match_parent"
+        android:layout_height="164dp"
+        android:paddingStart="16dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="14dp" />
+</com.fongmi.android.tv.ui.custom.JetStreamRexSectionCard>

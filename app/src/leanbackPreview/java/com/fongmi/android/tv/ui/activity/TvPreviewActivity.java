@@ -40,7 +40,8 @@ import com.fongmi.android.tv.ui.theme.JetStreamPalette;
 import com.fongmi.android.tv.ui.theme.RexTheme;
 import com.fongmi.android.tv.ui.home.PosterHomeController;
 import com.fongmi.android.tv.ui.presenter.RexPosterPresenter;
-import com.fongmi.android.tv.ui.presenter.RexSpotlightPresenter;
+import com.fongmi.android.tv.ui.presenter.RexSectionCardPresenter;
+import com.fongmi.android.tv.ui.custom.JetStreamRexSectionCard;
 import com.fongmi.android.tv.ui.rex.RexHomeCatalog;
 import com.google.android.flexbox.FlexboxLayoutManager;
 import com.google.android.flexbox.FlexDirection;
@@ -78,7 +79,6 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public ArrayObjectAdapter rexPage;
     public JetStreamVerticalGridView rexGrid;
     public int rexSpotlightPosition;
-    public int rexMixedPosition;
     private PosterHomeController posterHome;
     private boolean retainPageOnThemeChange;
     private View rexToolbar;
@@ -351,8 +351,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
         posterHome.attachSnapshot(rexPage, RexPreviewFixtures.feeds());
         for (int i = 0; i < rexPage.size(); i++) {
             if (!(rexPage.get(i) instanceof ListRow row)) continue;
-            if (row.getAdapter().getPresenter(row) instanceof RexSpotlightPresenter) rexSpotlightPosition = i;
-            if (row.getAdapter().getPresenter(row) instanceof RexPosterPresenter) rexMixedPosition = i;
+            if (row.getAdapter().getPresenter(row) instanceof RexSectionCardPresenter) rexSpotlightPosition = i;
         }
         ((ProgressLayout) content.findViewById(R.id.progressLayout)).showContent();
         nav.requestFocus();
@@ -360,7 +359,33 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
 
     public void selectRexRow(boolean spotlight) {
         rexGrid.requestFocus();
-        rexGrid.setSelectedPosition(spotlight ? rexSpotlightPosition : rexMixedPosition);
+        rexGrid.setSelectedPosition(rexSpotlightPosition);
+        focusRexSection(spotlight, 0);
+    }
+
+    private void focusRexSection(boolean spotlight, int attempt) {
+        rexGrid.postDelayed(() -> {
+            HorizontalGridView rail = rexRail(true);
+            if (rail == null) {
+                if (attempt < 20) focusRexSection(spotlight, attempt + 1);
+                return;
+            }
+            rail.setSelectedPosition(0);
+            rail.scrollToPosition(0);
+            rail.postDelayed(() -> {
+                JetStreamRexSectionCard card = rexSectionCard(0);
+                if (card == null) {
+                    if (attempt < 20) focusRexSection(spotlight, attempt + 1);
+                    return;
+                }
+                if (spotlight) card.findViewById(R.id.hero).requestFocus();
+                else {
+                    HorizontalGridView posters = card.findViewById(R.id.posters);
+                    posters.setSelectedPosition(0);
+                    posters.requestFocus();
+                }
+            }, 80);
+        }, 40);
     }
 
     private void setRexToolbarVisible(boolean visible) {
@@ -374,10 +399,20 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     }
 
     public HorizontalGridView rexRail(boolean spotlight) {
-        RecyclerView.ViewHolder holder = rexGrid.findViewHolderForAdapterPosition(spotlight ? rexSpotlightPosition : rexMixedPosition);
+        if (!spotlight) {
+            JetStreamRexSectionCard card = rexSectionCard(0);
+            return card == null ? null : card.findViewById(R.id.posters);
+        }
+        RecyclerView.ViewHolder holder = rexGrid.findViewHolderForAdapterPosition(rexSpotlightPosition);
         if (!(holder instanceof ItemBridgeAdapter.ViewHolder bridge)) return null;
         if (!(bridge.getPresenter() instanceof ListRowPresenter presenter)) return null;
         return ((ListRowPresenter.ViewHolder) presenter.getRowViewHolder(bridge.getViewHolder())).getGridView();
+    }
+
+    public JetStreamRexSectionCard rexSectionCard(int position) {
+        HorizontalGridView rail = rexRail(true);
+        RecyclerView.ViewHolder holder = rail == null ? null : rail.findViewHolderForAdapterPosition(position);
+        return holder == null ? null : holder.itemView.findViewById(R.id.rexSectionCard);
     }
 
     /** Verify the production navigation intents while keeping the fixture offline. */

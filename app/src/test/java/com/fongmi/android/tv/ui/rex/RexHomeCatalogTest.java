@@ -33,6 +33,8 @@ public class RexHomeCatalogTest {
         List<RexFeedResult> spots = RexHomeCatalog.spotlights(List.of(result));
         assertEquals(1, spots.size());
         assertEquals("2", spots.get(0).getItems().get(0).getId());
+        assertEquals("1", spots.get(0).getItems().get(1).getId());
+        assertEquals("1", result.getItems().get(0).getId());
     }
 
     @Test
@@ -45,6 +47,39 @@ public class RexHomeCatalogTest {
     public void spotlightsSkipEmptySections() {
         assertTrue(RexHomeCatalog.spotlights(List.of(new RexFeedResult(section("a", 20), List.of()))).isEmpty());
         assertTrue(RexHomeCatalog.spotlights(null).isEmpty());
+    }
+
+    @Test
+    public void sectionPreviewsDeduplicateAndCapWithoutMixingSections() {
+        List<Vod> items = new ArrayList<>();
+        items.add(null);
+        items.add(vod("", "tv", true));
+        for (int i = 0; i < 30; i++) items.add(vod("a" + i, "tv", i == 20));
+        items.add(vod("a0", "tv", true));
+        List<RexFeedResult> cards = RexHomeCatalog.spotlights(List.of(
+                new RexFeedResult(section("a", 20), items),
+                new RexFeedResult(section("b", 2), List.of(vod("b0", "tv", true), vod("b1", "tv", true), vod("b2", "tv", true)))));
+        assertEquals(RexHomeCatalog.SECTION_PREVIEW_CAP, cards.get(0).getItems().size());
+        assertEquals("a20", cards.get(0).getItems().get(0).getId());
+        assertEquals("a0", cards.get(0).getItems().get(1).getId());
+        assertEquals(2, cards.get(1).getItems().size());
+        assertTrue(cards.get(1).getItems().stream().allMatch(item -> item.getId().startsWith("b")));
+    }
+
+    @Test
+    public void sectionDiffTracksSmallCardMetadataAndArtwork() {
+        RexSection section = section("a", 12);
+        Vod hero = vod("hero", "tv", true);
+        Vod original = vod("item", "tv", true);
+        RexFeedResult before = new RexFeedResult(section, List.of(hero, original));
+        Vod updated = vod("item", "tv", true);
+        assertTrue(before.isSameContent(new RexFeedResult(section, List.of(hero, updated))));
+        updated.setYear("2030");
+        org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero, updated))));
+        updated.setYear("");
+        updated.setBackdrop("new-backdrop");
+        org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero, updated))));
+        org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero))));
     }
 
     @Test

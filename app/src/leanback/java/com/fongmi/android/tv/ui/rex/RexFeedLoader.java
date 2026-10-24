@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Rex 两行（精选大卡 + 混合推荐流）的数据加载编排。
+ * Rex 栏目卡的数据加载编排。
  *
  * <p>逐栏目并行；栏目独立成败——失败或空栏目直接消失，不影响其他栏目；
  * 静态 30 分钟缓存（命中先渲染，同时不重复拉）；24 秒兜底截止（到点交付已到达的部分）；
@@ -35,7 +35,7 @@ public final class RexFeedLoader {
 
     public interface Listener {
 
-        void onComplete(List<RexFeedResult> results);
+        void onResults(List<RexFeedResult> results);
     }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -44,44 +44,58 @@ public final class RexFeedLoader {
     private List<RexSection> sections = List.of();
     private Listener listener;
     private Runnable deadline;
+    private Runnable delivery;
     private int pending;
     private int generation;
     private boolean done;
     private boolean closed;
 
     public void load(List<RexSection> sections, Listener listener) {
+        if (closed) return;
+        int request = ++generation;
+        cancelCalls();
+        cancelDelivery();
         this.sections = sections;
         this.listener = listener;
-        int request = ++generation;
         done = false;
         pending = 0;
+        Map<String, List<Vod>> previous = new LinkedHashMap<>(merged);
+        List<RexSection> missing = new ArrayList<>();
         merged.clear();
         cancelDeadline();
         for (RexSection section : sections) {
             List<Vod> cached = cached(section.getKey());
             if (cached != null) merged.put(section.getKey(), cached);
-            else pending++;
+            else {
+                pending++;
+                missing.add(section);
+                // A partial refresh must not remove still-visible sections while they load.
+                if (previous.containsKey(section.getKey())) merged.put(section.getKey(), previous.get(section.getKey()));
+            }
         }
         if (pending == 0) {
+            done = true;
             deliver(request);
             return;
         }
+        if (!merged.isEmpty()) deliver(request);
+        if (closed || request != generation) return;
         deadline = () -> {
             if (closed || done || request != generation) return;
             done = true;
             cancelCalls();
+            cancelDelivery();
             deliver(request);
         };
         handler.postDelayed(deadline, DEADLINE_MS);
-        for (RexSection section : sections) {
-            if (!merged.containsKey(section.getKey())) fetch(section, request);
-        }
+        for (RexSection section : missing) fetch(section, request);
     }
 
     public void close() {
         closed = true;
         generation++;
         cancelDeadline();
+        cancelDelivery();
         cancelCalls();
     }
 
@@ -180,6 +194,10 @@ public final class RexFeedLoader {
     }
 
     private void accept(RexSection section, List<Vod> items, int request) {
+        if (Looper.myLooper() != handler.getLooper()) {
+            handler.post(() -> accept(section, items, request));
+            return;
+        }
         if (closed || done || request != generation) return;
         List<Vod> capped = items.isEmpty()
                 ? List.of()
@@ -190,7 +208,15 @@ public final class RexFeedLoader {
         if (pending == 0) {
             done = true;
             cancelDeadline();
+            cancelDelivery();
             deliver(request);
+        } else if (!capped.isEmpty() && delivery == null) {
+            // Several feeds often finish together; publish one bounded UI update.
+            delivery = () -> {
+                delivery = null;
+                if (!done) deliver(request);
+            };
+            handler.postDelayed(delivery, 32);
         }
     }
 
@@ -201,12 +227,17 @@ public final class RexFeedLoader {
             List<Vod> items = merged.get(section.getKey());
             if (items != null && !items.isEmpty()) results.add(new RexFeedResult(section, items));
         }
-        if (listener != null) listener.onComplete(results);
+        if (listener != null) listener.onResults(results);
     }
 
     private void cancelDeadline() {
         if (deadline != null) handler.removeCallbacks(deadline);
         deadline = null;
+    }
+
+    private void cancelDelivery() {
+        if (delivery != null) handler.removeCallbacks(delivery);
+        delivery = null;
     }
 
     private void cancelCalls() {
