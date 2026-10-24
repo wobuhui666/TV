@@ -3,6 +3,7 @@ package com.fongmi.android.tv.ui.custom
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -54,12 +55,15 @@ class HomeContinueCardLayout @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
+    private val cornerRadiusDp = 10
+    private val focusStrokeWidthDp = 3
+
     init {
         background = GradientDrawable().apply {
-            cornerRadius = jetStreamDp(10)
+            cornerRadius = jetStreamDp(cornerRadiusDp)
             setColor(jetStreamColor(R.color.jetstream_surface_container))
         }
-        foreground = jetStreamFocusForeground(cornerRadiusDp = 10, strokeWidthDp = 3)
+        foreground = jetStreamFocusForeground(cornerRadiusDp, focusStrokeWidthDp)
         clipToOutline = true
         JetStreamAnimator.bindFocus(this, JetStreamAnimator.FOCUS_SCALE_CARD, 0)
     }
@@ -67,8 +71,14 @@ class HomeContinueCardLayout @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         // Leanback installs its smaller default outline after creating row children.
-        // Keep the progress strip clipped to this card's own rounded background.
-        outlineProvider = ViewOutlineProvider.BACKGROUND
+        // GradientDrawable insets the stroke center by half its width, so its
+        // outer corner radius includes that half-width as well.
+        outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height,
+                    jetStreamDp(cornerRadiusDp) + jetStreamDp(focusStrokeWidthDp) / 2f)
+            }
+        }
     }
 }
 
