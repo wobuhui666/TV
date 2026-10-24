@@ -11,6 +11,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.setting.Setting
 import kotlin.math.max
@@ -190,19 +191,24 @@ object JetStreamPalette {
     }
 
     private fun lightAccent(palette: JetStreamAccentPalette): JetStreamAccentPalette {
+        // Custom/wallpaper accents may use white on their dark primary. Generate
+        // pale containers independently so light mode always keeps dark text.
+        val primaryContainer = ColorUtils.blendARGB(palette.primary, AndroidColor.WHITE, 0.76f)
+        val secondaryContainer = ColorUtils.blendARGB(palette.secondary, AndroidColor.WHITE, 0.76f)
+        val tertiaryContainer = ColorUtils.blendARGB(palette.tertiary, AndroidColor.WHITE, 0.76f)
         return palette.copy(
             primary = palette.primaryContainer,
             onPrimary = 0xFFFFFFFF.toInt(),
-            primaryContainer = palette.onPrimaryContainer,
-            onPrimaryContainer = palette.onPrimary,
+            primaryContainer = primaryContainer,
+            onPrimaryContainer = ON_SURFACE,
             secondary = palette.secondaryContainer,
             onSecondary = 0xFFFFFFFF.toInt(),
-            secondaryContainer = palette.onSecondaryContainer,
-            onSecondaryContainer = palette.onSecondary,
+            secondaryContainer = secondaryContainer,
+            onSecondaryContainer = ON_SURFACE,
             tertiary = palette.tertiaryContainer,
             onTertiary = 0xFFFFFFFF.toInt(),
-            tertiaryContainer = palette.onTertiaryContainer,
-            onTertiaryContainer = palette.onTertiary
+            tertiaryContainer = tertiaryContainer,
+            onTertiaryContainer = ON_SURFACE
         )
     }
 
