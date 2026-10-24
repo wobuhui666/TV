@@ -238,6 +238,10 @@ public class TvAppearanceTouchTest {
         main(() -> RexTheme.setLight(!light));
         SystemClock.sleep(450);
         main(() -> {
+            assertSame("Playback Activity survives theme switching", activity, TvPreviewActivity.current);
+            assertFalse("Retained playback Activity is alive", activity.isDestroyed());
+            assertTrue("Retained playback title remains attached", title.isAttachedToWindow());
+            assertTrue("Retained playback switch remains attached", nativeSwitch.isAttachedToWindow());
             assertSame("Playback native controls survive theme switching", title, activity.retainedTitle);
             assertSame("Retained switch survives theme switching", nativeSwitch, activity.nativeSwitch);
             assertEquals("Retained playback title follows the current foreground",

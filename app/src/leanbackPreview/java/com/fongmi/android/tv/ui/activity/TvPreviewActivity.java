@@ -25,6 +25,7 @@ import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.bean.Word;
+import com.fongmi.android.tv.diagnostics.DiagnosticManager;
 import com.fongmi.android.tv.ui.adapter.KeepAdapter;
 import com.fongmi.android.tv.ui.adapter.WordAdapter;
 import com.fongmi.android.tv.setting.Setting;
@@ -41,6 +42,7 @@ import com.google.android.flexbox.FlexDirection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.io.IOException;
 
 /** Offline fixtures composed of the same TV layouts and controls shipped in the app. */
 public class TvPreviewActivity extends BaseActivity implements JetStreamSettingView.Listener, CustomKeyDownVod.Listener {
@@ -91,6 +93,11 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     @Override protected boolean customWall() { return false; }
 
     @Override protected void initView(Bundle state) {
+        try {
+            DiagnosticManager.start(this);
+        } catch (IOException error) {
+            throw new IllegalStateException("Cannot start preview crash diagnostics", error);
+        }
         current = this;
         showPage("rex-home");
     }

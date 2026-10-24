@@ -22,7 +22,13 @@ test_apk=$(read_metadata "$test_metadata" apk)
 printf 'Application: %s\nInstrumentation: %s\n' "$pkg" "$test_pkg" > "$out/packages.txt"
 collect() {
     adb pull "/sdcard/Android/data/$pkg/files/tv-verification/." "$out/" >/dev/null 2>&1 || true
-    adb logcat -d -v brief | grep -E 'AndroidRuntime|FATAL|ANR|TvAppearanceTouchTest' > "$out/logcat.txt" || true
+    adb logcat -b all -d -v threadtime > "$out/logcat-full.txt" 2>&1 || true
+    grep -E 'AndroidRuntime|FATAL|ANR|TvAppearanceTouchTest|CustomActivityOnCrash' "$out/logcat-full.txt" > "$out/logcat.txt" || true
+    adb shell dumpsys activity exit-info "$pkg" > "$out/exit-info.txt" 2>&1 || true
+    adb shell dumpsys meminfo "$pkg" > "$out/meminfo.txt" 2>&1 || true
+    adb shell dumpsys dropbox --print data_app_crash > "$out/dropbox-java-crashes.txt" 2>&1 || true
+    adb shell dumpsys dropbox --print data_app_native_crash > "$out/dropbox-native-crashes.txt" 2>&1 || true
+    adb exec-out run-as "$pkg" tar -c -f - files/diagnostics > "$out/app-diagnostics.tar" 2> "$out/app-diagnostics-collection.txt" || true
     adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' > "$out/focus.txt" || true
 }
 trap collect EXIT
