@@ -10,6 +10,7 @@ import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.View;
 import androidx.leanback.widget.HorizontalGridView;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.graphics.ColorUtils;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -336,31 +337,45 @@ public class TvAppearanceTouchTest {
         verifyRexRailSwipe(false);
         capture(theme + "-19-rex-mixed-swipe");
         main(() -> activity.rexGrid.requestFocus());
-        int oldOffset = scrollOffset();
-        device.swipe(device.getDisplayWidth() - 70, device.getDisplayHeight() - 100,
-                device.getDisplayWidth() - 70, 200, 35);
-        SystemClock.sleep(700);
-        assertTrue("Production Rex page scrolls vertically to its shelves", scrollOffset() > oldOffset);
+        verifyScrolledBySwipe(activity.rexGrid, device.getDisplayWidth() - 70, device.getDisplayHeight() - 100,
+                device.getDisplayWidth() - 70, 200, false);
         capture(theme + "-20-rex-shelves");
     }
 
     private void verifyRexRailSwipe(boolean spotlight) {
-        AtomicInteger before = new AtomicInteger();
         int[] bounds = new int[4];
+        HorizontalGridView[] target = new HorizontalGridView[1];
         main(() -> {
             HorizontalGridView rail = activity.rexRail(spotlight);
             assertNotNull("Production CustomRowPresenter exposes its native rail", rail);
+            target[0] = rail;
             int[] location = new int[2];
             rail.getLocationOnScreen(location);
             bounds[0] = location[0]; bounds[1] = location[1];
             bounds[2] = rail.getWidth(); bounds[3] = rail.getHeight();
-            before.set(rail.computeHorizontalScrollOffset());
         });
         int y = Math.min(device.getDisplayHeight() - 80, bounds[1] + bounds[3] / 2);
-        device.swipe(bounds[0] + bounds[2] - 180, y, bounds[0] + 180, y, 35);
-        SystemClock.sleep(800);
-        main(() -> assertTrue("Touch swipe scrolls the real Rex horizontal rail",
-                activity.rexRail(spotlight).computeHorizontalScrollOffset() > before.get()));
+        verifyScrolledBySwipe(target[0], bounds[0] + bounds[2] - 180, y,
+                bounds[0] + 180, y, true);
+    }
+
+    private void verifyScrolledBySwipe(RecyclerView recycler, int startX, int startY, int endX, int endY, boolean horizontal) {
+        AtomicInteger distance = new AtomicInteger();
+        RecyclerView.OnScrollListener listener = new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(RecyclerView view, int dx, int dy) {
+                distance.addAndGet(horizontal ? dx : dy);
+            }
+        };
+        // Leanback's LayoutManager leaves scrollbar offsets at zero; observe consumed movement.
+        main(() -> recycler.addOnScrollListener(listener));
+        try {
+            device.swipe(startX, startY, endX, endY, 35);
+            SystemClock.sleep(800);
+            assertTrue(horizontal ? "Touch swipe scrolls the real Rex horizontal rail"
+                    : "Production Rex page scrolls vertically to its shelves", distance.get() > 0);
+        } finally {
+            main(() -> recycler.removeOnScrollListener(listener));
+        }
     }
 
     private void verifyGestureCancellation() {
