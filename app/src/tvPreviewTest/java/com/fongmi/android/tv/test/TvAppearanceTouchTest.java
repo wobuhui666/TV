@@ -38,6 +38,11 @@ import com.fongmi.android.tv.ui.activity.HomePreviewFixtures;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
+import com.fongmi.android.tv.ui.custom.JetStreamRexSectionCard;
+import com.fongmi.android.tv.ui.rex.RexFeedLoader;
+import com.fongmi.android.tv.ui.rex.RexSections;
+import com.fongmi.android.tv.bean.RexSection;
+import com.fongmi.android.tv.api.rex.RexTmdbQuery;
 import com.fongmi.android.tv.ui.custom.JetStreamSettingView;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownVod;
@@ -260,7 +265,7 @@ public class TvAppearanceTouchTest {
             assertTrue("Light mode survives activity recreation", RexTheme.isLight());
             capture("light-11-recreated");
             try (FileWriter writer = new FileWriter(new File(output, "result.txt"))) {
-                writer.write("PASS: production PosterHomeController/RexSpotlightPresenter/RexPosterPresenter with offline Rex feeds; dark/light palettes; first touch clicks and long press; D-pad continuity; Rex horizontal rail and vertical grid swipe; search/detail/dialog/TV Material settings; retained native title/switch and new dialog theme; system theme changes, manual override and recreation; production discover detail with artwork and missing artwork.\n");
+                writer.write("PASS: production PosterHomeController/RexSectionCardPresenter/RexPosterPresenter with offline Rex feeds; dark/light palettes; first touch clicks and long press; D-pad continuity; Rex horizontal rail and vertical grid swipe; search/detail/dialog/TV Material settings; retained native title/switch and new dialog theme; system theme changes, manual override and recreation; production discover detail with artwork and missing artwork.\n");
             }
         } catch (Exception | AssertionError failure) {
             try {
@@ -432,6 +437,7 @@ public class TvAppearanceTouchTest {
                 assertEquals("History cards retain their production geometry", activity.dp(112), rail.getChildAt(0).getHeight());
             });
             capture(theme + "-23-home-history-order");
+            verifyCachedHomeRefresh(home, theme);
 
             device.pressBack();
             SystemClock.sleep(700);
@@ -558,6 +564,52 @@ public class TvAppearanceTouchTest {
         assertTrue("D-pad movement enters production home content before selecting a lower row", contentFocused.get());
     }
 
+    private void verifyCachedHomeRefresh(TvHomePreviewActivity home, String theme) throws Exception {
+        AtomicInteger changedContent = new AtomicInteger();
+        AtomicInteger structuralChanges = new AtomicInteger();
+        int popular = home.popularPosition();
+        RecyclerView.AdapterDataObserver observer = new RecyclerView.AdapterDataObserver() {
+            @Override public void onItemRangeChanged(int start, int count) {
+                if (start == 0 || (start <= popular && start + count > popular)) changedContent.incrementAndGet();
+            }
+            @Override public void onItemRangeInserted(int start, int count) { structuralChanges.addAndGet(count); }
+            @Override public void onItemRangeRemoved(int start, int count) { structuralChanges.addAndGet(count); }
+            @Override public void onItemRangeMoved(int from, int to, int count) { structuralChanges.addAndGet(count); }
+        };
+        main(() -> { home.pageGrid().getAdapter().registerAdapterDataObserver(observer); home.controller().refresh(); });
+        try {
+            long deadline = SystemClock.uptimeMillis() + 5000;
+            AtomicBoolean complete = new AtomicBoolean();
+            do {
+                instrumentation.runOnMainSync(() -> complete.set((int) HomePreviewFixtures.field(home.controller(), "pending") == 0));
+                if (complete.get()) break;
+                SystemClock.sleep(100);
+            } while (SystemClock.uptimeMillis() < deadline);
+            assertTrue("Warm home refresh completes", complete.get());
+            main(() -> {
+                assertEquals("Identical results do not rebind hero artwork or populated shelves", 0, changedContent.get());
+                assertEquals("Warm refresh does not remove and rebuild Rex shelves", 0, structuralChanges.get());
+                RexFeedLoader loader = new RexFeedLoader();
+                AtomicInteger pendingAtFirstDelivery = new AtomicInteger(-1);
+                java.util.List<RexSection> sections = new java.util.ArrayList<>(RexSections.home());
+                sections.add(RexSection.tmdb("preview-uncached-section", R.string.rex_section_trending_day, RexTmdbQuery.trending("day")));
+                try {
+                    loader.load(sections, results -> {
+                        if (!results.isEmpty()) pendingAtFirstDelivery.compareAndSet(-1, (int) HomePreviewFixtures.field(loader, "pending"));
+                    });
+                    assertTrue("Cached sections render before the outstanding source finishes", pendingAtFirstDelivery.get() > 0);
+                } finally {
+                    loader.close();
+                }
+            });
+            try (FileWriter writer = new FileWriter(new File(output, theme + "-home-refresh.txt"))) {
+                writer.write("PASS: identical cached results produce 0 hero/shelf rebinds and 0 structural row changes; cached Rex sections render while an uncached source is still pending.\n");
+            }
+        } finally {
+            main(() -> home.pageGrid().getAdapter().unregisterAdapterDataObserver(observer));
+        }
+    }
+
     private View rowView(TvHomePreviewActivity home, int position) {
         RecyclerView.ViewHolder holder = home.pageGrid().findViewHolderForAdapterPosition(position);
         assertNotNull("Production home row is laid out at " + position, holder);
@@ -659,12 +711,13 @@ public class TvAppearanceTouchTest {
     private void verifyRexHome(String theme) throws Exception {
         main(() -> {
             assertTrue("Production controller registered a Rex spotlight row", activity.rexSpotlightPosition > 0);
-            assertTrue("Production controller registered a Rex poster row", activity.rexMixedPosition > activity.rexSpotlightPosition);
             activity.selectRexRow(true);
         });
-        capture(theme + "-14-rex-spotlight");
+        assertSectionCard();
+        device.executeShellCommand("dumpsys gfxinfo " + activity.getPackageName() + " reset");
+        capture(theme + "-14-rex-section-card");
         int before = activity.navigationCount;
-        text("星际旅途 1").click();
+        text(activity.getString(R.string.rex_section_trending_day)).click();
         SystemClock.sleep(400);
         assertEquals("Rex spotlight activates on its first tap", before + 1, activity.navigationCount);
         assertEquals("trending_day", activity.lastNavigation.getStringExtra("section_key"));
@@ -673,7 +726,7 @@ public class TvAppearanceTouchTest {
         SystemClock.sleep(400);
         assertEquals("D-pad advances from the touched Rex spotlight", "now_playing", activity.lastNavigation.getStringExtra("section_key"));
         capture(theme + "-15-rex-spotlight-touch-dpad");
-        Rect spotlight = text("山海之间 13").getVisibleBounds();
+        Rect spotlight = text(activity.getString(R.string.rex_section_now_playing)).getVisibleBounds();
         before = activity.navigationCount;
         device.swipe(spotlight.centerX(), spotlight.centerY(), spotlight.centerX(), spotlight.centerY(), 130);
         SystemClock.sleep(400);
@@ -683,7 +736,7 @@ public class TvAppearanceTouchTest {
         capture(theme + "-16-rex-spotlight-swipe");
 
         main(() -> activity.selectRexRow(false));
-        capture(theme + "-17-rex-mixed");
+        capture(theme + "-17-rex-section-posters");
         before = activity.navigationCount;
         text("山海之间 2").click();
         SystemClock.sleep(400);
@@ -693,18 +746,59 @@ public class TvAppearanceTouchTest {
         device.pressDPadRight(); device.pressDPadCenter();
         SystemClock.sleep(400);
         assertEquals("D-pad advances from the touched Rex poster", "tmdb:movie:1002", activity.lastNavigation.getStringExtra("key"));
-        capture(theme + "-18-rex-mixed-touch-dpad");
+        capture(theme + "-18-rex-section-posters-touch-dpad");
         Rect poster = text("追光的人 3").getVisibleBounds();
         before = activity.navigationCount;
         device.swipe(poster.centerX(), poster.centerY(), poster.centerX(), poster.centerY(), 130);
         SystemClock.sleep(400);
         assertEquals("Rex poster long press navigates once", before + 1, activity.navigationCount);
         verifyRexRailSwipe(false);
-        capture(theme + "-19-rex-mixed-swipe");
-        main(() -> activity.rexGrid.requestFocus());
-        verifyScrolledBySwipe(activity.rexGrid, device.getDisplayWidth() - 70, device.getDisplayHeight() - 100,
-                device.getDisplayWidth() - 70, 200, false);
+        capture(theme + "-19-rex-section-posters-swipe");
+        int[] inside = new int[4];
+        main(() -> {
+            HorizontalGridView rail = activity.rexRail(false);
+            int[] location = new int[2];
+            rail.getLocationOnScreen(location);
+            inside[0] = location[0] + rail.getWidth() / 2;
+            inside[1] = location[1] + rail.getHeight() - 20;
+            inside[2] = Math.max(80, location[1] - 300);
+        });
+        verifyScrolledBySwipe(activity.rexGrid, inside[0], inside[1], inside[0], inside[2], false);
         capture(theme + "-20-rex-shelves");
+        try (FileWriter writer = new FileWriter(new File(output, theme + "-home-framestats.txt"))) {
+            writer.write(device.executeShellCommand("dumpsys gfxinfo " + activity.getPackageName() + " framestats"));
+            writer.write(device.executeShellCommand("dumpsys meminfo " + activity.getPackageName()));
+        }
+    }
+
+    private void assertSectionCard() {
+        AtomicBoolean colored = new AtomicBoolean();
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        do {
+            instrumentation.runOnMainSync(() -> {
+                JetStreamRexSectionCard card = activity.rexSectionCard(0);
+                colored.set(card != null && card.getSurfaceColor() != JetStreamPalette.resolveColor(activity, R.color.jetstream_surface_container));
+            });
+            if (colored.get()) break;
+            SystemClock.sleep(100);
+        } while (SystemClock.uptimeMillis() < deadline);
+        assertTrue("Section background is extracted from its displayed hero", colored.get());
+        main(() -> {
+            JetStreamRexSectionCard card = activity.rexSectionCard(0);
+            View hero = card.findViewById(R.id.hero);
+            HorizontalGridView rail = card.findViewById(R.id.posters);
+            assertEquals(activity.dp(434), card.getHeight());
+            assertEquals("The preview rail joins the large artwork", hero.getBottom(), rail.getTop());
+            assertTrue("The preview rail stays inside the rounded container", rail.getBottom() <= card.getHeight());
+            assertTrue("The card clips both parts to a single rounded outline", card.getClipToOutline());
+            assertEquals(12, rail.getAdapter().getItemCount());
+            assertTrue("Only visible preview cards are bound", rail.getChildCount() < rail.getAdapter().getItemCount());
+            View child = rail.findViewHolderForAdapterPosition(0).itemView;
+            for (int id : new int[] {R.id.name, R.id.meta}) {
+                android.widget.TextView text = child.findViewById(id);
+                assertTrue("Extracted card tint preserves caption contrast", ColorUtils.calculateContrast(text.getCurrentTextColor(), card.getSurfaceColor()) >= 4.5);
+            }
+        });
     }
 
     private void verifyRexRailSwipe(boolean spotlight) {
@@ -719,9 +813,20 @@ public class TvAppearanceTouchTest {
             bounds[0] = location[0]; bounds[1] = location[1];
             bounds[2] = rail.getWidth(); bounds[3] = rail.getHeight();
         });
-        int y = Math.min(device.getDisplayHeight() - 80, bounds[1] + bounds[3] / 2);
-        verifyScrolledBySwipe(target[0], bounds[0] + bounds[2] - 180, y,
-                bounds[0] + 180, y, true);
+        int y = Math.min(device.getDisplayHeight() - 50, bounds[1] + bounds[3] / 2);
+        AtomicInteger outerMovement = new AtomicInteger();
+        RecyclerView.OnScrollListener observer = new RecyclerView.OnScrollListener() {
+            @Override public void onScrolled(RecyclerView view, int dx, int dy) { outerMovement.addAndGet(dx); }
+        };
+        HorizontalGridView[] outer = new HorizontalGridView[1];
+        main(() -> { outer[0] = activity.rexRail(true); outer[0].addOnScrollListener(observer); });
+        try {
+            verifyScrolledBySwipe(target[0], Math.min(device.getDisplayWidth() - 60, bounds[0] + bounds[2] - 100), y,
+                    bounds[0] + 100, y, true);
+            if (!spotlight) assertEquals("Inner poster swipes do not drag the surrounding section cards", 0, outerMovement.get());
+        } finally {
+            main(() -> outer[0].removeOnScrollListener(observer));
+        }
     }
 
     private void verifyScrolledBySwipe(RecyclerView recycler, int startX, int startY, int endX, int endY, boolean horizontal) {

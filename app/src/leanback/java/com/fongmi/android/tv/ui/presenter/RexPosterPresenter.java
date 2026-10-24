@@ -14,20 +14,38 @@ import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.rex.RexCaptions;
 import com.fongmi.android.tv.ui.theme.JetStreamAmbient;
 import com.fongmi.android.tv.utils.ImgUtil;
+import com.fongmi.android.tv.utils.ResUtil;
 
 /** 混合推荐流小卡：海报 + 「年份 · 类型」常显副题，点击进入详情。 */
 public class RexPosterPresenter extends Presenter {
 
     private final VodPresenter.OnClickListener listener;
+    private final boolean landscape;
 
     public RexPosterPresenter(VodPresenter.OnClickListener listener) {
+        this(listener, false);
+    }
+
+    public RexPosterPresenter(VodPresenter.OnClickListener listener, boolean landscape) {
         this.listener = listener;
+        this.landscape = landscape;
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent) {
-        return new Holder(AdapterRexPosterBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
+        Holder holder = new Holder(AdapterRexPosterBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
+        if (landscape) {
+            holder.view.getLayoutParams().width = ResUtil.dp2px(164);
+            holder.binding.poster.getLayoutParams().height = ResUtil.dp2px(92);
+            ViewGroup.MarginLayoutParams title = (ViewGroup.MarginLayoutParams) holder.binding.name.getLayoutParams();
+            title.height = ResUtil.dp2px(22);
+            title.topMargin = ResUtil.dp2px(8);
+            holder.binding.name.setTextSize(14);
+            holder.binding.meta.getLayoutParams().height = ResUtil.dp2px(18);
+            holder.binding.meta.setTextSize(11);
+        }
+        return holder;
     }
 
     @Override
@@ -38,12 +56,12 @@ public class RexPosterPresenter extends Presenter {
         String meta = RexCaptions.subtitle(vod);
         holder.binding.meta.setText(meta);
         holder.binding.meta.setVisibility(TextUtils.isEmpty(meta) ? View.GONE : View.VISIBLE);
-        ImgUtil.load(vod.getName(), vod.getPic(), holder.binding.image);
+        ImgUtil.load(vod.getName(), landscape ? RexSpotlightPresenter.landscapeOf(vod) : vod.getPic(), holder.binding.image);
         holder.view.setOnClickListener(view -> listener.onItemClick(vod, holder.binding.image));
         holder.view.setOnLongClickListener(view -> listener.onLongClick(vod));
         holder.view.setOnFocusChangeListener((view, focused) -> {
             JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 0);
-            if (focused) JetStreamAmbient.push(vod.getPic());
+            if (focused && !landscape) JetStreamAmbient.push(vod.getPic());
         });
     }
 

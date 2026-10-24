@@ -458,6 +458,13 @@ public class Vod implements Parcelable, Diffable<Vod> {
         return getName().equals(other.getName()) && getPic().equals(other.getPic()) && getRemarks().equals(other.getRemarks()) && Objects.equals(getSite(), other.getSite());
     }
 
+    /** Home card diffing must not parse HTML descriptions or format nullable metadata. */
+    public boolean isSameCardContent(Vod other) {
+        return isSameContent(other) && Objects.equals(backdrop, other.backdrop)
+                && Objects.equals(vodYear, other.vodYear) && Objects.equals(genreText, other.genreText)
+                && Objects.equals(typeName, other.typeName) && Objects.equals(vodContent, other.vodContent);
+    }
+
     public static final Creator<Vod> CREATOR = new Creator<>() {
         @Override
         public Vod createFromParcel(Parcel source) {

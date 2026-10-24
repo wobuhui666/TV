@@ -7,22 +7,36 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Rex 两行的呈现策略（纯逻辑，可单测）：精选大卡选取与混合推荐流拼接。 */
+/** Rex 栏目卡与推荐页的内容策略。 */
 public final class RexHomeCatalog {
 
     public static final int PER_SECTION_CAP = 20;
     public static final int MIXED_TOTAL_CAP = 100;
+    public static final int SECTION_PREVIEW_CAP = 12;
 
     private RexHomeCatalog() {
     }
 
-    /** 精选大卡：每个栏目一张，优先有横图（backdrop 与 poster 不同）的条目。 */
+    /** 每栏目保留一组预览，横图代表作置顶，其余影片保持来源顺序。 */
     public static List<RexFeedResult> spotlights(List<RexFeedResult> results) {
         List<RexFeedResult> spotlights = new ArrayList<>();
         if (results == null) return spotlights;
         for (RexFeedResult result : results) {
-            Vod chosen = pick(result.getItems());
-            if (chosen != null) spotlights.add(new RexFeedResult(result.getSection(), List.of(chosen)));
+            List<Vod> valid = new ArrayList<>();
+            Set<String> seen = new LinkedHashSet<>();
+            for (Vod item : result.getItems()) {
+                if (item != null && !item.getId().isEmpty() && seen.add(item.getId())) valid.add(item);
+            }
+            Vod chosen = pick(valid);
+            if (chosen == null) continue;
+            int cap = Math.min(SECTION_PREVIEW_CAP, result.getSection().getLimit());
+            List<Vod> preview = new ArrayList<>();
+            preview.add(chosen);
+            for (Vod item : valid) {
+                if (preview.size() >= cap) break;
+                if (item != chosen) preview.add(item);
+            }
+            spotlights.add(new RexFeedResult(result.getSection(), preview));
         }
         return spotlights;
     }

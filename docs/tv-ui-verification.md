@@ -13,12 +13,18 @@ bash .github/scripts/verify-tv-ui.sh
 
 本机构建环境按 [LOCAL_BUILD_ENV.md](../LOCAL_BUILD_ENV.md) 导出 `MEDIA3_SOURCE_DIR`、`TV_SDK_INIT`、SDK 与 JDK 路径。安装脚本从两个 APK 的 Gradle 元数据读取应用与测试包名，再核对设备注册的 instrumentation，兼容 `tvApplicationId` / `TV_APPLICATION_ID` 的并存包配置。
 
-`leanbackPreview` 仅加入离线预览 Activity 和固定数据；正式包不包含此入口。真实首页复用 `activity_home.xml`、`PosterHomeController.register()` 与 `attachSnapshot()`、`RexHomeCatalog`、`RexSpotlightPresenter`、`RexPosterPresenter`、`CustomRowPresenter`，保持生产栏目和书架顺序、卡片尺寸、间距、字体和动画；导航沿用当前首页的首页/片库/推荐/搜索/我的五项，滚动后的工具栏显隐沿用生产逻辑。五个真实栏目提供 60 条固定影片，海报与横图是由 Canvas 生成的内存 PNG，由生产 ImgUtil/Glide 读取 data URI；不依赖远程图片。片库与搜索热词同样使用当前生产 KeepAdapter / WordAdapter 及其网格/Flexbox 配置。独立导航、筛选和 native-grid-probe 是交互探针，不代表首页排版。点击调用生产跳转逻辑，预览 Activity 记录真实 Intent 来断言栏目 key 和 TMDB 影片 key，保持场景离线。
+`leanbackPreview` 仅加入离线预览 Activity 和固定数据；正式包不包含此入口。真实首页复用 `activity_home.xml`、`PosterHomeController.register()` 与 `attachSnapshot()`、`RexHomeCatalog`、`RexSectionCardPresenter`、`RexPosterPresenter`、`CustomRowPresenter`，保持生产栏目和书架顺序、卡片尺寸、间距、字体和动画；导航沿用当前首页的首页/片库/推荐/搜索/我的五项，滚动后的工具栏显隐沿用生产逻辑。五个真实栏目提供 60 条固定影片，海报与横图是由 Canvas 生成的内存 PNG，由生产 ImgUtil/Glide 读取 data URI；不依赖远程图片。片库与搜索热词同样使用当前生产 KeepAdapter / WordAdapter 及其网格/Flexbox 配置。独立导航、筛选和 native-grid-probe 是交互探针，不代表首页排版。点击调用生产跳转逻辑，预览 Activity 记录真实 Intent 来断言栏目 key 和 TMDB 影片 key，保持场景离线。
 
-设备测试通过 UIAutomator 实际点击、长按与滑动，覆盖 Rex 精选卡和混合推荐海报的首次触摸、随后 D-pad 右移/确认、原生横向 rail 和整个首页的竖向滑动，同时断言两套配色的文字对比度、主题切换及重建持久化。每套主题要求 30 个完整场景，包括当前 Rex 首页、精选行、推荐行、书架，以及独立控件探针、搜索、详情、对话框、播放和 TV Material 设置；额外保存重建后的浅色首页。保留原生播放控件的探针会切换主题两次，断言标题对象保持不变且文字颜色同步更新，并截图之后打开的对话框。播放器另外验证单击、双击、滑动及 ACTION_CANCEL。截图检查要求指定场景完整、非空白、浅深背景显著不同。上传的 `rex-theme-comparison.png` 用于真实首页的浅/深色并排审阅，`theme-comparison.png` 汇总其他场景；最终仍需人工查看截图判断美观、遮挡与焦点。
+设备测试通过 UIAutomator 实际点击、长按与滑动，覆盖 Rex 栏目组合卡和容器内海报的首次触摸、随后 D-pad 右移/确认、原生横向 rail 和整个首页的竖向滑动，同时断言两套配色的文字对比度、主题切换及重建持久化。每套主题要求 30 个完整场景，包括当前 Rex 首页、精选行、推荐行、书架，以及独立控件探针、搜索、详情、对话框、播放和 TV Material 设置；额外保存重建后的浅色首页。保留原生播放控件的探针会切换主题两次，断言标题对象保持不变且文字颜色同步更新，并截图之后打开的对话框。播放器另外验证单击、双击、滑动及 ACTION_CANCEL。截图检查要求指定场景完整、非空白、浅深背景显著不同。上传的 `rex-theme-comparison.png` 用于真实首页的浅/深色并排审阅，`theme-comparison.png` 汇总其他场景；最终仍需人工查看截图判断美观、遮挡与焦点。
 
 真实首页回归通过仅预览构建中的 `TvHomePreviewActivity extends HomeActivity` 运行生产初始化、监听、焦点调度、导航路由和工具栏触屏流；预览仅记录生产 `startActivity` 发出的 Intent。数据按上游原生浏览测试的方式预填 Discover/Rex 缓存，并在当前 Config cid 的真实数据库中保存三条 History，后台历史查询读取相同数据；场景结束恢复原缓存、历史、客户端和偏好。未命中请求由离线客户端拒绝，提前授予模拟器通知权限避免系统弹窗。
 
 每套主题额外验证继续观看完整行 → 标题/分类 → 此刻热门的适配器顺序和实际几何、空历史时分类紧跟 hero 无新增空白；真实首页/片库/推荐/搜索/我的各项第一次触摸、长按来源对话框、随后 D-pad；排队焦点恢复与工具栏隐藏不得吞触摸，ACTION_CANCEL 释放保护，内容滚动后 Back 恢复顶栏并可点击，标题第一次点击打开真实来源选择。原有 49 个截图场景保留，新增 12 个真实首页截图，总计 61 个必需帧。
 
 在上述 61 帧基础上，追加生产 `activity_discover_detail.xml` 的有图/无图场景，每套主题各两帧；用黑白极端背景检查文字列最外侧各级文字对比度至少 4.5:1。通过 `cmd uimode night` 实际切换模拟器系统日夜模式，验证设置页跟随、播放控件原位刷新、明确浅/深色覆盖系统（包括当前颜色相同时退出跟随）、重建保留三态偏好，并增加四帧系统主题截图。当前共要求 69 帧。设备测试结束恢复系统原夜间设置。
+
+首页 Rex 栏目现为 480×434dp 的整体圆角容器，上方 480×270dp 代表图，下方 164dp 横向预览区，每栏目最多 12 张。`14-rex-section-card`、`17-rex-section-posters` 等场景覆盖整组外观和内部横图；推荐页的独立大卡/混合推荐流沿用既有布局。栏目底色从实际展示的大图取样，64×36 的自有位图在单一后台线程量化，最多缓存 64 种图色，同时请求合并；不为取色再次下载大图。失效的回调不得把颜色写到复用后的其他栏目。
+
+首页加载先交付已有缓存，随后将接近同时完成的来源合并为 32ms 一次的增量更新，刷新时取消旧请求并暂时保留未完成栏目的旧内容。完整可见字段参与差异比较，相同内容不重绑轮播大图/普通书架，Rex 书架按 key 保留。设备回归要求相同缓存刷新时大图/内容书架重绑次数为 0、结构性行变化次数为 0；同时检查内部横滑不带动外层卡片行、从内部竖滑仍滚动首页、只创建可见预览视图，以及图片取色后文字对比度至少 4.5:1。
+
+每套主题的 `*-home-refresh.txt` 记录缓存刷新断言，`*-home-framestats.txt` 收集栏目交互期间的 `dumpsys gfxinfo ... framestats` 和 `dumpsys meminfo`。这些数据来自软件渲染模拟器，供排查重复布局、绘制与内存问题，不能作为电视真机帧率或网络首屏性能的结论。

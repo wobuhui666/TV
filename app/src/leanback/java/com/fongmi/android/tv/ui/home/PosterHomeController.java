@@ -30,7 +30,7 @@ import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.ui.activity.RexSectionActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
 import com.fongmi.android.tv.ui.presenter.RexPosterPresenter;
-import com.fongmi.android.tv.ui.presenter.RexSpotlightPresenter;
+import com.fongmi.android.tv.ui.presenter.RexSectionCardPresenter;
 import com.fongmi.android.tv.ui.rex.RexFeedLoader;
 import com.fongmi.android.tv.ui.rex.RexFeedResult;
 import com.fongmi.android.tv.ui.rex.RexHomeCatalog;
@@ -70,9 +70,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private final Footer footer = new Footer();
     private final RexFeedLoader rexLoader = new RexFeedLoader();
     private ArrayObjectAdapter rexSpotlightAdapter;
-    private ArrayObjectAdapter rexMixedAdapter;
     private ListRow rexSpotlightRow;
-    private ListRow rexMixedRow;
     private final List<Shelf> rexShelves = new ArrayList<>();
     private boolean shelfAny;
     private ArrayObjectAdapter page;
@@ -100,8 +98,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         selector.addPresenter(Categories.class, new CategoriesPresenter());
         selector.addPresenter(Shelf.class, new ShelfPresenter());
         selector.addPresenter(Footer.class, new FooterPresenter());
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), RexSpotlightPresenter.class);
-        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), RexPosterPresenter.class);
+        selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), RexSectionCardPresenter.class);
         keepShelf.register(selector);
     }
 
@@ -124,7 +121,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         page.add(1, categories);
         keepShelf.attach(page, categories);
         page.addAll(page.size(), shelves);
-        rexSpotlightAdapter = new ArrayObjectAdapter(new RexSpotlightPresenter(new RexSpotlightPresenter.Listener() {
+        rexSpotlightAdapter = new ArrayObjectAdapter(new RexSectionCardPresenter(new RexSectionCardPresenter.Listener() {
             @Override
             public void onSectionClick(RexSection section, View card) {
                 RexSectionActivity.start(activity, section);
@@ -135,12 +132,9 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
                 RexSectionActivity.start(activity, section);
                 return true;
             }
-        }));
-        rexMixedAdapter = new ArrayObjectAdapter(new RexPosterPresenter(PosterHomeController.this));
+        }, PosterHomeController.this));
         rexSpotlightRow = new ListRow(rexSpotlightAdapter);
-        rexMixedRow = new ListRow(rexMixedAdapter);
         page.add(rexSpotlightRow);
-        page.add(rexMixedRow);
         page.add(footer);
         updateHistoryOrder();
     }
@@ -168,7 +162,6 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         if (row == hero) return !hero.value.isEmpty();
         if (row instanceof Shelf shelf) return !shelf.items.isEmpty();
         if (row == rexSpotlightRow) return rexSpotlightAdapter != null && rexSpotlightAdapter.size() > 0;
-        if (row == rexMixedRow) return rexMixedAdapter != null && rexMixedAdapter.size() > 0;
         if (keepShelf.isRow(row)) return keepShelf.isFocusable();
         return row == categories || row == footer;
     }
@@ -241,14 +234,20 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     private void render() {
-        hero.value.replace(PosterHomeCatalog.hero(content, category));
-        notifyRow(hero);
+        List<Vod> heroItems = PosterHomeCatalog.hero(content, category);
+        if (!RexFeedResult.sameItems(hero.value.getItems(), heroItems)) {
+            hero.value.replace(heroItems);
+            notifyRow(hero);
+        }
         boolean any = false;
         for (Shelf shelf : shelves) {
-            shelf.items = PosterHomeCatalog.visible(shelf.row, category)
+            List<Vod> items = PosterHomeCatalog.visible(shelf.row, category)
                     ? PosterHomeCatalog.filter(content.get(shelf.row), category) : List.of();
+            if (!RexFeedResult.sameItems(shelf.items, items)) {
+                shelf.items = items;
+                notifyRow(shelf);
+            }
             any |= !shelf.items.isEmpty();
-            notifyRow(shelf);
         }
         shelfAny = any;
         footer.empty = !any && !rexAny();
@@ -298,7 +297,6 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private void applyRexResults(List<RexFeedResult> results) {
         List<RexFeedResult> feeds = results == null ? List.of() : results;
         rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(feeds), new BaseDiffCallback<RexFeedResult>());
-        rexMixedAdapter.setItems(RexHomeCatalog.mixed(feeds), new BaseDiffCallback<Vod>());
         applyRexShelves(feeds);
         footer.empty = !shelfAny && !rexAny();
         notifyRow(footer);
@@ -307,23 +305,43 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     /** shelf() 标记的栏目（「动漫」等新板块）以经典书架样式排在两行卡片之后、footer 之前。 */
     private void applyRexShelves(List<RexFeedResult> results) {
         if (page == null) return;
-        for (Shelf shelf : rexShelves) if (page.indexOf(shelf) >= 0) page.remove(shelf);
-        rexShelves.clear();
-        int index = page.indexOf(footer);
-        if (index < 0) return;
+        if (page.indexOf(footer) < 0) return;
+        List<Shelf> next = new ArrayList<>();
+        List<Shelf> changed = new ArrayList<>();
         for (RexFeedResult result : results) {
             if (result.getSection().isShelf() && !result.getItems().isEmpty()) {
-                Shelf shelf = new Shelf(result.getSection().getLabelRes(), null);
-                shelf.items = result.getItems();
-                rexShelves.add(shelf);
-                page.add(index++, shelf);
+                Shelf shelf = null;
+                for (Shelf previous : rexShelves) if (result.getSection().getKey().equals(previous.key)) shelf = previous;
+                if (shelf == null) {
+                    shelf = new Shelf(result.getSection().getLabelRes(), null);
+                    shelf.key = result.getSection().getKey();
+                }
+                if (!RexFeedResult.sameItems(shelf.items, result.getItems())) {
+                    shelf.items = result.getItems();
+                    changed.add(shelf);
+                }
+                next.add(shelf);
             }
         }
+        for (Shelf previous : rexShelves) if (!next.contains(previous)) page.remove(previous);
+        int existing = 0;
+        for (Shelf shelf : next) if (page.indexOf(shelf) >= 0) existing++;
+        int start = page.indexOf(footer) - existing;
+        for (int i = 0; i < next.size(); i++) {
+            Shelf shelf = next.get(i);
+            int index = page.indexOf(shelf);
+            if (index < 0) page.add(start + i, shelf);
+            else {
+                if (index != start + i) page.move(index, start + i);
+                if (changed.contains(shelf)) notifyRow(shelf);
+            }
+        }
+        rexShelves.clear();
+        rexShelves.addAll(next);
     }
 
     private boolean rexAny() {
         return (rexSpotlightAdapter != null && rexSpotlightAdapter.size() > 0)
-                || (rexMixedAdapter != null && rexMixedAdapter.size() > 0)
                 || !rexShelves.isEmpty();
     }
 
@@ -349,6 +367,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     private static final class Shelf {
+        String key;
         final int title;
         final DiscoverApi.Row row;
         List<Vod> items = List.of();

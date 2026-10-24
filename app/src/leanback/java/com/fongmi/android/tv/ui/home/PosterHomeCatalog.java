@@ -9,9 +9,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /** Presentation policy only: no source queries or playback selection happen on the home wall. */
 public final class PosterHomeCatalog {
+    private static final Pattern TITLE_SEPARATORS = Pattern.compile("[\\s\\p{P}]");
 
     public static final int ALL = 0;
     public static final int MOVIES = 1;
@@ -59,7 +61,7 @@ public final class PosterHomeCatalog {
                 if (!visible(row, category)) continue;
                 for (Vod item : filter(content.get(row), category)) {
                     if (requireLandscape && item.getBackdrop().equals(item.getPic())) continue;
-                    String title = item.getName().toLowerCase(Locale.ROOT).replaceAll("[\\s\\p{P}]", "");
+                    String title = TITLE_SEPARATORS.matcher(item.getName().toLowerCase(Locale.ROOT)).replaceAll("");
                     String key = title + ":" + item.getYear() + ":" + item.getTypeName();
                     result.putIfAbsent(key, item);
                     if (result.size() == 5) return new ArrayList<>(result.values());
