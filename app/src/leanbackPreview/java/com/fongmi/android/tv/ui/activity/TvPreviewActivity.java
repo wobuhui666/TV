@@ -337,7 +337,8 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public HorizontalGridView rexRail(boolean spotlight) {
         RecyclerView.ViewHolder holder = rexGrid.findViewHolderForAdapterPosition(spotlight ? rexSpotlightPosition : rexMixedPosition);
         if (!(holder instanceof ItemBridgeAdapter.ViewHolder bridge)) return null;
-        return ((ListRowPresenter.ViewHolder) bridge.getViewHolder()).getGridView();
+        if (!(bridge.getPresenter() instanceof ListRowPresenter presenter)) return null;
+        return ((ListRowPresenter.ViewHolder) presenter.getRowViewHolder(bridge.getViewHolder())).getGridView();
     }
 
     /** Verify the production navigation intents while keeping the fixture offline. */
