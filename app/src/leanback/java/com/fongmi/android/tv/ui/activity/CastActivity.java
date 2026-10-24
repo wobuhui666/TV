@@ -134,7 +134,10 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         mBinding.control.action.reset.setOnClickListener(view -> onReset());
         mBinding.control.action.player.setOnClickListener(view -> onChoose());
         mBinding.control.action.decode.setOnClickListener(view -> onDecode());
-        mBinding.video.setOnTouchListener((view, event) -> mKeyDown.onTouchEvent(event));
+        mBinding.video.setOnTouchListener((view, event) -> {
+            com.fongmi.android.tv.ui.custom.JetStreamTouch.focusDirect(view, event);
+            return mKeyDown.onTouchEvent(event);
+        });
     }
 
     private void setVideoView() {

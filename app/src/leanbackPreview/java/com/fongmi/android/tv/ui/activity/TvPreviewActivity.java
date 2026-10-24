@@ -37,6 +37,8 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public int doubleTaps;
     public volatile long seekTime;
     public volatile int seekEvents;
+    public volatile int directClicks;
+    public JetStreamSwitch nativeSwitch;
     public JetStreamVodControlView controls;
     public CustomKeyDownVod gestures;
     public String page = "home";
@@ -98,6 +100,28 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             ((ProgressLayout) content.findViewById(R.id.progressLayout)).showContent();
             grid = nativeGrid;
             nav.requestFocus();
+            return;
+        }
+        if (name.equals("native-controls")) {
+            LinearLayoutCompat layout = column();
+            directClicks = 0;
+            JetStreamButtonTextView cancel = new JetStreamButtonTextView(this);
+            cancel.setText("取消");
+            cancel.setFocusable(true); cancel.setFocusableInTouchMode(true);
+            cancel.setOnClickListener(view -> directClicks++);
+            layout.addView(cancel, new LinearLayoutCompat.LayoutParams(dp(220), dp(48)));
+            JetStreamDialogButton confirm = new JetStreamDialogButton(this);
+            confirm.setText("确定");
+            confirm.setFocusable(true); confirm.setFocusableInTouchMode(true);
+            confirm.setOnClickListener(view -> directClicks++);
+            LinearLayoutCompat.LayoutParams buttons = new LinearLayoutCompat.LayoutParams(dp(220), dp(48));
+            buttons.topMargin = dp(16);
+            layout.addView(confirm, buttons);
+            nativeSwitch = new JetStreamSwitch(this);
+            nativeSwitch.setText("提示开关");
+            nativeSwitch.setFocusable(true); nativeSwitch.setFocusableInTouchMode(true);
+            layout.addView(nativeSwitch, new LinearLayoutCompat.LayoutParams(dp(260), dp(48)));
+            cancel.requestFocus();
             return;
         }
         if (name.equals("library")) {

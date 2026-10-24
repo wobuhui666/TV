@@ -1,3 +1,3 @@
 <resources>
-    <item name="jetstream_touch_installed" type="id" />
+    <item name="jetstream_touch_direct_bound" type="id" />
 </resources>

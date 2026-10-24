@@ -251,6 +251,7 @@ class JetStreamSwitch @JvmOverloads constructor(
 ) : MaterialSwitch(context, attrs, defStyleAttr) {
 
     init {
+        JetStreamTouch.bindDirectTouch(this)
         thumbTintList = jetStreamColorStateList(R.color.jetstream_switch_thumb)
         trackTintList = jetStreamColorStateList(R.color.jetstream_switch_track)
         trackTintMode = PorterDuff.Mode.SRC_IN

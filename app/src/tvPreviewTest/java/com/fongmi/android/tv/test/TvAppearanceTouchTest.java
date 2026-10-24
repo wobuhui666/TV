@@ -192,6 +192,20 @@ public class TvAppearanceTouchTest {
                 capture(theme + "-11-home-layout");
                 main(() -> activity.showPage("library"));
                 capture(theme + "-12-library");
+                main(() -> activity.showPage("native-controls"));
+                text("确定").click(); SystemClock.sleep(350);
+                assertEquals("Native dialog button activates on its first tap", 1, activity.directClicks);
+                device.pressDPadCenter(); SystemClock.sleep(350);
+                assertEquals("D-pad stays on the touched dialog button", 2, activity.directClicks);
+                text("取消").click(); SystemClock.sleep(350);
+                assertEquals("Native text button activates on its first tap", 3, activity.directClicks);
+                device.pressDPadCenter(); SystemClock.sleep(350);
+                assertEquals("D-pad stays on the touched text button", 4, activity.directClicks);
+                text("提示开关").click(); SystemClock.sleep(350);
+                main(() -> assertTrue("Native switch toggles on its first tap", activity.nativeSwitch.isChecked()));
+                device.pressDPadCenter(); SystemClock.sleep(350);
+                main(() -> assertFalse("D-pad stays on the touched switch", activity.nativeSwitch.isChecked()));
+                capture(theme + "-13-native-controls");
                 main(() -> { activity.cardClicks = 0; activity.cardLongClicks = 0; });
             }
             verifyGestureCancellation();

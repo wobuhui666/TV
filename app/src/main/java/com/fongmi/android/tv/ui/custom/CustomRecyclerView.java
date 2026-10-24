@@ -41,6 +41,7 @@ public class CustomRecyclerView extends RecyclerView {
 
     private void init(Context context, @Nullable AttributeSet attrs) {
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        RecyclerTouchFocus.install(this);
         if (attrs != null) setAttrs(context, attrs);
         setOverScrollMode(View.OVER_SCROLL_NEVER);
     }
