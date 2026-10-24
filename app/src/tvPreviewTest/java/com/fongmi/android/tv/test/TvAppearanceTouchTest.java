@@ -305,9 +305,9 @@ public class TvAppearanceTouchTest {
             }
             assertNotNull("Production settings exposes its content scroll container", content);
             // Small, slow gestures cannot fling past the appearance row between checks.
-            boolean moved = content.scroll(Direction.DOWN, .2f, 400);
+            // Compose may report scroll-finished before the end; target visibility controls this bounded search.
+            content.scroll(Direction.DOWN, .2f, 400);
             SystemClock.sleep(300);
-            if (!moved) break;
         }
         assertTrue("Production settings scrolls to the appearance actions", device.hasObject(By.text("浅色")));
     }
