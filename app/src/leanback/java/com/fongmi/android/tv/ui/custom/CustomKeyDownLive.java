@@ -97,8 +97,7 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         if (direction == TouchSwipeDetector.UP) listener.onKeyDown();
         else if (direction == TouchSwipeDetector.DOWN) listener.onKeyUp();
         else {
-            reset();
-            long time = direction == TouchSwipeDetector.LEFT ? -Constant.INTERVAL_SEEK : Constant.INTERVAL_SEEK;
+            long time = direction == TouchSwipeDetector.LEFT ? subTime() : addTime();
             listener.onSeeking(time);
             if (direction == TouchSwipeDetector.LEFT) listener.onKeyLeft(time);
             else listener.onKeyRight(time);

@@ -35,7 +35,7 @@ object JetStreamTouch {
                     }
                     MotionEvent.ACTION_UP -> {
                         val child = target
-                        if (!dragging && child != null && child === rv.findChildViewUnder(event.x, event.y)) {
+                        if (!dragging && child != null && child === rv.findChildViewUnder(event.x, event.y) && !containsRecycler(child)) {
                             focusable(child)?.let { view ->
                                 view.isFocusableInTouchMode = true
                                 view.requestFocus()
@@ -47,6 +47,16 @@ object JetStreamTouch {
                 return false
             }
         })
+    }
+
+    // A TV page often nests horizontal rails inside a vertical grid. The inner
+    // recycler owns the tapped card; focusing its host here can restore an old item.
+    private fun containsRecycler(view: View): Boolean {
+        if (view is RecyclerView) return true
+        if (view is ViewGroup) for (index in 0 until view.childCount) {
+            if (containsRecycler(view.getChildAt(index))) return true
+        }
+        return false
     }
 
     private fun focusable(view: View): View? {

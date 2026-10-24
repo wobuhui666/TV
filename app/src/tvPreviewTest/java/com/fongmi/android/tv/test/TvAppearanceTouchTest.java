@@ -182,6 +182,13 @@ public class TvAppearanceTouchTest {
                 SystemClock.sleep(350);
                 assertEquals(light, RexTheme.isLight());
                 main(() -> activity.showPage("home-layout"));
+                int nativeClicks = activity.cardClicks;
+                text("山海之间 2").click();
+                SystemClock.sleep(350);
+                assertEquals("Native TV grid accepts the first touch", nativeClicks + 1, activity.cardClicks);
+                device.pressDPadRight(); device.pressDPadCenter();
+                SystemClock.sleep(350);
+                assertEquals("Native TV grid continues from the touched card", "card-2", activity.lastAction);
                 capture(theme + "-11-home-layout");
                 main(() -> activity.showPage("library"));
                 capture(theme + "-12-library");
