@@ -29,6 +29,11 @@ import com.fongmi.android.tv.diagnostics.DiagnosticManager;
 import com.fongmi.android.tv.ui.adapter.KeepAdapter;
 import com.fongmi.android.tv.ui.adapter.WordAdapter;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.ThemeMode;
+import com.fongmi.android.tv.databinding.ActivityDiscoverDetailBinding;
+import com.fongmi.android.tv.bean.DiscoverCredit;
+import com.fongmi.android.tv.ui.adapter.DiscoverCreditAdapter;
+import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.*;
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
@@ -52,6 +57,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     public RecyclerView grid;
     public JetStreamSettingView settings;
     public JetStreamVodDetailView detail;
+    public ActivityDiscoverDetailBinding discoverDetail;
     public String lastAction = "";
     public int lastChip = -1;
     public int cardClicks;
@@ -80,7 +86,7 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
     private FrameLayout root;
 
     @Override protected void attachBaseContext(android.content.Context base) {
-        android.content.res.Configuration config = new android.content.res.Configuration(base.getResources().getConfiguration());
+        android.content.res.Configuration config = new android.content.res.Configuration();
         config.setLocale(java.util.Locale.SIMPLIFIED_CHINESE);
         super.attachBaseContext(base.createConfigurationContext(config));
     }
@@ -118,7 +124,33 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
         if (posterHome != null) { posterHome.close(); posterHome = null; }
         page = name;
         settings = null;
+        discoverDetail = null;
         retainPageOnThemeChange = name.equals("retained-controls");
+        if (name.equals("discover-detail") || name.equals("discover-detail-empty")) {
+            root.removeAllViews();
+            discoverDetail = ActivityDiscoverDetailBinding.inflate(getLayoutInflater(), root, true);
+            Vod item = RexPreviewFixtures.feeds().get(0).getItems().get(0);
+            discoverDetail.title.setText("数到三 · 详情预览");
+            discoverDetail.originalTitle.setText("Count to Three");
+            discoverDetail.meta.setText("2026 · 剧情 · 中国 · 1小时48分钟");
+            discoverDetail.creator.setText("导演 / 主创：陈星、王月");
+            discoverDetail.overview.setText("舞蹈老师在平凡生活中遇见新的伙伴，一段关于勇气与成长的故事就此展开。生活的色彩、人物的心情与细腻的情感交织，带来一次温暖而真诚的旅程。此页复用影片详情的实际布局，验证背景图存在及缺失时的文字对比度。");
+            if (!name.endsWith("empty")) {
+                ImgUtil.load(item.getName(), item.getPic(), discoverDetail.poster);
+                ImgUtil.load(item.getName(), item.getBackdrop(), discoverDetail.backdrop);
+            }
+            DiscoverCreditAdapter cast = new DiscoverCreditAdapter();
+            discoverDetail.cast.setAdapter(cast);
+            cast.setItems(java.util.List.of(new DiscoverCredit("陈星", "饰 主角", item.getPic()),
+                    new DiscoverCredit("王月", "饰 伙伴", item.getPic()), new DiscoverCredit("林远", "导演", item.getPic())));
+            discoverDetail.cast.setVisibility(View.VISIBLE);
+            discoverDetail.castTitle.setVisibility(View.VISIBLE);
+            discoverDetail.fullOverview.setVisibility(View.GONE);
+            discoverDetail.search.setOnClickListener(view -> lastAction = "discover-search");
+            discoverDetail.keep.setOnClickListener(view -> lastAction = "discover-keep");
+            discoverDetail.search.requestFocus();
+            return;
+        }
         if (name.equals("rex-home")) {
             showRexHome();
             return;
@@ -402,9 +434,14 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
 
     @Override public void onSettingAction(String key) {
         lastAction = key;
-        if (key.equals(JetStreamSettingView.KEY_THEME_MODE)) RexTheme.setLight(!RexTheme.isLight());
+        if (key.equals(JetStreamSettingView.KEY_THEME_MODE)) RexTheme.setMode(switch (Setting.getThemeMode()) {
+            case DARK -> ThemeMode.LIGHT;
+            case LIGHT -> ThemeMode.SYSTEM;
+            case SYSTEM -> ThemeMode.DARK;
+        });
         if (key.equals(JetStreamSettingView.KEY_THEME_LIGHT)) RexTheme.setLight(true);
         if (key.equals(JetStreamSettingView.KEY_THEME_DARK)) RexTheme.setLight(false);
+        if (key.equals(JetStreamSettingView.KEY_THEME_SYSTEM)) RexTheme.setMode(ThemeMode.SYSTEM);
     }
     @Override public void onSettingLongAction(String key) { lastAction = "long-" + key; }
 

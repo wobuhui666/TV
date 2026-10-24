@@ -176,7 +176,7 @@
 
         <activity
             android:name=".ui.activity.SettingActivity"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|uiMode|orientation"
             android:screenOrientation="sensorLandscape" />
 
         <activity

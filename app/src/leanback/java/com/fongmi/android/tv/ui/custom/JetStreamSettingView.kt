@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.setting.Setting
+import com.fongmi.android.tv.setting.ThemeMode
 import com.fongmi.android.tv.ui.components.TvActionButton
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
 import com.fongmi.android.tv.ui.components.JetStreamPageScrim
@@ -617,8 +618,9 @@ class JetStreamSettingView @JvmOverloads constructor(
                     RowSpec(KEY_ECH_INFO, context.getString(R.string.setting_ech_info)),
                     RowSpec(KEY_CF_PREFERRED, context.getString(R.string.setting_cf_preferred)),
                     RowSpec(KEY_THEME_MODE, context.getString(R.string.setting_theme_mode), actions = listOf(
-                        ActionSpec(KEY_THEME_DARK, context.getString(R.string.theme_mode_dark), selected = !RexTheme.isLight),
-                        ActionSpec(KEY_THEME_LIGHT, context.getString(R.string.theme_mode_light), selected = RexTheme.isLight)
+                        ActionSpec(KEY_THEME_DARK, context.getString(R.string.theme_mode_dark), selected = Setting.getThemeMode() == ThemeMode.DARK),
+                        ActionSpec(KEY_THEME_LIGHT, context.getString(R.string.theme_mode_light), selected = Setting.getThemeMode() == ThemeMode.LIGHT),
+                        ActionSpec(KEY_THEME_SYSTEM, context.getString(R.string.theme_mode_system), selected = Setting.getThemeMode() == ThemeMode.SYSTEM)
                     )),
                     RowSpec(KEY_THEME_COLOR, context.getString(R.string.setting_theme_color), actions = themeActions()),
                     RowSpec(KEY_SIZE, context.getString(R.string.setting_size)),
@@ -725,6 +727,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_THEME_MODE = "theme_mode"
         const val KEY_THEME_DARK = "theme_dark"
         const val KEY_THEME_LIGHT = "theme_light"
+        const val KEY_THEME_SYSTEM = "theme_system"
         const val KEY_THEME_COLOR = "theme_color"
         const val KEY_SIZE = "size"
         const val KEY_BACKUP = "backup"

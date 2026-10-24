@@ -3,8 +3,13 @@ package com.fongmi.android.tv.test;
 import static org.junit.Assert.*;
 
 import android.app.Instrumentation;
+import android.app.UiModeManager;
+import android.content.Context;
+import android.content.res.Configuration;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.SystemClock;
 import android.os.Build;
@@ -25,6 +30,8 @@ import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.ThemeMode;
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.ui.activity.TvPreviewActivity;
 import com.fongmi.android.tv.ui.activity.TvHomePreviewActivity;
 import com.fongmi.android.tv.ui.activity.HomePreviewFixtures;
@@ -113,6 +120,7 @@ public class TvAppearanceTouchTest {
                 capture(theme + "-01-home");
                 verifyRexHome(theme);
                 verifyProductionHome(theme);
+                verifyDiscoverDetail(light, theme);
                 main(() -> activity.showPage("home"));
                 capture(theme + "-00-controls-home");
 
@@ -244,6 +252,7 @@ public class TvAppearanceTouchTest {
                 main(() -> { activity.cardClicks = 0; activity.cardLongClicks = 0; });
             }
             verifyGestureCancellation();
+            verifySystemTheme();
             main(() -> RexTheme.setLight(true));
             main(() -> activity.recreate());
             SystemClock.sleep(1200);
@@ -251,7 +260,7 @@ public class TvAppearanceTouchTest {
             assertTrue("Light mode survives activity recreation", RexTheme.isLight());
             capture("light-11-recreated");
             try (FileWriter writer = new FileWriter(new File(output, "result.txt"))) {
-                writer.write("PASS: production PosterHomeController/RexSpotlightPresenter/RexPosterPresenter with offline Rex feeds; dark/light palettes; first touch clicks and long press; D-pad continuity; Rex horizontal rail and vertical grid swipe; search/detail/dialog/TV Material settings; retained native title/switch and new dialog theme; theme toggle and recreation.\n");
+                writer.write("PASS: production PosterHomeController/RexSpotlightPresenter/RexPosterPresenter with offline Rex feeds; dark/light palettes; first touch clicks and long press; D-pad continuity; Rex horizontal rail and vertical grid swipe; search/detail/dialog/TV Material settings; retained native title/switch and new dialog theme; system theme changes, manual override and recreation; production discover detail with artwork and missing artwork.\n");
             }
         } catch (Exception | AssertionError failure) {
             try {
@@ -263,6 +272,122 @@ public class TvAppearanceTouchTest {
         } finally {
             main(() -> { activity.finish(); Setting.putLightTheme(false); Setting.putThemeColor(Setting.THEME_DEFAULT); });
         }
+    }
+
+    private void verifyDiscoverDetail(boolean light, String theme) throws Exception {
+        main(() -> activity.showPage("discover-detail"));
+        assertDiscoverDetailContrast(light);
+        capture(theme + "-29-discover-detail");
+        text("搜索播放").click();
+        SystemClock.sleep(350);
+        assertEquals("discover-search", activity.lastAction);
+        device.pressDPadRight(); device.pressDPadCenter();
+        SystemClock.sleep(350);
+        assertEquals("Detail navigation continues from the touched action", "discover-keep", activity.lastAction);
+        main(() -> activity.showPage("discover-detail-empty"));
+        assertDiscoverDetailContrast(light);
+        capture(theme + "-30-discover-detail-empty");
+    }
+
+    private void assertDiscoverDetailContrast(boolean light) {
+        main(() -> {
+            android.widget.TextView[] labels = {activity.discoverDetail.sourceLabel, activity.discoverDetail.title,
+                    activity.discoverDetail.originalTitle, activity.discoverDetail.meta, activity.discoverDetail.creator,
+                    activity.discoverDetail.overview, activity.discoverDetail.castTitle};
+            View scrim = activity.discoverDetail.detailScrim;
+            Bitmap pixels = Bitmap.createBitmap(scrim.getWidth(), scrim.getHeight(), Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(pixels);
+            try {
+                // Check the least protected edge of the text column against both extreme artworks.
+                int[] textPosition = new int[2];
+                activity.discoverDetail.overview.getLocationOnScreen(textPosition);
+                int sampleX = Math.min(pixels.getWidth() - 1, textPosition[0] + activity.discoverDetail.overview.getWidth() - 1);
+                for (int artwork : new int[] {Color.BLACK, Color.WHITE}) {
+                    canvas.drawColor(artwork);
+                    scrim.draw(canvas);
+                    int backdrop = pixels.getPixel(sampleX, pixels.getHeight() / 2);
+                    assertEquals("Detail background follows the active appearance", light, ColorUtils.calculateLuminance(backdrop) > .5);
+                    for (android.widget.TextView label : labels) {
+                        assertTrue("Detail text stays readable over bright and dark artwork: " + label.getText(),
+                                ColorUtils.calculateContrast(label.getCurrentTextColor(), backdrop) >= 4.5);
+                    }
+                }
+            } finally {
+                pixels.recycle();
+            }
+        });
+    }
+
+    private void verifySystemTheme() throws Exception {
+        int savedNightMode = ((UiModeManager) instrumentation.getTargetContext().getSystemService(Context.UI_MODE_SERVICE)).getNightMode();
+        ThemeMode savedMode = Setting.getThemeMode();
+        try {
+            setSystemNight(false);
+            main(() -> activity.showPage("settings"));
+            scrollSettingsToAppearance();
+            text("跟随系统").click();
+            SystemClock.sleep(500);
+            assertEquals(ThemeMode.SYSTEM, Setting.getThemeMode());
+            assertTrue("System day mode selects light appearance", RexTheme.isLight());
+            main(() -> verifySurfaceTheme(activity, true));
+            capture("system-01-settings-light");
+
+            TvPreviewActivity retained = activity;
+            setSystemNight(true);
+            assertSame("Configuration-handling activities survive a system appearance change", retained, TvPreviewActivity.current);
+            assertFalse("System night mode selects dark appearance", RexTheme.isLight());
+            main(() -> verifySurfaceTheme(activity, false));
+            capture("system-02-settings-dark");
+
+            main(() -> activity.showPage("retained-controls"));
+            View retainedTitle = activity.retainedTitle;
+            setSystemNight(false);
+            main(() -> {
+                assertSame("System changes preserve retained playback controls", retainedTitle, activity.retainedTitle);
+                assertEquals(JetStreamPalette.resolveColor(activity, R.color.jetstream_on_surface), activity.retainedTitle.getCurrentTextColor());
+                verifySurfaceTheme(activity, true);
+                verifySwitchTint();
+            });
+            capture("system-03-retained-light");
+
+            // Choosing the currently resolved color must still leave follow-system mode.
+            main(() -> RexTheme.setLight(true));
+            assertEquals(ThemeMode.LIGHT, Setting.getThemeMode());
+            setSystemNight(true);
+            assertTrue("Explicit light overrides a dark system", RexTheme.isLight());
+            main(() -> verifySurfaceTheme(activity, true));
+            main(() -> RexTheme.setLight(false));
+            setSystemNight(false);
+            assertFalse("Explicit dark overrides a light system", RexTheme.isLight());
+            main(() -> verifySurfaceTheme(activity, false));
+
+            main(() -> RexTheme.setMode(ThemeMode.SYSTEM));
+            main(() -> activity.recreate());
+            SystemClock.sleep(1200);
+            activity = TvPreviewActivity.current;
+            assertEquals("Follow-system preference survives recreation", ThemeMode.SYSTEM, Setting.getThemeMode());
+            assertTrue(RexTheme.isLight());
+            capture("system-04-recreated-light");
+        } finally {
+            main(() -> RexTheme.setMode(savedMode));
+            String restore = savedNightMode == UiModeManager.MODE_NIGHT_AUTO ? "auto"
+                    : savedNightMode == UiModeManager.MODE_NIGHT_YES ? "yes" : "no";
+            device.executeShellCommand("cmd uimode night " + restore);
+            SystemClock.sleep(500);
+        }
+    }
+
+    private void setSystemNight(boolean night) throws Exception {
+        device.executeShellCommand("cmd uimode night " + (night ? "yes" : "no"));
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        while (systemNight() != night && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+        assertEquals("Android delivers the system night-mode configuration", night, systemNight());
+        instrumentation.waitForIdleSync();
+        SystemClock.sleep(700);
+    }
+
+    private boolean systemNight() {
+        return (App.get().getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
 
     private void verifyProductionHome(String theme) throws Exception {

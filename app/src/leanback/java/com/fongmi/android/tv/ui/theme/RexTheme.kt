@@ -10,4 +10,9 @@ object RexTheme {
     fun setLight(light: Boolean) {
         com.fongmi.android.tv.ui.rex.RexTheme.setLight(light)
     }
+
+    @JvmStatic
+    fun setMode(mode: com.fongmi.android.tv.setting.ThemeMode) {
+        com.fongmi.android.tv.ui.rex.RexTheme.setMode(mode)
+    }
 }

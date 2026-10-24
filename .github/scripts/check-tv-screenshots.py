@@ -11,7 +11,14 @@ scenes = ["01-home", "14-rex-spotlight", "15-rex-spotlight-touch-dpad", "16-rex-
           "10-settings-switched", "11-native-grid-probe", "12-library", "13-native-controls",
           "21-retained-native-controls", "22-retained-dialog",
           "23-home-history-order", "24-home-toolbar-touch", "25-home-toolbar-longpress",
-          "26-home-toolbar-restored", "27-home-title-source", "28-home-empty-history"]
+          "26-home-toolbar-restored", "27-home-title-source", "28-home-empty-history",
+          "29-discover-detail", "30-discover-detail-empty"]
+system_scenes = ["01-settings-light", "02-settings-dark", "03-retained-light", "04-recreated-light"]
+for scene in system_scenes:
+    assert (root / f"system-{scene}.png").is_file(), f"Missing system theme scene: {scene}"
+    with Image.open(root / f"system-{scene}.png") as screenshot:
+        assert screenshot.size == (1920, 1080), (scene, screenshot.size)
+        assert max(ImageStat.Stat(screenshot.convert("RGB")).stddev) > 3, f"Blank system theme screenshot: {scene}"
 assert (root / "light-11-recreated.png").is_file(), "Missing recreated light-theme home"
 for theme in ("dark", "light"):
     for scene in scenes:
@@ -31,10 +38,11 @@ with Image.open(root / "light-01-home.png") as light, Image.open(root / "dark-01
     assert light_mean > dark_mean + 80, (light_mean, dark_mean)
 result = (root / "result.txt").read_text()
 assert "PASS:" in result and "PosterHomeController/RexSpotlightPresenter/RexPosterPresenter" in result
-print(f"PASS: {len(scenes) * 2 + 1} required screenshots, nonblank UI, distinct light/dark backgrounds and interaction assertions")
+print(f"PASS: {len(scenes) * 2 + 1 + len(system_scenes)} required screenshots, nonblank UI, distinct light/dark backgrounds and interaction assertions")
 
 comparison_scenes = ["01-home", "14-rex-spotlight", "17-rex-mixed", "20-rex-shelves",
-                     "03-chips-touch-dpad", "06-search", "07-detail", "08-dialog", "09-playback", "09-settings", "21-retained-native-controls"]
+                     "03-chips-touch-dpad", "06-search", "07-detail", "29-discover-detail", "30-discover-detail-empty",
+                     "08-dialog", "09-playback", "09-settings", "21-retained-native-controls"]
 sheet = Image.new("RGB", (960, len(comparison_scenes) * 294), "#e7e9ef")
 draw = ImageDraw.Draw(sheet)
 for row, scene in enumerate(comparison_scenes):

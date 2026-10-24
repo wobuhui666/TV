@@ -37,6 +37,7 @@ import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.PreloadSetting;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.ThemeMode;
 import com.fongmi.android.tv.setting.SourceSelectionSetting;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
 import com.fongmi.android.tv.ui.rex.RexFeedLoader;
@@ -352,9 +353,14 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             return;
         }
         switch (key) {
-            case JetStreamSettingView.KEY_THEME_MODE -> RexTheme.setLight(!RexTheme.isLight());
+            case JetStreamSettingView.KEY_THEME_MODE -> RexTheme.setMode(switch (Setting.getThemeMode()) {
+                case DARK -> ThemeMode.LIGHT;
+                case LIGHT -> ThemeMode.SYSTEM;
+                case SYSTEM -> ThemeMode.DARK;
+            });
             case JetStreamSettingView.KEY_THEME_DARK -> RexTheme.setLight(false);
             case JetStreamSettingView.KEY_THEME_LIGHT -> RexTheme.setLight(true);
+            case JetStreamSettingView.KEY_THEME_SYSTEM -> RexTheme.setMode(ThemeMode.SYSTEM);
             case JetStreamSettingView.KEY_VOD -> onVod();
             case JetStreamSettingView.KEY_LIVE -> onLive();
             case JetStreamSettingView.KEY_WALL -> onWall();
@@ -886,7 +892,11 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     }
 
     private void setThemeText() {
-        setRowValue(JetStreamSettingView.KEY_THEME_MODE, getString(RexTheme.isLight() ? R.string.theme_mode_light : R.string.theme_mode_dark));
+        setRowValue(JetStreamSettingView.KEY_THEME_MODE, getString(switch (Setting.getThemeMode()) {
+            case DARK -> R.string.theme_mode_dark;
+            case LIGHT -> R.string.theme_mode_light;
+            case SYSTEM -> R.string.theme_mode_system;
+        }));
         setRowValue(JetStreamSettingView.KEY_THEME_COLOR, getString(JetStreamPalette.currentLabelRes()));
     }
 

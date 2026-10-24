@@ -10,10 +10,10 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop" />
 
-    <View
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverDetailScrimView
+        android:id="@+id/detailScrim"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_discover_detail_scrim" />
+        android:layout_height="match_parent" />
 
     <LinearLayout
         android:layout_width="match_parent"

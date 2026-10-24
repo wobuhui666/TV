@@ -4,6 +4,7 @@ import androidx.annotation.ColorInt;
 
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
+import com.fongmi.android.tv.setting.ThemeMode;
 
 /**
  * Rex 行的主题单一挂钩。
@@ -21,8 +22,12 @@ public final class RexTheme {
     }
 
     public static void setLight(boolean light) {
-        if (isLight() == light) return;
-        Setting.putLightTheme(light);
+        setMode(light ? ThemeMode.LIGHT : ThemeMode.DARK);
+    }
+
+    public static void setMode(ThemeMode mode) {
+        if (Setting.getThemeMode() == mode) return;
+        Setting.putThemeMode(mode);
         RefreshEvent.theme();
     }
 

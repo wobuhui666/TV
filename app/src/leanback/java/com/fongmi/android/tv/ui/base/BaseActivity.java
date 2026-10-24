@@ -38,12 +38,14 @@ import me.jessyan.autosize.AutoSizeCompat;
 public abstract class BaseActivity extends AppCompatActivity {
 
     private JetStreamWallView wallpaper;
+    private boolean appliedLightTheme;
 
     protected abstract ViewBinding getBinding();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if (RexTheme.isLight()) setTheme(R.style.Theme_App_Light);
+        appliedLightTheme = RexTheme.isLight();
+        if (appliedLightTheme) setTheme(R.style.Theme_App_Light);
         super.onCreate(savedInstanceState);
         JetStreamWallpaper.start();
         applyThemeWindow();
@@ -90,6 +92,7 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        refreshSystemTheme();
         refreshWallpaper();
     }
 
@@ -136,7 +139,8 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onThemeEvent(RefreshEvent event) {
         if (event.getType() != RefreshEvent.Type.THEME) return;
-        setTheme(RexTheme.isLight() ? R.style.Theme_App_Light : R.style.Theme_App);
+        appliedLightTheme = RexTheme.isLight();
+        setTheme(appliedLightTheme ? R.style.Theme_App_Light : R.style.Theme_App);
         JetStreamThemeController.refresh();
         applyThemeWindow();
         JetStreamNativeTheme.refresh(findViewById(android.R.id.content));
@@ -162,7 +166,12 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        refreshSystemTheme();
         Util.hideSystemUI(this);
+    }
+
+    private void refreshSystemTheme() {
+        if (appliedLightTheme != RexTheme.isLight() && !isFinishing() && !isDestroyed()) RefreshEvent.theme();
     }
 
     @Override
