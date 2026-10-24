@@ -290,18 +290,8 @@ public class TvAppearanceTouchTest {
                 assertTrue("Categories follow the entire continue-watching row", home.categoriesPosition() > home.historyPosition());
                 assertTrue("The classic popular shelf follows categories", home.popularPosition() > home.categoriesPosition());
             });
-            device.pressDPadDown();
-            AtomicBoolean contentFocused = new AtomicBoolean();
-            long focusDeadline = SystemClock.uptimeMillis() + 5000;
-            do {
-                instrumentation.runOnMainSync(() -> contentFocused.set(home.pageGrid().hasFocus()));
-                if (contentFocused.get()) break;
-                SystemClock.sleep(100);
-            } while (SystemClock.uptimeMillis() < focusDeadline);
-            main(() -> {
-                assertTrue("The first D-pad movement enters the production hero before selecting history", contentFocused.get());
-                home.focusRow(home.historyPosition());
-            });
+            enterHomeContent(home);
+            main(() -> home.focusRow(home.historyPosition()));
             main(() -> {
                 assertEquals("Real content navigation hides the toolbar above continue watching", View.GONE, home.toolbar().getVisibility());
                 View history = rowView(home, home.historyPosition());
@@ -373,6 +363,7 @@ public class TvAppearanceTouchTest {
             SystemClock.sleep(450);
             assertRoute(home, "DiscoverActivity");
 
+            enterHomeContent(home);
             main(() -> home.focusRow(home.popularPosition()));
             main(() -> assertEquals("Scrolling content hides the real toolbar", View.GONE, home.toolbar().getVisibility()));
             main(() -> home.showToolbar(true));
@@ -428,6 +419,18 @@ public class TvAppearanceTouchTest {
             while (!home.isDestroyed() && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
             main(() -> session[0].close());
         }
+    }
+
+    private void enterHomeContent(TvHomePreviewActivity home) {
+        device.pressDPadDown();
+        AtomicBoolean contentFocused = new AtomicBoolean();
+        long deadline = SystemClock.uptimeMillis() + 5000;
+        do {
+            instrumentation.runOnMainSync(() -> contentFocused.set(home.pageGrid().hasFocus()));
+            if (contentFocused.get()) break;
+            SystemClock.sleep(100);
+        } while (SystemClock.uptimeMillis() < deadline);
+        assertTrue("D-pad movement enters production home content before selecting a lower row", contentFocused.get());
     }
 
     private View rowView(TvHomePreviewActivity home, int position) {
