@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.BuildConfig;
 
 public class CustomRecyclerView extends RecyclerView {
 
@@ -41,7 +42,7 @@ public class CustomRecyclerView extends RecyclerView {
 
     private void init(Context context, @Nullable AttributeSet attrs) {
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-        RecyclerTouchFocus.install(this);
+        RecyclerTouchFocus.install(this, "leanback".equals(BuildConfig.FLAVOR_mode));
         if (attrs != null) setAttrs(context, attrs);
         setOverScrollMode(View.OVER_SCROLL_NEVER);
     }

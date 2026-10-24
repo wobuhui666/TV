@@ -10,7 +10,7 @@ import com.fongmi.android.tv.R
 /** Coordinate TV native touch focus with the same anchors used by the D-pad. */
 object JetStreamTouch {
     @JvmStatic
-    fun install(recycler: RecyclerView) = RecyclerTouchFocus.install(recycler)
+    fun install(recycler: RecyclerView) = RecyclerTouchFocus.install(recycler, true)
 
     @JvmStatic
     fun bindDirectTouch(view: View) {

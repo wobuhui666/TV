@@ -13,6 +13,10 @@ public final class RecyclerTouchFocus {
     private RecyclerTouchFocus() { }
 
     public static void install(RecyclerView recycler) {
+        install(recycler, false);
+    }
+
+    public static void install(RecyclerView recycler, boolean enableTouchMode) {
         if (Boolean.TRUE.equals(recycler.getTag(R.id.touch_focus_installed))) return;
         recycler.setTag(R.id.touch_focus_installed, true);
         int slop = ViewConfiguration.get(recycler.getContext()).getScaledTouchSlop();
@@ -47,8 +51,11 @@ public final class RecyclerTouchFocus {
                             int y = Math.round(origin[1] + event.getY());
                             // Nested horizontal rails own their touched card and its index.
                             if (!insideRecycler(target, x, y)) {
-                                View focus = focusAt(target, x, y);
-                                if (focus != null) focus.requestFocus();
+                                View focus = focusAt(target, x, y, enableTouchMode);
+                                if (focus != null) {
+                                    if (enableTouchMode) focus.setFocusableInTouchMode(true);
+                                    focus.requestFocus();
+                                }
                             }
                         }
                         target = null;
@@ -73,12 +80,12 @@ public final class RecyclerTouchFocus {
         return false;
     }
 
-    private static View focusAt(View view, int x, int y) {
+    private static View focusAt(View view, int x, int y, boolean enableTouchMode) {
         if (!hit(view, x, y)) return null;
         if (view instanceof ViewGroup group) for (int i = group.getChildCount() - 1; i >= 0; i--) {
-            View focus = focusAt(group.getChildAt(i), x, y);
+            View focus = focusAt(group.getChildAt(i), x, y, enableTouchMode);
             if (focus != null) return focus;
         }
-        return view.isFocusable() && view.isFocusableInTouchMode() ? view : null;
+        return view.isFocusable() && (enableTouchMode || view.isFocusableInTouchMode()) ? view : null;
     }
 }
