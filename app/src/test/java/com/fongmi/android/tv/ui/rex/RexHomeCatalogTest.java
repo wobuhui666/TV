@@ -79,6 +79,10 @@ public class RexHomeCatalogTest {
         updated.setYear("");
         updated.setBackdrop("new-backdrop");
         org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero, updated))));
+        updated.setYear(null);
+        updated.setBackdrop("backdrop:item");
+        updated.setContent("<p>updated description</p>");
+        org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero, updated))));
         org.junit.Assert.assertFalse(before.isSameContent(new RexFeedResult(section, List.of(hero))));
     }
 

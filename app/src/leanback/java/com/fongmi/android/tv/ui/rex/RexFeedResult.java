@@ -48,9 +48,6 @@ public final class RexFeedResult implements Diffable<RexFeedResult> {
 
     public static boolean sameContent(Vod first, Vod second) {
         if (first == second) return true;
-        return first != null && second != null && first.isSameItem(second) && first.isSameContent(second)
-                && first.getBackdrop().equals(second.getBackdrop()) && first.getYear().equals(second.getYear())
-                && first.getGenreText().equals(second.getGenreText()) && first.getTypeName().equals(second.getTypeName())
-                && first.getContent().equals(second.getContent());
+        return first != null && second != null && first.isSameItem(second) && first.isSameCardContent(second);
     }
 }
