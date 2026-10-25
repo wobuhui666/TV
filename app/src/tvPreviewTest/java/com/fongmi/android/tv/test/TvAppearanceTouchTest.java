@@ -714,6 +714,7 @@ public class TvAppearanceTouchTest {
             activity.selectRexRow(true);
         });
         assertSectionCard();
+        assertSectionFocusOutline();
         device.executeShellCommand("dumpsys gfxinfo " + activity.getPackageName() + " reset");
         capture(theme + "-14-rex-section-card");
         int before = activity.navigationCount;
@@ -725,6 +726,7 @@ public class TvAppearanceTouchTest {
         device.pressDPadRight(); device.pressDPadCenter();
         SystemClock.sleep(400);
         assertEquals("D-pad advances from the touched Rex spotlight", "now_playing", activity.lastNavigation.getStringExtra("section_key"));
+        assertSectionFocusOutline();
         capture(theme + "-15-rex-spotlight-touch-dpad");
         Rect spotlight = text(activity.getString(R.string.rex_section_now_playing)).getVisibleBounds();
         before = activity.navigationCount;
@@ -736,6 +738,7 @@ public class TvAppearanceTouchTest {
         capture(theme + "-16-rex-spotlight-swipe");
 
         main(() -> activity.selectRexRow(false));
+        assertSectionFocusOutline();
         capture(theme + "-17-rex-section-posters");
         before = activity.navigationCount;
         text("山海之间 2").click();
@@ -746,6 +749,7 @@ public class TvAppearanceTouchTest {
         device.pressDPadRight(); device.pressDPadCenter();
         SystemClock.sleep(400);
         assertEquals("D-pad advances from the touched Rex poster", "tmdb:movie:1002", activity.lastNavigation.getStringExtra("key"));
+        assertSectionFocusOutline();
         capture(theme + "-18-rex-section-posters-touch-dpad");
         Rect poster = text("追光的人 3").getVisibleBounds();
         before = activity.navigationCount;
@@ -798,6 +802,27 @@ public class TvAppearanceTouchTest {
                 android.widget.TextView text = child.findViewById(id);
                 assertTrue("Extracted card tint preserves caption contrast", ColorUtils.calculateContrast(text.getCurrentTextColor(), card.getSurfaceColor()) >= 4.5);
             }
+        });
+    }
+
+    private void assertSectionFocusOutline() {
+        main(() -> {
+            HorizontalGridView outer = activity.rexRail(true);
+            int focused = 0;
+            for (int i = 0; i < outer.getChildCount(); i++) {
+                JetStreamRexSectionCard card = outer.getChildAt(i).findViewById(R.id.rexSectionCard);
+                assertNotNull(card);
+                if (card.hasFocus()) focused++;
+                Bitmap outline = Bitmap.createBitmap(card.getWidth(), card.getHeight(), Bitmap.Config.ARGB_8888);
+                try {
+                    card.getForeground().draw(new Canvas(outline));
+                    boolean painted = Color.alpha(outline.getPixel(card.getWidth() / 2, activity.dp(1))) > 0;
+                    assertEquals("Only the section containing focus paints an outline", card.hasFocus(), painted);
+                } finally {
+                    outline.recycle();
+                }
+            }
+            assertEquals("Exactly one visible section owns hero or preview focus", 1, focused);
         });
     }
 

@@ -48,7 +48,7 @@ class JetStreamRexSectionCard @JvmOverloads constructor(
         surface.setColor(surfaceColor)
         findViewById<JetStreamRexSectionScrim>(R.id.scrim)?.setSurfaceColor(surfaceColor)
         foreground = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_activated), GradientDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
                 setColor(Color.TRANSPARENT)
                 // Stroke center is inset by 1dp; its outer radius matches the 22dp clip.
                 cornerRadius = jetStreamDp(21)
@@ -66,12 +66,19 @@ class JetStreamRexSectionCard @JvmOverloads constructor(
 
     override fun requestChildFocus(child: View, focused: View) {
         super.requestChildFocus(child, focused)
-        isActivated = true
+        refreshDrawableState()
     }
 
     override fun clearChildFocus(child: View) {
         super.clearChildFocus(child)
-        isActivated = hasFocus()
+        refreshDrawableState()
+    }
+
+    override fun onCreateDrawableState(extraSpace: Int): IntArray {
+        val state = super.onCreateDrawableState(extraSpace + 1)
+        // Leanback activates every card in an active row; only actual child focus owns the outline.
+        if (hasFocus()) mergeDrawableStates(state, intArrayOf(android.R.attr.state_focused))
+        return state
     }
 
     override fun focusSearch(focused: View, direction: Int): View? {
