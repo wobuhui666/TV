@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewOutlineProvider
+import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.core.graphics.ColorUtils
 import androidx.leanback.widget.HorizontalGridView
@@ -25,6 +26,7 @@ class JetStreamRexSectionCard @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
     private val surface = GradientDrawable().apply { cornerRadius = jetStreamDp(22) }
+    private val focusChanges = ViewTreeObserver.OnGlobalFocusChangeListener { _, _ -> refreshDrawableState() }
     private var artworkColor: Int? = null
     var surfaceColor: Int = 0
         private set
@@ -61,22 +63,20 @@ class JetStreamRexSectionCard @JvmOverloads constructor(
         super.onAttachedToWindow()
         // Leanback otherwise replaces this with its much smaller default outline.
         outlineProvider = ViewOutlineProvider.BACKGROUND
+        viewTreeObserver.addOnGlobalFocusChangeListener(focusChanges)
         updateColors()
-    }
-
-    override fun requestChildFocus(child: View, focused: View) {
-        super.requestChildFocus(child, focused)
         refreshDrawableState()
     }
 
-    override fun clearChildFocus(child: View) {
-        super.clearChildFocus(child)
-        refreshDrawableState()
+    override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalFocusChangeListener(focusChanges)
+        super.onDetachedFromWindow()
     }
 
     override fun onCreateDrawableState(extraSpace: Int): IntArray {
         val state = super.onCreateDrawableState(extraSpace + 1)
-        // Leanback activates every card in an active row; only actual child focus owns the outline.
+        // Child loss notifications precede clearing focus; the global listener refreshes after transfer.
+        // Leanback activates every card in an active row, so activation cannot own the outline.
         if (hasFocus()) mergeDrawableStates(state, intArrayOf(android.R.attr.state_focused))
         return state
     }
