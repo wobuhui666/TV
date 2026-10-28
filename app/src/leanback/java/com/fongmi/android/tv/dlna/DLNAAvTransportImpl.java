@@ -30,6 +30,8 @@ import org.jupnp.support.model.TransportSettings;
 import org.jupnp.support.model.TransportState;
 import org.jupnp.support.model.TransportStatus;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
@@ -92,11 +94,17 @@ public class DLNAAvTransportImpl extends AbstractAVTransportService {
         }
     }
 
-    private static String formatSpeed(float speed) {
+    static String formatSpeed(float speed) {
         if (!(speed > 0f) || Float.isNaN(speed) || Float.isInfinite(speed)) return "1";
-        int rounded = Math.round(speed);
-        if (rounded > 0 && Math.abs(speed - rounded) < 0.05f) return Integer.toString(rounded);
-        return "1";
+        // AVTransport uses an integer or fraction, including the UI's quarter speeds.
+        BigDecimal decimal = new BigDecimal(Float.toString(speed)).stripTrailingZeros();
+        int scale = Math.max(0, decimal.scale());
+        BigInteger numerator = decimal.movePointRight(scale).toBigIntegerExact();
+        BigInteger denominator = BigInteger.TEN.pow(scale);
+        BigInteger divisor = numerator.gcd(denominator);
+        numerator = numerator.divide(divisor);
+        denominator = denominator.divide(divisor);
+        return denominator.equals(BigInteger.ONE) ? numerator.toString() : numerator + "/" + denominator;
     }
 
     public long consumePendingSeekMs() {
@@ -271,9 +279,8 @@ public class DLNAAvTransportImpl extends AbstractAVTransportService {
     private void startCastActivity(CastAction action) {
         Intent intent = new Intent(context, CastActivity.class);
         intent.putExtra(CastAction.KEY_EXTRA, action);
-        intent.putExtra(DLNARendererService.EXTRA_CAST_TOKEN, DLNARendererService.markCasting());
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(intent);
+        DLNARendererService.startCasting(context, intent);
     }
 
     public boolean hasNext() {
@@ -293,6 +300,15 @@ public class DLNAAvTransportImpl extends AbstractAVTransportService {
         try {
             currentState = toTransportState(state);
             getLastChange().setEventedValue(AbstractAVTransportService.getDefaultInstanceID(), new AVTransportVariable.TransportState(currentState));
+            // Notify after releasing lifecycle/action locks: jUPnP's callback takes
+            // its service manager lock, which can already be held by a SOAP action.
+            App.post(this::fireLastChange);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void fireLastChange() {
+        try {
             getLastChange().fire(propertyChangeSupport);
         } catch (Exception ignored) {
         }

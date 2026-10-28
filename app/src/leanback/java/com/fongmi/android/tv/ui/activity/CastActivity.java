@@ -101,11 +101,12 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void onNewIntent(Intent intent) {
+        castToken = intent.getIntExtra(DLNARendererService.EXTRA_CAST_TOKEN, castToken);
         super.onNewIntent(intent);
         setIntent(intent);
         if (mRenderer != null) mRenderer.setDlnaActive(true);
-        if (intent.hasExtra(CastAction.KEY_EXTRA)) setAction(intent);
-        else finish();
+        if (!intent.hasExtra(CastAction.KEY_EXTRA)) finish();
+        else if (service() != null) setAction(intent);
     }
 
     @Override
@@ -115,6 +116,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        castToken = getIntent().getIntExtra(DLNARendererService.EXTRA_CAST_TOKEN, 0);
         super.initView(savedInstanceState);
         bound = bindService(new Intent(this, DLNARendererService.class), mRendererConnection, Context.BIND_AUTO_CREATE);
         mClock = Clock.create(mBinding.widget.clock);
@@ -205,7 +207,6 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void setAction(Intent intent) {
-        castToken = intent.getIntExtra(DLNARendererService.EXTRA_CAST_TOKEN, castToken);
         mAction = intent.getParcelableExtra(CastAction.KEY_EXTRA);
         if (mAction == null) return;
         mBinding.widget.title.setText(getName());
@@ -742,7 +743,6 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void releaseRenderer() {
-        if (mRenderer != null) mRenderer.setDlnaActive(false);
         if (bound) unbindService(mRendererConnection);
         mRenderer = null;
         bound = false;
@@ -750,11 +750,10 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void onDestroy() {
-        int token = castToken;
         if (mKeyDown != null) mKeyDown.reset();
         mClock.release();
+        if (!isChangingConfigurations()) DLNARendererService.clearCasting(castToken);
         releaseRenderer();
-        DLNARendererService.clearCasting(token);
         App.removeCallbacks(mR1, mR2);
         super.onDestroy();
     }

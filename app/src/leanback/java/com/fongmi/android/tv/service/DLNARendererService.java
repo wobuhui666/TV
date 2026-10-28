@@ -44,16 +44,13 @@ import org.jupnp.support.renderingcontrol.lastchange.RenderingControlLastChangeP
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DLNARendererService extends AndroidUpnpServiceImpl implements ServiceConnection {
 
     public static final String EXTRA_CAST_TOKEN = "dlna_cast_token";
 
-    private static final AtomicInteger CAST_TOKEN = new AtomicInteger();
-    private static final AtomicBoolean STOP_REQUESTED = new AtomicBoolean();
-    private static volatile DLNARendererService instance;
+    private static final DlnaSessionLifecycle CAST_LIFECYCLE = new DlnaSessionLifecycle();
+    private static DLNARendererService instance;
 
     private final IBinder binder = new LocalBinder();
 
@@ -67,31 +64,44 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
     private boolean bound;
 
     public static void start(Context context) {
-        context.startService(new Intent(context, DLNARendererService.class));
+        synchronized (CAST_LIFECYCLE) {
+            context.startService(new Intent(context, DLNARendererService.class));
+            CAST_LIFECYCLE.start();
+        }
     }
 
     public static void stop(Context context) {
-        if (isCasting()) {
-            STOP_REQUESTED.set(true);
-            return;
+        synchronized (CAST_LIFECYCLE) {
+            if (CAST_LIFECYCLE.requestStop()) context.stopService(new Intent(context, DLNARendererService.class));
         }
-        STOP_REQUESTED.set(false);
-        context.stopService(new Intent(context, DLNARendererService.class));
     }
 
     public static boolean isCasting() {
-        return CAST_TOKEN.get() != 0;
+        synchronized (CAST_LIFECYCLE) {
+            return CAST_LIFECYCLE.isCasting();
+        }
     }
 
-    public static int markCasting() {
-        STOP_REQUESTED.set(false);
-        return CAST_TOKEN.incrementAndGet();
+    public static void startCasting(Context context, Intent intent) {
+        synchronized (CAST_LIFECYCLE) {
+            int previousToken = CAST_LIFECYCLE.getCastToken();
+            int token = CAST_LIFECYCLE.beginCast();
+            try {
+                intent.putExtra(EXTRA_CAST_TOKEN, token);
+                context.startActivity(intent);
+            } catch (RuntimeException e) {
+                CAST_LIFECYCLE.restoreCast(token, previousToken);
+                throw e;
+            }
+        }
     }
 
     public static void clearCasting(int token) {
-        if (!CAST_TOKEN.compareAndSet(token, 0)) return;
-        DLNARendererService service = instance;
-        if (service != null && STOP_REQUESTED.compareAndSet(true, false) && !isCasting()) service.stopSelf();
+        synchronized (CAST_LIFECYCLE) {
+            if (!CAST_LIFECYCLE.isCurrentCast(token)) return;
+            if (instance != null) instance.setDlnaActive(false);
+            if (CAST_LIFECYCLE.endCast(token) && instance != null) instance.stopSelf();
+        }
     }
 
     @Override
@@ -102,7 +112,9 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
+        synchronized (CAST_LIFECYCLE) {
+            instance = this;
+        }
         Notification notification = new NotificationCompat.Builder(this, Notify.DEFAULT).setSmallIcon(R.drawable.ic_notification).setContentTitle(getString(R.string.app_name)).setSilent(true).build();
         startForeground(Notify.ID + 1, notification);
         upnpService.startup();
@@ -150,13 +162,10 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
             "http-get:*:audio/flac:*",
             "http-get:*:audio/ogg:*",
             "http-get:*:audio/*:*",
-            "http-get:*:image/jpeg:*",
-            "http-get:*:image/png:*",
-            "http-get:*:image/*:*",
             "http-get:*:application/vnd.apple.mpegurl:*",
             "http-get:*:application/x-mpegURL:*",
             "http-get:*:application/dash+xml:*",
-            "http-get:*:*:*");
+            "http-get:*:application/octet-stream:*");
 
     @SuppressWarnings("unchecked")
     private LocalService<ConnectionManagerService> createConnectionManager() {
@@ -190,7 +199,9 @@ public class DLNARendererService extends AndroidUpnpServiceImpl implements Servi
 
     @Override
     public void onDestroy() {
-        if (instance == this) instance = null;
+        synchronized (CAST_LIFECYCLE) {
+            if (instance == this) instance = null;
+        }
         unbindPlaybackService();
         super.onDestroy();
     }
