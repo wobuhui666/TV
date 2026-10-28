@@ -297,18 +297,19 @@ public class DLNAAvTransportImpl extends AbstractAVTransportService {
     }
 
     public void fireStateChange(RenderState state) {
+        TransportState transportState = toTransportState(state);
+        currentState = transportState;
+        // SOAP actions hold jUPnP's manager lock. Update and publish LastChange
+        // together on the main thread so no action waits for its event lock.
         try {
-            currentState = toTransportState(state);
-            getLastChange().setEventedValue(AbstractAVTransportService.getDefaultInstanceID(), new AVTransportVariable.TransportState(currentState));
-            // Notify after releasing lifecycle/action locks: jUPnP's callback takes
-            // its service manager lock, which can already be held by a SOAP action.
-            App.post(this::fireLastChange);
+            App.post(() -> fireLastChange(transportState));
         } catch (Exception ignored) {
         }
     }
 
-    private void fireLastChange() {
+    private void fireLastChange(TransportState state) {
         try {
+            getLastChange().setEventedValue(AbstractAVTransportService.getDefaultInstanceID(), new AVTransportVariable.TransportState(state));
             getLastChange().fire(propertyChangeSupport);
         } catch (Exception ignored) {
         }

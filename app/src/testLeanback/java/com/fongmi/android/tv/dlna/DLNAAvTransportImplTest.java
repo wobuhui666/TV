@@ -1,10 +1,45 @@
 package com.fongmi.android.tv.dlna;
 
 import org.junit.Test;
+import org.jupnp.model.types.UnsignedIntegerFourBytes;
+import org.jupnp.support.model.TransportState;
 
 import static org.junit.Assert.assertEquals;
 
 public class DLNAAvTransportImplTest {
+
+    private static final UnsignedIntegerFourBytes INSTANCE_ID = new UnsignedIntegerFourBytes(0);
+
+    @Test
+    public void shouldReportDefaultTransportInfoWithoutAPlayer() {
+        DLNAAvTransportImpl transport = new DLNAAvTransportImpl(null);
+
+        assertEquals("1", transport.getTransportInfo(INSTANCE_ID).getCurrentSpeed());
+        assertEquals(TransportState.NO_MEDIA_PRESENT, transport.getTransportInfo(INSTANCE_ID).getCurrentTransportState());
+    }
+
+    @Test
+    public void shouldReadCachedPositionWithoutAPlayer() {
+        DLNAAvTransportImpl transport = new DLNAAvTransportImpl(null);
+        transport.updatePositionCache(15000, 120000);
+
+        assertEquals("00:00:15", transport.getPositionInfo(INSTANCE_ID).getRelTime());
+        assertEquals("00:02:00", transport.getPositionInfo(INSTANCE_ID).getTrackDuration());
+        assertEquals("1", transport.getTransportInfo(INSTANCE_ID).getCurrentSpeed());
+    }
+
+    @Test
+    public void shouldResetCachedPositionAndTransportState() {
+        DLNAAvTransportImpl transport = new DLNAAvTransportImpl(null);
+        transport.updatePositionCache(15000, 120000);
+        transport.fireStateChange(RenderState.PLAYING);
+
+        transport.reset();
+
+        assertEquals("00:00:00", transport.getMediaInfo(INSTANCE_ID).getMediaDuration());
+        assertEquals("1", transport.getTransportInfo(INSTANCE_ID).getCurrentSpeed());
+        assertEquals(TransportState.NO_MEDIA_PRESENT, transport.getTransportInfo(INSTANCE_ID).getCurrentTransportState());
+    }
 
     @Test
     public void shouldReportWholeSpeedsAsIntegers() {
