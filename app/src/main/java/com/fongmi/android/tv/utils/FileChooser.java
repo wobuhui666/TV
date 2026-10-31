@@ -76,6 +76,42 @@ public class FileChooser {
         return getPathFromUri(App.get(), uri);
     }
 
+    /** Resolve existing readable local files without copying content or enumerating a provider. */
+    public static File getLocalFile(Context context, Uri uri) {
+        if (context == null || uri == null || Thread.currentThread().isInterrupted()) return null;
+        try {
+            String path;
+            if (uri.getScheme() == null) {
+                path = uri.toString();
+            } else if (ContentResolver.SCHEME_FILE.equalsIgnoreCase(uri.getScheme())) {
+                String authority = uri.getAuthority();
+                if (authority != null && !authority.isEmpty() && !authority.equalsIgnoreCase("localhost")) return null;
+                path = uri.getPath();
+            } else if (ContentResolver.SCHEME_CONTENT.equalsIgnoreCase(uri.getScheme())) {
+                path = null;
+                if (isExternalStorageDocument(uri) && DocumentsContract.isDocumentUri(context, uri)) {
+                    String id = DocumentsContract.getDocumentId(uri);
+                    int colon = id.indexOf(':');
+                    if (colon <= 0) return null;
+                    String volume = id.substring(0, colon);
+                    if (!volume.matches("[A-Za-z0-9_-]+")) return null;
+                    File root = volume.equalsIgnoreCase("primary") ? Environment.getExternalStorageDirectory() : new File("/storage", volume);
+                    File candidate = new File(root, id.substring(colon + 1));
+                    if (!candidate.getCanonicalPath().startsWith(root.getCanonicalPath() + File.separator)) return null;
+                    path = candidate.getPath();
+                }
+                if (path == null) path = getDataColumn(context, uri);
+            } else {
+                return null;
+            }
+            if (path == null || Thread.currentThread().isInterrupted()) return null;
+            File file = new File(path);
+            return file.isAbsolute() && file.isFile() && file.canRead() ? file : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private static String getPathFromUri(Context context, Uri uri) {
         if (uri == null) return null;
         String path = null;

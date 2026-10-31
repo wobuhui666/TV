@@ -12,8 +12,10 @@ import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
+import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.player.extractor.Source;
+import com.fongmi.android.tv.player.media.LocalSubtitleScanner;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.SearchResultFilter;
@@ -180,7 +182,7 @@ public class SiteApi {
             if (resolveRequest != null) result.setUrl(source.fetch(resolveRequest, result));
             result.setHeader(site.getHeader());
             result.setKey(key);
-            return result;
+            return withLocalSubtitles(result, id);
         } else if (site.getType() == 4) {
             ArrayMap<String, String> params = new ArrayMap<>();
             params.put("play", id);
@@ -191,7 +193,7 @@ public class SiteApi {
             if (result.getFlag().isEmpty()) result.setFlag(flag);
             if (resolveRequest != null) result.setUrl(source.fetch(resolveRequest, result));
             result.setHeader(site.getHeader());
-            return result;
+            return withLocalSubtitles(result, id);
         } else if (site.isEmpty() && "push_agent".equals(key)) {
             Result result = new Result();
             result.setUrl(id);
@@ -199,7 +201,7 @@ public class SiteApi {
             result.setFlag(flag);
             if (resolveRequest != null) result.setUrl(source.fetch(resolveRequest, result));
             SpiderDebug.log("player", result.toString());
-            return result;
+            return withLocalSubtitles(result, id);
         } else {
             Result result = new Result();
             result.setUrl(id);
@@ -209,8 +211,17 @@ public class SiteApi {
             result.setParse(Sniffer.isVideoFormat(id) && result.getPlayUrl().isEmpty() ? 0 : 1);
             if (resolveRequest != null) result.setUrl(source.fetch(resolveRequest, result));
             SpiderDebug.log("player", result.toString());
-            return result;
+            return withLocalSubtitles(result, id);
         }
+    }
+
+    private static Result withLocalSubtitles(Result result, String original) {
+        if (!result.getSubs().isEmpty()) return result;
+        List<Sub> subtitles = LocalSubtitleScanner.scan(App.get(), result.getUrl().v());
+        // A local STRM may resolve to an HTTP target, while its sidecars remain beside the pointer.
+        if (subtitles.isEmpty() && !original.equals(result.getUrl().v())) subtitles = LocalSubtitleScanner.scan(App.get(), original);
+        result.setSubs(subtitles);
+        return result;
     }
 
     @NonNull

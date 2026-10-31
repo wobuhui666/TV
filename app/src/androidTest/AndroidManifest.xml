@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="com.fongmi.android.tv.test.LocalSubtitleMetadataProvider"
+            android:authorities="${applicationId}.local.subtitles"
+            android:exported="true" />
+    </application>
+</manifest>
