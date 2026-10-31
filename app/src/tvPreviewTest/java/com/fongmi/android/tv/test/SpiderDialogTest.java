@@ -8,6 +8,13 @@ import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.graphics.Rect;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ScrollView;
+import android.view.inspector.WindowInspector;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
@@ -156,6 +163,62 @@ public final class SpiderDialogTest {
         JSONObject values = call.get(5, TimeUnit.SECONDS).getJSONObject("values");
         assertEquals("two", values.getString("account"));
         assertEquals("editor", values.getJSONArray("roles").getString(0));
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 29)
+    public void remoteNavigationScrollsLongFormsBeforeLeavingTheInputs() throws Exception {
+        JSONArray fields = new JSONArray();
+        for (int i = 1; i <= 12; i++) fields.put(new JSONObject().put("name", "field" + i).put("label", "Field " + i));
+        JSONObject options = new JSONObject().put("title", "Long source form").put("inputs", fields)
+                .put("buttons", new JSONArray().put(new JSONObject().put("id", "finish").put("label", "Finish long form")));
+        Dialog owner = owner();
+        ListenableFuture<JSONObject> call = Task.submit(() -> owner.show(options), 1000);
+        calls.add(call);
+        text("Long source form");
+        final View[] first = new View[1];
+        final ScrollView[] scroll = new ScrollView[1];
+        instrumentation.runOnMainSync(() -> {
+            first[0] = findDescription(currentDialogRoot(), "Field 1");
+            assertNotNull(first[0]);
+            for (android.view.ViewParent parent = first[0].getParent(); parent != null; parent = parent.getParent()) {
+                if (parent instanceof ScrollView container) { scroll[0] = container; break; }
+            }
+            assertNotNull(scroll[0]);
+            assertTrue(first[0].requestFocus());
+        });
+        for (int i = 2; i <= 12; i++) {
+            device.pressDPadDown();
+            focused("Field " + i);
+        }
+        instrumentation.runOnMainSync(() -> {
+            assertTrue("Long forms must scroll while remote focus stays in the inputs", scroll[0].getScrollY() > 0);
+            View focused = currentDialogRoot().findFocus();
+            assertTrue(focused instanceof EditText);
+            assertEquals("Field 12", focused.getContentDescription().toString());
+            Rect fieldBounds = new Rect();
+            assertTrue("The final input must be visible after scrolling", focused.getGlobalVisibleRect(fieldBounds));
+        });
+        capture("long-form-scroll");
+        text("Finish long form").click();
+        assertEquals("finish", call.get(5, TimeUnit.SECONDS).getString("button"));
+    }
+
+    private View currentDialogRoot() {
+        for (View root : WindowInspector.getGlobalWindowViews()) {
+            if (findDescription(root, "Field 1") != null) return root;
+        }
+        throw new AssertionError("Long form window is not attached");
+    }
+
+    private View findDescription(View view, String description) {
+        if (description.equals(String.valueOf(view.getContentDescription()))) return view;
+        if (view instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = findDescription(group.getChildAt(i), description);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     @Test public void quickJsDialogsSurviveAsyncNetworkingAndStayWithTheirCaller() throws Exception {

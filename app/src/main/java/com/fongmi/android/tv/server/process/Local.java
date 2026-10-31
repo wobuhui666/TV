@@ -47,7 +47,9 @@ public class Local implements Process {
             File file = Path.local(path.substring(5));
             if (file.isDirectory()) return getFolder(file);
             if (file.isFile()) return getFile(headers, file, getMimeTypeForFile(path));
-            throw new FileNotFoundException();
+            return newFixedLengthResponse(Status.NOT_FOUND, MIME_PLAINTEXT, "");
+        } catch (FileNotFoundException e) {
+            return newFixedLengthResponse(Status.NOT_FOUND, MIME_PLAINTEXT, "");
         } catch (Exception e) {
             return Nano.error(e.getMessage());
         }
