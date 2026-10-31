@@ -9,6 +9,7 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -163,8 +164,18 @@ public final class SpiderDialog implements LifecycleEventObserver {
     private boolean onFocusKey(View view, int keyCode, KeyEvent event) {
         if (event.getAction() != KeyEvent.ACTION_DOWN || !event.hasNoModifiers() || keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN) return false;
         if (view instanceof MaterialAutoCompleteTextView select && select.isPopupShowing() || canMoveCursor(view, keyCode)) return false;
-        View next = view.focusSearch(keyCode == KeyEvent.KEYCODE_DPAD_UP ? View.FOCUS_UP : View.FOCUS_DOWN);
+        int direction = keyCode == KeyEvent.KEYCODE_DPAD_UP ? View.FOCUS_UP : View.FOCUS_DOWN;
+        ScrollView scroll = findScrollView(view);
+        if (scroll != null && scroll.arrowScroll(direction)) return true;
+        View next = view.focusSearch(direction);
         return next != null && next.requestFocus();
+    }
+
+    private ScrollView findScrollView(View view) {
+        for (ViewParent parent = view.getParent(); parent != null; parent = parent.getParent()) {
+            if (parent instanceof ScrollView scroll) return scroll;
+        }
+        return null;
     }
 
     private boolean canMoveCursor(View view, int keyCode) {

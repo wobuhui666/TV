@@ -23,8 +23,10 @@ final class NextMediaPreload implements Player.Listener {
     private final PreloadCoordinator coordinator;
     private final Handler handler;
     private final Runnable task = this::update;
+    private final Runnable stopped = this::clearIfStopped;
     final ExoPlayer player;
     private MediaItem pending;
+    private MediaItem foreground;
     private AbortableCallFactory calls;
     private PreloadBudget.Lease lease;
     private PreloadManagerListener completion;
@@ -158,6 +160,7 @@ final class NextMediaPreload implements Player.Listener {
 
     void clear() {
         handler.removeCallbacks(task);
+        handler.removeCallbacks(stopped);
         if (!consumed) pause();
         else {
             removeCompletionListener();
@@ -180,11 +183,30 @@ final class NextMediaPreload implements Player.Listener {
         manager.release();
     }
 
-    @Override public void onPlaybackStateChanged(int state) { update(); }
+    private void clearIfStopped() {
+        if (!released && player.getPlaybackState() == Player.STATE_IDLE && !consumed) clear();
+    }
+
+    @Override public void onPlaybackStateChanged(int state) {
+        handler.removeCallbacks(stopped);
+        // Keep synchronous stop()/take() handoff valid, then release unused completed buffers.
+        if (state == Player.STATE_IDLE) handler.post(stopped);
+        update();
+    }
     @Override public void onIsLoadingChanged(boolean loading) { update(); }
+    @Override public void onMediaItemTransition(MediaItem item, int reason) {
+        if (foreground != null && !consumed && (item == null || !sameMedia(foreground, item))) clear();
+        foreground = item;
+    }
     @Override public void onPositionDiscontinuity(Player.PositionInfo oldPosition, Player.PositionInfo newPosition, int reason) {
         if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
-            pause();
+            boolean sameItem = oldPosition.mediaItemIndex == newPosition.mediaItemIndex
+                    && (oldPosition.mediaItem == null || newPosition.mediaItem == null
+                    ? oldPosition.mediaItem == newPosition.mediaItem : sameMedia(oldPosition.mediaItem, newPosition.mediaItem));
+            // Finished buffers no longer consume the network lease. Retain their source and
+            // samples when only the current episode's position changes. In-flight work still
+            // yields immediately to the coordinator's foreground/seek cooldown budget.
+            if (!completed || !sameItem) pause();
             update();
         }
     }

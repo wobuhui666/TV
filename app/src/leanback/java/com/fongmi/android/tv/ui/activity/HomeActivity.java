@@ -734,14 +734,22 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void clearHistory() {
-        if (mHistoryCid != VodConfig.getCid()) return;
+        if (isFinishing() || isDestroyed() || mHistoryCid != VodConfig.getCid()) return;
+        int cid = mHistoryCid;
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
-        mAdapter.removeItems(getHistoryIndex(), 1);
-        History.delete(VodConfig.getCid());
-        mPresenter.setDelete(false);
-        mHistoryAdapter.clear();
-        if (mPosterHome != null) mPosterHome.updateHistoryOrder();
+        mHistoryTasks.write(() -> {
+            try {
+                History.delete(cid);
+            } catch (Exception error) {
+                App.post(() -> {
+                    if (!isFinishing() && !isDestroyed()) Notify.show(R.string.tv_history_delete_error);
+                });
+            } finally {
+                App.post(RefreshEvent::history);
+            }
+        });
+        applyHistory(new ArrayList<>(), false);
         getHistory();
         requestHistoryFocus(RecyclerView.NO_POSITION);
     }

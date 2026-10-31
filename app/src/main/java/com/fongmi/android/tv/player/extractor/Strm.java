@@ -5,13 +5,15 @@ import android.net.Uri;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Path;
-import com.google.common.net.HttpHeaders;
 
 import java.io.File;
 
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class Strm implements Source.Extractor {
+
+    private static final long MAX_STRM_BYTES = 64 * 1024;
 
     @Override
     public boolean match(Uri uri) {
@@ -27,10 +29,19 @@ public class Strm implements Source.Extractor {
 
     private String http(String url) throws Exception {
         try (Response res = OkHttp.newCall(OkHttp.noRedirect(), url).execute()) {
-            String content = res.header(HttpHeaders.CONTENT_DISPOSITION, "");
-            boolean text = content.contains(".strm") || content.contains(".txt");
-            return text ? res.body().string().split("\\R", 2)[0] : url;
+            if (!res.isSuccessful()) return url;
+            try (ResponseBody body = res.peekBody(MAX_STRM_BYTES)) {
+                // A full probe may be a truncated video, playlist or unusually large pointer.
+                if (body.contentLength() >= MAX_STRM_BYTES) return url;
+                return parseTarget(body.string(), url);
+            }
         }
+    }
+
+    static String parseTarget(String content, String originalUrl) {
+        if (content.startsWith("\uFEFF")) content = content.substring(1);
+        String line = content.split("\\R", 2)[0].trim();
+        return line.matches("[a-zA-Z][a-zA-Z0-9+.-]*:\\S+") ? line : originalUrl;
     }
 
     @Override

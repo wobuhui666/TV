@@ -975,12 +975,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void requestUrl(LivePlayRequest request) {
+        cancelPendingSeek();
         beginPlaybackRequest();
         mViewModel.getUrl(request.getChannel(), request.getPosition());
     }
 
     @Override
     public void requestCatchupUrl(LivePlayRequest request) {
+        cancelPendingSeek();
         beginPlaybackRequest();
         mViewModel.getUrl(request.getChannel(), request.getCatchupData(), request.getPosition());
         hideUI();
@@ -988,11 +990,13 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void stopPlaybackForRefresh() {
+        cancelPendingSeek();
         stopPlayer();
     }
 
     @Override
     public void startPlayback(Result result, long position, Channel channel) {
+        cancelPendingSeek();
         claimLocalPlayback();
         start(result, position);
     }
@@ -1097,6 +1101,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void setLive(Live item) {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.dismiss();
         if (item.isSelected()) item.getGroups().clear();
         LiveConfig.get().setHome(item);
@@ -1319,6 +1324,34 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     @Override
+    public boolean canSeek() {
+        return isPlaybackReady() && player().canSeek();
+    }
+
+    @Override
+    public void onSeekEnd(long time) {
+        seek(time);
+    }
+
+    @Override
+    public void onSeekCancel() {
+        App.removeCallbacks(mSeekRunnable);
+        mSeekTime = 0;
+        hideCenter();
+    }
+
+    private void cancelPendingSeek() {
+        if (mKeyDown != null) mKeyDown.cancelSeek();
+        App.removeCallbacks(mSeekRunnable);
+        mSeekTime = 0;
+    }
+
+    @Override
+    public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        cancelPendingSeek();
+    }
+
+    @Override
     public void onKeyUp() {
         if (LiveSetting.isInvert()) nextChannel();
         else prevChannel();
@@ -1381,6 +1414,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected void onStop() {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.setStarted(false);
         super.onStop();
         if (PlayerSetting.isBackgroundOff()) mClock.stop();
@@ -1391,6 +1425,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         if (isJetStreamControlVisible()) {
             hideControl();
         } else if (isJetStreamInfoVisible()) {
+            cancelPendingSeek();
             hideInfo();
         } else if (isVisible(mBinding.recycler)) {
             hideUI();
@@ -1402,6 +1437,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected void onDestroy() {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.dismiss();
         mClock.release();
         Source.get().exit();

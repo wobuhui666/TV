@@ -19,7 +19,7 @@ class ReleaseVersionTest(unittest.TestCase):
         second = OTA.release_version("2026-10-07T12:00:01+00:00")
         self.assertEqual(214_537_600, first[0])
         self.assertEqual(first[0] + 1, second[0])
-        self.assertEqual("5.5.5+20261007.120000", first[1])
+        self.assertEqual("5.8.5+20261007.120000", first[1])
 
     def test_timezones_represent_the_same_build_version(self):
         self.assertEqual(OTA.release_version("2026-10-07T12:00:00Z"), OTA.release_version("2026-10-07T20:00:00+08:00"))
@@ -44,7 +44,7 @@ class ManifestTest(unittest.TestCase):
             metadata = {
                 "version": 3,
                 "applicationId": OTA.PACKAGE_NAME,
-                "elements": [{"versionCode": 214_537_600, "versionName": "5.5.5+20261007.120000", "outputFile": apk.name}],
+                "elements": [{"versionCode": 214_537_600, "versionName": "5.8.5+20261007.120000", "outputFile": apk.name}],
             }
             metadata_path = folder / "output-metadata.json"
             metadata_path.write_text(json.dumps(metadata))
@@ -83,7 +83,7 @@ class ManifestTest(unittest.TestCase):
         result = self.manifest()
         self.assertEqual(1, result["schema"])
         self.assertEqual(214_537_600, result["code"])
-        self.assertEqual("5.5.5+20261007.120000", result["name"])
+        self.assertEqual("5.8.5+20261007.120000", result["name"])
         self.assertEqual(OTA.PACKAGE_NAME, result["packageName"])
         self.assertEqual("leanback", result["mode"])
         self.assertEqual("遥控体验改进", result["desc"])
@@ -142,9 +142,11 @@ class ManifestTest(unittest.TestCase):
             self.manifest()
 
     def test_rejects_stale_local_version(self):
-        self.mutate_metadata("arm64_v8a", lambda data: data["elements"][0].update(versionCode=555))
-        with self.assertRaisesRegex(ValueError, "CI versionCode"):
-            self.manifest()
+        for code in (555, 585):
+            with self.subTest(code=code):
+                self.mutate_metadata("arm64_v8a", lambda data: data["elements"][0].update(versionCode=code))
+                with self.assertRaisesRegex(ValueError, "CI versionCode"):
+                    self.manifest()
 
     def test_rejects_ambiguous_duplicate_variant_outputs(self):
         apk, metadata = self.paths["arm64_v8a"]

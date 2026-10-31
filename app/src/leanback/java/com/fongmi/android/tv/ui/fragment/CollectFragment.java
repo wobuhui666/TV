@@ -184,7 +184,10 @@ public class CollectFragment extends BaseFragment implements CustomScroller.Call
 
     private void appendVideo(List<Vod> items) {
         if (items == null || items.isEmpty() || !mViewReady || mAdapter == null) return;
-        if (getActiveActivity() == null) return;
+        // Source pagination may finish while this page is adjacent to the visible page.
+        // Preserve its rows now; only clicks and new loads require user-visible focus.
+        Activity activity = getActivity();
+        if (activity == null || !isAdded() || activity.isFinishing() || activity.isDestroyed()) return;
         if (checkLastSize(items)) return;
         List<ListRow> rows = new ArrayList<>();
         VodPresenter presenter = new VodPresenter(this, Style.rect(), getPageSpec(Style.rect()));

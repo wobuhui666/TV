@@ -1,0 +1,151 @@
+name: App responsiveness with live configuration
+
+on:
+  workflow_call:
+    inputs:
+      baseline_ref:
+        type: string
+        required: true
+      compare_baseline:
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: Baseline commit for the same live-config/navigation probe
+        required: true
+        default: '839ec53dea1a01879cbc42d11e7a7a475768c67e'
+      compare_baseline:
+        description: Also measure the baseline, or rerun optimized checks only
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: ${{ inputs.compare_baseline && fromJSON('["baseline", "optimized"]') || fromJSON('["optimized"]') }}
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      RESPONSIVENESS_REVISION: ${{ matrix.revision }}
+    steps:
+      - name: Free runner space for Android builds and emulator
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/swift /opt/hostedtoolcache/CodeQL
+          df -h "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.revision == 'baseline' && inputs.baseline_ref || github.sha }}
+          persist-credentials: false
+      - name: Checkout identical measurement harness
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .responsiveness-harness
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            app/src/tvPreviewTest/java/com/fongmi/android/tv/test/AppResponsivenessTest.java
+          sparse-checkout-cone-mode: false
+      - name: Install measurement harness
+        run: |
+          cp .responsiveness-harness/.github/scripts/verify-app-responsiveness.sh .github/scripts/
+          cp .responsiveness-harness/app/src/tvPreviewTest/java/com/fongmi/android/tv/test/AppResponsivenessTest.java app/src/tvPreviewTest/java/com/fongmi/android/tv/test/
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Checkout Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          persist-credentials: false
+      - name: Prepare composite and SDK
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/tv-sdk-compat.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x gradlew
+      - name: Run application unit tests and check mobile compilation
+        if: matrix.revision == 'optimized'
+        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :catvod:testDebugUnitTest :quickjs:testDebugUnitTest :app:testLeanbackArm64_v8aPreviewUnitTest :app:compileMobileArm64_v8aDebugJavaWithJavac -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Verify Python and JavaScript source compatibility and release versions
+        if: matrix.revision == 'optimized'
+        run: |
+          python -B -m unittest discover -s chaquo/src/test/python -v
+          node quickjs/src/test/js/net.test.cjs
+          node quickjs/src/test/js/dialog.test.cjs
+          python -B -m unittest discover -s tools/tests -p test_ota_release.py -v
+      - name: Build production debug TV APK
+        if: matrix.revision == 'optimized'
+        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Build TV emulator preview and instrumentation
+        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Prepare x86 QuickJS preview
+        run: python3 .github/scripts/prepare-quickjs-preview.py
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Measure live configuration and navigation with animations enabled
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash .github/scripts/verify-app-responsiveness.sh
+      - name: Upload measurements and regression reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-responsiveness-${{ matrix.revision }}-${{ github.run_id }}
+          path: |
+            artifacts/app-responsiveness/
+            app/build/test-results/
+            app/build/reports/tests/
+            catvod/build/test-results/
+            quickjs/build/test-results/
+            artifacts/fongmi-features/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload optimized TV APK
+        if: matrix.revision == 'optimized' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tv-responsiveness-arm64-debug-${{ github.run_id }}
+          path: app/build/outputs/apk/leanbackArm64_v8a/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14

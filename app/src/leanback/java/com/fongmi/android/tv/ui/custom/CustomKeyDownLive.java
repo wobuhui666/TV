@@ -17,7 +17,8 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
     private final TouchSwipeDetector swipe;
     private final StringBuilder text;
     private final Listener listener;
-    private long holdTime;
+    private final PendingSeek pendingSeek;
+    private final SeekKeySequence seekKeys = new SeekKeySequence();
 
     private final Runnable runnable = new Runnable() {
         @Override
@@ -36,6 +37,10 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
         this.listener = (Listener) context;
         this.detector = new GestureDetector(context, this);
         this.swipe = new TouchSwipeDetector(context);
+        pendingSeek = new PendingSeek(listener::onSeekEnd, new PendingSeek.Scheduler() {
+            @Override public void post(Runnable task, long delayMs) { App.post(task, delayMs); }
+            @Override public void cancel(Runnable task) { App.removeCallbacks(task); }
+        }, listener::onSeekCancel);
     }
 
     public boolean onTouchEvent(MotionEvent e) {
@@ -59,24 +64,39 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
     }
 
     private void check(KeyEvent event) {
-        if (KeyUtil.isActionDown(event) && KeyUtil.isLeftKey(event)) {
-            listener.onSeeking(subTime());
-        } else if (KeyUtil.isActionDown(event) && KeyUtil.isRightKey(event)) {
-            listener.onSeeking(addTime());
-        } else if (KeyUtil.isActionDown(event) && KeyUtil.isUpKey(event)) {
+        if (KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event)) {
+            onSeekKey(event);
+            return;
+        }
+        if (KeyUtil.isActionDown(event)) cancelSeek();
+        if (KeyUtil.isActionDown(event) && KeyUtil.isUpKey(event)) {
             listener.onKeyUp();
         } else if (KeyUtil.isActionDown(event) && KeyUtil.isDownKey(event)) {
             listener.onKeyDown();
-        } else if (KeyUtil.isActionUp(event) && KeyUtil.isLeftKey(event)) {
-            listener.onKeyLeft(holdTime);
-        } else if (KeyUtil.isActionUp(event) && KeyUtil.isRightKey(event)) {
-            listener.onKeyRight(holdTime);
         } else if (KeyUtil.isActionUp(event) && KeyUtil.isDigitKey(event)) {
             onKeyDown(event.getKeyCode());
         } else if (KeyUtil.isActionUp(event) && KeyUtil.isEnterKey(event)) {
             listener.onKeyCenter();
         } else if (KeyUtil.isMenuKey(event) || event.isLongPress() && KeyUtil.isEnterKey(event)) {
             listener.onMenu();
+        }
+    }
+
+    private void onSeekKey(KeyEvent event) {
+        if (KeyUtil.isActionDown(event)) {
+            if (!seekKeys.down(event.getKeyCode(), event.getDeviceId(), event.getDownTime(), event.getRepeatCount())) return;
+            pendingSeek.cancel();
+            if (listener.canSeek()) listener.onSeeking(KeyUtil.isLeftKey(event) ? subTime() : addTime());
+            else pendingSeek.clear();
+        } else if (KeyUtil.isActionUp(event)
+                && seekKeys.up(event.getKeyCode(), event.getDeviceId(), event.getDownTime())) {
+            if (event.isCanceled()) cancelSeek();
+            else if (listener.canSeek()) pendingSeek.post(250);
+            else {
+                cancelSeek();
+                if (KeyUtil.isLeftKey(event)) listener.onKeyLeft(0);
+                else listener.onKeyRight(0);
+            }
         }
     }
 
@@ -94,13 +114,22 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
 
     private void onSwipe(int direction) {
         if (!listener.dispatch(false)) return;
-        if (direction == TouchSwipeDetector.UP) listener.onKeyDown();
-        else if (direction == TouchSwipeDetector.DOWN) listener.onKeyUp();
+        if (direction == TouchSwipeDetector.UP || direction == TouchSwipeDetector.DOWN) {
+            cancelSeek();
+            if (direction == TouchSwipeDetector.UP) listener.onKeyDown();
+            else listener.onKeyUp();
+        }
         else {
-            long time = direction == TouchSwipeDetector.LEFT ? subTime() : addTime();
-            listener.onSeeking(time);
-            if (direction == TouchSwipeDetector.LEFT) listener.onKeyLeft(time);
-            else listener.onKeyRight(time);
+            seekKeys.clear();
+            pendingSeek.cancel();
+            if (listener.canSeek()) {
+                listener.onSeeking(direction == TouchSwipeDetector.LEFT ? subTime() : addTime());
+                pendingSeek.post(250);
+            } else {
+                cancelSeek();
+                if (direction == TouchSwipeDetector.LEFT) listener.onKeyLeft(0);
+                else listener.onKeyRight(0);
+            }
         }
     }
 
@@ -121,18 +150,32 @@ public class CustomKeyDownLive extends GestureDetector.SimpleOnGestureListener {
     }
 
     private long addTime() {
-        return holdTime = holdTime + Constant.INTERVAL_SEEK;
+        return pendingSeek.add(Constant.INTERVAL_SEEK);
     }
 
     private long subTime() {
-        return holdTime = holdTime - Constant.INTERVAL_SEEK;
+        return pendingSeek.add(-Constant.INTERVAL_SEEK);
     }
 
     public void reset() {
-        holdTime = 0;
+        cancelSeek();
+    }
+
+    public void cancelSeek() {
+        seekKeys.clear();
+        pendingSeek.clear();
     }
 
     public interface Listener {
+
+        default boolean canSeek() { return true; }
+
+        default void onSeekEnd(long time) {
+            if (time < 0) onKeyLeft(time);
+            else onKeyRight(time);
+        }
+
+        default void onSeekCancel() {}
 
         boolean dispatch(boolean check);
 

@@ -19,29 +19,40 @@ import android.widget.TextView;
 
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HorizontalGridView;
+import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.VerticalGridView;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.MutableLiveData;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
+import androidx.viewpager.widget.ViewPager;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Config;
+import com.fongmi.android.tv.bean.Collect;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
 import com.fongmi.android.tv.setting.PosterSourcePrioritySetting;
+import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.SourceSelectionMode;
 import com.fongmi.android.tv.source.PosterSourceResults;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
+import com.fongmi.android.tv.model.SiteViewModel;
+import com.fongmi.android.tv.ui.activity.CollectActivity;
 import com.fongmi.android.tv.ui.activity.DiscoverDetailActivity;
 import com.fongmi.android.tv.ui.activity.HomeActivity;
 import com.fongmi.android.tv.ui.activity.SearchActivity;
 import com.fongmi.android.tv.ui.custom.JetStreamPageProgressLayout;
 import com.fongmi.android.tv.ui.home.PosterHomeController;
+import com.fongmi.android.tv.ui.fragment.CollectFragment;
 import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Prefers;
@@ -73,7 +84,7 @@ import static org.junit.Assert.*;
 /** Real native activities and D-pad events, using in-memory posters and a deliberately offline client. */
 @RunWith(AndroidJUnit4.class)
 public final class NativeBrowseIntegrationTest {
-    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1", "browse_history_actions", "browse_poster_keep_shelf", "browse_hero_rotation"};
+    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1", "browse_history_actions", "browse_poster_keep_shelf", "browse_hero_rotation", "source_selection_mode"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final List<Activity> previousActivities = new ArrayList<>();
@@ -436,6 +447,115 @@ public final class NativeBrowseIntegrationTest {
         tapView(value(() -> panel.findViewById(R.id.close)));
         await(() -> !panel.isShown() && detail.findViewById(R.id.search).hasFocus(),
                 "the footer close button remains actionable after partially scrolling source cards");
+    }
+
+    @Test(timeout = 60000)
+    public void searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults() {
+        main(() -> {
+            SourceSelectionSetting.putMode(SourceSelectionMode.LEGACY);
+            savedSites = field(VodConfig.get(), "sites");
+            replacedSites = true;
+            setField(VodConfig.get(), "sites", new ArrayList<Site>());
+        });
+        CollectActivity activity = (CollectActivity) instrumentation.startActivitySync(
+                new Intent(instrumentation.getTargetContext(), CollectActivity.class)
+                        .putExtra("keyword", "星河旅人").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        launched.add(activity);
+        await(activity::hasWindowFocus, "the ordinary search results page opens");
+        Object controller = value(() -> field(activity, "results"));
+        SiteViewModel model = value(() -> (SiteViewModel) field(controller, "mViewModel"));
+        ViewPager pager = value(() -> activity.findViewById(R.id.pager));
+        main(() -> {
+            for (int index = 1; index <= 8; index++) {
+                Vod item = poster("search-item-" + index, "星河旅人", "movie");
+                item.setSite(Site.get("search-site-" + index, "Search site " + index));
+                ((MutableLiveData<Result>) model.getSearch()).setValue(Result.list(List.of(item)));
+            }
+        });
+        await(() -> pager.getAdapter().getCount() == 9 && searchPage(activity, "all") != null
+                && searchItemCount(searchPage(activity, "all")) == 8, "all initial sources reach the all-results page");
+        main(() -> pager.setCurrentItem(1, false));
+        await(() -> searchPage(activity, "search-site-1") != null
+                && searchPage(activity, "search-site-1").getView() != null
+                && searchItemCount(searchPage(activity, "search-site-1")) == 1, "the first source page loads");
+        CollectFragment first = value(() -> searchPage(activity, "search-site-1"));
+        SiteViewModel firstModel = value(() -> (SiteViewModel) field(first, "mViewModel"));
+        main(() -> pager.setCurrentItem(2, false));
+        await(() -> first.getView() != null && !first.getUserVisibleHint() && pager.getCurrentItem() == 2,
+                "the first source remains an adjacent offscreen page");
+        main(() -> {
+            Vod extra = poster("search-page-two", "星河旅人 第二部", "movie");
+            extra.setSite(Site.get("search-site-1", "Search site 1"));
+            ((MutableLiveData<Result>) firstModel.getResult()).setValue(Result.list(List.of(extra)));
+            assertEquals("Pagination delivered to the adjacent page must not be discarded", 2, searchItemCount(first));
+            pager.setCurrentItem(6, false);
+        });
+        await(() -> first.getView() == null && first.isDetached()
+                && searchPage(activity, "search-site-6") != null
+                && searchPage(activity, "search-site-6").getView() != null,
+                "visiting another source detaches the old page and releases its views");
+        main(() -> {
+            long liveViews = activity.getSupportFragmentManager().getFragments().stream()
+                    .filter(fragment -> fragment instanceof CollectFragment && fragment.getView() != null).count();
+            assertTrue("Only the current page and adjacent source views stay allocated", liveViews <= 3);
+            Vod late = poster("search-late-item", "星河旅人", "movie");
+            late.setSite(Site.get("search-site-9", "Search site 9"));
+            ((MutableLiveData<Result>) model.getSearch()).setValue(Result.list(List.of(late)));
+            Vod detachedPage = poster("search-page-three", "星河旅人 第三部", "movie");
+            detachedPage.setSite(Site.get("search-site-1", "Search site 1"));
+            ((MutableLiveData<Result>) firstModel.getResult()).setValue(Result.list(List.of(detachedPage)));
+            pager.setCurrentItem(1, false);
+        });
+        await(() -> first.getView() != null && searchItemCount(first) == 3,
+                "revisiting the same source keeps adjacent and detached late pagination rows exactly once");
+        main(() -> {
+            assertSame(first, searchPage(activity, "search-site-1"));
+            pager.setCurrentItem(0, false);
+        });
+        await(() -> searchPage(activity, "all") != null && searchPage(activity, "all").getView() != null
+                && searchItemCount(searchPage(activity, "all")) == 9,
+                "the detached all-results page restores its rows and receives late source results once");
+        main(() -> {
+            try {
+                Method search = controller.getClass().getDeclaredMethod("search", String.class);
+                search.setAccessible(true);
+                search.invoke(controller, "山海之间");
+            } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+        });
+        await(() -> first.getActivity() == null && pager.getAdapter().getCount() == 1,
+                "a new keyword removes the old detached pages before reusing pager tags");
+        main(() -> {
+            Vod replacement = poster("new-search-item", "山海之间", "movie");
+            replacement.setSite(Site.get("search-site-1", "Search site 1"));
+            ((MutableLiveData<Result>) model.getSearch()).setValue(Result.list(List.of(replacement)));
+            pager.setCurrentItem(1, false);
+        });
+        await(() -> searchPage(activity, "search-site-1") != null
+                && searchPage(activity, "search-site-1").getView() != null
+                && searchItemCount(searchPage(activity, "search-site-1")) == 1,
+                "the new source page contains only the new keyword result");
+        main(() -> assertNotSame(first, searchPage(activity, "search-site-1")));
+    }
+
+    private CollectFragment searchPage(CollectActivity activity, String siteKey) {
+        for (Fragment fragment : activity.getSupportFragmentManager().getFragments()) {
+            if (fragment instanceof CollectFragment collect) {
+                Collect items = (Collect) field(collect, "mCollect");
+                if (items != null && siteKey.equals(items.getSite().getKey())) return collect;
+            }
+        }
+        return null;
+    }
+
+    private int searchItemCount(CollectFragment fragment) {
+        if (fragment == null) return 0;
+        ArrayObjectAdapter adapter = (ArrayObjectAdapter) field(fragment, "mAdapter");
+        if (adapter == null) return 0;
+        int count = 0;
+        for (int index = 0; index < adapter.size(); index++) {
+            if (adapter.get(index) instanceof ListRow row) count += row.getAdapter().size();
+        }
+        return count;
     }
 
     @Test(timeout = 60000)

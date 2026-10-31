@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.ConcurrentHashMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -68,7 +67,7 @@ public final class RexNowClient {
         void onError(Exception e);
     }
 
-    private static final Map<Object, Set<Call>> PENDING = new ConcurrentHashMap<>();
+    private static final TaggedCalls PENDING = new TaggedCalls();
 
     private RexNowClient() {
     }
@@ -171,10 +170,7 @@ public final class RexNowClient {
 
     /** 取消某个 tag 的全部在途请求。 */
     public static void cancel(@Nullable Object tag) {
-        if (tag == null) return;
-        Set<Call> calls = PENDING.remove(tag);
-        if (calls == null) return;
-        for (Call call : calls) call.cancel();
+        PENDING.cancel(tag);
     }
 
     private static void fetchRegionFeed(String region, String category, List<String> dates, int index, @Nullable Object tag, ItemsListener listener) {
@@ -222,23 +218,21 @@ public final class RexNowClient {
     private static void get(String url, @Nullable Object tag, BodyListener listener) {
         Request request = new Request.Builder().url(url).tag(tag == null ? url : tag).build();
         Call call = OkHttp.client().newCall(request);
-        track(tag, call);
+        PENDING.track(tag, call);
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                untrack(tag, call);
-                if (!call.isCanceled()) post(() -> listener.onError(e));
+                post(tag, call, () -> listener.onError(e));
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                untrack(tag, call);
                 try (Response resp = response) {
                     if (!resp.isSuccessful() || resp.body() == null) throw new IOException("Rex feed failed: HTTP " + resp.code());
                     String body = resp.body().string();
-                    post(() -> listener.onBody(body));
+                    post(tag, call, () -> listener.onBody(body));
                 } catch (Exception e) {
-                    post(() -> listener.onError(e));
+                    post(tag, call, () -> listener.onError(e));
                 }
             }
         });
@@ -405,17 +399,8 @@ public final class RexNowClient {
         return items == null ? new ArrayList<>() : items;
     }
 
-    private static void track(@Nullable Object tag, Call call) {
-        if (tag == null) return;
-        PENDING.computeIfAbsent(tag, key -> ConcurrentHashMap.newKeySet()).add(call);
-    }
-
-    private static void untrack(@Nullable Object tag, Call call) {
-        if (tag == null) return;
-        Set<Call> calls = PENDING.get(tag);
-        if (calls == null) return;
-        calls.remove(call);
-        if (calls.isEmpty()) PENDING.remove(tag);
+    private static void post(Object tag, Call call, Runnable runnable) {
+        PENDING.deliver(tag, call, runnable, RexNowClient::post);
     }
 
     private static void post(Runnable runnable) {

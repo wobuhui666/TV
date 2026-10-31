@@ -4,16 +4,49 @@ on:
   push:
     branches: ['feat/tv-touch-light-theme', 'feat/tv-touch-light-theme-issue77', 'fix/home-history-order-touch']
   workflow_dispatch:
+    inputs:
+      guarded_source:
+        description: Verify real guarded sources in the ARM64 sourceprobe package
+        type: boolean
+        default: false
+      preload:
+        description: Include native next-episode cache regressions
+        type: boolean
+        default: false
+      responsiveness:
+        description: Measure app responsiveness with the live aiwex configuration
+        type: boolean
+        default: false
+      baseline_ref:
+        description: Baseline commit for responsiveness comparison
+        type: string
+        default: '839ec53dea1a01879cbc42d11e7a7a475768c67e'
+      compare_baseline:
+        description: Also build the baseline, or rerun only optimized checks
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
+  guarded-source:
+    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source
+    uses: ./.github/workflows/guarded-source-verify.yml
+    with:
+      preload: ${{ inputs.preload }}
+  responsiveness:
+    if: github.event_name == 'workflow_dispatch' && inputs.responsiveness && !inputs.guarded_source
+    uses: ./.github/workflows/app-responsiveness.yml
+    with:
+      baseline_ref: ${{ inputs.baseline_ref }}
+      compare_baseline: ${{ inputs.compare_baseline }}
   verify:
+    if: ${{ !inputs.responsiveness && !inputs.guarded_source }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

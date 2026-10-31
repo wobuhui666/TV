@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -226,6 +227,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void start() {
+        cancelPendingSeek();
         claimLocalPlayback();
         mPlaybackKey = mAction.getCurrentURI();
         startPlayer(mPlaybackKey, mAction.result(), false, Constant.TIMEOUT_PLAY, buildMetadata());
@@ -673,6 +675,25 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     @Override
+    public boolean canSeek() {
+        return isPlaybackReady() && player().canSeek();
+    }
+
+    @Override
+    public void onSeekCancel() {
+        hideCenter();
+    }
+
+    private void cancelPendingSeek() {
+        if (mKeyDown != null) mKeyDown.cancelSeek();
+    }
+
+    @Override
+    public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        cancelPendingSeek();
+    }
+
+    @Override
     public boolean onSpeedUp() {
         if (!isPlaybackReady() || !player().isPlaying()) return false;
         mBinding.widget.speed.setVisibility(View.VISIBLE);
@@ -727,6 +748,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void onStop() {
+        cancelPendingSeek();
         super.onStop();
         if (PlayerSetting.isBackgroundOff()) mClock.stop();
     }
@@ -736,6 +758,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
         if (isJetStreamControlVisible()) {
             hideControl();
         } else if (isJetStreamCenterVisible() || isVisible(mBinding.widget.center)) {
+            cancelPendingSeek();
             hideCenter();
         } else {
             super.onBackInvoked();

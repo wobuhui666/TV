@@ -42,8 +42,8 @@ https://github.com/wobuhui666/TV/releases/latest/download/leanback.json
 每次发布 job 开始时，`tools/ota-release.py version` 一次性生成两种 ABI 共用的版本：
 
 - `TV_VERSION_CODE`：当前 UTC 秒数减去 2020-01-01 UTC 秒数，再加 `1000000`，限制在 Android 支持的整数范围内。
-- `TV_VERSION_NAME`：`5.5.5+YYYYMMDD.HHMMSS`，时间为 UTC。
-- 本地未设置上述环境变量时保持 `555` / `5.5.5`，方便已有开发构建；正式 OTA 生成器会拒绝此默认版本码。
+- `TV_VERSION_NAME`：`5.8.5+YYYYMMDD.HHMMSS`，时间为 UTC。
+- 本地未设置上述环境变量时使用与 FongMi 5.8.5 同步的 `585` / `5.8.5`，方便已有开发构建；正式 OTA 生成器会拒绝此默认版本码。
 
 构建后生成器从实际 `output-metadata.json` 读取版本与包名，要求 ARM64、ARMv7 两个 APK 都存在且版本一致，验证 ZIP、二进制 Manifest、DEX 和 native ABI，再计算文件大小和 SHA-256。清单与 APK 先上传到同一个 draft release，全部上传成功后才发布并按分支设置 latest；清单生成或上传失败则停止发布。
 
