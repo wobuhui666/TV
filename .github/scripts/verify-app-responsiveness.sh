@@ -52,7 +52,7 @@ for setting in window_animation_scale transition_animation_scale animator_durati
 done
 adb install -r "$(read_metadata "$metadata" apk)"
 adb install -r "$(read_metadata "$test_metadata" apk)"
-uid=$(adb shell cmd package list packages -U "$pkg" | python3 -c 'import sys; print(sys.stdin.read().split("uid:")[-1].strip())')
+uid=$(adb shell cmd package list packages -U "$pkg" | python3 -c 'import re, sys; match = re.search(r"^package:" + re.escape(sys.argv[1]) + r" uid:([0-9]+)\s*$", sys.stdin.read(), re.M); assert match, "Target application UID missing"; print(match.group(1))' "$pkg")
 [[ "$uid" =~ ^[0-9]+$ ]]
 adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
 if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
