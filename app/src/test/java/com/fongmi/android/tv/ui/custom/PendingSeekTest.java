@@ -57,6 +57,36 @@ public class PendingSeekTest {
         assertEquals(0, calls[0]);
     }
 
+    @Test public void shouldNotCommitTheReplacementDeltaFromAnAlreadyDequeuedOldTask() {
+        long[] received = new long[2];
+        TestScheduler scheduler = new TestScheduler();
+        PendingSeek seek = new PendingSeek(delta -> { received[0]++; received[1] = delta; }, scheduler);
+        seek.add(10_000);
+        seek.post(250);
+        Runnable old = scheduler.pending;
+        seek.clear();
+        seek.add(20_000);
+        seek.post(250);
+        old.run();
+        assertEquals(0, received[0]);
+        scheduler.runPending();
+        assertEquals(1, received[0]);
+        assertEquals(20_000, received[1]);
+    }
+
+    @Test public void shouldCancelThePreviewOnceWithoutSeekingWhenDirectionsCancelOut() {
+        long[] calls = new long[2];
+        TestScheduler scheduler = new TestScheduler();
+        PendingSeek seek = new PendingSeek(delta -> calls[0]++, scheduler, () -> calls[1]++);
+        seek.add(10_000);
+        seek.add(-10_000);
+        seek.post(250);
+        scheduler.runPending();
+        seek.clear();
+        assertEquals(0, calls[0]);
+        assertEquals(1, calls[1]);
+    }
+
     private static final class TestScheduler implements PendingSeek.Scheduler {
 
         private Runnable pending;

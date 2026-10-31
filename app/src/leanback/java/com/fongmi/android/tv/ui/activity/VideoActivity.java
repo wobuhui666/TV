@@ -331,6 +331,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onNewIntent(Intent intent) {
+        cancelPendingSeek();
         String oldId = getId();
         super.onNewIntent(intent);
         String id = Objects.toString(intent.getStringExtra("id"), "");
@@ -689,6 +690,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void requestPlayer(VodPlayRequest request) {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.dismiss();
         beginPlaybackRequest();
         mBinding.widget.title.setText(getString(R.string.detail_title, getVodName(), request.getTitle()));
@@ -699,6 +701,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void requestSearch(List<Site> sites, String keyword) {
+        cancelPendingSeek();
         beginPlaybackRequest();
         mQuickItems.clear();
         mBinding.quick.setItems(new ArrayList<>(), -1);
@@ -708,6 +711,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void prepareSource(Vod item) {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.dismiss();
         getIntent().putExtra("key", item.getSiteKey());
         getIntent().putExtra("pic", item.getPic());
@@ -722,6 +726,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void stopPlaybackForRefresh() {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.dismiss();
         player().stop();
         player().clear();
@@ -742,6 +747,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void startPlayback(Result result, boolean useParse, long startPositionMs, History history, Episode episode) {
+        cancelPendingSeek();
         if (mSpecs != null) mSpecs.begin();
         onSpeedEnd();
         claimLocalPlayback();
@@ -2140,6 +2146,25 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     @Override
+    public boolean canSeek() {
+        return isPlaybackReady() && player().canSeek();
+    }
+
+    @Override
+    public void onSeekCancel() {
+        hideCenter();
+    }
+
+    private void cancelPendingSeek() {
+        if (mKeyDown != null) mKeyDown.cancelSeek();
+    }
+
+    @Override
+    public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        cancelPendingSeek();
+    }
+
+    @Override
     public boolean onSpeedUp() {
         if (!isPlaybackReady() || mHistory == null || !player().isPlaying()) return false;
         if (!temporarySpeed.begin(player().getSpeed())) return true;
@@ -2228,6 +2253,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (isJetStreamControlVisible()) {
             hideControl();
         } else if (isJetStreamCenterVisible()) {
+            cancelPendingSeek();
             hideCenter();
         } else if (isFullscreen()) {
             exitFullscreen();
