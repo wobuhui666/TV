@@ -2,12 +2,15 @@ package com.fongmi.android.tv.player.parse;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.SystemClock;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -28,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -114,6 +118,54 @@ public final class ParseJobLifecycleTest {
         assertEquals(0, callbacks.get());
     }
 
+    @Test public void shouldNotReopenQueuedChallengeDialogAfterStop() {
+        instrumentation.runOnMainSync(() -> {
+            assertTrue("Queue through the real attached View handler", parent.isAttachedToWindow());
+            parent.post(() -> invoke(parent, "showDialog", new Class<?>[0]));
+            // Positive control: an active challenge can still display its real dialog.
+            invoke(parent, "showDialog", new Class<?>[0]);
+            Object shown = field(parent, "dialog");
+            assertNotNull("Active challenge dialog remains available", shown);
+            assertTrue(((AlertDialog) field(shown, "dialog")).isShowing());
+            parent.stop(false);
+        });
+        instrumentation.waitForIdleSync();
+        instrumentation.runOnMainSync(() -> assertNull("A queued challenge must not reopen a stopped parser", field(parent, "dialog")));
+        assertEquals(0, callbacks.get());
+    }
+
+    @Test public void shouldDiscardDelayedJavascriptContinuationAfterStop() throws Exception {
+        awaitJavascriptReady();
+        instrumentation.runOnMainSync(() -> invoke(parent, "evaluate", new Class<?>[]{List.class, int.class},
+                List.of("window.location.href='" + fixture.url("/script-active.html") + "'"), 0));
+        assertTrue("Active parser JavaScript must really navigate before testing cancellation", fixture.activeScript.await(8, TimeUnit.SECONDS));
+        instrumentation.runOnMainSync(() -> parent.stop(false));
+        instrumentation.waitForIdleSync();
+        instrumentation.runOnMainSync(() -> {
+            // Replay the continuation normally invoked by the previous evaluateJavascript
+            // ValueCallback after it returns to the main thread, preserving its next index.
+            invoke(parent, "evaluate", new Class<?>[]{List.class, int.class}, List.of("already completed",
+                    "window.location.href='" + fixture.url("/script-forbidden.html") + "'"), 1);
+        });
+        assertFalse("A late script continuation must not navigate after stop", fixture.forbiddenScript.await(1500, TimeUnit.MILLISECONDS));
+        assertEquals(0, callbacks.get());
+    }
+
+    private void awaitJavascriptReady() throws Exception {
+        long deadline = SystemClock.elapsedRealtime() + 8000;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            CountDownLatch evaluated = new CountDownLatch(1);
+            AtomicReference<String> state = new AtomicReference<>();
+            instrumentation.runOnMainSync(() -> parent.evaluateJavascript("document.readyState", value -> {
+                state.set(value);
+                evaluated.countDown();
+            }));
+            if (evaluated.await(500, TimeUnit.MILLISECONDS) && "\"complete\"".equals(state.get())) return;
+            SystemClock.sleep(40);
+        }
+        throw new AssertionError("WebView must finish its initial blank document before the script control");
+    }
+
     private void addNestedPage() {
         invoke(parent, "onParseAdd", new Class<?>[]{Map.class, String.class}, Map.of(), fixture.url("/nested.html"));
     }
@@ -129,10 +181,14 @@ public final class ParseJobLifecycleTest {
     }
 
     private static List<?> views(ParseJob job) {
+        return (List<?>) field(job, "webViews");
+    }
+
+    private static Object field(Object owner, String name) {
         try {
-            Field field = ParseJob.class.getDeclaredField("webViews");
+            Field field = owner.getClass().getDeclaredField(name);
             field.setAccessible(true);
-            return (List<?>) field.get(job);
+            return field.get(owner);
         } catch (ReflectiveOperationException error) {
             throw new AssertionError(error);
         }
@@ -140,6 +196,8 @@ public final class ParseJobLifecycleTest {
 
     private static final class Fixture extends NanoHTTPD {
         final CountDownLatch loaded = new CountDownLatch(1);
+        final CountDownLatch activeScript = new CountDownLatch(1);
+        final CountDownLatch forbiddenScript = new CountDownLatch(1);
         final AtomicInteger pings = new AtomicInteger();
 
         Fixture() { super("127.0.0.1", 0); }
@@ -147,6 +205,11 @@ public final class ParseJobLifecycleTest {
         String url(String path) { return "http://127.0.0.1:" + getListeningPort() + path; }
 
         @Override public Response serve(IHTTPSession session) {
+            if ("/script-active.html".equals(session.getUri())) activeScript.countDown();
+            if ("/script-forbidden.html".equals(session.getUri())) forbiddenScript.countDown();
+            if (session.getUri().startsWith("/script-")) {
+                return newFixedLengthResponse(Response.Status.OK, "text/html", "<html>Script navigation fixture</html>");
+            }
             if ("/nested.html".equals(session.getUri())) {
                 loaded.countDown();
                 return newFixedLengthResponse(Response.Status.OK, "text/html",

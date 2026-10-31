@@ -6,12 +6,19 @@ on:
       baseline_ref:
         type: string
         required: true
+      compare_baseline:
+        type: boolean
+        default: true
   workflow_dispatch:
     inputs:
       baseline_ref:
         description: Baseline commit for the same live-config/navigation probe
         required: true
         default: '839ec53dea1a01879cbc42d11e7a7a475768c67e'
+      compare_baseline:
+        description: Also measure the baseline, or rerun optimized checks only
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -23,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        revision: [baseline, optimized]
+        revision: ${{ inputs.compare_baseline && fromJSON('["baseline", "optimized"]') || fromJSON('["optimized"]') }}
     env:
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       RESPONSIVENESS_REVISION: ${{ matrix.revision }}

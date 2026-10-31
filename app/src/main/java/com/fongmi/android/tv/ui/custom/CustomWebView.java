@@ -132,7 +132,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (url.equals(BLANK)) return;
+                if (stopped || url.equals(BLANK)) return;
                 evaluate(getScript(url), 0);
             }
 
@@ -155,7 +155,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private void showDialog() {
-        if (dialog != null || App.activity() == null) return;
+        if (stopped || dialog != null || App.activity() == null) return;
         if (getParent() != null) ((ViewGroup) getParent()).removeView(this);
         dialog = WebDialog.create(this).show();
         App.removeCallbacks(timer);
@@ -179,7 +179,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     }
 
     private void evaluate(List<String> script, int index) {
-        if (index >= script.size()) return;
+        if (stopped || index >= script.size()) return;
         String js = script.get(index);
         if (TextUtils.isEmpty(js)) {
             evaluate(script, index + 1);

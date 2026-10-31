@@ -13,6 +13,10 @@ on:
         description: Baseline commit for responsiveness comparison
         type: string
         default: '839ec53dea1a01879cbc42d11e7a7a475768c67e'
+      compare_baseline:
+        description: Also build the baseline, or rerun only optimized checks
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ jobs:
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
+      compare_baseline: ${{ inputs.compare_baseline }}
   verify:
     if: ${{ !inputs.responsiveness }}
     runs-on: ubuntu-latest
