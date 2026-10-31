@@ -111,7 +111,7 @@ public class PyLoaderLifecycleTest {
 
     private static void assertDialogClosed(Spider source) throws Exception {
         try {
-            source.dialog.open("{}").get();
+            source.dialog.open("{}", null).get();
             fail("Host resources should close even if plugin destroy throws");
         } catch (ExecutionException expected) {
             assertTrue(expected.getCause() instanceof IllegalStateException);
