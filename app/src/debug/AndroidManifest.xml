@@ -2,7 +2,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="MissingLeanbackLauncher,ImpliedTouchscreenHardware,MissingLeanbackSupport">
     <application>
-        <activity android:name="com.fongmi.android.tv.test.SeekInputActivity" android:exported="false" android:theme="@style/Theme.App" />
         <activity android:name="com.fongmi.android.tv.test.CorePlaybackActivity" android:exported="false" android:theme="@style/Theme.App" />
     </application>
 </manifest>

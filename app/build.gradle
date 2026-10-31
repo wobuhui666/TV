@@ -107,8 +107,14 @@ android {
         // Both mode and ABI are flavor dimensions. Bind the TV preview explicitly
         // so a partial flavor/build-type directory cannot silently be ignored.
         preview {
-            java.srcDirs += ['src/leanbackPreview/java', 'src/debug/java']
+            java.srcDirs += ['src/leanbackPreview/java', 'src/debug/java', 'src/leanbackDebug/java']
             manifest.srcFile 'src/leanbackPreview/AndroidManifest.xml'
+        }
+        // Both flavor dimensions are required for a variant-specific TV debug source set.
+        ['leanbackArm64_v8aDebug', 'leanbackArmeabi_v7aDebug'].each { variantName ->
+            def tvDebug = maybeCreate(variantName)
+            tvDebug.java.srcDirs += 'src/leanbackDebug/java'
+            tvDebug.manifest.srcFile 'src/leanbackDebug/AndroidManifest.xml'
         }
         if (providers.gradleProperty('tvPreview').isPresent()) {
             androidTest.java.srcDirs += 'src/tvPreviewTest/java'

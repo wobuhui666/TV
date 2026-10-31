@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownLive;
 import com.fongmi.android.tv.ui.custom.CustomKeyDownVod;
 
-/** Disposable input callback host; does not create a player or load sources. */
+/** TV debug/preview input callback host; does not create a player or load sources. */
 public final class SeekInputActivity extends AppCompatActivity implements CustomKeyDownVod.Listener, CustomKeyDownLive.Listener {
     public long preview;
     public long committed;
