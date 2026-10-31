@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -50,7 +48,7 @@ public final class RexTmdbClient {
         void onError(Exception e);
     }
 
-    private static final Map<Object, Set<Call>> PENDING = new ConcurrentHashMap<>();
+    private static final TaggedCalls PENDING = new TaggedCalls();
 
     private RexTmdbClient() {
     }
@@ -77,25 +75,23 @@ public final class RexTmdbClient {
         }
         Object requestTag = tag == null ? query.path : tag;
         Call call = TmdbNetwork.newCall(new Request.Builder().url(url).tag(requestTag).build());
-        track(tag, call);
+        PENDING.track(tag, call);
         call.enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                untrack(tag, call);
-                if (!call.isCanceled()) post(() -> listener.onError(e));
+                post(tag, call, () -> listener.onError(e));
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                untrack(tag, call);
                 try (Response resp = response) {
                     if (!resp.isSuccessful() || resp.body() == null) throw new IOException("Rex tmdb failed: HTTP " + resp.code());
                     String body = resp.body().string();
                     List<Vod> items = DiscoverApi.parseTmdbResults(body, query.fallbackMediaType);
                     int totalPages = totalPages(body);
-                    post(() -> listener.onSuccess(new ArrayList<>(items), page, totalPages));
+                    post(tag, call, () -> listener.onSuccess(new ArrayList<>(items), page, totalPages));
                 } catch (Exception e) {
-                    post(() -> listener.onError(e));
+                    post(tag, call, () -> listener.onError(e));
                 }
             }
         });
@@ -103,10 +99,7 @@ public final class RexTmdbClient {
 
     /** 取消某个 tag 的全部在途请求。 */
     public static void cancel(@Nullable Object tag) {
-        if (tag == null) return;
-        Set<Call> calls = PENDING.remove(tag);
-        if (calls == null) return;
-        for (Call call : calls) call.cancel();
+        PENDING.cancel(tag);
     }
 
     static HttpUrl buildUrl(RexTmdbQuery.Query query, int page, @Nullable String apiKey) {
@@ -133,17 +126,8 @@ public final class RexTmdbClient {
         return (int) Math.min(total, 500);
     }
 
-    private static void track(@Nullable Object tag, Call call) {
-        if (tag == null) return;
-        PENDING.computeIfAbsent(tag, key -> ConcurrentHashMap.newKeySet()).add(call);
-    }
-
-    private static void untrack(@Nullable Object tag, Call call) {
-        if (tag == null) return;
-        Set<Call> calls = PENDING.get(tag);
-        if (calls == null) return;
-        calls.remove(call);
-        if (calls.isEmpty()) PENDING.remove(tag);
+    private static void post(Object tag, Call call, Runnable runnable) {
+        PENDING.deliver(tag, call, runnable, RexTmdbClient::post);
     }
 
     private static void post(Runnable runnable) {

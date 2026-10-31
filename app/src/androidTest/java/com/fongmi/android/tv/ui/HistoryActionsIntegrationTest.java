@@ -311,6 +311,32 @@ public final class HistoryActionsIntegrationTest {
     }
 
     @Test(timeout = 45000)
+    public void legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration() {
+        History first = seed("Clear first", cid);
+        History second = seed("Clear second", cid);
+        History foreign = seed("Keep other configuration", otherCid);
+        HomeActivity home = home(2);
+        CountDownLatch release = blockQueue(home);
+        CountDownLatch done = new CountDownLatch(1);
+        main(() -> {
+            invoke(home, "clearHistory");
+            assertEquals("Cards disappear without waiting for the history worker", 0, items(home).size());
+            assertNotNull("The queued deletion has not reached the database yet",
+                    AppDatabase.get().getHistoryDao().find(cid, first.getKey()));
+            assertNotNull(AppDatabase.get().getHistoryDao().find(cid, second.getKey()));
+            queue(home).write(done::countDown);
+            useConfiguration(otherConfiguration);
+        });
+        release.countDown();
+        assertLatch(done, "legacy clear completes after queued work");
+        assertNull(value(() -> AppDatabase.get().getHistoryDao().find(cid, first.getKey())));
+        assertNull(value(() -> AppDatabase.get().getHistoryDao().find(cid, second.getKey())));
+        assertStored(foreign);
+        await(() -> items(home).size() == 1 && ((History) items(home).get(0)).getCid() == otherCid,
+                "refresh loads the current configuration after the captured deletion");
+    }
+
+    @Test(timeout = 45000)
     public void homeMenuRemovesOnlyItsCardAndTheDisabledOptionRestoresLegacyLongPress() {
         History first = seed("Last home history", cid);
         History foreign = seed("Other home configuration", otherCid);

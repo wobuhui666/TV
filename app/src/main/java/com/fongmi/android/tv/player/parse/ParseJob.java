@@ -41,6 +41,7 @@ public class ParseJob implements ParseCallback {
     private final List<CustomWebView> webViews;
     private ExecutorService executor;
     private ExecutorService infinite;
+    private Future<?> timeout;
     private ParseCallback callback;
     private Parse parse;
 
@@ -78,7 +79,7 @@ public class ParseJob implements ParseCallback {
 
     private void execute(Result result) {
         Future<?> task = executor.submit(getTask(result));
-        Task.schedule(() -> {
+        timeout = Task.scheduler().schedule(() -> {
             if (task.cancel(true)) onParseError();
         }, Constant.TIMEOUT_PARSE_DEF, TimeUnit.MILLISECONDS);
     }
@@ -183,10 +184,15 @@ public class ParseJob implements ParseCallback {
     }
 
     private void startWeb(String key, String from, Map<String, String> headers, String url, String click) {
+        if (done.get()) return;
         if (!WebViewUtil.support()) {
             onParseError();
         } else {
-            App.post(() -> webViews.add(CustomWebView.create(App.get()).start(key, from, headers, url, click, this, !url.contains("player/?url="))));
+            App.post(() -> {
+                // Switching sources can stop this job before the main-thread creation runs.
+                if (done.get()) return;
+                webViews.add(CustomWebView.create(App.get()).start(key, from, headers, url, click, this, !url.contains("player/?url=")));
+            });
         }
     }
 
@@ -221,12 +227,14 @@ public class ParseJob implements ParseCallback {
     }
 
     public void stop() {
+        done.set(true);
+        if (timeout != null) timeout.cancel(false);
+        timeout = null;
         if (executor != null) executor.shutdownNow();
         if (infinite != null) infinite.shutdownNow();
         infinite = null;
         executor = null;
         callback = null;
-        done.set(true);
         stopWeb();
     }
 }

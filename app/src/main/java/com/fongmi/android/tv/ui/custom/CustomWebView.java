@@ -47,6 +47,7 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     private static final int MAX_URLS = 5;
 
     private final AtomicReference<ParseCallback> callbackRef = new AtomicReference<>();
+    private final List<CustomWebView> children = new ArrayList<>();
     private LinkedHashSet<String> urls;
     private WebResourceResponse empty;
     private WebDialog dialog;
@@ -206,7 +207,10 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
     private void onParseAdd(Map<String, String> headers, String url) {
         ParseCallback cb = callbackRef.get();
         if (cb == null) return;
-        post(() -> CustomWebView.create(App.get()).start(key, from, headers, url, click, cb, false));
+        post(() -> {
+            if (stopped || callbackRef.get() != cb) return;
+            children.add(CustomWebView.create(App.get()).start(key, from, headers, url, click, cb, false));
+        });
     }
 
     private void onParseSuccess(Map<String, String> headers, String url) {
@@ -227,6 +231,12 @@ public class CustomWebView extends WebView implements DialogInterface.OnDismissL
         stopLoading();
         loadUrl(BLANK);
         App.removeCallbacks(timer);
+        // Nested player pages share this parse session and must end with their parent.
+        for (CustomWebView child : children) {
+            child.stop(false);
+            child.destroy();
+        }
+        children.clear();
         if (error) onParseError();
         else callbackRef.set(null);
     }

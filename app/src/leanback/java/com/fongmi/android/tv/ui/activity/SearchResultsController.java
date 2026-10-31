@@ -9,7 +9,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.fragment.app.FragmentStatePagerAdapter;
+import androidx.fragment.app.FragmentPagerAdapter;
 import androidx.leanback.widget.OnChildViewHolderSelectedListener;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
@@ -257,10 +257,16 @@ final class SearchResultsController {
     private void disposePages() {
         FragmentManager manager = activity.getSupportFragmentManager();
         if (manager.isDestroyed()) return;
+        List<Fragment> fragments = new ArrayList<>(manager.getFragments());
+        // FragmentManager.getFragments() excludes detached pages; dispose those as well
+        // before reusing the same pager IDs for another keyword or relevance filter.
+        if (mPageAdapter != null) {
+            for (Fragment fragment : mPageAdapter.pages) if (!fragments.contains(fragment)) fragments.add(fragment);
+        }
         FragmentTransaction transaction = manager.beginTransaction();
         boolean changed = false;
-        for (Fragment fragment : manager.getFragments()) {
-            if (!(fragment instanceof CollectFragment) || !fragment.isAdded()) continue;
+        for (Fragment fragment : fragments) {
+            if (!(fragment instanceof CollectFragment) || (!fragment.isAdded() && !fragment.isDetached())) continue;
             transaction.remove(fragment);
             changed = true;
         }
@@ -343,9 +349,12 @@ final class SearchResultsController {
         return disposed || activity.isFinishing() || activity.isDestroyed();
     }
 
-    class PageAdapter extends FragmentStatePagerAdapter {
+    // Keep fetched source pages in memory, while detaching their expensive views offscreen.
+    // CollectFragment retains its rows and pending results across onDestroyView/initView.
+    class PageAdapter extends FragmentPagerAdapter {
 
         private CollectFragment mAllFragment;
+        private final List<Fragment> pages = new ArrayList<>();
 
         public PageAdapter(@NonNull FragmentManager fm) {
             super(fm);
@@ -357,6 +366,14 @@ final class SearchResultsController {
             int safePosition = clampPosition(position);
             Collect collect = safePosition == RecyclerView.NO_POSITION ? Collect.all() : mAdapter.get(safePosition);
             return CollectFragment.newInstance(getKeyword(), collect, compact);
+        }
+
+        @NonNull
+        @Override
+        public Object instantiateItem(@NonNull ViewGroup container, int position) {
+            Object item = super.instantiateItem(container, position);
+            if (item instanceof Fragment fragment && !pages.contains(fragment)) pages.add(fragment);
+            return item;
         }
 
         @Override
@@ -375,10 +392,6 @@ final class SearchResultsController {
         @Nullable
         private CollectFragment getAllFragment() {
             return mAllFragment;
-        }
-
-        @Override
-        public void destroyItem(@NonNull ViewGroup container, int position, @NonNull Object object) {
         }
 
         @Nullable
