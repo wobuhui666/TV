@@ -36,6 +36,10 @@ data = {'fatalExceptionCount': len(re.findall(r'FATAL EXCEPTION:', text)),
         'anrCount': len(re.findall(r'ANR in com\.fongmi\.android\.tv\.preview', system)),
         'nativeFatalSignalCount': len(re.findall(r'Fatal signal \d+', text))}
 pathlib.Path(sys.argv[3]).write_text(json.dumps(data, indent=2) + '\n')
+source = {'wrongElfMachine': bool(re.search(r'EM_AARCH64[^\n]*EM_X86_64', text)),
+          'failureTypes': [name for name in ('UnsatisfiedLinkError', 'ExceptionInInitializerError',
+              'NoClassDefFoundError', 'InvocationTargetException') if name in text]}
+pathlib.Path(sys.argv[3]).with_name('source-runtime-diagnostics.json').write_text(json.dumps(source, indent=2) + '\n')
 PY
 }
 trap collect EXIT

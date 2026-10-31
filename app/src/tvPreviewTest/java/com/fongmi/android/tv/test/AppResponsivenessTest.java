@@ -262,13 +262,20 @@ public final class AppResponsivenessTest {
     }
 
     private Activity launch(java.lang.Class<? extends Activity> type, String keyword) {
-        Intent intent = new Intent(target, type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent intent = new Intent(target, type);
         if (keyword != null) intent.putExtra("keyword", keyword);
         List<Activity> before = new ArrayList<>();
         instrumentation.runOnMainSync(() -> before.addAll(validationActivities()));
         // startActivitySync waits for global UI idle, which an animated TV page may
         // never reach. Start asynchronously and wait only for this activity's lifecycle.
-        target.startActivity(intent);
+        Activity host = current;
+        if (host == null || host.isFinishing() || host.isDestroyed()) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            target.startActivity(intent);
+        } else {
+            // Match production navigation: child pages belong to the existing Home task.
+            instrumentation.runOnMainSync(() -> host.startActivity(intent));
+        }
         AtomicReference<Activity> resumed = new AtomicReference<>();
         boolean launched = await(() -> {
             for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
