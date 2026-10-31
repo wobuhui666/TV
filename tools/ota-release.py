@@ -11,6 +11,8 @@ import zipfile
 
 EPOCH = datetime(2020, 1, 1, tzinfo=timezone.utc)
 MAX_VERSION_CODE = 2_100_000_000
+LOCAL_VERSION_CODE = 585
+BASE_VERSION_NAME = "5.8.5"
 ABIS = {"arm64_v8a": "arm64-v8a", "armeabi_v7a": "armeabi-v7a"}
 PACKAGE_NAME = "com.fongmi.android.tv"
 COEXIST_PACKAGE_NAME = "com.wobuhui666.android.tv"
@@ -22,9 +24,9 @@ def release_version(started_at=None):
         raise ValueError("Build start time must include a UTC offset")
     instant = instant.astimezone(timezone.utc)
     code = int((instant - EPOCH).total_seconds()) + 1_000_000
-    if not 555 < code <= MAX_VERSION_CODE:
+    if not LOCAL_VERSION_CODE < code <= MAX_VERSION_CODE:
         raise ValueError("Build time produces an unsupported Android version code")
-    return code, "5.5.5+" + instant.strftime("%Y%m%d.%H%M%S")
+    return code, BASE_VERSION_NAME + "+" + instant.strftime("%Y%m%d.%H%M%S")
 
 
 def verify_apk(apk, android_abi):
@@ -78,7 +80,7 @@ def build_manifest(apk_root, repository, tag, mode="leanback", desc="", coexist=
             if metadata.get("applicationId") != package_name:
                 raise ValueError("Unexpected Android package name")
             code, name = element.get("versionCode"), element.get("versionName")
-            if type(code) is not int or not 555 < code <= MAX_VERSION_CODE:
+            if type(code) is not int or not LOCAL_VERSION_CODE < code <= MAX_VERSION_CODE:
                 raise ValueError("Missing or unsupported CI versionCode in APK metadata")
             if not isinstance(name, str) or not name.strip():
                 raise ValueError("Missing versionName in APK metadata")

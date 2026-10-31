@@ -20,11 +20,11 @@ def buildConfigString = { value ->
 }
 
 // CI assigns one timestamp-based version to both ABI builds and their OTA manifest.
-def tvVersionCode = System.getenv('TV_VERSION_CODE') ?: '555'
+def tvVersionCode = System.getenv('TV_VERSION_CODE') ?: '585'
 if (!(tvVersionCode ==~ /[0-9]+/) || tvVersionCode.toBigInteger() < 1 || tvVersionCode.toBigInteger() > 2100000000) {
     throw new GradleException('TV_VERSION_CODE must be an integer between 1 and 2100000000')
 }
-def tvVersionName = System.getenv('TV_VERSION_NAME') ?: '5.5.5'
+def tvVersionName = System.getenv('TV_VERSION_NAME') ?: '5.8.5'
 
 // Default package stays compatible with FongMi/TV upgrades. Pass -PtvApplicationId=com.wobuhui666.android.tv
 // (or TV_APPLICATION_ID) to build the coexist edition that installs side by side with FongMi/TV.
