@@ -9,6 +9,10 @@ on:
         description: Verify real guarded sources in the ARM64 sourceprobe package
         type: boolean
         default: false
+      preload:
+        description: Include native next-episode cache regressions
+        type: boolean
+        default: false
       responsiveness:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
@@ -33,6 +37,8 @@ jobs:
   guarded-source:
     if: github.event_name == 'workflow_dispatch' && inputs.guarded_source
     uses: ./.github/workflows/guarded-source-verify.yml
+    with:
+      preload: ${{ inputs.preload }}
   responsiveness:
     if: github.event_name == 'workflow_dispatch' && inputs.responsiveness && !inputs.guarded_source
     uses: ./.github/workflows/app-responsiveness.yml

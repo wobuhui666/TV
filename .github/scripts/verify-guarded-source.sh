@@ -159,6 +159,37 @@ for setting in window_animation_scale transition_animation_scale animator_durati
     adb shell settings put global "$setting" 1
 done
 
+if [[ "${FONGMI_PRELOAD_TESTS:-false}" == true ]]; then
+    preload_archive="$RUNNER_TEMP/fongmi-core-fixtures.tar.gz"
+    test -f "$preload_archive"
+    adb push "$preload_archive" /data/local/tmp/fongmi-core-fixtures.tar.gz >/dev/null
+    adb shell run-as "$pkg" mkdir -p files/core-fixtures
+    adb shell "cat /data/local/tmp/fongmi-core-fixtures.tar.gz | run-as $pkg tar -xz -C files/core-fixtures"
+    if ! timeout 240s adb shell am instrument -w -r \
+        -e core_fixture_root core-fixtures \
+        -e class com.fongmi.android.tv.player.exo.NextMediaPreloadTest \
+        "$test_pkg/androidx.test.runner.AndroidJUnitRunner" > "$guarded_temp/preload-instrumentation.txt" 2>&1; then
+        preload_exit=1
+    else
+        preload_exit=0
+    fi
+    cp "$guarded_temp/preload-instrumentation.txt" "$out/preload-instrumentation.txt"
+    python3 - "$guarded_temp/preload-instrumentation.txt" "$out/preload-summary.json" "$preload_exit" <<'PY'
+import json, pathlib, re, sys
+content = pathlib.Path(sys.argv[1]).read_text(errors='replace')
+match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', content, re.M)
+result = {'passed': match is not None and sys.argv[3] == '0',
+          'testCount': int(match.group(1)) if match else 0,
+          'failureTypes': sorted(set(re.findall(r'\b((?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:Exception|Error))\b', content)))}
+pathlib.Path(sys.argv[2]).write_text(json.dumps(result, indent=2) + '\n')
+assert result['passed'], 'Preload cache regression failed; inspect the test summary'
+PY
+    # Keep actual source checks independent of synthetic player state and fixtures.
+    adb shell am force-stop "$pkg"
+    adb shell pm clear "$pkg" >/dev/null
+    adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
+fi
+
 python3 - "$out/config-metadata.json" <<'PY'
 import hashlib, json, pathlib, sys, urllib.request
 try:

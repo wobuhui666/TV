@@ -96,7 +96,14 @@ jobs:
           chmod +x gradlew
       - name: Run application unit tests and check mobile compilation
         if: matrix.revision == 'optimized'
-        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:testLeanbackArm64_v8aPreviewUnitTest :app:compileMobileArm64_v8aDebugJavaWithJavac -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :catvod:testDebugUnitTest :quickjs:testDebugUnitTest :app:testLeanbackArm64_v8aPreviewUnitTest :app:compileMobileArm64_v8aDebugJavaWithJavac -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Verify Python and JavaScript source compatibility and release versions
+        if: matrix.revision == 'optimized'
+        run: |
+          python -B -m unittest discover -s chaquo/src/test/python -v
+          node quickjs/src/test/js/net.test.cjs
+          node quickjs/src/test/js/dialog.test.cjs
+          python -B -m unittest discover -s tools/tests -p test_ota_release.py -v
       - name: Build production debug TV APK
         if: matrix.revision == 'optimized'
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2 --console=plain
@@ -129,6 +136,9 @@ jobs:
             artifacts/app-responsiveness/
             app/build/test-results/
             app/build/reports/tests/
+            catvod/build/test-results/
+            quickjs/build/test-results/
+            artifacts/fongmi-features/
           retention-days: 14
           if-no-files-found: warn
       - name: Upload optimized TV APK

@@ -62,6 +62,9 @@ if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
     for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
         adb shell settings put global "$setting" 0
     done
+    if [[ -f .github/scripts/verify-fongmi-features.sh ]]; then
+        bash .github/scripts/verify-fongmi-features.sh
+    fi
     classes='com.fongmi.android.tv.player.parse.ParseJobLifecycleTest,com.fongmi.android.tv.ui.NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults,com.fongmi.android.tv.ui.HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration'
     timeout 240s adb shell am instrument -w -r -e class "$classes" "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/regression.txt"
     grep -Eq '^OK [(][1-9][0-9]* tests?[)]' "$out/regression.txt"

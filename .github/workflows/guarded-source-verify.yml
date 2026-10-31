@@ -2,7 +2,16 @@ name: Guarded source verification in the ARM64 package
 
 on:
   workflow_call:
+    inputs:
+      preload:
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      preload:
+        description: Include native next-episode cache regressions
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,6 +26,7 @@ jobs:
     timeout-minutes: 60
     env:
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      FONGMI_PRELOAD_TESTS: ${{ inputs.preload }}
     steps:
       - name: Free runner space for the ARM build and emulator
         run: |
@@ -73,6 +83,15 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Prepare synthetic preload media
+        if: inputs.preload
+        run: |
+          if ! command -v ffmpeg >/dev/null || [ ! -f /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf ]; then
+              sudo apt-get update
+              sudo apt-get install -y ffmpeg fonts-dejavu-core
+          fi
+          CORE_REAL_SAMPLES=0 bash tools/player-core-fixtures.sh "$RUNNER_TEMP/fongmi-core-fixtures"
+          tar -czf "$RUNNER_TEMP/fongmi-core-fixtures.tar.gz" -C "$RUNNER_TEMP/fongmi-core-fixtures" .
       - name: Verify real sources through the available native bridge
         uses: reactivecircus/android-emulator-runner@v2
         with:
