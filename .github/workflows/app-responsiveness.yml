@@ -35,6 +35,10 @@ jobs:
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       RESPONSIVENESS_REVISION: ${{ matrix.revision }}
     steps:
+      - name: Free runner space for Android builds and emulator
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/swift /opt/hostedtoolcache/CodeQL
+          df -h "$GITHUB_WORKSPACE"
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.revision == 'baseline' && inputs.baseline_ref || github.sha }}
@@ -113,6 +117,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: false
+          emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash .github/scripts/verify-app-responsiveness.sh
       - name: Upload measurements and regression reports

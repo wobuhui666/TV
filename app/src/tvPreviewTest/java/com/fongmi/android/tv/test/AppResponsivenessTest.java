@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Debug;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
@@ -17,6 +18,9 @@ import android.view.Window;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.runner.lifecycle.ActivityLifecycleCallback;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.fongmi.android.tv.api.SiteApi;
@@ -40,6 +44,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import com.github.catvod.utils.Prefers;
+import com.github.catvod.crawler.SpiderNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,6 +59,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 
 /** Explicit live-config probe. Counts/timings only; never exports configuration or source bodies. */
@@ -67,6 +73,11 @@ public final class AppResponsivenessTest {
     private final HandlerThread metricsThread = new HandlerThread("responsiveness-metrics");
     private final List<Activity> activities = new ArrayList<>();
     private final List<Activity> observed = new ArrayList<>();
+    private final List<Activity> previousActivities = new ArrayList<>();
+    private final ActivityLifecycleCallback lifecycleCallback = (activity, stage) -> {
+        if (target.getPackageName().equals(activity.getPackageName())
+                && !previousActivities.contains(activity) && !activities.contains(activity)) activities.add(activity);
+    };
     private Activity current;
 
     @Test(timeout = 360_000)
@@ -85,8 +96,13 @@ public final class AppResponsivenessTest {
             long duration = metrics.getMetric(FrameMetrics.TOTAL_DURATION);
             if (duration > 0 && frames.size() < 20_000) frames.add(duration);
         };
+        instrumentation.runOnMainSync(() -> {
+            previousActivities.addAll(validationActivities());
+            ActivityLifecycleMonitorRegistry.getInstance().addLifecycleCallback(lifecycleCallback);
+        });
         try {
             report.put("schema", "tv.responsiveness.v1");
+            report.put("deviceAbis", new JSONArray(java.util.Arrays.asList(Build.SUPPORTED_ABIS)));
             report.put("nativeArmPlaybackVerified", false);
             report.put("stages", stages);
             CountDownLatch loaded = new CountDownLatch(1);
@@ -184,7 +200,16 @@ public final class AppResponsivenessTest {
             throw new AssertionError(failure);
         } finally {
             worker.shutdownNow();
-            for (Activity activity : new ArrayList<>(activities)) close(activity, listener);
+            List<Activity> closing = new ArrayList<>();
+            instrumentation.runOnMainSync(() -> {
+                // Include a newly created activity even if its launch never reached RESUMED.
+                for (Activity activity : validationActivities()) {
+                    if (!previousActivities.contains(activity) && !activities.contains(activity)) activities.add(activity);
+                }
+                closing.addAll(activities);
+                ActivityLifecycleMonitorRegistry.getInstance().removeLifecycleCallback(lifecycleCallback);
+            });
+            for (int index = closing.size() - 1; index >= 0; index--) close(closing.get(index), listener);
             report.put("activityCleanupComplete", activities.isEmpty());
             if (!activities.isEmpty()) report.put("passed", false);
             metricsThread.quitSafely();
@@ -208,10 +233,16 @@ public final class AppResponsivenessTest {
         JSONObject stage = new JSONObject().put("phase", phase).put("siteIndex", VodConfig.get().getSites().indexOf(site));
         stages.put(stage);
         long started = SystemClock.elapsedRealtime();
-        Future<Result> pending = worker.submit(() -> phase.equals("home") ? SiteApi.homeContent(site)
-                : SiteApi.searchContent(site, keyword, false, "1"));
+        Future<Result> pending = worker.submit(() -> {
+            if (site.getType() == 3 && site.spider() instanceof SpiderNull) return null;
+            return phase.equals("home") ? SiteApi.homeContent(site) : SiteApi.searchContent(site, keyword, false, "1");
+        });
         try {
             Result result = pending.get(25, TimeUnit.SECONDS);
+            if (result == null) {
+                stage.put("status", "source-not-loaded");
+                return false;
+            }
             int count = result.getList().size();
             stage.put("itemCount", count).put("categoryCount", result.getTypes().size());
             boolean content = count > 0 || phase.equals("home") && !result.getTypes().isEmpty();
@@ -233,9 +264,36 @@ public final class AppResponsivenessTest {
     private Activity launch(java.lang.Class<? extends Activity> type, String keyword) {
         Intent intent = new Intent(target, type).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (keyword != null) intent.putExtra("keyword", keyword);
-        current = instrumentation.startActivitySync(intent);
-        activities.add(current);
+        List<Activity> before = new ArrayList<>();
+        instrumentation.runOnMainSync(() -> before.addAll(validationActivities()));
+        // startActivitySync waits for global UI idle, which an animated TV page may
+        // never reach. Start asynchronously and wait only for this activity's lifecycle.
+        target.startActivity(intent);
+        AtomicReference<Activity> resumed = new AtomicReference<>();
+        boolean launched = await(() -> {
+            for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                if (type.isInstance(activity) && target.getPackageName().equals(activity.getPackageName())
+                        && !before.contains(activity)) {
+                    resumed.set(activity);
+                    return true;
+                }
+            }
+            return false;
+        }, 15_000);
+        assertTrue(type.getSimpleName() + " did not reach RESUMED within 15 seconds", launched);
+        current = resumed.get();
         return current;
+    }
+
+    private List<Activity> validationActivities() {
+        List<Activity> result = new ArrayList<>();
+        for (Stage stage : Stage.values()) {
+            if (stage == Stage.DESTROYED) continue;
+            for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(stage)) {
+                if (target.getPackageName().equals(activity.getPackageName()) && !result.contains(activity)) result.add(activity);
+            }
+        }
+        return result;
     }
 
     private boolean close(Activity activity, Window.OnFrameMetricsAvailableListener listener) {
@@ -244,7 +302,7 @@ public final class AppResponsivenessTest {
             if (!activity.isDestroyed()) activity.finish();
         });
         boolean destroyed = await(activity::isDestroyed, 10_000);
-        if (destroyed) activities.remove(activity);
+        if (destroyed) instrumentation.runOnMainSync(() -> activities.remove(activity));
         return destroyed;
     }
 

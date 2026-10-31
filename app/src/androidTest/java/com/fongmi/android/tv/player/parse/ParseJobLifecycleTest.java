@@ -141,6 +141,7 @@ public final class ParseJobLifecycleTest {
         assertTrue("Active parser JavaScript must really navigate before testing cancellation", fixture.activeScript.await(8, TimeUnit.SECONDS));
         instrumentation.runOnMainSync(() -> parent.stop(false));
         instrumentation.waitForIdleSync();
+        awaitJavascriptReady();
         instrumentation.runOnMainSync(() -> {
             // Replay the continuation normally invoked by the previous evaluateJavascript
             // ValueCallback after it returns to the main thread, preserving its next index.

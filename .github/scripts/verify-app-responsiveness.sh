@@ -52,14 +52,22 @@ uid=$(adb shell cmd package list packages -U "$pkg" | python3 -c 'import sys; pr
 [[ "$uid" =~ ^[0-9]+$ ]]
 adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
 if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
+    # Existing fixture tests synchronize on UI idle. Keep their animation policy,
+    # then restore production timing before collecting any live measurements.
+    for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
+        adb shell settings put global "$setting" 0
+    done
     classes='com.fongmi.android.tv.player.parse.ParseJobLifecycleTest,com.fongmi.android.tv.ui.NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults,com.fongmi.android.tv.ui.HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration'
-    adb shell am instrument -w -r -e class "$classes" "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/regression.txt"
+    timeout 240s adb shell am instrument -w -r -e class "$classes" "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/regression.txt"
     grep -Eq '^OK [(][1-9][0-9]* tests?[)]' "$out/regression.txt"
     # The live probe starts with a fresh application/configuration after fixture-based regressions.
     adb shell am force-stop "$pkg"
     adb shell pm clear "$pkg" >/dev/null
     adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
 fi
+for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
+    adb shell settings put global "$setting" 1
+done
 adb logcat -c
 python3 - "$out/config-metadata.json" <<'PY'
 import hashlib, json, pathlib, sys, urllib.request
@@ -70,7 +78,7 @@ config = json.loads(body)
 pathlib.Path(sys.argv[1]).write_text(json.dumps({'sha256': hashlib.sha256(body).hexdigest(),
     'bytes': len(body), 'siteCount': len(config.get('sites', []))}, indent=2) + '\n')
 PY
-adb shell am instrument -w -r \
+timeout 420s adb shell am instrument -w -r \
     -e performance_config_url https://9280.kstore.vip/aiwex.json \
     -e class com.fongmi.android.tv.test.AppResponsivenessTest \
     "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/instrumentation.txt"
