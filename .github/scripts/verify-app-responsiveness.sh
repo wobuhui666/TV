@@ -55,6 +55,7 @@ adb install -r "$(read_metadata "$test_metadata" apk)"
 uid=$(adb shell cmd package list packages -U "$pkg" | python3 -c 'import re, sys; match = re.search(r"^package:" + re.escape(sys.argv[1]) + r" uid:([0-9]+)\s*$", sys.stdin.read(), re.M); assert match, "Target application UID missing"; print(match.group(1))' "$pkg")
 [[ "$uid" =~ ^[0-9]+$ ]]
 adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
+adb shell pm grant "$pkg" android.permission.RECORD_AUDIO
 if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
     # Existing fixture tests synchronize on UI idle. Keep their animation policy,
     # then restore production timing before collecting any live measurements.
@@ -68,6 +69,7 @@ if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
     adb shell am force-stop "$pkg"
     adb shell pm clear "$pkg" >/dev/null
     adb shell pm grant "$pkg" android.permission.POST_NOTIFICATIONS
+    adb shell pm grant "$pkg" android.permission.RECORD_AUDIO
 fi
 for setting in window_animation_scale transition_animation_scale animator_duration_scale; do
     adb shell settings put global "$setting" 1
