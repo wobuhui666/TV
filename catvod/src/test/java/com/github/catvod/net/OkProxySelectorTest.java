@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -46,9 +47,9 @@ public class OkProxySelectorTest {
     public void redirectChainCarriesProxyAcrossIpTargets() throws Exception {
         java.net.Proxy proxy = proxy(java.net.Proxy.Type.HTTP, 8080);
         addRule("ott.example.com", proxy);
-        OkProxySelector.Policy source = selector.policy(new URI("http://ott.example.com/live"), null);
-        OkProxySelector.Policy first = selector.policy(new URI("http://233.1.2.3/stream"), source);
-        OkProxySelector.Policy second = selector.policy(new URI("http://233.1.2.4/stream"), first);
+        OkProxySelector.Policy source = selector.policy(HttpUrl.get("http://ott.example.com/live"), null);
+        OkProxySelector.Policy first = selector.policy(HttpUrl.get("http://233.1.2.3/stream"), source);
+        OkProxySelector.Policy second = selector.policy(HttpUrl.get("http://233.1.2.4/stream"), first);
 
         assertEquals(List.of(proxy), first.select(new URI("http://233.1.2.3/stream")));
         assertEquals(List.of(proxy), second.select(new URI("http://233.1.2.4/stream")));
@@ -61,9 +62,9 @@ public class OkProxySelectorTest {
         java.net.Proxy targetProxy = proxy(java.net.Proxy.Type.SOCKS, 1080);
         addRule("ott.example.com", sourceProxy);
         addRule("cdn.example.com", targetProxy);
-        OkProxySelector.Policy source = selector.policy(new URI("http://ott.example.com/live"), null);
-        OkProxySelector.Policy target = selector.policy(new URI("http://cdn.example.com/stream"), source);
-        OkProxySelector.Policy next = selector.policy(new URI("http://233.1.2.3/stream"), target);
+        OkProxySelector.Policy source = selector.policy(HttpUrl.get("http://ott.example.com/live"), null);
+        OkProxySelector.Policy target = selector.policy(HttpUrl.get("http://cdn.example.com/stream"), source);
+        OkProxySelector.Policy next = selector.policy(HttpUrl.get("http://233.1.2.3/stream"), target);
 
         assertEquals(List.of(targetProxy), target.select(new URI("http://cdn.example.com/stream")));
         assertEquals(List.of(targetProxy), next.select(new URI("http://233.1.2.3/stream")));
@@ -77,8 +78,8 @@ public class OkProxySelectorTest {
         addRule("first.example.com", firstProxy);
         addRule("second.example.com", secondProxy);
         URI target = new URI("http://233.1.2.3/stream");
-        OkProxySelector.Policy first = selector.policy(target, selector.policy(new URI("http://first.example.com/live"), null));
-        OkProxySelector.Policy second = selector.policy(target, selector.policy(new URI("http://second.example.com/live"), null));
+        OkProxySelector.Policy first = selector.policy(HttpUrl.get(target.toString()), selector.policy(HttpUrl.get("http://first.example.com/live"), null));
+        OkProxySelector.Policy second = selector.policy(HttpUrl.get(target.toString()), selector.policy(HttpUrl.get("http://second.example.com/live"), null));
 
         assertEquals(List.of(firstProxy), first.select(target));
         assertEquals(List.of(secondProxy), second.select(target));
@@ -89,8 +90,8 @@ public class OkProxySelectorTest {
     public void redirectDoesNotProxyLoopbackTarget() throws Exception {
         java.net.Proxy proxy = proxy(java.net.Proxy.Type.HTTP, 8080);
         addRule("ott.example.com", proxy);
-        OkProxySelector.Policy source = selector.policy(new URI("http://ott.example.com/live"), null);
-        OkProxySelector.Policy target = selector.policy(new URI("http://127.0.0.1/stream"), source);
+        OkProxySelector.Policy source = selector.policy(HttpUrl.get("http://ott.example.com/live"), null);
+        OkProxySelector.Policy target = selector.policy(HttpUrl.get("http://127.0.0.1/stream"), source);
 
         assertNull(target.rule());
         assertNotEquals(List.of(proxy), target.select(new URI("http://127.0.0.1/stream")));
@@ -100,13 +101,40 @@ public class OkProxySelectorTest {
     public void clearOnAnotherThreadInvalidatesInheritedRule() throws Exception {
         java.net.Proxy proxy = proxy(java.net.Proxy.Type.HTTP, 8080);
         addRule("ott.example.com", proxy);
-        OkProxySelector.Policy source = selector.policy(new URI("http://ott.example.com/live"), null);
+        OkProxySelector.Policy source = selector.policy(HttpUrl.get("http://ott.example.com/live"), null);
         Thread thread = new Thread(selector::clear);
         thread.start();
         thread.join();
         addRule("other.example.com", proxy);
 
-        assertNull(selector.policy(new URI("http://233.1.2.3/stream"), source).rule());
+        assertNull(selector.policy(HttpUrl.get("http://233.1.2.3/stream"), source).rule());
+    }
+
+    @Test
+    public void shouldMatchProxyRuleWhenHttpUrlHostIsMissingFromUri() {
+        HttpUrl url = HttpUrl.get("http://video_cdn.example/stream");
+        assertNull("Underscore hosts are accepted by OkHttp but not URI.getHost", url.uri().getHost());
+        java.net.Proxy proxy = proxy(java.net.Proxy.Type.HTTP, 8080);
+        addRule("video_cdn.example", proxy);
+
+        OkProxySelector.Policy policy = selector.policy(url, null);
+
+        assertEquals(List.of(proxy), policy.select(url.uri()));
+        assertEquals(policy, selector.policy(HttpUrl.get("http://video_cdn.example:80/other"), null));
+        assertNotEquals(policy, selector.policy(HttpUrl.get("http://other_cdn.example/stream"), policy));
+    }
+
+    @Test
+    public void shouldKeepRedirectProxyWhenUriLosesTheTargetHost() throws Exception {
+        try (ProxyServer server = new ProxyServer(
+                "HTTP/1.1 302 Found\r\nLocation: http://video_cdn.example/stream\r\n",
+                "HTTP/1.1 200 OK\r\n")) {
+            addRule("ott.example.com", server.proxy());
+            try (Response response = client().newCall(new Request.Builder().url("http://ott.example.com/live").build()).execute()) {
+                assertEquals(200, response.code());
+            }
+            assertEquals(List.of("GET http://ott.example.com/live HTTP/1.1", "GET http://video_cdn.example/stream HTTP/1.1"), server.requests());
+        }
     }
 
     @Test

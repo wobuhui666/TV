@@ -31,7 +31,7 @@ final class ProxyRedirectInterceptor implements Interceptor {
             OkProxySelector.Policy policy = null;
             Chain routed = chain;
             if (chain.getProxy() == null && chain.getProxySelector() == selector) {
-                policy = selector.policy(request.url().uri(), previousPolicy);
+                policy = selector.policy(request.url(), previousPolicy);
                 if (previousPolicy != null && !policy.sharesProxyCredentials(previousPolicy)) request = request.newBuilder().removeHeader("Proxy-Authorization").build();
                 request = request.newBuilder().tag(OkProxySelector.Policy.class, policy).build();
                 routed = chain.withProxySelector(policy);
