@@ -46,6 +46,9 @@ public final class ParseJobLifecycleTest {
     private CustomWebView parent;
 
     @Before public void setup() throws Exception {
+        String packageName = instrumentation.getTargetContext().getPackageName();
+        assertTrue("Run only in a disposable validation application", packageName.equals("com.fongmi.android.tv.preview")
+                || packageName.equals("com.fongmi.android.tv.sourceprobe"));
         fixture = new Fixture();
         fixture.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true);
         activity = (CorePlaybackActivity) instrumentation.startActivitySync(new Intent(

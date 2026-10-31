@@ -28,8 +28,8 @@ import okhttp3.Response;
  * （{@link TmdbEndpoint} + {@link TmdbNetwork}），解析复用
  * {@link DiscoverApi#parseTmdbResults(String, String)}（会顺带填 genreText）。
  *
- * <p>取消：TmdbNetwork 使用独立 OkHttpClient，DiscoverApi.cancel 扫不到，
- * 本类自带 tag → Call 注册表，页面级 {@link #cancel(Object)} 兜底。
+ * <p>取消：本类保留 tag → Call 登记直到正文消费和主线程交付结束，
+ * 页面级 {@link #cancel(Object)} 同时取消在途正文和已排队的回调。
  */
 public final class RexTmdbClient {
 
