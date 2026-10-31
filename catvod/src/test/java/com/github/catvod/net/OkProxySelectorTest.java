@@ -138,6 +138,26 @@ public class OkProxySelectorTest {
     }
 
     @Test
+    public void shouldTryBackupProxyWhenUnderscoreHostCannotUseTheFirstProxy() throws Exception {
+        int closedPort;
+        try (ServerSocket unused = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+            closedPort = unused.getLocalPort();
+        }
+        java.net.Proxy unreachable = new java.net.Proxy(java.net.Proxy.Type.HTTP,
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), closedPort));
+        try (ProxyServer server = new ProxyServer("HTTP/1.1 200 OK\r\n")) {
+            selector.getProxy().add(new Proxy() {
+                @Override public List<String> getHosts() { return List.of("video_cdn.example"); }
+                @Override public List<java.net.Proxy> getProxies() { return List.of(unreachable, server.proxy()); }
+            });
+            try (Response response = client().newCall(new Request.Builder().url("http://video_cdn.example/stream").build()).execute()) {
+                assertEquals(200, response.code());
+            }
+            assertEquals(List.of("GET http://video_cdn.example/stream HTTP/1.1"), server.requests());
+        }
+    }
+
+    @Test
     public void actualRedirectChainStaysOnHttpProxy() throws Exception {
         try (ProxyServer server = new ProxyServer(
                 "HTTP/1.1 302 Found\r\nLocation: http://233.1.2.3/stream\r\n",

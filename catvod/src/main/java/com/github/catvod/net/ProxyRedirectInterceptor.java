@@ -3,7 +3,13 @@ package com.github.catvod.net;
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.ProtocolException;
+import java.net.Proxy;
+import java.net.URI;
+import java.net.UnknownHostException;
+import java.util.List;
 
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
@@ -36,7 +42,7 @@ final class ProxyRedirectInterceptor implements Interceptor {
                 request = request.newBuilder().tag(OkProxySelector.Policy.class, policy).build();
                 routed = chain.withProxySelector(policy);
             }
-            Response response = routed.proceed(request);
+            Response response = proceed(routed, request, policy);
             for (Response prior = response.priorResponse(); prior != null; prior = prior.priorResponse()) followUpCount++;
             response = withPriorResponse(response, previousResponse);
             if (followUpCount > 20) {
@@ -53,6 +59,30 @@ final class ProxyRedirectInterceptor implements Interceptor {
             previousPolicy = policy;
             request = followUp;
         }
+    }
+
+    private Response proceed(Chain chain, Request request, OkProxySelector.Policy policy) throws IOException {
+        URI uri = request.url().uri();
+        if (policy == null || uri.getHost() != null) return chain.proceed(request);
+        // OkHttp skips ProxySelector for these otherwise-valid HttpUrls. An explicit
+        // proxy keeps the normalized policy effective without changing the request URL.
+        List<Proxy> proxies = policy.select(uri);
+        IOException previous = null;
+        for (int index = 0; index < proxies.size(); index++) {
+            Proxy proxy = proxies.get(index);
+            try {
+                return chain.withProxy(proxy).proceed(request);
+            } catch (IOException failure) {
+                if (previous != null) failure.addSuppressed(previous);
+                RequestBody body = request.body();
+                boolean connectionFailed = failure instanceof ConnectException || failure instanceof NoRouteToHostException || failure instanceof UnknownHostException;
+                if (index == proxies.size() - 1 || !connectionFailed || !chain.getRetryOnConnectionFailure()
+                        || chain.call().isCanceled() || body != null && (body.isOneShot() || body.isDuplex())) throw failure;
+                if (proxy.address() != null) policy.connectFailed(uri, proxy.address(), failure);
+                previous = failure;
+            }
+        }
+        return chain.withProxy(Proxy.NO_PROXY).proceed(request);
     }
 
     private Response withPriorResponse(Response response, Response previous) {
