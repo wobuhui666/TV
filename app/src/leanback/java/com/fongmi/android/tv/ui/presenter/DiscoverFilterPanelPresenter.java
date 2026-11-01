@@ -49,6 +49,7 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
     private static final class Holder extends ViewHolder {
 
         private final AdapterDiscoverFilterPanelBinding binding;
+        private List<Integer> boundRows = List.of();
 
         private Holder(AdapterDiscoverFilterPanelBinding binding) {
             super(binding.getRoot());
@@ -61,8 +62,11 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
             for (int row : visibleRows) summaries.add(summaryLabel(binding.getRoot().getContext(), panel, row, selected(panel.getRow(row))));
             int expanded = panel.getExpandedRow();
             int focused = binding.summary.getFocusedPosition();
+            int focusedRow = focused >= 0 && focused < boundRows.size() ? boundRows.get(focused) : -1;
             binding.summary.setItems(summaries, visibleRows.indexOf(expanded));
-            if (focused >= 0) binding.summary.setFocusedPosition(Math.min(focused, visibleRows.size() - 1));
+            int restored = visibleRows.indexOf(focusedRow);
+            if (focused >= 0) binding.summary.setFocusedPosition(restored >= 0 ? restored : Math.min(focused, visibleRows.size() - 1));
+            boundRows = List.copyOf(visibleRows);
             binding.summary.setOnChipClickListener(position -> {
                 if (position >= 0 && position < visibleRows.size()) listener.onFilterGroupClick(visibleRows.get(position));
             });
@@ -121,6 +125,7 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
         }
 
         private void unbind() {
+            boundRows = List.of();
             binding.summary.clearListeners();
             binding.options.clearListeners();
         }

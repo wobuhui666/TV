@@ -94,7 +94,7 @@ public final class PosterWallFiltersIntegrationTest {
     private final AtomicInteger delayedCancelled = new AtomicInteger();
     private final Map<Map<Object, Object>, Map<Object, Object>> savedCaches = new IdentityHashMap<>();
     private OkHttpClient originalClient, originalTmdbClient, fixtureClient;
-    private volatile boolean pagination, rapidFilters;
+    private volatile boolean pagination, rapidFilters, delayedGenres;
     private byte[] artwork;
     private boolean prepared;
 
@@ -116,6 +116,7 @@ public final class PosterWallFiltersIntegrationTest {
                         .body(ResponseBody.create(artwork, MediaType.get("image/png"))).build();
                 requests.add(url);
                 boolean hold = pagination && url.encodedPath().endsWith("/movie/top_rated") && "2".equals(url.queryParameter("page"))
+                        || delayedGenres && url.encodedPath().endsWith("/genre/movie/list")
                         || rapidFilters && url.encodedPath().endsWith("/discover/movie")
                         && !"popularity.desc".equals(url.queryParameter("sort_by"));
                 if (hold) {
@@ -208,6 +209,27 @@ public final class PosterWallFiltersIntegrationTest {
             assertEquals(1, posters.getSelectedPosition());
         });
         capture(activity, "wall-pagination-filled");
+    }
+
+    @Test(timeout = 60000)
+    public void lateGenreChoicesKeepTheFocusedLogicalFilterGroup() throws Exception {
+        delayedGenres = true;
+        RexSectionActivity activity = wall("top_movie");
+        await(() -> items(activity).size() == 20 && panel(activity).getVisibleRows().equals(List.of(3, 4, 5)), "wall renders while genre metadata is pending");
+        JetStreamChipRow summary = value(() -> activity.findViewById(R.id.summary));
+        main(() -> {
+            summary.setFocusedPosition(1);
+            assertTrue(summary.requestFocus());
+        });
+        await(() -> summary.hasFocus() && summary.getFocusedPosition() == 1, "year filter has actual focus");
+        releaseDelayed.countDown();
+        await(() -> panel(activity).getVisibleRows().equals(List.of(2, 3, 4, 5)) && summary.getFocusedPosition() == 2,
+                "new genre group cannot change the focused year group");
+        main(() -> {
+            assertTrue(summary.hasFocus());
+            assertEquals(4, panel(activity).getVisibleRows().get(summary.getFocusedPosition()).intValue());
+        });
+        capture(activity, "wall-late-genres-focus");
     }
 
     @Test(timeout = 90000)
