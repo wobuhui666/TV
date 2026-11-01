@@ -17,6 +17,10 @@ on:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
         default: false
+      polish:
+        description: Verify poster-wall filters, subtitle labels and source-form hints
+        type: boolean
+        default: false
       baseline_ref:
         description: Baseline commit for responsiveness comparison
         type: string
@@ -40,13 +44,14 @@ jobs:
     with:
       preload: ${{ inputs.preload }}
   responsiveness:
-    if: github.event_name == 'workflow_dispatch' && inputs.responsiveness && !inputs.guarded_source
+    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
       compare_baseline: ${{ inputs.compare_baseline }}
+      polish: ${{ inputs.polish }}
   verify:
-    if: ${{ !inputs.responsiveness && !inputs.guarded_source }}
+    if: ${{ !inputs.responsiveness && !inputs.polish && !inputs.guarded_source }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
