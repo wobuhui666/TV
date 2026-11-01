@@ -79,4 +79,3 @@ ARM 播放器和低性能电视上的实际解码、长时间播放仍需真实�
 [脱敏验证汇总](verification-summary.json) · [基线报告](baseline-report.json) · [优化版报告](optimized-report.json) · [首页截图](home.png) · [搜索截图](search.png) · [结果页截图](search-results.png)
 
 实际电视上的解码、长时间播放和低性能设备帧率尚未验证。本轮没有修改播放引擎、布局或动画参数。
-

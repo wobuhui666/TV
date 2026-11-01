@@ -3,8 +3,13 @@
   "files": [
     {
       "file": "README.md",
-      "bytes": 3736,
-      "sha256": "77022539e23a407944d65d9f71241559cf0a60645af7685d9c3a25adab4b13e9"
+      "bytes": 3999,
+      "sha256": "fd367512908a638f01ea0e2416ffa7b8cc3530e51b3a8cb2f517ed1a104329c5"
+    },
+    {
+      "file": "apk-audit.json",
+      "bytes": 681,
+      "sha256": "caf83ba3c9765994c72a85484ea2a356614017ae1c5b909274b9f3c8e827e7ef"
     },
     {
       "file": "config-metadata.json",

@@ -30,6 +30,8 @@
 
 审计时 TV 临时目录约 **4.76 GiB**，项目生成缓存另约 **104 MiB**。清单记录按路径统计的字节数，实际文件系统释放量可能受压缩、硬链接和其他任务影响；不以此承诺固定磁盘增量。
 
+本次实际完成 133 个临时目录、五处项目缓存以及已结束任务接续目录的清理，另移除八份被公开摘要替代的临时文档／日志。清理前后文件系统可用空间增加约 **4.93 GiB**；这是本次观察值，不代表所有文件的逻辑大小之和。
+
 `mpv/build/generated/ffmpeg9` 由 Gradle 的 `prepareFfmpeg9` 从受跟踪的 `app/libs/mpv-android-lib-v0.0.3.aar`、`third_party/mpv/mpv-android-ffmpeg9-native.zip` 和 bridge ZIP 重建，不是唯一原生源码。`.media3` 则是固定提交的依赖源码，含 composite settings 和配套补丁，其父目录会用于定位 `.github/media3-stubs`，不能当作临时输出删除或随意移动。
 
 ## 后续放置约定

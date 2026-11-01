@@ -38,3 +38,5 @@ GHA 预览任务抽测的配置源未返回首页或搜索内容，状态为 `no
 | ![深色播放设置](settings-dark.png) | ![浅色播放设置](settings-light.png) |
 
 使用与匹配规则见 [社区跳过说明](../../../community-skip.md)。[验证摘要](verification-summary.json)记录提交、用例和范围；[配置指纹](config-metadata.json)仅含 SHA-256、大小与源数量；[文件清单](FILES.json)记录本目录数据文件的大小和哈希。原始 APK、完整配置、播放 URL、凭据及原始设备日志未导入仓库。
+
+[APK 符号检查](apk-audit.json)记录此前同一应用运行代码的 debug 产物：新社区 Runtime 符号存在，旧 AISkip 运行类符号不在 DEX 中。该项检查类符号和安装包哈希，不等同于媒体播放或真实设备解码验证。

@@ -1,803 +1,803 @@
 {
   "date": "2026-11-01",
-  "status": "prepared",
+  "status": "completed",
   "temporaryDirectories": [
     {
       "directory": "/tmp/community-skip-api",
       "bytesAtAudit": 567356,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-final-apks",
       "bytesAtAudit": 104611503,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-final-tests",
       "bytesAtAudit": 763791,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-live-verification",
       "bytesAtAudit": 13599875,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-live-verification-final",
       "bytesAtAudit": 14356057,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-live-verification-r2",
       "bytesAtAudit": 13762643,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/community-skip-ui-verification",
       "bytesAtAudit": 53390576,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/cronet-ech-api",
       "bytesAtAudit": 15861569,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/fongmi-ci-preview-first",
       "bytesAtAudit": 91434,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/fongmi-native-final",
       "bytesAtAudit": 4324,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/fongmi-native-second",
       "bytesAtAudit": 4324,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/fongmi-preview-final",
       "bytesAtAudit": 12784171,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-actionlint-1.7.12",
       "bytesAtAudit": 6074530,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-async-rejection-check",
       "bytesAtAudit": 43621,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-binary-body-tests-20261025",
       "bytesAtAudit": 149884,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-backend-40419907885",
       "bytesAtAudit": 732998,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-backend-40425008488",
       "bytesAtAudit": 733142,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-images",
       "bytesAtAudit": 161,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-ui-40419905200",
       "bytesAtAudit": 51329669,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-ui-40425005727",
       "bytesAtAudit": 50885853,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-capsule-ui-40573937563",
       "bytesAtAudit": 51104459,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-cf-ech-20261006",
       "bytesAtAudit": 400196322,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ciallo-publish",
       "bytesAtAudit": 29331,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-community-api-test",
       "bytesAtAudit": 44706,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-community-identity-test",
       "bytesAtAudit": 3991078,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-danmaku-validation",
       "bytesAtAudit": 307496082,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dex-venv",
       "bytesAtAudit": 155,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-diagnostic-androidtest-stubs",
       "bytesAtAudit": 456,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-diagnostics-stubs",
       "bytesAtAudit": 665,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-diagnostics-test-classes",
       "bytesAtAudit": 73625,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-cleanup-compile-jvk02xa3",
       "bytesAtAudit": 216961,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-quickjs-compile-eip217fe",
       "bytesAtAudit": 0,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-quickjs-compile-p9zckpru",
       "bytesAtAudit": 169085,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-scope-compile-9xp_tiyi",
       "bytesAtAudit": 174450,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-tests.4rqOVg",
       "bytesAtAudit": 57909,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-tests.TUZtK5",
       "bytesAtAudit": 104365,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-tests.n2xde3",
       "bytesAtAudit": 38894,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-tests.ncekcG",
       "bytesAtAudit": 104717,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-dialog-ui-compile-eea4q3tg",
       "bytesAtAudit": 1048574,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-docs-backup-verify-20261006",
       "bytesAtAudit": 2078196,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-doh-jar-fix-20261006",
       "bytesAtAudit": 851050975,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ech-validation-20261005",
       "bytesAtAudit": 298105374,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-failedfuture-api24-review",
       "bytesAtAudit": 16317898,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-final-backend-40218655668",
       "bytesAtAudit": 714779,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-final-backend-40220477314",
       "bytesAtAudit": 717924,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-final-backend-40222299115",
       "bytesAtAudit": 731528,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-final-backend-40224821991",
       "bytesAtAudit": 731435,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-fongmi-batch1-tests-40211448973",
       "bytesAtAudit": 684772,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-fongmi-batch1-ui-40212796671",
       "bytesAtAudit": 31003775,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-fongmi-review-20261025",
       "bytesAtAudit": 1916553,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-guarded-source-final",
       "bytesAtAudit": 3368,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-handoff-schema",
       "bytesAtAudit": 4286533,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-health-stubs",
       "bytesAtAudit": 889,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-health-test-classes",
       "bytesAtAudit": 58781,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-history-focus-run-40102111408",
       "bytesAtAudit": 4165792,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-history-focus-run-40102111408-attempt2",
       "bytesAtAudit": 26914671,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-history-focus-run-40104117545",
       "bytesAtAudit": 25985021,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-cards-40119357868",
       "bytesAtAudit": 28076067,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-cards-40153494399",
       "bytesAtAudit": 5200180,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-cards-40154698662",
       "bytesAtAudit": 27153694,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-order-run-40070888390-artifacts",
       "bytesAtAudit": 11357281,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-order-run-40079166262-artifacts",
       "bytesAtAudit": 9408228,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-order-run-40079813286-artifacts",
       "bytesAtAudit": 9710513,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-home-order-run-40082813307-artifacts",
       "bytesAtAudit": 26367377,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40062901755-artifacts",
       "bytesAtAudit": 1282539,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40063581550-artifacts",
       "bytesAtAudit": 4774023,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40064227322-artifacts",
       "bytesAtAudit": 9343252,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40064818298-artifacts",
       "bytesAtAudit": 11948797,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40065589373-artifacts",
       "bytesAtAudit": 13155842,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40066126300-artifacts",
       "bytesAtAudit": 14069450,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-issue77-run-40066825981-artifacts",
       "bytesAtAudit": 22969654,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-download-retry-tests",
       "bytesAtAudit": 57106,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-downloader-tests",
       "bytesAtAudit": 30304,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-manifest-tests",
       "bytesAtAudit": 31846,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-metadata-tests",
       "bytesAtAudit": 51058,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-release-audit-20261025",
       "bytesAtAudit": 1629059831,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ota-retry-tests.G6IadW",
       "bytesAtAudit": 57029,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-native-final",
       "bytesAtAudit": 4325,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-native-latest",
       "bytesAtAudit": 4324,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-native-overlay-latest",
       "bytesAtAudit": 4325,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-release-latest",
       "bytesAtAudit": 1474,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-1e5-failed",
       "bytesAtAudit": 22920499,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-1e5-failure",
       "bytesAtAudit": 22920499,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-5cd-failed",
       "bytesAtAudit": 14145860,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-all-passed",
       "bytesAtAudit": 22672610,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-d478-failed",
       "bytesAtAudit": 22237164,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-d478-failure",
       "bytesAtAudit": 22237164,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-final-delivery",
       "bytesAtAudit": 22672610,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-polish-ui-overlay-final",
       "bytesAtAudit": 22189363,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-pr87-lifecycle-test",
       "bytesAtAudit": 3090,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-preload-tests",
       "bytesAtAudit": 27046,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-python-lazy-check",
       "bytesAtAudit": 61740,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-quickjs-preview-script-test",
       "bytesAtAudit": 198658888,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-readme-review",
       "bytesAtAudit": 8428438,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-baseline",
       "bytesAtAudit": 84162,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-baseline-final",
       "bytesAtAudit": 283020,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-baseline-r2",
       "bytesAtAudit": 157465,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-baseline-r3",
       "bytesAtAudit": 155068,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-optimized-final",
       "bytesAtAudit": 970126,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-optimized-initial",
       "bytesAtAudit": 676483,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-responsiveness-optimized-r2",
       "bytesAtAudit": 836317,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-rex-card-run-40118338184",
       "bytesAtAudit": 627441,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-rex-laurels-40157129470",
       "bytesAtAudit": 27848489,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-samsung-validation",
       "bytesAtAudit": 509909599,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-screenshot-review-env",
       "bytesAtAudit": 168,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-sdk-research",
       "bytesAtAudit": 23536288,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-sf-laurels",
       "bytesAtAudit": 50662,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-subtitle-unit",
       "bytesAtAudit": 61731,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-system-theme-run-40111688945",
       "bytesAtAudit": 625669,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-system-theme-run-40112687693",
       "bytesAtAudit": 28804431,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-system-theme-run-40114449736",
       "bytesAtAudit": 28609485,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-tagged-calls-check",
       "bytesAtAudit": 8325,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-theme-mode-tests",
       "bytesAtAudit": 2881,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-timeshift-api-wv_dawnh",
       "bytesAtAudit": 32725,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-timeshift-exo-api",
       "bytesAtAudit": 1015777,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-timeshift-jvm-2nch463j",
       "bytesAtAudit": 19907,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-timeshift-source-tests-fmkk9hyd",
       "bytesAtAudit": 29405,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-auth-ku9f2b2i",
       "bytesAtAudit": 2486,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verification-40218655767",
       "bytesAtAudit": 11591980,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verification-40220477338",
       "bytesAtAudit": 30695741,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verification-40222299083",
       "bytesAtAudit": 47518599,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verification-40224821944",
       "bytesAtAudit": 48167476,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40045675324",
       "bytesAtAudit": 104820054,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40046292839",
       "bytesAtAudit": 6987990,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40046960664",
       "bytesAtAudit": 15724757,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40047729156",
       "bytesAtAudit": 18490583,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40050038969",
       "bytesAtAudit": 18813432,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-ui-verify-40050842524",
       "bytesAtAudit": 19838234,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-upstream-review",
       "bytesAtAudit": 167657,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/catvod-new-sources",
       "bytesAtAudit": 16949021,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-new-spider-api",
       "bytesAtAudit": 269825591,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-pr747-review",
       "bytesAtAudit": 44489,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     },
     {
       "directory": "/tmp/tv-fongmi-review-20261025-notes",
       "bytesAtAudit": 14468,
-      "status": "pending-upload-before-removal",
+      "status": "removed",
       "type": "tv-development-temporary"
     }
   ],
@@ -805,31 +805,31 @@
     {
       "directory": ".gradle",
       "bytesAtAudit": 126169,
-      "status": "pending-removal",
+      "status": "removed",
       "type": "rebuildable-project-output"
     },
     {
       "directory": ".kotlin",
       "bytesAtAudit": 0,
-      "status": "pending-removal",
+      "status": "already-absent",
       "type": "rebuildable-project-output"
     },
     {
       "directory": "build",
       "bytesAtAudit": 136375,
-      "status": "pending-removal",
+      "status": "removed",
       "type": "rebuildable-project-output"
     },
     {
       "directory": "chaquo/build",
       "bytesAtAudit": 1281,
-      "status": "pending-removal",
+      "status": "removed",
       "type": "rebuildable-project-output"
     },
     {
       "directory": "mpv/build",
       "bytesAtAudit": 108898480,
-      "status": "pending-removal",
+      "status": "removed",
       "type": "rebuildable-project-output"
     }
   ],
@@ -844,5 +844,65 @@
     "app/libs",
     "third_party"
   ],
-  "documentationOnly": true
+  "documentationOnly": true,
+  "archiveUploadedAtCommit": "5ff3f9afec6d192314d4d07eeb31546850f8275b",
+  "temporaryBytesCounted": 5807359251,
+  "freeBytesBefore": 4196610048,
+  "freeBytesAfter": 9484967936,
+  "observedFreeByteChange": 5288357888,
+  "completedAtUtc": "2026-11-01T16:12:09Z",
+  "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+  "media3LocalPatchesPreserved": true,
+  "appBuildInputsPreserved": true,
+  "internalHandoffRemoved": true,
+  "removedLooseTemporaryFiles": [
+    {
+      "file": "/tmp/community-skip-pr.md",
+      "bytes": 1658,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-pr-final.md",
+      "bytes": 2758,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-provider-smoke.json",
+      "bytes": 576,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-apk-audit.json",
+      "bytes": 486,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-current-job.log",
+      "bytes": 215,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-live-failure.log",
+      "bytes": 79066,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/community-skip-live-failure-r2.log",
+      "bytes": 49929,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    },
+    {
+      "file": "/tmp/tv-workspace-cleanup-audit.json",
+      "bytes": 60162,
+      "status": "removed",
+      "reason": "superseded-development-output"
+    }
+  ]
 }
