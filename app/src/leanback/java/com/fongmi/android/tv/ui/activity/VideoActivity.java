@@ -39,7 +39,6 @@ import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.ui.custom.PlaybackSpecsController;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitlePlaybackUi;
-import com.fongmi.android.tv.ai.skip.AiSkipRuntime;
 import com.fongmi.android.tv.api.DanmakuApi;
 import com.fongmi.android.tv.api.SiteApi;
 import com.fongmi.android.tv.api.config.VodConfig;
@@ -718,7 +717,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         getIntent().putExtra("id", item.getId());
         mBinding.scroll.scrollTo(0, 0);
         mClock.setCallback(null);
-        AiSkipRuntime.get().stopSession();
+        mVod.stopCommunitySkip();
         updateNavigationKey();
         player().reset();
         player().stop();
@@ -731,7 +730,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         player().stop();
         player().clear();
         mClock.setCallback(null);
-        AiSkipRuntime.get().stopSession();
+        mVod.stopCommunitySkip();
     }
 
     @Override
@@ -751,25 +750,18 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (mSpecs != null) mSpecs.begin();
         onSpeedEnd();
         claimLocalPlayback();
-        String mediaKey = com.github.catvod.utils.Util.md5(getHistoryKey() + "|" + episode.getUrl() + "|" + episode.getName());
-        long effectiveStartPositionMs = AiSkipRuntime.get().startSession(mediaKey, history, episode.getName(), startPositionMs, this::refreshAiSkipResult);
-        startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), effectiveStartPositionMs, VodPlaybackMedia.metadata(history, episode));
+        startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), startPositionMs, VodPlaybackMedia.metadata(history, episode));
     }
 
-    private void refreshAiSkipResult() {
-        if (mHistory == null || isFinishing()) return;
-        mBinding.control.action.opening.setText(mHistory.getOpening() <= 0 ? getString(R.string.play_op) : Util.timeMs(mHistory.getOpening()));
-        mBinding.control.action.ending.setText(mHistory.getEnding() <= 0 ? getString(R.string.play_ed) : Util.timeMs(mHistory.getEnding()));
-        syncJetStreamControl();
-        if (!isPlaybackReady() || !isOwner() || controller() == null) return;
-        long position = player().getPosition();
-        long duration = player().getDuration();
-        if (AiSkipRuntime.shouldSkipOpening(position, mHistory.getOpening())) {
-            controller().seekTo(mHistory.getOpening());
-        } else if (player().isPlaying()
-                && AiSkipRuntime.hasEnteredEnding(position, duration, mHistory.getEnding())) {
-            mVod.nextEpisode(false);
-        }
+    @Override
+    public boolean canSkipCommunitySegment() {
+        return !isRedirect() && !isScrubbing() && !isFinishing() && isPlaybackReady()
+                && isOwner() && player().isPlaying() && player().canSeek();
+    }
+
+    @Override
+    public void skipCommunitySegment(long positionMs) {
+        if (canSkipCommunitySegment()) controller().seekTo(positionMs);
     }
 
     @Override
@@ -1247,7 +1239,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setOpening(long opening) {
         mVod.setOpening(opening);
-        AiSkipRuntime.get().feedback(mHistory);
         mBinding.control.action.opening.setText(opening <= 0 ? getString(R.string.play_op) : Util.timeMs(mHistory.getOpening()));
         syncJetStreamControl();
     }
@@ -1273,7 +1264,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void setEnding(long ending) {
         mVod.setEnding(ending);
-        AiSkipRuntime.get().feedback(mHistory);
         mBinding.control.action.ending.setText(ending <= 0 ? getString(R.string.play_ed) : Util.timeMs(mHistory.getEnding()));
         syncJetStreamControl();
     }
@@ -2271,7 +2261,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         com.fongmi.android.tv.syncplay.SyncplaySession.get().detach(this);
         if (mVod != null) mVod.clearPreload();
         if (mKeyDown != null) mKeyDown.reset();
-        AiSkipRuntime.get().stopSession();
+        if (mVod != null) mVod.stopCommunitySkip();
         mRatingRequest++;
         MediaRatingHelper.cancel();
         mClock.release();

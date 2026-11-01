@@ -19,7 +19,7 @@
    - 已轮换 Worker 密钥 `AI_SKIP_TOKEN`（用户确认）；新值见
      r9-evidence/ai-skip-token.txt，旧值即刻失效。
    - 验证：`GET /v1/health` + 新 Bearer → `200 {"status":"ok"}`；
-     旧值 → 401。详见 AI-SKIP-SERVICE.md。
+     旧值 → 401。详见 [AI-SKIP-SERVICE.md](../../aiskip-20261101/notes/AI-SKIP-SERVICE.md)。
    - App 侧配置入口：设置 → 播放 → AI 跳过片头片尾（启用 / 接口地址 / Token / 测试）。
 
 ## 提交
@@ -42,7 +42,7 @@
 ## 补充：AI 跳片服务端端到端探测（2026-10-04）
 用静音 WAV 模拟 App 完整调用链：上传 → 建任务 → 轮询，约 60 秒后 `status=completed`
 （静音样本正确地返回 0 个跳过点）。说明 Worker + 队列 + Gemini 分析链路可用，
-只差真实播放样本才会产出跳过点。详见 AI-SKIP-SERVICE.md。
+只差真实播放样本才会产出跳过点。详见 [AI-SKIP-SERVICE.md](../../aiskip-20261101/notes/AI-SKIP-SERVICE.md)。
 
 ## 推送完成（2026-10-04 08:53）
 - 使用 zhhshss 账号的 token 推送成功：`a9c65efa9..fedc4dd75 -> ui/apple-tv-redesign`

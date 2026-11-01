@@ -10,6 +10,7 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.event.RefreshEvent;
+import com.fongmi.android.tv.player.skip.LegacySkipMigration;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.Task;
 
@@ -22,6 +23,7 @@ public class VodHistoryPolicy {
     public History findOrCreate(String key, String mark, Vod item) {
         History history = History.find(key);
         history = history == null ? create(key, item) : history;
+        LegacySkipMigration.clearBoundaries(history);
         if (!TextUtils.isEmpty(mark)) history.setVodRemarks(mark);
         if (Setting.isIncognito() && history.getKey().equals(key)) history.delete();
         history.setVodName(item.getName());
@@ -86,6 +88,7 @@ public class VodHistoryPolicy {
 
     public long startPositionMs(History history) {
         if (history == null) return C.TIME_UNSET;
+        LegacySkipMigration.clearBoundaries(history);
         long position = Math.max(history.getOpening(), history.getPosition());
         return position < 0 ? C.TIME_UNSET : position;
     }

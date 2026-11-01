@@ -1,0 +1,10 @@
+<resources>
+    <string name="ai_skip_enabled">AI intro/outro skipping</string>
+    <string name="ai_skip_url">AI skip service URL</string>
+    <string name="ai_skip_token">AI skip service token</string>
+    <string name="ai_skip_test">Test AI skip service</string>
+    <string name="ai_skip_test_idle">Test connection</string>
+    <string name="ai_skip_test_running">Testing…</string>
+    <string name="ai_skip_test_ok">Connected</string>
+    <string name="ai_skip_test_failed">Connection failed</string>
+</resources>

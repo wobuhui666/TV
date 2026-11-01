@@ -318,10 +318,17 @@ public class History implements Diffable<History> {
     }
 
     private History copyTo(History item) {
-        if (getOpening() > 0) item.setOpening(getOpening());
-        if (getEnding() > 0) item.setEnding(getEnding());
-        if (getOpening() > 0) item.setOpeningSource(getOpeningSource());
-        if (getEnding() > 0) item.setEndingSource(getEndingSource());
+        com.fongmi.android.tv.player.skip.LegacySkipMigration.clearBoundaries(this);
+        if (item.getOpening() <= 0 && !"manual".equalsIgnoreCase(item.getOpeningSource())
+                && (getOpening() > 0 || "manual".equalsIgnoreCase(getOpeningSource()))) {
+            item.setOpening(getOpening());
+            item.setOpeningSource(getOpeningSource());
+        }
+        if (item.getEnding() <= 0 && !"manual".equalsIgnoreCase(item.getEndingSource())
+                && (getEnding() > 0 || "manual".equalsIgnoreCase(getEndingSource()))) {
+            item.setEnding(getEnding());
+            item.setEndingSource(getEndingSource());
+        }
         if (getSpeed() != 1) item.setSpeed(getSpeed());
         return this;
     }

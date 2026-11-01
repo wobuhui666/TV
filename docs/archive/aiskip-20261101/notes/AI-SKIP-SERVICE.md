@@ -19,7 +19,7 @@
   用户提供的 `cfk_…` 是 Cloudflare Global API Key（配 email 使用），不是本服务的 token，
   用它请求会 401。
 - 已按用户要求轮换密钥 `AI_SKIP_TOKEN` 两次：为便于在电视键盘上输入，最终值为短串
-  `tvskip2026`（也保存在 `/home/ubuntu/TV-ui-work/r9-evidence/ai-skip-token.txt`，权限 600）。
+  `[REDACTED]`（也保存在 `/home/ubuntu/TV-ui-work/r9-evidence/ai-skip-token.txt`，权限 600）。
   历史值均已失效。若有其它客户端在用旧值，需要同步更新。
 
 ## App 侧配置（设置 → 播放 → AI 跳片头片尾）
@@ -44,7 +44,7 @@
 结论：Worker + 队列 + Gemini 分析链路完整可用；真实片头片尾需要真实音频样本才会给出跳过点。
 
 ## 当前状态（2026-10-04 08:00）
-- Worker 密钥 `AI_SKIP_TOKEN` 现为短串 `tvskip2026`（便于电视键盘输入；见 r9-evidence/ai-skip-token.txt）。
+- Worker 密钥 `AI_SKIP_TOKEN` 现为短串 `[REDACTED]`（便于电视键盘输入；见 r9-evidence/ai-skip-token.txt）。
 - App 侧：AI 自动跳片头片尾=开 ✓、服务地址=`https://ai.ciallo0d000721.cc.cd` ✓、令牌已存（密文偏好存在）。
 - App 内「测试 AI 跳过服务」曾显示「连接失败」：电视侧 DNS/ping 正常，服务端用同一 token 实测 200，
   判断为**第一遍在电视键盘上输入的 40 位长 token 有误**。已改为短 token，待在 App 里重输一次即可验证。

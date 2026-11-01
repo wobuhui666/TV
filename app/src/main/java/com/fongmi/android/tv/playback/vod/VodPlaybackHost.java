@@ -20,6 +20,10 @@ public interface VodPlaybackHost {
 
     default void clearPreload() {}
 
+    default boolean canSkipCommunitySegment() { return false; }
+
+    default void skipCommunitySegment(long positionMs) {}
+
     default List<Vod> getSourceCandidates() {
         return new ArrayList<>();
     }

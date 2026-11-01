@@ -9,6 +9,8 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.player.skip.CommunitySkipRuntime;
+import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.SourceSelectionSetting;
 import com.fongmi.android.tv.source.EpisodeTarget;
 import com.fongmi.android.tv.source.SmartSourceSelector;
@@ -29,6 +31,8 @@ public class VodPlaybackController {
     private History lastHistory;
     private final SourceReliabilityStore reliability;
     private final NextEpisodePreloader preloader;
+    private final CommunitySkipRuntime communitySkip = new CommunitySkipRuntime();
+    private boolean communitySkipEnabled = Setting.isCommunitySkipEnabled();
 
     public VodPlaybackController(VodPlaybackHost host, VodPlaybackState state) {
         this.historyPolicy = new VodHistoryPolicy();
@@ -41,6 +45,7 @@ public class VodPlaybackController {
     }
 
     public void reset() {
+        stopCommunitySkip();
         clearPreload();
         endingPolicy.reset();
         state.reset();
@@ -64,6 +69,7 @@ public class VodPlaybackController {
     }
 
     public void requestDetail() {
+        stopCommunitySkip();
         host.requestDetail(host.getVodKey(), host.getVodId());
     }
 
@@ -122,6 +128,10 @@ public class VodPlaybackController {
 
     private void startPlayback(Result result, long startPositionMs) {
         endingPolicy.reset();
+        communitySkipEnabled = Setting.isCommunitySkipEnabled();
+        boolean live = result.getTimeshift() != null && result.getTimeshift().isValid(System.currentTimeMillis());
+        if (live) stopCommunitySkip();
+        else communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
         host.startPlayback(result, state.isUseParse(), startPositionMs, state.getHistory(), state.getEpisode());
     }
 
@@ -208,6 +218,7 @@ public class VodPlaybackController {
     }
 
     public void playbackError(String msg) {
+        stopCommunitySkip();
         if (state.getMedia() != null && SourceSelectionSetting.getMode() == SourceSelectionMode.SMART) reliability.recordFailure(state.getMedia());
         host.resetPlaybackForError(msg);
         fallbackPolicy.playbackError();
@@ -220,10 +231,15 @@ public class VodPlaybackController {
     public void replay() {
         if (state.getHistory() != null) state.getHistory().setPosition(C.TIME_UNSET);
         if (host.isPlayerEmpty()) refresh();
-        else host.replay(host.isTimeshiftPlayback() ? C.TIME_UNSET : startPositionMs());
+        else {
+            communitySkipEnabled = Setting.isCommunitySkipEnabled();
+            if (!host.isTimeshiftPlayback()) communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
+            host.replay(host.isTimeshiftPlayback() ? C.TIME_UNSET : startPositionMs());
+        }
     }
 
     public void refresh() {
+        stopCommunitySkip();
         saveCurrentHistory();
         host.stopPlaybackForRefresh();
         if (!state.hasFlags() || !state.hasEpisode()) return;
@@ -310,8 +326,20 @@ public class VodPlaybackController {
 
     public void onTimeChanged(long time, long position, long duration) {
         if (host.isTimeshiftPlayback()) return;
+        boolean skipEnabled = Setting.isCommunitySkipEnabled();
+        if (communitySkipEnabled != skipEnabled) {
+            communitySkipEnabled = skipEnabled;
+            if (skipEnabled && state.hasEpisode()) communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
+            else stopCommunitySkip();
+        }
         History history = currentHistory();
         historyPolicy.updateTime(history, time, position, duration);
+        long skipTarget = communitySkip.target(position, duration, history, host.canSkipCommunitySegment());
+        if (skipTarget != C.TIME_UNSET) {
+            endingPolicy.resetPosition();
+            host.skipCommunitySegment(skipTarget);
+            return;
+        }
         if (NextEpisodePreloader.shouldPrepare(position, duration, history == null ? 0 : history.getEnding())) preloadNext();
         else preloader.expire();
         if (history != null && endingPolicy.update(position, duration, history.getEnding())) nextEpisode(false);
@@ -319,6 +347,10 @@ public class VodPlaybackController {
 
     public void onSeek() {
         endingPolicy.resetPosition();
+    }
+
+    public void stopCommunitySkip() {
+        communitySkip.stop();
     }
 
     public long startPositionMs() {

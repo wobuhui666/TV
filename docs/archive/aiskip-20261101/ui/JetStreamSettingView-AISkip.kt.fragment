@@ -1,0 +1,10 @@
+// Historical AISkip rows and keys; not compiled.
+
+                    RowSpec(KEY_AI_SKIP, context.getString(R.string.ai_skip_enabled), toggle = true),
+                    RowSpec(KEY_AI_SKIP_URL, context.getString(R.string.ai_skip_url)),
+                    RowSpec(KEY_AI_SKIP_TOKEN, context.getString(R.string.ai_skip_token)),
+                    RowSpec(KEY_AI_SKIP_TEST, context.getString(R.string.ai_skip_test)),
+        const val KEY_AI_SKIP = "ai_skip"
+        const val KEY_AI_SKIP_URL = "ai_skip_url"
+        const val KEY_AI_SKIP_TOKEN = "ai_skip_token"
+        const val KEY_AI_SKIP_TEST = "ai_skip_test"

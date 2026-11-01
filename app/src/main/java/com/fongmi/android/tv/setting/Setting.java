@@ -203,6 +203,14 @@ public class Setting {
         Prefers.put("seek_accelerate", value);
     }
 
+    public static boolean isCommunitySkipEnabled() {
+        return Prefers.getBoolean("community_skip_enabled", true);
+    }
+
+    public static void putCommunitySkipEnabled(boolean value) {
+        Prefers.put("community_skip_enabled", value);
+    }
+
     public static boolean isZhuyin() {
         return Prefers.getBoolean("zhuyin");
     }

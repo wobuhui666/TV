@@ -552,6 +552,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void prepareSource(Vod item) {
+        mVod.stopCommunitySkip();
         getIntent().putExtra("key", item.getSiteKey());
         getIntent().putExtra("pic", item.getPic());
         getIntent().putExtra("id", item.getId());
@@ -566,6 +567,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void stopPlaybackForRefresh() {
+        mVod.stopCommunitySkip();
         player().stop();
         player().clear();
         mClock.setCallback(null);
@@ -588,6 +590,17 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         onSpeedEnd();
         claimLocalPlayback();
         startPlayer(getHistoryKey(), result, useParse, getSite().getTimeout(), startPositionMs, VodPlaybackMedia.metadata(history, episode));
+    }
+
+    @Override
+    public boolean canSkipCommunitySegment() {
+        return !isRedirect() && !isScrubbing() && !isFinishing() && isPlaybackReady()
+                && isOwner() && player().isPlaying() && player().canSeek();
+    }
+
+    @Override
+    public void skipCommunitySegment(long positionMs) {
+        if (canSkipCommunitySegment()) controller().seekTo(positionMs);
     }
 
     @Override
@@ -1702,6 +1715,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     protected void onDestroy() {
+        if (mVod != null) mVod.stopCommunitySkip();
         if (mVod != null) mVod.clearPreload();
         mClock.release();
         saveHistory(true);

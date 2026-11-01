@@ -58,7 +58,7 @@ public final class MpvVideoOutputRecoveryIntegrationTest {
             Map.entry("mpv_vulkan", true), Map.entry("mpv_hdr", 2), Map.entry("mpv_anime4k", 0),
             Map.entry("preload", false), Map.entry("preload_next", false), Map.entry("tunnel", false),
             Map.entry("audio_effect_preset", 0), Map.entry("audio_pass_through", false),
-            Map.entry("ai_subtitle_enabled", false), Map.entry("ai_skip_enabled", false));
+            Map.entry("ai_subtitle_enabled", false), Map.entry("community_skip_enabled", false));
     private static final Map<String, String> HEADERS = Map.of(
             "User-Agent", "TV-VO-Recovery-Fixture", "X-Recovery-Fixture", "local-only");
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();

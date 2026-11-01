@@ -214,6 +214,14 @@ public class TvAppearanceTouchTest {
                 assertTrue("Left swipe rewinds", activity.seekTime < 0);
                 main(() -> activity.gestures.reset());
                 main(() -> activity.showPage("settings"));
+                main(() -> {
+                    activity.settings.showSection(JetStreamSettingView.SECTION_PLAYBACK);
+                    activity.settings.setRowValue(JetStreamSettingView.KEY_COMMUNITY_SKIP,
+                            Setting.getSwitch(Setting.isCommunitySkipEnabled()));
+                });
+                scrollSettingsToText(activity.getString(R.string.player_community_skip));
+                capture(theme + "-31-community-skip-settings");
+                main(() -> activity.settings.showSection(JetStreamSettingView.SECTION_APP));
                 scrollSettingsToAppearance();
                 capture(theme + "-09-settings");
                 text(light ? "深色" : "浅色").click();
@@ -687,9 +695,13 @@ public class TvAppearanceTouchTest {
     }
 
     private void scrollSettingsToAppearance() {
+        scrollSettingsToText("浅色");
+    }
+
+    private void scrollSettingsToText(String target) {
         for (int i = 0; i < 40; i++) {
             refreshAccessibility();
-            if (device.hasObject(By.text("浅色"))) break;
+            if (device.hasObject(By.text(target))) break;
             UiObject2 content = null;
             for (UiObject2 candidate : device.findObjects(By.scrollable(true))) {
                 Rect bounds = candidate.getVisibleBounds();
@@ -705,7 +717,7 @@ public class TvAppearanceTouchTest {
             SystemClock.sleep(300);
         }
         refreshAccessibility();
-        assertTrue("Production settings scrolls to the appearance actions", device.hasObject(By.text("浅色")));
+        assertTrue("Production settings scrolls to " + target, device.hasObject(By.text(target)));
     }
 
     private void verifyRexHome(String theme) throws Exception {
