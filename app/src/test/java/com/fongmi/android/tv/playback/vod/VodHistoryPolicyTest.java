@@ -136,4 +136,30 @@ public class VodHistoryPolicyTest {
         assertEquals(70_000, current.getOpening());
         assertEquals("manual", current.getOpeningSource());
     }
+
+    @Test
+    public void shouldCarryManualZeroToAnotherSourceAndPreserveTheCurrentManualChoice() throws Exception {
+        History source = new History();
+        source.setOpening(0);
+        source.setOpeningSource("manual");
+        source.setEnding(0);
+        source.setEndingSource("manual");
+        History current = new History();
+        Method copy = History.class.getDeclaredMethod("copyTo", History.class);
+        copy.setAccessible(true);
+        copy.invoke(source, current);
+        assertEquals(0, current.getOpening());
+        assertEquals(0, current.getEnding());
+        assertEquals("manual", current.getOpeningSource());
+        assertEquals("manual", current.getEndingSource());
+
+        source.setOpening(70_000);
+        source.setEnding(90_000);
+        copy.invoke(source, current);
+        assertEquals(0, current.getOpening());
+        assertEquals(0, current.getEnding());
+        current.setOpening(50_000);
+        copy.invoke(source, current);
+        assertEquals(50_000, current.getOpening());
+    }
 }

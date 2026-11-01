@@ -10,6 +10,7 @@ import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.player.skip.CommunitySkipRuntime;
+import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.SourceSelectionSetting;
 import com.fongmi.android.tv.source.EpisodeTarget;
 import com.fongmi.android.tv.source.SmartSourceSelector;
@@ -31,6 +32,7 @@ public class VodPlaybackController {
     private final SourceReliabilityStore reliability;
     private final NextEpisodePreloader preloader;
     private final CommunitySkipRuntime communitySkip = new CommunitySkipRuntime();
+    private boolean communitySkipEnabled = Setting.isCommunitySkipEnabled();
 
     public VodPlaybackController(VodPlaybackHost host, VodPlaybackState state) {
         this.historyPolicy = new VodHistoryPolicy();
@@ -126,6 +128,7 @@ public class VodPlaybackController {
 
     private void startPlayback(Result result, long startPositionMs) {
         endingPolicy.reset();
+        communitySkipEnabled = Setting.isCommunitySkipEnabled();
         boolean live = result.getTimeshift() != null && result.getTimeshift().isValid(System.currentTimeMillis());
         if (live) stopCommunitySkip();
         else communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
@@ -229,6 +232,7 @@ public class VodPlaybackController {
         if (state.getHistory() != null) state.getHistory().setPosition(C.TIME_UNSET);
         if (host.isPlayerEmpty()) refresh();
         else {
+            communitySkipEnabled = Setting.isCommunitySkipEnabled();
             if (!host.isTimeshiftPlayback()) communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
             host.replay(host.isTimeshiftPlayback() ? C.TIME_UNSET : startPositionMs());
         }
@@ -322,6 +326,12 @@ public class VodPlaybackController {
 
     public void onTimeChanged(long time, long position, long duration) {
         if (host.isTimeshiftPlayback()) return;
+        boolean skipEnabled = Setting.isCommunitySkipEnabled();
+        if (communitySkipEnabled != skipEnabled) {
+            communitySkipEnabled = skipEnabled;
+            if (skipEnabled && state.hasEpisode()) communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
+            else stopCommunitySkip();
+        }
         History history = currentHistory();
         historyPolicy.updateTime(history, time, position, duration);
         long skipTarget = communitySkip.target(position, duration, history, host.canSkipCommunitySegment());
