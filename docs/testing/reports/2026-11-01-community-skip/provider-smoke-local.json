@@ -1,0 +1,29 @@
+{
+  "providers": [
+    {
+      "provider": "theintrodb",
+      "available": true,
+      "contractVerified": true,
+      "httpStatus": 200,
+      "completeSpans": 1,
+      "openEndedSpans": 1
+    },
+    {
+      "provider": "introdb",
+      "available": true,
+      "contractVerified": true,
+      "httpStatus": 200,
+      "completeSpans": 1,
+      "openEndedSpans": 0
+    },
+    {
+      "provider": "theotherdb",
+      "available": true,
+      "contractVerified": true,
+      "httpStatus": 200,
+      "completeSpans": 1,
+      "openEndedSpans": 0
+    }
+  ],
+  "passed": true
+}

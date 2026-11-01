@@ -1,0 +1,40 @@
+diff --git a/app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java b/app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
+index c628e71..4fa0e1f 100644
+--- a/app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
++++ b/app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
+@@ -6,6 +6,7 @@ import android.view.ViewGroup;
+ 
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
++import androidx.fragment.app.FragmentManager;
+ import androidx.fragment.app.FragmentTransaction;
+ import androidx.viewbinding.ViewBinding;
+ 
+@@ -78,6 +79,7 @@ public class FolderFragment extends BaseFragment {
+     }
+ 
+     public void toggleFilter(boolean visible) {
++        if (visible && !Cache.get(getType()).isEmpty()) getChildFragmentManager().popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+         Optional.ofNullable(getChild()).ifPresent(f -> f.toggleFilter(visible));
+     }
+ 
+diff --git a/app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java b/app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
+index 9ea3e38..6ad4c77 100644
+--- a/app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
++++ b/app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java
+@@ -6,6 +6,7 @@ import android.view.ViewGroup;
+ 
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
++import androidx.fragment.app.FragmentManager;
+ import androidx.fragment.app.FragmentTransaction;
+ import androidx.viewbinding.ViewBinding;
+ 
+@@ -93,6 +94,7 @@ public class FolderFragment extends BaseFragment {
+     }
+ 
+     public void setFilter(String key, Value value) {
++        getChildFragmentManager().popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+         Optional.ofNullable(getChild()).ifPresent(f -> f.setFilter(key, value));
+     }
+ 

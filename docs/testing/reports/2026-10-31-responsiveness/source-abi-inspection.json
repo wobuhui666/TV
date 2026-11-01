@@ -1,0 +1,27 @@
+{
+  "schema": "tv.source-abi-inspection.v1",
+  "jarSha256": "97ed47577933dfd9b4d6c7d638888d349ad24ec8ee1dfc4afc9f1b33d97eabee",
+  "jarBytes": 1018779,
+  "nativeAssets": [
+    {
+      "asset": "assets/wexguard_v7.so",
+      "bytes": 48364,
+      "elfClass": 1,
+      "elfMachine": 40,
+      "abi": "armeabi-v7a"
+    },
+    {
+      "asset": "assets/wexguard_v8.so",
+      "bytes": 48680,
+      "elfClass": 2,
+      "elfMachine": 183,
+      "abi": "arm64-v8a"
+    }
+  ],
+  "x86LibraryPresent": false,
+  "guardAbiSelection": "Build.CPU_ABI.contains(64) selects v8; all other values select v7",
+  "loadMethod": "java.lang.System.load",
+  "fallback": "JarLoader returns and caches SpiderNull after guarded initialization failure",
+  "packageRestrictionConfirmed": false,
+  "actualSourceContentVerified": false
+}

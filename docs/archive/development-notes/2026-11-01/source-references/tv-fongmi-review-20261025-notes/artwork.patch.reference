@@ -1,0 +1,84 @@
+diff --git a/app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java b/app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
+index b10c2fb..ac554c1 100644
+--- a/app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
++++ b/app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
+@@ -1176,19 +1176,26 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost,
+     }
+ 
+     private void setArtwork() {
+-        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>() {
+-            @Override
+-            public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+-                mBinding.player.setDefaultArtwork(resource);
+-            }
+-
+-            @Override
+-            public void onLoadFailed(@Nullable Drawable errorDrawable) {
+-                mBinding.player.setDefaultArtwork(errorDrawable);
+-            }
+-        });
++        ImgUtil.load(this, mHistory.getVodPic(), mArtworkTarget);
+     }
+ 
++    private final CustomTarget<Drawable> mArtworkTarget = new CustomTarget<>() {
++        @Override
++        public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
++            mBinding.player.setDefaultArtwork(resource);
++        }
++
++        @Override
++        public void onLoadFailed(@Nullable Drawable errorDrawable) {
++            mBinding.player.setDefaultArtwork(errorDrawable);
++        }
++
++        @Override
++        public void onLoadCleared(@Nullable Drawable placeholder) {
++            mBinding.player.setDefaultArtwork(null);
++        }
++    };
++
+     private void setPartAdapter() {
+         mPartAdapter.addAll(PartUtil.split(mHistory.getVodName()));
+         mBinding.part.setVisibility(View.VISIBLE);
+diff --git a/app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java b/app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
+index 6662e68..52c2f95 100644
+--- a/app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
++++ b/app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java
+@@ -1310,19 +1310,26 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, T
+     }
+ 
+     private void setArtwork() {
+-        ImgUtil.load(this, mHistory.getVodPic(), new CustomTarget<>() {
+-            @Override
+-            public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
+-                mBinding.player.setDefaultArtwork(resource);
+-            }
+-
+-            @Override
+-            public void onLoadFailed(@Nullable Drawable errorDrawable) {
+-                mBinding.player.setDefaultArtwork(errorDrawable);
+-            }
+-        });
++        ImgUtil.load(this, mHistory.getVodPic(), mArtworkTarget);
+     }
+ 
++    private final CustomTarget<Drawable> mArtworkTarget = new CustomTarget<>() {
++        @Override
++        public void onResourceReady(@NonNull Drawable resource, @Nullable Transition<? super Drawable> transition) {
++            mBinding.player.setDefaultArtwork(resource);
++        }
++
++        @Override
++        public void onLoadFailed(@Nullable Drawable errorDrawable) {
++            mBinding.player.setDefaultArtwork(errorDrawable);
++        }
++
++        @Override
++        public void onLoadCleared(@Nullable Drawable placeholder) {
++            mBinding.player.setDefaultArtwork(null);
++        }
++    };
++
+     private void saveHistory(boolean exit) {
+         if (!isWebPlaybackActive() && !isPlaybackCurrent()) return;
+         long position = getActivePlaybackPosition();

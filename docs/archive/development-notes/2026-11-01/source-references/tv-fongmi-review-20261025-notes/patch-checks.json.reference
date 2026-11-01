@@ -1,0 +1,20 @@
+[
+  {
+    "candidate": "flag-position",
+    "commit": "ef58e5551f9a9d8679821b38422c06373185a04e",
+    "appliesWithoutEdits": true,
+    "detail": ""
+  },
+  {
+    "candidate": "artwork",
+    "commit": "c05d9b2e5dd8a47a70bcf55ca23c86560f0c25cf",
+    "appliesWithoutEdits": false,
+    "detail": "error: patch failed: app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java:1176\nerror: app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java: patch does not apply\nerror: patch failed: app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java:1310\nerror: app/src/mobile/java/com/fongmi/android/tv/ui/activity/VideoActivity.java: patch does not apply"
+  },
+  {
+    "candidate": "folder-filter",
+    "commit": "9c845a913337b2d994343b7885159c0a84681b93",
+    "appliesWithoutEdits": false,
+    "detail": "error: patch failed: app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java:6\nerror: app/src/leanback/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java: patch does not apply\nerror: patch failed: app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java:6\nerror: app/src/mobile/java/com/fongmi/android/tv/ui/fragment/FolderFragment.java: patch does not apply"
+  }
+]

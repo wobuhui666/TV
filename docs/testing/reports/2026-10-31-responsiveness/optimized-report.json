@@ -1,0 +1,81 @@
+{
+  "schema": "tv.responsiveness.v1",
+  "deviceAbis": [
+    "x86_64",
+    "arm64-v8a"
+  ],
+  "nativeArmPlaybackVerified": false,
+  "stages": [
+    {
+      "phase": "home",
+      "siteIndex": 0,
+      "status": "source-not-loaded",
+      "elapsedMs": 6
+    },
+    {
+      "phase": "search",
+      "siteIndex": 4,
+      "status": "source-not-loaded",
+      "elapsedMs": 3
+    },
+    {
+      "phase": "search",
+      "siteIndex": 5,
+      "status": "source-not-loaded",
+      "elapsedMs": 5
+    },
+    {
+      "phase": "search",
+      "siteIndex": 6,
+      "status": "source-not-loaded",
+      "elapsedMs": 3
+    },
+    {
+      "phase": "home-start",
+      "totalPssKb": 216643,
+      "javaHeapKb": 38657
+    },
+    {
+      "phase": "search-0",
+      "totalPssKb": 243005,
+      "javaHeapKb": 48866
+    },
+    {
+      "phase": "search-1",
+      "totalPssKb": 241214,
+      "javaHeapKb": 46833
+    },
+    {
+      "phase": "search-2",
+      "totalPssKb": 243414,
+      "javaHeapKb": 46659
+    },
+    {
+      "phase": "ordinary-search-results",
+      "totalPssKb": 227566,
+      "javaHeapKb": 34800
+    },
+    {
+      "phase": "home-return",
+      "totalPssKb": 227718,
+      "javaHeapKb": 34993
+    }
+  ],
+  "configLoadMs": 2967,
+  "siteCount": 99,
+  "sourceHomeContentVerified": false,
+  "sourceSearchContentVerified": false,
+  "sourceSearchProbeCount": 3,
+  "sourceAvailability": "no-content-from-probed-sources",
+  "homeExperience": "source",
+  "homeConfigReloadMs": 2070,
+  "homeResultDelivered": true,
+  "ordinarySearchHasResults": false,
+  "ordinarySearchResultCount": 0,
+  "passed": true,
+  "activityCleanupComplete": true,
+  "frameCount": 659,
+  "frameP50Ms": 50.120002,
+  "frameP95Ms": 133.505602,
+  "framesOver32Ms": 487
+}

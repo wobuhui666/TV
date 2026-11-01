@@ -1,0 +1,17 @@
+{
+  "headSha": "a52f476693bcdc95f2364dac13557363bd8d56fd",
+  "passed": true,
+  "suites": [
+    {
+      "class": "com.fongmi.android.tv.ui.PosterWallFiltersIntegrationTest",
+      "passed": true,
+      "tests": 7
+    },
+    {
+      "class": "com.fongmi.android.tv.test.TrackPresentationTest",
+      "passed": true,
+      "tests": 1
+    }
+  ],
+  "passedTests": 8
+}

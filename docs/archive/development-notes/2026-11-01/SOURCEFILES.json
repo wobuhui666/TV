@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-01",
+  "files": [
+    {
+      "sourceDirectory": "catvod-new-sources",
+      "sourceFile": "legacy_gl.py",
+      "archivedFile": "source-references/catvod-new-sources/legacy_gl.py.reference",
+      "sourceBytes": 4459,
+      "sourceSha256": "1125c411f84a74a6627d11192dd88e5e8d4254e328e30328cff8980caccc22c7",
+      "archivedSha256": "1125c411f84a74a6627d11192dd88e5e8d4254e328e30328cff8980caccc22c7",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "catvod-new-sources",
+      "sourceFile": "sorani/Sorani.java",
+      "archivedFile": "source-references/catvod-new-sources/sorani/Sorani.java.reference",
+      "sourceBytes": 19091,
+      "sourceSha256": "6f55efb5bddb29352b137dd35c87c217f2d4cbc4f36538524cbf34a1570f90a5",
+      "archivedSha256": "6f55efb5bddb29352b137dd35c87c217f2d4cbc4f36538524cbf34a1570f90a5",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "catvod-new-sources",
+      "sourceFile": "sorani/SoraniHostCheck.java",
+      "archivedFile": "source-references/catvod-new-sources/sorani/SoraniHostCheck.java.reference",
+      "sourceBytes": 2137,
+      "sourceSha256": "b7907abb8698840fde7c26309c3bd00fed5ed48d4d2b16ba863c5bfced4712b4",
+      "archivedSha256": "b7907abb8698840fde7c26309c3bd00fed5ed48d4d2b16ba863c5bfced4712b4",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-new-spider-api",
+      "sourceFile": "quickjs_context_jni.cpp",
+      "archivedFile": "source-references/tv-new-spider-api/quickjs_context_jni.cpp.reference",
+      "sourceBytes": 11962,
+      "sourceSha256": "5d519fa6c6da01e9b27a82d1e681700b3dbfaa2354fbca61e42290377f3a2f91",
+      "archivedSha256": "5d519fa6c6da01e9b27a82d1e681700b3dbfaa2354fbca61e42290377f3a2f91",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-new-spider-api",
+      "sourceFile": "PythonPlugin-17.kt",
+      "archivedFile": "source-references/tv-new-spider-api/PythonPlugin-17.kt.reference",
+      "sourceBytes": 14321,
+      "sourceSha256": "f9db03db704c9e84f94b01a9e598c9d3ea13b8cdd2256a91cac2dae10fe8c170",
+      "archivedSha256": "f9db03db704c9e84f94b01a9e598c9d3ea13b8cdd2256a91cac2dae10fe8c170",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-new-spider-api",
+      "sourceFile": "PythonPlugin.kt",
+      "archivedFile": "source-references/tv-new-spider-api/PythonPlugin.kt.reference",
+      "sourceBytes": 14087,
+      "sourceSha256": "edcfd8df78e0578656b03b39b106423011fab61c4a91b123f0ea6d0edd8a235d",
+      "archivedSha256": "edcfd8df78e0578656b03b39b106423011fab61c4a91b123f0ea6d0edd8a235d",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-new-spider-api",
+      "sourceFile": "LegacySelectionCheck.java",
+      "archivedFile": "source-references/tv-new-spider-api/LegacySelectionCheck.java.reference",
+      "sourceBytes": 1811,
+      "sourceSha256": "f6d409498ebc22f3719c6bba54de0c7fec8eee07e87e624a3a4104c49ec4c1d9",
+      "archivedSha256": "f6d409498ebc22f3719c6bba54de0c7fec8eee07e87e624a3a4104c49ec4c1d9",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-pr747-review",
+      "sourceFile": "quickjs/src/main/assets/js/lib/http.js",
+      "archivedFile": "source-references/tv-pr747-review/quickjs/src/main/assets/js/lib/http.js.reference",
+      "sourceBytes": 994,
+      "sourceSha256": "9c89fa7903f311a33616d1388410e5d659f200922e81b34c06e7992b97f42f18",
+      "archivedSha256": "9c89fa7903f311a33616d1388410e5d659f200922e81b34c06e7992b97f42f18",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-pr747-review",
+      "sourceFile": "app/src/main/java/com/fongmi/android/tv/player/PlayerManager.java",
+      "archivedFile": "source-references/tv-pr747-review/app/src/main/java/com/fongmi/android/tv/player/PlayerManager.java.reference",
+      "sourceBytes": 23340,
+      "sourceSha256": "869eb35ac755419ca55638841fd36d75899ef0b0836f2a914bc440b45d96b64c",
+      "archivedSha256": "869eb35ac755419ca55638841fd36d75899ef0b0836f2a914bc440b45d96b64c",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-pr747-review",
+      "sourceFile": "app/src/main/java/com/fongmi/android/tv/player/parse/ParseJob.java",
+      "archivedFile": "source-references/tv-pr747-review/app/src/main/java/com/fongmi/android/tv/player/parse/ParseJob.java.reference",
+      "sourceBytes": 9176,
+      "sourceSha256": "3c76d3207cecc36c449fdff1616755f55a71dae0f398c0adf675ed6ba34a4365",
+      "archivedSha256": "3c76d3207cecc36c449fdff1616755f55a71dae0f398c0adf675ed6ba34a4365",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-pr747-review",
+      "sourceFile": "app/src/main/java/com/fongmi/android/tv/player/track/TrackUtil.java",
+      "archivedFile": "source-references/tv-pr747-review/app/src/main/java/com/fongmi/android/tv/player/track/TrackUtil.java.reference",
+      "sourceBytes": 4548,
+      "sourceSha256": "933d12afd97591619eff92f1ce05b7a2e316c9c2d9d1e17c0733ee7fa3510605",
+      "archivedSha256": "933d12afd97591619eff92f1ce05b7a2e316c9c2d9d1e17c0733ee7fa3510605",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-pr747-review",
+      "sourceFile": "app/src/main/java/com/fongmi/android/tv/bean/Track.java",
+      "archivedFile": "source-references/tv-pr747-review/app/src/main/java/com/fongmi/android/tv/bean/Track.java.reference",
+      "sourceBytes": 3470,
+      "sourceSha256": "2980ce66529adfb66c78f601074104f8d64d6d3727396fc968ce3272cace4d6e",
+      "archivedSha256": "2980ce66529adfb66c78f601074104f8d64d6d3727396fc968ce3272cace4d6e",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-fongmi-review-20261025-notes",
+      "sourceFile": "artwork.patch",
+      "archivedFile": "source-references/tv-fongmi-review-20261025-notes/artwork.patch.reference",
+      "sourceBytes": 3692,
+      "sourceSha256": "02638b320b57ea9b16b38bfc10913888f5e762b153c3927ef9437546206a84a5",
+      "archivedSha256": "02638b320b57ea9b16b38bfc10913888f5e762b153c3927ef9437546206a84a5",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-fongmi-review-20261025-notes",
+      "sourceFile": "flag-position.patch",
+      "archivedFile": "source-references/tv-fongmi-review-20261025-notes/flag-position.patch.reference",
+      "sourceBytes": 838,
+      "sourceSha256": "770124219d02022857cf2c35878298cbfc0b0fb2bcfe533e5798f577c21ba424",
+      "archivedSha256": "770124219d02022857cf2c35878298cbfc0b0fb2bcfe533e5798f577c21ba424",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-fongmi-review-20261025-notes",
+      "sourceFile": "folder-filter.patch",
+      "archivedFile": "source-references/tv-fongmi-review-20261025-notes/folder-filter.patch.reference",
+      "sourceBytes": 1947,
+      "sourceSha256": "7b20c1d929d247b53f537be1da24beea7ad8319c527b13f85543d0cb4c9fbfe1",
+      "archivedSha256": "7b20c1d929d247b53f537be1da24beea7ad8319c527b13f85543d0cb4c9fbfe1",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    },
+    {
+      "sourceDirectory": "tv-fongmi-review-20261025-notes",
+      "sourceFile": "patch-checks.json",
+      "archivedFile": "source-references/tv-fongmi-review-20261025-notes/patch-checks.json.reference",
+      "sourceBytes": 1266,
+      "sourceSha256": "f465b133a263433ab71720d248224de06c493f546995bbbaa957f5d4eef58fdb",
+      "archivedSha256": "f465b133a263433ab71720d248224de06c493f546995bbbaa957f5d4eef58fdb",
+      "redactedLiteralCount": 0,
+      "usage": "historical-reference-not-current-build-input"
+    }
+  ]
+}

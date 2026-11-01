@@ -1,0 +1,74 @@
+from pathlib import Path
+p=Path('/home/ubuntu/CatVodSpider/app/src/main/java/com/github/catvod/spider/Girigiri.java')
+s=p.read_text().replace('import com.github.catvod.bean.Result;\n','').replace('import com.github.catvod.bean.Vod;\n','')
+s=s.replace('import org.json.JSONTokener;', 'import org.json.JSONTokener;\n\nimport okhttp3.Request;\nimport okhttp3.Response;')
+s=s.replace('    private String host = DEFAULT_HOST;','''    private String host = DEFAULT_HOST;
+    private volatile SearchResult cachedSearch;
+
+    private static final class SearchResult {
+        final String key;
+        final String json;
+        final long expires;
+        SearchResult(String key, String json) {
+            this.key = key;
+            this.json = json;
+            this.expires = System.nanoTime() + 60_000_000_000L;
+        }
+    }''')
+s=s.replace('        host = uri.toString().replaceAll("/+$", "");','        host = uri.toString().replaceAll("/+$", "");\n        cachedSearch = null;')
+a=s.index('    private Document document(String path) throws Exception {');b=s.index('        if (!doc.select(',a)
+s=s[:a]+'''    private String get(String path) throws Exception {
+        Request request = new Request.Builder().url(host + path)
+                .header("User-Agent", UA).header("Referer", host + "/").tag(siteKey).build();
+        // Use the legacy host client: its proxy, DNS and optional ECH stay effective.
+        try (Response response = client().newCall(request).execute()) {
+            if (!response.isSuccessful()) throw new IllegalStateException("Girigiri HTTP " + response.code());
+            if (response.body() == null) throw new IllegalStateException("Girigiri 回應缺少正文");
+            return response.body().string();
+        }
+    }
+
+    private Document document(String path) throws Exception {
+        Document doc = Jsoup.parse(get(path), host + path);
+'''+s[b:]
+s=s.replace('List.of("class", "area", "year", "lang", "version", "state")','Arrays.asList("class", "area", "year", "lang", "version", "state")')
+a=s.index('        // suggest 忽略');b=s.index('    @Override\n    public String detailContent',a)
+s=s[:a]+'''        // suggest ignores page/pg: slice the complete finite response locally.
+        SearchResult cached = cachedSearch;
+        JSONObject data;
+        if (cached != null && cached.key.equals(query) && cached.expires > System.nanoTime()) {
+            data = new JSONObject(cached.json);
+        } else {
+            data = suggestions(query, 100);
+            int total = data.getInt("total");
+            if (total > data.getJSONArray("list").length()) data = suggestions(query, total);
+            if (data.getJSONArray("list").length() != data.getInt("total"))
+                throw new IllegalStateException("Girigiri 搜尋 API 未提供完整結果");
+            cachedSearch = new SearchResult(query, data.toString());
+        }
+        JSONArray records = data.getJSONArray("list");
+        JSONArray items = new JSONArray();
+        long start = (long) (page - 1) * PAGE_SIZE;
+        long end = Math.min(records.length(), start + PAGE_SIZE);
+        for (long index = start; index < end; index++) {
+            JSONObject item = records.getJSONObject((int) index);
+            String id = String.valueOf(item.get("id"));
+            String name = item.getString("name");
+            String pic = item.getString("pic");
+            if (!id.matches("\\\\d+") || name.isEmpty() || pic.isEmpty()) throw new IllegalStateException("Girigiri 搜尋資料不完整");
+            items.put(new JSONObject().put("vod_id", id).put("vod_name", name)
+                    .put("vod_pic", URI.create(host + "/").resolve(pic).toString()).put("vod_remarks", ""));
+        }
+        return new JSONObject().put("list", items).put("page", page).put("pagecount", Math.max(1, (records.length() + PAGE_SIZE - 1) / PAGE_SIZE))
+                .put("limit", PAGE_SIZE).put("total", records.length()).toString();
+    }
+
+    private JSONObject suggestions(String key, int limit) throws Exception {
+        JSONObject data = new JSONObject(get("/index.php/ajax/suggest?mid=1&wd=" + encode(key) + "&limit=" + limit));
+        if (data.optInt("code", 0) != 1 || data.optJSONArray("list") == null || !data.has("total") || data.getInt("total") < 0)
+            throw new IllegalStateException("Girigiri 搜尋 API 回應無效");
+        return data;
+    }
+
+'''+s[b:]
+p.write_bytes(s.replace('\n','\r\n').encode('utf-8'))

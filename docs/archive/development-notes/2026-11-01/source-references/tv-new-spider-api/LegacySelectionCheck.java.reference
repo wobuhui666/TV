@@ -1,0 +1,16 @@
+import java.lang.reflect.Method;
+import org.json.JSONArray;
+import org.json.JSONObject;
+public class LegacySelectionCheck {
+ public static void main(String[] args) throws Exception {
+  Class<?> type=Class.forName("com.fongmi.android.tv.test.QuickJsLegacySourcesTest");
+  Method valid=type.getDeclaredMethod("validVideos",JSONObject.class); valid.setAccessible(true);
+  JSONArray rows=new JSONArray().put(new JSONObject().put("vod_id","no_data")).put(new JSONObject().put("vod_id"," ")).put(new JSONObject().put("vod_id",JSONObject.NULL)).put(new JSONObject().put("vod_id","menu").put("folder",true)).put(new JSONObject().put("vod_id","menu2").put("vod_tag","folder")).put(new JSONObject().put("vod_id","real-id"));
+  if(((JSONArray)valid.invoke(null,new JSONObject().put("list",rows))).length()!=1)throw new AssertionError("Invalid VOD selection");
+  Method url=type.getDeclaredMethod("playerUrlCount",Object.class);url.setAccessible(true);
+  Object[] values={null,""," ","ftp://example.com/media","https://example.com/media",new JSONArray().put("name").put("https://example.com/a"),new JSONArray().put("https://example.com/a"),new JSONArray().put("name").put(new JSONArray().put("nested").put("https://example.com/a")),new JSONObject().put("values",new JSONArray().put(new JSONObject().put("v","https://example.com/a"))),new JSONObject().put("values",new JSONArray().put(new JSONObject().put("v",""))),new JSONObject().put("values",new JSONArray().put(new JSONObject().put("v","https://example.com/a"))).put("position",2)};
+  int[] expected={0,0,0,0,1,1,0,0,1,0,0};
+  for(int i=0;i<values.length;i++)if(((Integer)url.invoke(null,values[i])).intValue()!=expected[i])throw new AssertionError("Invalid URL case "+i);
+  System.out.println("PASS: VOD placeholder/folder exclusion and 11 URL structure cases");
+ }
+}

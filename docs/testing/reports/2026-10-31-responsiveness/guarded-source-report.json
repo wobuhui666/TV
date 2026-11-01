@@ -1,0 +1,74 @@
+{
+  "schema": "tv.guarded-source-verification.v1",
+  "nativeArmPlaybackVerified": false,
+  "passed": true,
+  "deviceAbis": [
+    "x86_64",
+    "arm64-v8a"
+  ],
+  "devicePrimaryAbi": "arm64-v8a",
+  "process64Bit": true,
+  "processArchitecture": "aarch64",
+  "primaryCpuAbi": "arm64-v8a",
+  "secondaryCpuAbi": "null",
+  "nativeBridge": "libndk_translation.so",
+  "configLoadMs": 10744,
+  "configStatus": "loaded",
+  "siteCount": 99,
+  "searchProbeCount": 3,
+  "pluginInitializationVerified": true,
+  "sourceContentVerified": true,
+  "sourceAvailability": "content-returned",
+  "nativeBridgeMapped": true,
+  "workerCleanupComplete": true,
+  "stages": [
+    {
+      "phase": "home",
+      "siteIndex": 0,
+      "pluginInitialized": true,
+      "contentReturned": true,
+      "itemCount": 20,
+      "categoryCount": 7,
+      "status": "results",
+      "dialogRequired": false,
+      "spiderClass": "com.github.catvod.spider.NewDouBanGuard",
+      "elapsedMs": 6441
+    },
+    {
+      "phase": "search",
+      "siteIndex": 4,
+      "pluginInitialized": true,
+      "contentReturned": true,
+      "itemCount": 3,
+      "categoryCount": 0,
+      "status": "results",
+      "dialogRequired": false,
+      "spiderClass": "com.github.catvod.spider.AiNewHuaJuanGuard",
+      "elapsedMs": 2254
+    },
+    {
+      "phase": "search",
+      "siteIndex": 5,
+      "pluginInitialized": true,
+      "contentReturned": false,
+      "itemCount": 0,
+      "categoryCount": 0,
+      "status": "initialized-without-content",
+      "dialogRequired": false,
+      "spiderClass": "com.github.catvod.spider.AiNewWoggGuard",
+      "elapsedMs": 1415
+    },
+    {
+      "phase": "search",
+      "siteIndex": 6,
+      "pluginInitialized": true,
+      "contentReturned": true,
+      "itemCount": 2,
+      "categoryCount": 0,
+      "status": "results",
+      "dialogRequired": false,
+      "spiderClass": "com.github.catvod.spider.AiNewGuanYingGuard",
+      "elapsedMs": 4356
+    }
+  ]
+}

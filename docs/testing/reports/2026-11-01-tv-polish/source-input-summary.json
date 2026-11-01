@@ -1,0 +1,22 @@
+{
+  "headSha": "a52f476693bcdc95f2364dac13557363bd8d56fd",
+  "passed": true,
+  "suites": [
+    {
+      "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+      "passed": true,
+      "tests": 5
+    },
+    {
+      "class": "com.fongmi.android.tv.player.media.LocalSubtitleScannerAndroidTest",
+      "passed": true,
+      "tests": 5
+    },
+    {
+      "class": "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest",
+      "passed": true,
+      "tests": 5
+    }
+  ],
+  "passedTests": 15
+}

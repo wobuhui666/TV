@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-01",
+  "testedCommit": "05bffa0ea7e24010f7abcaccef0edeb37a648d8d",
+  "mergedCommit": "5436ac1ba97748b556dc49ed482e99aabd548222",
+  "pullRequest": 92,
+  "productionWorkflow": 41319343911,
+  "navigationWorkflow": 41319384536,
+  "navigationRunAttempt": 2,
+  "uiWorkflow": 41317633980,
+  "uiTestedCommit": "92708198d9eab69551b4c1ac8e39cf36f8beb12f",
+  "unitTests": {
+    "tests": 779,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focusedSuites": [
+    {
+      "suite": "com.fongmi.android.tv.playback.vod.VodHistoryPolicyTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.fongmi.android.tv.player.skip.CommunitySkipApiTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.fongmi.android.tv.player.skip.CommunitySkipParserTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.fongmi.android.tv.player.skip.EpisodeIdentityResolverTest",
+      "tests": 17,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.fongmi.android.tv.player.skip.PlaybackEpisodeSnapshotTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.fongmi.android.tv.player.skip.SegmentSkipPolicyTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "instrumentationTests": 9,
+  "communitySkipExoTests": 2,
+  "communitySkipTestMethods": [
+    "shouldHonorPauseManualResetStopAndChangedEpisode",
+    "shouldSeekOnlyTheIntroAndCreditsAndKeepBothStoryScenes"
+  ],
+  "fixtureScope": "PRODUCTION_VOD_CONTROLLER_EXO_PCM_WAV",
+  "fixtureDurationMs": 90000,
+  "introRangeMs": [
+    5000,
+    9000
+  ],
+  "creditsRangeMs": [
+    73000,
+    87000
+  ],
+  "postCreditsSceneMs": 3000,
+  "mpvHardwarePlaybackVerified": false,
+  "realSourcePlaybackVerified": false,
+  "rendererFailureObservedOnFirstAttempt": true,
+  "rendererFailureCauseConfirmed": false,
+  "secondAttemptPassed": true
+}
