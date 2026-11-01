@@ -44,7 +44,7 @@
 | `/home/ubuntu/TV-fix-20261001/PR_BODY.md` | [查看](TV-fix-20261001/PR_BODY.md) |
 | `/home/ubuntu/TV-fix-20261001/compat-README.md` | [查看](TV-fix-20261001/compat-README.md) |
 | `/home/ubuntu/TV-review-20261001/REVIEW.md` | [查看](TV-review-20261001/REVIEW.md) |
-| `/home/ubuntu/TV-ui-work/AI-SKIP-SERVICE.md` | [查看](TV-ui-work/AI-SKIP-SERVICE.md) |
+| `/home/ubuntu/TV-ui-work/AI-SKIP-SERVICE.md` | [查看](../aiskip-20261101/notes/AI-SKIP-SERVICE.md) |
 | `/home/ubuntu/TV-ui-work/BLOCKER-FIXES.md` | [查看](TV-ui-work/BLOCKER-FIXES.md) |
 | `/home/ubuntu/TV-ui-work/CONTINUE-20261002.md` | [查看](TV-ui-work/CONTINUE-20261002.md) |
 | `/home/ubuntu/TV-ui-work/DELIVERY-CONTEXT.md` | [查看](TV-ui-work/DELIVERY-CONTEXT.md) |

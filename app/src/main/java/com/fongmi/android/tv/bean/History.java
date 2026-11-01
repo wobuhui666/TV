@@ -318,6 +318,7 @@ public class History implements Diffable<History> {
     }
 
     private History copyTo(History item) {
+        com.fongmi.android.tv.player.skip.LegacySkipMigration.clearBoundaries(this);
         if (getOpening() > 0) item.setOpening(getOpening());
         if (getEnding() > 0) item.setEnding(getEnding());
         if (getOpening() > 0) item.setOpeningSource(getOpeningSource());

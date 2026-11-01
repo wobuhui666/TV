@@ -50,7 +50,7 @@ public final class PlaybackSpecsControllerTest {
             Map.entry("audio_pass_through", false), Map.entry("audio_prefer", false),
             Map.entry("video_prefer", false), Map.entry("av3a", false),
             Map.entry("subtitle_libass", false), Map.entry("ai_subtitle_enabled", false),
-            Map.entry("ai_skip_enabled", false));
+            Map.entry("community_skip_enabled", false));
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final AtomicReference<String> error = new AtomicReference<>();
     private Map<String, ?> saved;

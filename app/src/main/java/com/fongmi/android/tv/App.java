@@ -96,6 +96,7 @@ public class App extends Application implements Application.ActivityLifecycleCal
     @Override
     public void onCreate() {
         super.onCreate();
+        com.fongmi.android.tv.player.skip.LegacySkipMigration.clearPreferences();
         // Only schedules Pine when toast filter is already enabled in settings.
         ToastFilter.install();
         Notify.createChannel();

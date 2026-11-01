@@ -19,6 +19,7 @@ test_pkg=$(read_metadata "$test_metadata" package)
 uid=''
 collect() {
     adb pull "/sdcard/Android/data/$pkg/files/responsiveness-verification/." "$out/" >/dev/null 2>&1 || true
+    adb pull "/sdcard/Android/data/$pkg/files/community-skip-verification" "$out/" >/dev/null 2>&1 || true
     adb shell dumpsys meminfo "$pkg" > "$out/meminfo.txt" 2>&1 || true
     adb shell dumpsys gfxinfo "$pkg" > "$out/gfxinfo.txt" 2>&1 || true
     # Live source logging may contain URLs/headers. Export counts, never raw source logs.
@@ -70,7 +71,7 @@ if [[ "${RESPONSIVENESS_REVISION:-optimized}" == optimized ]]; then
         bash .github/scripts/verify-tv-polish.sh || tv_fixture_failed=1
     fi
     [[ "$tv_fixture_failed" == 0 ]]
-    classes='com.fongmi.android.tv.player.parse.ParseJobLifecycleTest,com.fongmi.android.tv.ui.NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults,com.fongmi.android.tv.ui.HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration'
+    classes='com.fongmi.android.tv.player.parse.ParseJobLifecycleTest,com.fongmi.android.tv.ui.NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults,com.fongmi.android.tv.ui.HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration,com.fongmi.android.tv.player.skip.CommunitySkipPlaybackAndroidTest'
     timeout 240s adb shell am instrument -w -r -e class "$classes" "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/regression.txt"
     grep -Eq '^OK [(][1-9][0-9]* tests?[)]' "$out/regression.txt"
     # The live probe starts with a fresh application/configuration after fixture-based regressions.

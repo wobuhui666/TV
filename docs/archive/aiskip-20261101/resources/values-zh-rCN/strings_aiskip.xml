@@ -1,0 +1,10 @@
+<resources>
+    <string name="ai_skip_enabled">AI 自动跳片头片尾</string>
+    <string name="ai_skip_url">AI 跳过服务地址</string>
+    <string name="ai_skip_token">AI 跳过服务令牌</string>
+    <string name="ai_skip_test">测试 AI 跳过服务</string>
+    <string name="ai_skip_test_idle">测试连接</string>
+    <string name="ai_skip_test_running">正在测试…</string>
+    <string name="ai_skip_test_ok">连接成功</string>
+    <string name="ai_skip_test_failed">连接失败</string>
+</resources>

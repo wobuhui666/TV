@@ -55,6 +55,7 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, S
         format = new DecimalFormat("0.#");
         mBinding.speedText.setText(format.format(PlayerSetting.getSpeed()));
         mBinding.adblockText.setText(Setting.getSwitch(Setting.isAdblock()));
+        mBinding.communitySkipText.setText(Setting.getSwitch(Setting.isCommunitySkipEnabled()));
         mBinding.mpvAnime4KText.setText((mpvAnime4K = ResUtil.getStringArray(R.array.select_mpv_anime4k))[PlayerSetting.getMpvAnime4K()]);
         mBinding.mpvVulkanText.setText(Setting.getSwitch(PlayerSetting.isMpvVulkan()));
         mBinding.mpvGpuNextText.setText(Setting.getSwitch(PlayerSetting.isMpvGpuNext()));
@@ -82,6 +83,7 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, S
         mBinding.preload.setOnClickListener(this::onPreload);
         mBinding.decode.setOnClickListener(this::onDecode);
         mBinding.aiSubtitle.setOnClickListener(v -> AiSubtitleSettingsActivity.start(requireContext()));
+        mBinding.communitySkip.setOnClickListener(this::setCommunitySkip);
         mBinding.ua.setOnClickListener(this::onUa);
     }
 
@@ -187,6 +189,11 @@ public class SettingPlayerFragment extends BaseFragment implements UaListener, S
     private void setAdblock(View view) {
         Setting.putAdblock(!Setting.isAdblock());
         mBinding.adblockText.setText(Setting.getSwitch(Setting.isAdblock()));
+    }
+
+    private void setCommunitySkip(View view) {
+        Setting.putCommunitySkipEnabled(!Setting.isCommunitySkipEnabled());
+        mBinding.communitySkipText.setText(Setting.getSwitch(Setting.isCommunitySkipEnabled()));
     }
 
     private void onPreload(View view) {

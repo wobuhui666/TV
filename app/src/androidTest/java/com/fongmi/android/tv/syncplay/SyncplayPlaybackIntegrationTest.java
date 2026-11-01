@@ -62,7 +62,7 @@ public final class SyncplayPlaybackIntegrationTest {
             Map.entry("player_engine", PlayerSetting.ENGINE_EXO), Map.entry("tunnel", false),
             Map.entry("preload", false), Map.entry("preload_next", false),
             Map.entry("audio_effect_preset", 0), Map.entry("audio_pass_through", false),
-            Map.entry("ai_subtitle_enabled", false), Map.entry("ai_skip_enabled", false));
+            Map.entry("ai_subtitle_enabled", false), Map.entry("community_skip_enabled", false));
 
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final Context target = instrumentation.getTargetContext();

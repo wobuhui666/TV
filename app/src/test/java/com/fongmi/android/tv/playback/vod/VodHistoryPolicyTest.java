@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.util.concurrent.TimeUnit;
+import java.lang.reflect.Method;
 
 public class VodHistoryPolicyTest {
 
@@ -83,5 +84,56 @@ public class VodHistoryPolicyTest {
 
         assertEquals(C.TIME_UNSET, history.getPosition());
         assertEquals(C.TIME_UNSET, history.getDuration());
+    }
+
+    @Test
+    public void shouldRemoveLegacyAiOffsetsBeforeStartingWithoutLosingProgress() {
+        History history = new History();
+        history.setOpening(90_000);
+        history.setOpeningSource("ai:old-episode");
+        history.setEnding(120_000);
+        history.setEndingSource("AI");
+        history.setPosition(25_000);
+
+        assertEquals(25_000, new VodHistoryPolicy().startPositionMs(history));
+        assertEquals(C.TIME_UNSET, history.getOpening());
+        assertEquals(C.TIME_UNSET, history.getEnding());
+        assertEquals("unknown", history.getOpeningSource());
+    }
+
+    @Test
+    public void shouldPreserveManualAndImportedOffsetsWhileRemovingLegacyAi() {
+        History history = new History();
+        history.setOpening(90_000);
+        history.setOpeningSource("manual");
+        history.setEnding(120_000);
+        history.setEndingSource("unknown");
+
+        assertEquals(90_000, new VodHistoryPolicy().startPositionMs(history));
+        assertEquals(120_000, history.getEnding());
+    }
+
+    @Test
+    public void shouldNotRestoreLegacyOffsetsWhenMergingAnotherSource() throws Exception {
+        History archivedSource = new History();
+        archivedSource.setOpening(90_000);
+        archivedSource.setOpeningSource("ai:previous-source");
+        archivedSource.setEnding(120_000);
+        archivedSource.setEndingSource("ai");
+        History current = new History();
+        current.setPosition(25_000);
+        Method copy = History.class.getDeclaredMethod("copyTo", History.class);
+        copy.setAccessible(true);
+        copy.invoke(archivedSource, current);
+
+        assertEquals(C.TIME_UNSET, current.getOpening());
+        assertEquals(C.TIME_UNSET, current.getEnding());
+        assertEquals(25_000, new VodHistoryPolicy().startPositionMs(current));
+
+        archivedSource.setOpening(70_000);
+        archivedSource.setOpeningSource("manual");
+        copy.invoke(archivedSource, current);
+        assertEquals(70_000, current.getOpening());
+        assertEquals("manual", current.getOpeningSource());
     }
 }
