@@ -2,10 +2,16 @@ package com.fongmi.android.tv.ui.dialog
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.fongmi.android.tv.R
@@ -36,7 +42,72 @@ object SpiderDialogStyle {
         decor.bindJetStreamTheme { background.setColor(decor.jetStreamColor(R.color.jetstream_surface)) }
         window.setBackgroundDrawable(background)
         style(decor)
+        addScrollHints(decor)
         JetStreamDialogDecor.tintButtons(dialog)
+    }
+
+    private fun addScrollHints(view: View) {
+        if (view is ScrollView) {
+            val parent = view.parent as? ViewGroup ?: return
+            if (parent is ScrollHints) return
+            val index = parent.indexOfChild(view)
+            val params = view.layoutParams
+            parent.removeViewAt(index)
+            parent.addView(ScrollHints(view), index, params)
+            return
+        }
+        if (view is ViewGroup) for (index in 0 until view.childCount) addScrollHints(view.getChildAt(index))
+    }
+
+    /** Paint in the form's existing side gutter without adding a focus or touch target. */
+    private class ScrollHints(private val scroll: ScrollView) : FrameLayout(scroll.context) {
+        private val path = Path()
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            strokeWidth = jetStreamDp(1) * 1.5f
+        }
+        private val scrollChanged = ViewTreeObserver.OnScrollChangedListener { invalidate() }
+
+        init {
+            isFocusable = false
+            isFocusableInTouchMode = false
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+            addView(scroll, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            bindJetStreamTheme {
+                paint.color = jetStreamColor(R.color.jetstream_on_surface_variant)
+                paint.alpha = 112
+                invalidate()
+            }
+        }
+
+        override fun onAttachedToWindow() {
+            super.onAttachedToWindow()
+            scroll.viewTreeObserver.addOnScrollChangedListener(scrollChanged)
+        }
+
+        override fun onDetachedFromWindow() {
+            if (scroll.viewTreeObserver.isAlive) scroll.viewTreeObserver.removeOnScrollChangedListener(scrollChanged)
+            super.onDetachedFromWindow()
+        }
+
+        override fun dispatchDraw(canvas: Canvas) {
+            super.dispatchDraw(canvas)
+            val x = scroll.right - jetStreamDp(12)
+            if (scroll.canScrollVertically(-1)) arrow(canvas, x, scroll.top + jetStreamDp(12), -1)
+            if (scroll.canScrollVertically(1)) arrow(canvas, x, scroll.bottom - jetStreamDp(12), 1)
+        }
+
+        private fun arrow(canvas: Canvas, x: Float, y: Float, direction: Int) {
+            val halfWidth = jetStreamDp(3)
+            val halfHeight = jetStreamDp(1) * 1.5f
+            path.reset()
+            path.moveTo(x - halfWidth, y - direction * halfHeight)
+            path.lineTo(x, y + direction * halfHeight)
+            path.lineTo(x + halfWidth, y - direction * halfHeight)
+            canvas.drawPath(path, paint)
+        }
     }
 
     private fun style(view: View) {

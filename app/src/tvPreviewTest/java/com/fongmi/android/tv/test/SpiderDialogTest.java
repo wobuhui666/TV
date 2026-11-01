@@ -185,10 +185,23 @@ public final class SpiderDialogTest {
             }
             assertNotNull(scroll[0]);
             assertTrue(first[0].requestFocus());
+            scroll[0].scrollTo(0, 0);
+            assertFalse("At the top only the downward scroll hint is needed", scroll[0].canScrollVertically(-1));
+            assertTrue("The long form has more inputs below the viewport", scroll[0].canScrollVertically(1));
+            assertFalse("Scroll decoration must not become a remote focus target", ((View) scroll[0].getParent()).isFocusable());
+            assertFalse("Scroll decoration must not intercept taps as a button", ((View) scroll[0].getParent()).isClickable());
         });
+        capture("long-form-scroll-top");
         for (int i = 2; i <= 12; i++) {
             device.pressDPadDown();
             focused("Field " + i);
+            if (i == 8) {
+                instrumentation.runOnMainSync(() -> {
+                    assertTrue("Middle inputs have earlier content above", scroll[0].canScrollVertically(-1));
+                    assertTrue("Middle inputs have later content below", scroll[0].canScrollVertically(1));
+                });
+                capture("long-form-scroll-middle");
+            }
         }
         instrumentation.runOnMainSync(() -> {
             assertTrue("Long forms must scroll while remote focus stays in the inputs", scroll[0].getScrollY() > 0);
@@ -197,6 +210,9 @@ public final class SpiderDialogTest {
             assertEquals("Field 12", focused.getContentDescription().toString());
             Rect fieldBounds = new Rect();
             assertTrue("The final input must be visible after scrolling", focused.getGlobalVisibleRect(fieldBounds));
+            scroll[0].scrollTo(0, scroll[0].getChildAt(0).getHeight());
+            assertTrue("At the bottom earlier inputs remain above", scroll[0].canScrollVertically(-1));
+            assertFalse("At the bottom the downward scroll hint must disappear", scroll[0].canScrollVertically(1));
         });
         capture("long-form-scroll");
         text("Finish long form").click();
