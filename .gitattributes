@@ -1,0 +1,2 @@
+# Keep mandatory single-space context lines in historical patch references.
+docs/archive/**/source-references/**/*.patch.reference whitespace=-blank-at-eol,-blank-at-eof

@@ -1,0 +1,50 @@
+{
+  "exportDate": "2026-11-01",
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 2351,
+      "sha256": "cf0061286f3ba79b6eb7e3764ec3855a75f41d0698385525a170d7fe80e61742"
+    },
+    {
+      "file": "recommendation-filter.png",
+      "bytes": 86716,
+      "sha256": "46554d3a999bd9bfe37bca6b72425892b8caa292b6054d374a4c6c0231e0ca95"
+    },
+    {
+      "file": "source-form-scroll.png",
+      "bytes": 40333,
+      "sha256": "47853f9520a0f11478bd393ffe5c9f214810f46445181e296e947ecb2208753d"
+    },
+    {
+      "file": "source-input-summary.json",
+      "bytes": 498,
+      "sha256": "9aa7c71d5da38a1847c07ca46c82a2d2b0962f740988eb061ff700700a88cc2e"
+    },
+    {
+      "file": "subtitle-dark.png",
+      "bytes": 47314,
+      "sha256": "cebea6906ccabed767f22f66771e1f3e904b392d66a357d46e26886038d165ec"
+    },
+    {
+      "file": "subtitle-light.png",
+      "bytes": 48710,
+      "sha256": "5da509a6273316824407fa3c1fc2e018c43a2f934fee0f3977c98a98e5fdc2d8"
+    },
+    {
+      "file": "ui-summary.json",
+      "bytes": 363,
+      "sha256": "3190b93ab7ae464179bb8097d9f72ade00e70b8523633e0eacd45b3756b2adc7"
+    },
+    {
+      "file": "wall-filters.png",
+      "bytes": 100520,
+      "sha256": "efd3e3bf56277b3c3f55ce6ae22f4d6c80f9e8738065c87d6b917300b7739166"
+    },
+    {
+      "file": "wall-local-filter.png",
+      "bytes": 58198,
+      "sha256": "84550b1bca7b13c29f75019b8c6bf42d17c76ff1139d5ec58a485aa4db84fc77"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "exportDate": "2026-11-01",
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 3999,
+      "sha256": "fd367512908a638f01ea0e2416ffa7b8cc3530e51b3a8cb2f517ed1a104329c5"
+    },
+    {
+      "file": "apk-audit.json",
+      "bytes": 681,
+      "sha256": "caf83ba3c9765994c72a85484ea2a356614017ae1c5b909274b9f3c8e827e7ef"
+    },
+    {
+      "file": "config-metadata.json",
+      "bytes": 120,
+      "sha256": "95fdd508325a0f1e4db111fa84d52276c53d6ab53d9437d18cb8bcd0fe7eed00"
+    },
+    {
+      "file": "health.json",
+      "bytes": 79,
+      "sha256": "0047f3f9075510ae12cd595ac3bb0e76a0f2219076f7c0886324d4409c071648"
+    },
+    {
+      "file": "navigation-report.json",
+      "bytes": 1397,
+      "sha256": "725d355f9e9b305950321f85150552f1c87587e2ed9aad338fb137deb1ed2511"
+    },
+    {
+      "file": "provider-smoke-gha.json",
+      "bytes": 567,
+      "sha256": "ec36214828e68d1fa913cd89bb3e0d15c2985405ce740a0438533ccfaaba1a2f"
+    },
+    {
+      "file": "provider-smoke-local.json",
+      "bytes": 576,
+      "sha256": "e40c405f651a7e098d292817f93f1be73bd832be6025759fd589304c598653c6"
+    },
+    {
+      "file": "settings-dark.png",
+      "bytes": 88199,
+      "sha256": "bb4cb646b2416cea94d2ff59631ce4a18a04f4eac3f89b35535d88fb8644eb83"
+    },
+    {
+      "file": "settings-light.png",
+      "bytes": 86447,
+      "sha256": "ba5668c02e2fd06a3a46a56ae6b9c7200ff23a7520596633cb65d53708c18660"
+    },
+    {
+      "file": "source-runtime-diagnostics.json",
+      "bytes": 178,
+      "sha256": "3170d6462bbfadeee1d4be2e84215089707da28b5476c96d049a847531f7ea6d"
+    },
+    {
+      "file": "verification-summary.json",
+      "bytes": 1991,
+      "sha256": "5ecb2d554866f61e89a8ef44f16ea01f45d285a05f0d4877f3098c971c63c415"
+    }
+  ]
+}

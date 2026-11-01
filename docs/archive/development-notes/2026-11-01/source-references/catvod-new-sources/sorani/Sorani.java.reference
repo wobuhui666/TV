@@ -1,0 +1,363 @@
+package com.github.catvod.spider;
+
+import android.content.Context;
+
+import com.github.catvod.crawler.Spider;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.HttpUrl;
+import okhttp3.Request;
+import okhttp3.Response;
+
+/** Sorani's public video API, accessed through the configured mirror using the legacy Spider API. */
+public class Sorani extends Spider {
+
+    private static final String DEFAULT_HOST = "https://sorani.ciallo0d000721.cc.cd";
+    private static final String PREFIX = "/__upstream__/";
+    private static final int PAGE_SIZE = 24;
+    private static final Set<String> UPSTREAMS = Set.of("api.sorani.cc", "img.sorani.net", "www.sorani-vids.xyz");
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
+
+    private final Set<Call> calls = ConcurrentHashMap.newKeySet();
+    private volatile boolean destroyed;
+    private String host = DEFAULT_HOST;
+    private String apiBase = DEFAULT_HOST + PREFIX + "api.sorani.cc/sorani-cms";
+
+    @Override
+    public void init(Context context, String extend) throws Exception {
+        destroyed = false;
+        if (extend == null || extend.trim().isEmpty()) return;
+        String value = extend.trim();
+        JSONObject options = value.startsWith("{") ? new JSONObject(value) : new JSONObject().put("host", value);
+        host = base(options.optString("host", DEFAULT_HOST));
+        apiBase = base(options.optString("apiBase", host + PREFIX + "api.sorani.cc/sorani-cms"));
+    }
+
+    @Override
+    public String homeContent(boolean filter) throws Exception {
+        JSONArray classes = new JSONArray().put(new JSONObject().put("type_id", "all").put("type_name", "全部动漫"));
+        categories(array("/api/category/tree", Map.of("types", "video", "onlyEnabled", "true")), classes, new LinkedHashSet<>());
+        JSONObject result = new JSONObject().put("class", classes);
+        if (filter) {
+            JSONObject filters = new JSONObject();
+            for (int i = 0; i < classes.length(); i++) {
+                String id = classes.getJSONObject(i).getString("type_id");
+                Map<String, String> params = id.equals("all") ? Map.of() : Map.of("categoryId", id);
+                filters.put(id, filters(object("/api/video/filter-options", params)));
+            }
+            result.put("filters", filters);
+        }
+        return result.put("list", videos(array("/api/video/latest", Map.of("limit", String.valueOf(PAGE_SIZE))))).toString();
+    }
+
+    @Override
+    public String homeVideoContent() throws Exception {
+        return new JSONObject().put("list", videos(array("/api/video/latest", Map.of("limit", String.valueOf(PAGE_SIZE))))).toString();
+    }
+
+    @Override
+    public String categoryContent(String tid, String pg, boolean filter, HashMap<String, String> extend) throws Exception {
+        Map<String, String> params = new LinkedHashMap<>();
+        if (!"all".equals(tid)) params.put("categoryId", positive(tid));
+        if (extend != null) {
+            for (String key : List.of("status", "year", "initial", "tags", "sortMode")) {
+                String value = extend.get(key);
+                if (value != null && !value.trim().isEmpty()) params.put(key, value.trim());
+            }
+        }
+        params.putIfAbsent("sortMode", "latest");
+        return listing(pg, params);
+    }
+
+    @Override
+    public String searchContent(String key, boolean quick) throws Exception {
+        return searchContent(key, quick, "1");
+    }
+
+    @Override
+    public String searchContent(String key, boolean quick, String pg) throws Exception {
+        if (key == null || key.trim().isEmpty()) throw new IllegalArgumentException("搜索词不能为空");
+        return listing(pg, new LinkedHashMap<>(Map.of("keyword", key.trim(), "sortMode", "relevance_popular")));
+    }
+
+    private String listing(String pg, Map<String, String> params) throws Exception {
+        params.put("page", positive(pg));
+        params.put("size", String.valueOf(PAGE_SIZE));
+        params.put("enabled", "true");
+        params.put("sortDesc", "true");
+        JSONObject data = object("/api/video", params);
+        return new JSONObject().put("list", videos(data.getJSONArray("records")))
+                .put("page", data.getInt("current")).put("pagecount", data.getInt("pages"))
+                .put("limit", data.getInt("size")).put("total", data.getLong("total")).toString();
+    }
+
+    @Override
+    public String detailContent(List<String> ids) throws Exception {
+        JSONArray list = new JSONArray();
+        for (String id : ids) {
+            id = positive(id);
+            JSONObject data = object("/api/video/" + id, Map.of());
+            JSONObject vod = video(data);
+            vod.put("vod_content", text(data, "summary"));
+            vod.put("vod_director", text(data, "director"));
+            vod.put("vod_area", text(data, "area"));
+            vod.put("vod_year", text(data, "year"));
+            vod.put("type_name", text(data, "categoryName"));
+            List<String> actors = new ArrayList<>();
+            JSONArray cast = data.optJSONArray("actors");
+            if (cast != null) for (int i = 0; i < cast.length(); i++) {
+                String name = text(cast.getJSONObject(i), "actorName");
+                if (!name.isEmpty() && !actors.contains(name)) actors.add(name);
+            }
+            vod.put("vod_actor", String.join(" / ", actors));
+            Map<String, JSONObject> episodes = new LinkedHashMap<>();
+            JSONArray sourceEpisodes = data.getJSONArray("episodes");
+            for (int i = 0; i < sourceEpisodes.length(); i++) {
+                JSONObject episode = sourceEpisodes.getJSONObject(i);
+                episodes.put(order(episode.get("episodeOrder")), episode);
+            }
+            List<String> names = new ArrayList<>();
+            List<String> playlists = new ArrayList<>();
+            JSONArray lines = array("/api/video/" + id + "/play-lines", Map.of());
+            for (int i = 0; i < lines.length(); i++) {
+                JSONObject line = lines.getJSONObject(i);
+                if (line.has("enable") && !line.getBoolean("enable")) continue;
+                String code = line.getString("code").trim();
+                if (code.isEmpty()) throw new IOException("Sorani 返回了无效播放线路");
+                JSONArray orders = array("/api/video/" + id + "/play-lines/" + encode(code) + "/episode-orders", Map.of());
+                List<String> items = new ArrayList<>();
+                for (int j = 0; j < orders.length(); j++) {
+                    String number = order(orders.get(j));
+                    JSONObject episode = episodes.get(number);
+                    String episodeId = episode == null ? "0" : positive(episode.get("episodeId").toString());
+                    String label = episode == null ? "第" + number + "集" : text(episode, "episodeLabel", "title");
+                    if (label.isEmpty()) label = "第" + number + "集";
+                    String playId = id + "~" + episodeId + "~" + number + "~" + encode(code);
+                    items.add(clean(label) + "$" + playId);
+                }
+                if (!items.isEmpty()) {
+                    names.add(clean(text(line, "name").isEmpty() ? code : text(line, "name")));
+                    playlists.add(String.join("#", items));
+                }
+            }
+            vod.put("vod_play_from", String.join("$$$", names));
+            vod.put("vod_play_url", String.join("$$$", playlists));
+            list.put(vod);
+        }
+        return new JSONObject().put("list", list).toString();
+    }
+
+    @Override
+    public String playerContent(String flag, String id, List<String> vipFlags) throws Exception {
+        String[] parts = id.split("~", -1);
+        if (parts.length != 4) throw new IllegalArgumentException("无效的 Sorani 播放编号");
+        String videoId = positive(parts[0]);
+        String episodeId = parts[1];
+        String number = order(parts[2]);
+        String line = URLDecoder.decode(parts[3], StandardCharsets.UTF_8.name());
+        if (line.isEmpty()) throw new IllegalArgumentException("缺少 Sorani 播放线路");
+        if (episodeId.equals("0")) {
+            JSONObject episode = object("/api/video/episode/video/" + videoId + "/episode/" + encode(number), Map.of());
+            episodeId = positive(episode.get("episodeId").toString());
+        }
+        // Resolve on every playback request: the returned URL contains a short-lived ticket.
+        JSONObject data = object("/api/video/episode/" + positive(episodeId) + "/play", Map.of("lineCode", line));
+        if (!data.optBoolean("canPlay", false)) {
+            String message = text(data, "message");
+            throw new IOException(message.isEmpty() ? "当前账号没有此集的播放权限" : message);
+        }
+        String url = mirror(data.getString("playUrl"), true);
+        JSONObject headers = new JSONObject().put("User-Agent", USER_AGENT).put("Referer", host + "/").put("Origin", origin(host));
+        JSONObject result = new JSONObject().put("parse", 0).put("jx", 0).put("url", url).put("header", headers);
+        if (data.optBoolean("hls", false)) result.put("format", "application/vnd.apple.mpegurl");
+        return result.toString();
+    }
+
+    @Override
+    public void destroy() {
+        destroyed = true;
+        for (Call call : calls) call.cancel();
+        calls.clear();
+    }
+
+    private Object request(String path, Map<String, String> params) throws Exception {
+        if (destroyed || Thread.currentThread().isInterrupted()) throw new IOException("Sorani 请求已取消");
+        String suffix = apiBase.endsWith("/api") && path.startsWith("/api/") ? path.substring(4) : path;
+        HttpUrl parsed = HttpUrl.parse(apiBase + suffix);
+        if (parsed == null) throw new IOException("无效的 Sorani API 地址");
+        HttpUrl.Builder url = parsed.newBuilder();
+        for (Map.Entry<String, String> entry : params.entrySet()) url.addQueryParameter(entry.getKey(), entry.getValue());
+        Request request = new Request.Builder().url(url.build()).header("User-Agent", USER_AGENT)
+                .header("Referer", host + "/").header("Origin", origin(host)).header("Accept", "application/json").build();
+        Call call = client().newCall(request);
+        call.timeout().timeout(20, TimeUnit.SECONDS);
+        calls.add(call);
+        if (destroyed) call.cancel();
+        try (Response response = call.execute()) {
+            if (!response.isSuccessful()) throw new IOException("Sorani 接口返回 HTTP " + response.code());
+            if (response.body() == null) throw new IOException("Sorani 接口没有响应正文");
+            JSONObject payload;
+            try {
+                payload = new JSONObject(response.body().string());
+            } catch (Exception e) {
+                throw new IOException("Sorani 接口返回了无效 JSON", e);
+            }
+            if (!payload.optBoolean("success", false) && payload.optInt("code", -1) != 200) {
+                throw new IOException("Sorani: " + text(payload, "message", "msg"));
+            }
+            Object data = payload.opt("data");
+            if (data == null || data == JSONObject.NULL) throw new IOException("Sorani 接口缺少 data");
+            return data;
+        } finally {
+            calls.remove(call);
+        }
+    }
+
+    private JSONObject object(String path, Map<String, String> params) throws Exception {
+        Object data = request(path, params);
+        if (!(data instanceof JSONObject)) throw new IOException("Sorani 接口数据不是对象");
+        return (JSONObject) data;
+    }
+
+    private JSONArray array(String path, Map<String, String> params) throws Exception {
+        Object data = request(path, params);
+        if (!(data instanceof JSONArray)) throw new IOException("Sorani 接口数据不是列表");
+        return (JSONArray) data;
+    }
+
+    private JSONArray videos(JSONArray records) throws Exception {
+        JSONArray list = new JSONArray();
+        for (int i = 0; i < records.length(); i++) list.put(video(records.getJSONObject(i)));
+        return list;
+    }
+
+    private JSONObject video(JSONObject item) throws Exception {
+        String title = item.getString("title").trim();
+        if (title.isEmpty()) throw new IOException("Sorani 视频缺少标题");
+        String cover = text(item, "coverThumb", "coverSmall", "coverLarge", "coverOg", "cover");
+        return new JSONObject().put("vod_id", positive(item.get("id").toString())).put("vod_name", title)
+                .put("vod_pic", cover.isEmpty() ? "" : mirror(cover, false))
+                .put("vod_remarks", text(item, "latestEpisodeLabel", "year"));
+    }
+
+    private void categories(JSONArray nodes, JSONArray result, Set<String> seen) throws Exception {
+        for (int i = 0; i < nodes.length(); i++) {
+            JSONObject node = nodes.getJSONObject(i);
+            String type = text(node, "type");
+            if (node.optInt("status", 1) != 0 && (type.isEmpty() || type.equals("video"))) {
+                String id = positive(node.get("id").toString());
+                String name = node.getString("name").trim();
+                if (!name.isEmpty() && seen.add(id)) result.put(new JSONObject().put("type_id", id).put("type_name", name));
+            }
+            JSONArray children = node.optJSONArray("children");
+            if (children != null) categories(children, result, seen);
+        }
+    }
+
+    private JSONArray filters(JSONObject options) throws Exception {
+        JSONArray filters = new JSONArray();
+        filters.put(new JSONObject().put("key", "sortMode").put("name", "排序").put("value", new JSONArray()
+                .put(choice("最新更新", "latest")).put(choice("热度", "trending")).put(choice("评分", "rating"))));
+        JSONArray tags = options.getJSONArray("tags");
+        JSONArray values = new JSONArray().put(choice("全部", ""));
+        for (int i = 0; i < tags.length(); i++) values.put(choice(tags.getString(i), tags.getString(i)));
+        filters.put(new JSONObject().put("key", "tags").put("name", "题材").put("value", values));
+        values = new JSONArray().put(choice("全部", ""));
+        JSONArray statuses = options.getJSONArray("statuses");
+        for (int i = 0; i < statuses.length(); i++) {
+            int status = statuses.getInt(i);
+            if (status == 0 || status == 1 || status == 3) values.put(choice(status == 0 ? "连载" : status == 1 ? "完结" : "未开播", String.valueOf(status)));
+        }
+        filters.put(new JSONObject().put("key", "status").put("name", "状态").put("value", values));
+        values = new JSONArray().put(choice("全部", ""));
+        for (int year = Calendar.getInstance().get(Calendar.YEAR); year >= 2000; year--) values.put(choice(String.valueOf(year), String.valueOf(year)));
+        values.put(choice("90年代", "1990s")).put(choice("80年代", "1980s")).put(choice("70年代", "1970s")).put(choice("更早", "before-1970"));
+        filters.put(new JSONObject().put("key", "year").put("name", "年份").put("value", values));
+        values = new JSONArray().put(choice("全部", "")).put(choice("0-9", "0-9"));
+        for (char letter = 'A'; letter <= 'Z'; letter++) values.put(choice(String.valueOf(letter), String.valueOf(letter)));
+        return filters.put(new JSONObject().put("key", "initial").put("name", "首字母").put("value", values));
+    }
+
+    private JSONObject choice(String name, String value) throws Exception {
+        return new JSONObject().put("n", name).put("v", value);
+    }
+
+    private String mirror(String value, boolean playback) throws IOException {
+        if (!playback && value.startsWith("data:image/")) return value;
+        HttpUrl url = HttpUrl.parse(value.startsWith("//") ? "https:" + value : value);
+        if (url == null) {
+            if (value.startsWith("/sorani-cms/uploads/")) {
+                url = HttpUrl.parse(host + PREFIX + "api.sorani.cc" + value);
+            } else {
+                HttpUrl base = HttpUrl.parse(host + "/");
+                url = base == null ? null : base.resolve(value);
+            }
+        }
+        if (url == null) throw new IOException("Sorani 返回了无效资源地址");
+        String suffix = url.encodedPath() + (url.encodedQuery() == null ? "" : "?" + url.encodedQuery());
+        String hostname = url.host();
+        if (hostname.equals("www.sorani.net") || hostname.equals("sorani.net") || hostname.equals(HttpUrl.get(DEFAULT_HOST).host())) return host + suffix;
+        if (UPSTREAMS.contains(hostname)) return host + PREFIX + hostname + suffix;
+        if (hostname.equals(HttpUrl.get(host).host()) && url.port() == HttpUrl.get(host).port()) return url.toString();
+        if (playback) throw new IOException("Sorani 播放地址不在已确认的镜像映射中");
+        return url.toString();
+    }
+
+    private static String base(String value) {
+        HttpUrl url = HttpUrl.parse(value.trim());
+        if (url == null || url.query() != null || url.fragment() != null) throw new IllegalArgumentException("Sorani host/apiBase 必须是 HTTP(S) 基础地址");
+        return url.toString().replaceAll("/+$", "");
+    }
+
+    private static String origin(String value) {
+        HttpUrl url = HttpUrl.get(value);
+        return url.newBuilder().encodedPath("/").query(null).fragment(null).build().toString().replaceAll("/+$", "");
+    }
+
+    private static String positive(String value) {
+        long number = Long.parseLong(value);
+        if (number < 1) throw new IllegalArgumentException("Sorani 编号/页码必须大于零");
+        return String.valueOf(number);
+    }
+
+    private static String order(Object value) {
+        BigDecimal number = new BigDecimal(value.toString());
+        if (number.signum() < 0) throw new IllegalArgumentException("无效的 Sorani 集序");
+        return number.stripTrailingZeros().toPlainString();
+    }
+
+    private static String text(JSONObject object, String... keys) {
+        for (String key : keys) {
+            String value = object.optString(key, "").trim();
+            if (!value.isEmpty() && !value.equals("null")) return value;
+        }
+        return "";
+    }
+
+    private static String encode(String value) throws Exception {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20");
+    }
+
+    private static String clean(String name) {
+        return name.replace('$', '＄').replace('#', '＃');
+    }
+}

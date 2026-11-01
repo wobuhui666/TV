@@ -1,0 +1,24 @@
+import com.github.catvod.spider.Sorani;
+import org.json.*;
+import java.util.*;
+import java.nio.file.*;
+public class SoraniHostCheck {
+ public static void main(String[] args) throws Exception {
+  Sorani s=new Sorani();s.init(null,args.length>0?args[0]:"");
+  JSONObject h=new JSONObject(s.homeContent(true));
+  if(h.getJSONArray("class").length()<2 || h.getJSONArray("list").length()==0)throw new AssertionError("home");
+  JSONObject one=new JSONObject(s.categoryContent("all","1",false,new HashMap<>()));
+  JSONObject two=new JSONObject(s.categoryContent("all","2",false,new HashMap<>()));
+  if(one.getJSONArray("list").getJSONObject(0).getString("vod_id").equals(two.getJSONArray("list").getJSONObject(0).getString("vod_id")))throw new AssertionError("pagination repeated");
+  JSONObject search=new JSONObject(s.searchContent("无职",false,"1"));
+  JSONObject empty=new JSONObject(s.searchContent("NoSuchSoraniAnime20261006",false,"1"));
+  if(search.getJSONArray("list").length()==0 || empty.getJSONArray("list").length()!=0)throw new AssertionError("search");
+  JSONObject detail=new JSONObject(s.detailContent(List.of("4634"))).getJSONArray("list").getJSONObject(0);
+  String playlist=detail.getString("vod_play_url");
+  String first=playlist.split("#")[0].split("\\$",2)[1];
+  JSONObject play=new JSONObject(s.playerContent("青空次元",first,List.of()));
+  if(play.getInt("parse")!=0 || !play.getString("url").contains("sorani.ciallo0d000721.cc.cd/__upstream__/"))throw new AssertionError("play mapping");
+  JSONObject result=new JSONObject().put("home_classes",h.getJSONArray("class").length()).put("home_videos",h.getJSONArray("list").length()).put("pages",one.getInt("pagecount")).put("total",one.getInt("total")).put("page1_first",one.getJSONArray("list").getJSONObject(0).getString("vod_id")).put("page2_first",two.getJSONArray("list").getJSONObject(0).getString("vod_id")).put("search_results",search.getJSONArray("list").length()).put("empty_results",empty.getJSONArray("list").length()).put("detail_episodes",playlist.split("#").length).put("play_mapped",true);
+  System.out.println(result.toString(2));s.destroy();
+ }
+}

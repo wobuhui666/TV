@@ -1,0 +1,17 @@
+{
+  "applicationCommit": "c69ac9e0c2dec85031e83aa02d64f75bfa9dfdbd",
+  "baselineCommit": "839ec53dea1a01879cbc42d11e7a7a475768c67e",
+  "unitTests": {
+    "tests": 708,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "fixtureInstrumentationTests": 7,
+  "liveNavigationTests": 1,
+  "guardedSourceTests": 1,
+  "navigationWorkflow": "https://github.com/wobuhui666/TV/actions/runs/41216971763",
+  "guardedSourceWorkflow": "https://github.com/wobuhui666/TV/actions/runs/41216969577",
+  "sourceContentVerified": true,
+  "nativeArmPlaybackVerified": false
+}

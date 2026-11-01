@@ -1,0 +1,18 @@
+diff --git a/app/src/main/java/com/fongmi/android/tv/bean/Flag.java b/app/src/main/java/com/fongmi/android/tv/bean/Flag.java
+index 5c3bc53..460c4d5 100644
+--- a/app/src/main/java/com/fongmi/android/tv/bean/Flag.java
++++ b/app/src/main/java/com/fongmi/android/tv/bean/Flag.java
+@@ -140,11 +140,13 @@ public class Flag implements Parcelable, Diffable<Flag> {
+     }
+ 
+     public void mergeEpisodes(List<Episode> items, boolean rev) {
++        Episode current = isPositionValid() ? getEpisodes().get(getPosition()) : null;
+         for (Episode item : items) {
+             if (getEpisodes().contains(item)) continue;
+             if (rev) getEpisodes().add(0, item);
+             else getEpisodes().add(item);
+         }
++        if (rev && current != null) setPosition(getEpisodes().indexOf(current));
+     }
+ 
+     public Flag trans() {

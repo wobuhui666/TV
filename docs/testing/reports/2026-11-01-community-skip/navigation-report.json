@@ -1,0 +1,69 @@
+{
+  "schema": "tv.responsiveness.v1",
+  "deviceAbis": [
+    "x86_64",
+    "arm64-v8a"
+  ],
+  "nativeArmPlaybackVerified": false,
+  "configLoadMs": 7884,
+  "siteCount": 99,
+  "sourceHomeContentVerified": false,
+  "sourceSearchContentVerified": false,
+  "sourceSearchProbeCount": 3,
+  "sourceAvailability": "no-content-from-probed-sources",
+  "homeExperience": "source",
+  "homeConfigReloadMs": 1986,
+  "homeResultDelivered": true,
+  "ordinarySearchHasResults": false,
+  "ordinarySearchResultCount": 0,
+  "passed": true,
+  "activityCleanupComplete": true,
+  "frameCount": 579,
+  "frameP50Ms": 39.38797,
+  "frameP95Ms": 183.508273,
+  "framesOver32Ms": 403,
+  "stages": [
+    {
+      "phase": "home",
+      "siteIndex": 0,
+      "status": "source-not-loaded",
+      "elapsedMs": 9
+    },
+    {
+      "phase": "search",
+      "siteIndex": 4,
+      "status": "source-not-loaded",
+      "elapsedMs": 3
+    },
+    {
+      "phase": "search",
+      "siteIndex": 5,
+      "status": "source-not-loaded",
+      "elapsedMs": 4
+    },
+    {
+      "phase": "search",
+      "siteIndex": 6,
+      "status": "source-not-loaded",
+      "elapsedMs": 3
+    },
+    {
+      "phase": "home-start"
+    },
+    {
+      "phase": "search-0"
+    },
+    {
+      "phase": "search-1"
+    },
+    {
+      "phase": "search-2"
+    },
+    {
+      "phase": "ordinary-search-results"
+    },
+    {
+      "phase": "home-return"
+    }
+  ]
+}

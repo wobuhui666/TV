@@ -1,0 +1,9 @@
+{
+  "wrongElfMachine": true,
+  "failureTypes": [
+    "UnsatisfiedLinkError",
+    "ExceptionInInitializerError",
+    "NoClassDefFoundError",
+    "InvocationTargetException"
+  ]
+}

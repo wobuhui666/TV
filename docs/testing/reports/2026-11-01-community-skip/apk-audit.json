@@ -1,0 +1,21 @@
+{
+  "artifactWorkflow": 41317617004,
+  "artifactCommit": "92708198d9eab69551b4c1ac8e39cf36f8beb12f",
+  "scope": "DEX_CLASS_SYMBOLS_NOT_MEDIA_PLAYBACK",
+  "files": [
+    {
+      "apk": "app-leanback-arm64_v8a-debug-androidTest.apk",
+      "bytes": 979476,
+      "sha256": "f710008179834a760e627dc02ccc24596abc51346d7cd89e55c7ee154681dccd",
+      "legacySkipClassesPresent": false,
+      "communityRuntimePresent": true
+    },
+    {
+      "apk": "app-leanback-arm64_v8a-debug.apk",
+      "bytes": 103632027,
+      "sha256": "5108f32ffcc878157a34bb2602e5c098216ff179775fa9491eb8016850f4d34d",
+      "legacySkipClassesPresent": false,
+      "communityRuntimePresent": true
+    }
+  ]
+}
