@@ -31,6 +31,12 @@
             android:layout_marginTop="4dp" android:layout_marginBottom="8dp"
             android:text="@string/discover_source_tmdb" android:textSize="13sp" />
 
+        <FrameLayout
+            android:id="@+id/filterContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
         <com.fongmi.android.tv.ui.custom.JetStreamPageProgressLayout
             android:id="@+id/progressLayout"
             android:layout_width="match_parent"

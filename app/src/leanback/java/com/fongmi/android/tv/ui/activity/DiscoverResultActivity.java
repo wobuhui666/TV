@@ -3,6 +3,7 @@ package com.fongmi.android.tv.ui.activity;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -14,7 +15,10 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.api.DiscoverApi;
+import com.fongmi.android.tv.api.rex.RexTmdbClient;
+import com.fongmi.android.tv.api.rex.RexTmdbQuery;
 import com.fongmi.android.tv.bean.DiscoverFacet;
+import com.fongmi.android.tv.bean.DiscoverRequestState;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.ActivityDiscoverResultBinding;
@@ -27,6 +31,7 @@ import com.fongmi.android.tv.utils.ResUtil;
 import com.google.common.collect.Lists;
 
 import java.util.List;
+import java.util.ArrayList;
 
 public class DiscoverResultActivity extends BaseActivity implements VodPresenter.OnClickListener, CustomScroller.Callback {
 
@@ -37,6 +42,12 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
     private CustomScroller scroller;
     private DiscoverFacet facet;
     private int page;
+    private int totalPages = 1;
+    private int generation;
+    private final List<ArrayObjectAdapter> rows = new ArrayList<>();
+    private final DiscoverRequestState requestState = new DiscoverRequestState();
+    private PosterWallFilterController filters;
+    private boolean initialFocus = true;
 
     public static void start(Activity activity, DiscoverFacet facet) {
         Intent intent = new Intent(activity, DiscoverResultActivity.class);
@@ -58,6 +69,8 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
         }
         mBinding.title.setText(facet.getName());
         setRecyclerView();
+        filters = new PosterWallFilterController(mBinding.filterContainer, RexTmdbQuery.forFacet(facet), this::onFiltersChanged);
+        generation = requestState.reset();
         load(1);
     }
 
@@ -71,26 +84,40 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
     }
 
     private void load(int targetPage) {
-        page = targetPage;
         if (targetPage == 1) mBinding.progressLayout.showProgress();
-        DiscoverApi.fetchFiltered(facet, targetPage, BuildConfig.TMDB_API_KEY, requestTag, new DiscoverApi.Listener() {
+        int ticket = generation;
+        RexTmdbClient.fetchPage(filters.query(), targetPage, BuildConfig.TMDB_API_KEY, requestTag, new RexTmdbClient.PageListener() {
             @Override
-            public void onSuccess(DiscoverApi.Row row, List<Vod> items) {
-                if (isInactive()) return;
+            public void onSuccess(List<Vod> items, int responsePage, int pages) {
+                if (isInactive() || ticket != generation) return;
+                page = responsePage;
+                totalPages = pages;
                 scroller.endLoading(newResult(items));
-                if (items.isEmpty()) scroller.setEnable(1);
+                scroller.setEnable(totalPages);
                 if (targetPage == 1) mBinding.progressLayout.showContent(true, items.size());
-                add(items);
+                add(requestState.addAllAndGetAdded(generation, items));
             }
 
             @Override
-            public void onError(DiscoverApi.Row row, Exception e) {
-                if (isInactive()) return;
+            public void onError(Exception e) {
+                if (isInactive() || ticket != generation) return;
                 scroller.endLoading(newResult(List.of()));
-                scroller.setEnable(1);
+                scroller.setEnable(totalPages);
                 if (targetPage == 1) mBinding.progressLayout.showContent(true, 0);
             }
         });
+    }
+
+    private void onFiltersChanged() {
+        initialFocus = false;
+        RexTmdbClient.cancel(requestTag);
+        generation = requestState.reset();
+        page = 0;
+        totalPages = 1;
+        rows.clear();
+        mAdapter.clear();
+        scroller.reset();
+        load(1);
     }
 
     private com.fongmi.android.tv.bean.Result newResult(List<Vod> items) {
@@ -101,19 +128,33 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
 
     private void add(List<Vod> items) {
         if (items.isEmpty()) return;
+        int offset = 0;
+        if (!rows.isEmpty()) {
+            ArrayObjectAdapter last = rows.get(rows.size() - 1);
+            int count = Math.min(COLUMN - last.size(), items.size());
+            if (count > 0) {
+                last.addAll(last.size(), items.subList(0, count));
+                offset = count;
+            }
+        }
         int width = (ResUtil.getScreenWidth() - ResUtil.dp2px(112 + 16 * (COLUMN - 1))) / COLUMN;
         VodPresenter presenter = new VodPresenter(this, Style.rect(), new int[]{width, Math.round(width / 0.75f)});
-        for (List<Vod> part : Lists.partition(items, COLUMN)) {
+        for (List<Vod> part : Lists.partition(items.subList(offset, items.size()), COLUMN)) {
             ArrayObjectAdapter row = new ArrayObjectAdapter(presenter);
             row.addAll(0, part);
+            rows.add(row);
             mAdapter.add(new ListRow(row));
         }
-        if (page == 1) requestFocus();
+        if (initialFocus) {
+            initialFocus = false;
+            requestFocus();
+        }
     }
 
     private void requestFocus() {
+        int ticket = generation;
         mBinding.recycler.postDelayed(() -> {
-            if (isInactive()) return;
+            if (isInactive() || ticket != generation || mBinding.filterContainer.hasFocus()) return;
             RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(0);
             View target = holder == null ? null : findFocusable(holder.itemView);
             if (target != null && target.requestFocus()) return;
@@ -162,7 +203,7 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
 
     @Override
     public boolean onLoadMore(String ignored) {
-        if (isInactive()) return false;
+        if (isInactive() || page >= totalPages) return false;
         load(page + 1);
         return true;
     }
@@ -170,8 +211,20 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
     @Override
     protected void onDestroy() {
         DiscoverApi.cancel(requestTag);
+        RexTmdbClient.cancel(requestTag);
         if (scroller != null) mBinding.recycler.removeOnScrollListener(scroller);
+        if (filters != null) filters.release();
         super.onDestroy();
+    }
+
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU && filters != null) {
+            if (event.getAction() == KeyEvent.ACTION_UP) filters.focus();
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && filters != null
+                && mBinding.filterContainer.hasFocus() && event.getAction() == KeyEvent.ACTION_UP && filters.collapse()) return true;
+        return super.dispatchKeyEvent(event);
     }
 
     private boolean isInactive() {

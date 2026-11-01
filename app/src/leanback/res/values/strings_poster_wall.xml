@@ -1,0 +1,8 @@
+<resources>
+    <string name="poster_wall_update_day">Update day</string>
+    <string name="poster_wall_original_order">Original order</string>
+    <string name="poster_wall_filter_current">Filter this list</string>
+    <string name="poster_wall_filters">Filters</string>
+    <string name="poster_wall_all_media">Movies and series</string>
+    <string name="poster_wall_all_update_days">All update days</string>
+</resources>

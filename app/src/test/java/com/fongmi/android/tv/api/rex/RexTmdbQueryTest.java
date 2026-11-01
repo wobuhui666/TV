@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.api.rex;
 
+import com.fongmi.android.tv.bean.DiscoverFacet;
+
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -84,5 +86,27 @@ public class RexTmdbQueryTest {
         assertEquals("tv/on_the_air", RexTmdbQuery.onTheAir().path);
         assertEquals("movie/top_rated", RexTmdbQuery.topRated(RexTmdbQuery.MOVIE).path);
         assertEquals("list/8241", RexTmdbQuery.list("8241").path);
+    }
+
+    @Test public void legacyGenreAndCompanyFacetsKeepTheirFixedMovieConstraints() {
+        RexTmdbQuery.Query genre = RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.GENRE, "28", "动作", ""));
+        RexTmdbQuery.Query company = RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.COMPANY, "420", "公司", ""));
+        assertEquals("discover/movie", genre.path);
+        assertEquals("28", genre.params.get("with_genres"));
+        assertEquals("420", company.params.get("with_companies"));
+        assertEquals("popularity.desc", company.params.get("sort_by"));
+    }
+
+    @Test public void legacyProviderFacetsRetainTheirChinaWatchRegion() {
+        RexTmdbQuery.Query query = RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.PROVIDER, "420", "平台", ""));
+        assertEquals("420", query.params.get("with_watch_providers"));
+        assertEquals("CN", query.params.get("watch_region"));
+        assertEquals("movie", query.fallbackMediaType);
+    }
+
+    @Test public void legacyFixedListsKeepTheirEndpointAndMediaType() {
+        assertEquals("tv/top_rated", RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.TOP_TV, "", "高分剧集", "")).path);
+        assertEquals("movie/now_playing", RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.NOW_PLAYING, "", "院线", "")).path);
+        assertEquals("discover/movie", RexTmdbQuery.forFacet(new DiscoverFacet(null, "", "", "")).path);
     }
 }

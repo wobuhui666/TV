@@ -15,6 +15,19 @@
         android:paddingTop="0dp"
         android:paddingBottom="40dp">
 
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/filterShortcut"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="48dp"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:text="@string/poster_wall_filters" />
+
         <com.fongmi.android.tv.ui.custom.JetStreamPageProgressLayout
             android:id="@+id/progressLayout"
             android:layout_width="match_parent"

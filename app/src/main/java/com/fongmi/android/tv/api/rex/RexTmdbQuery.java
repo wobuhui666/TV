@@ -2,6 +2,8 @@ package com.fongmi.android.tv.api.rex;
 
 import androidx.annotation.Nullable;
 
+import com.fongmi.android.tv.bean.DiscoverFacet;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -142,6 +144,25 @@ public final class RexTmdbQuery {
     /** TMDB 片单 API（rex 的 HTML 抓取降级为后备，不再使用）。 */
     public static Query list(String listId) {
         return new Query("list/" + listId, "", new LinkedHashMap<>());
+    }
+
+    public static Query forFacet(DiscoverFacet facet) {
+        return switch (facet.getKind() == null ? "" : facet.getKind()) {
+            case DiscoverFacet.TOP_MOVIE -> topRated(MOVIE);
+            case DiscoverFacet.TOP_TV -> topRated(TV);
+            case DiscoverFacet.NOW_PLAYING -> nowPlaying();
+            default -> {
+                Map<String, String> params = new LinkedHashMap<>();
+                params.put("sort_by", "popularity.desc");
+                if (DiscoverFacet.GENRE.equals(facet.getKind())) params.put("with_genres", facet.getId());
+                if (DiscoverFacet.COMPANY.equals(facet.getKind())) params.put("with_companies", facet.getId());
+                if (DiscoverFacet.PROVIDER.equals(facet.getKind())) {
+                    params.put("with_watch_providers", facet.getId());
+                    params.put("watch_region", "CN");
+                }
+                yield new Query("discover/movie", MOVIE, params);
+            }
+        };
     }
 
     private static boolean contains(String[] values, String value) {
