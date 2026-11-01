@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -38,6 +39,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -218,12 +220,69 @@ public final class SpiderDialogTest {
             View finish = currentDialogRoot().findViewById(android.R.id.button1);
             Rect buttonBounds = new Rect();
             assertNotNull("The original dialog action must remain attached", finish);
-            assertTrue("Scroll hints must preserve the complete dialog button panel", finish.isShown()
-                    && finish.getGlobalVisibleRect(buttonBounds) && buttonBounds.height() + 1 >= finish.getHeight());
+            assertTrue("The original dialog action must remain visible and clickable", finish.isShown() && finish.isClickable()
+                    && finish.getGlobalVisibleRect(buttonBounds) && !buttonBounds.isEmpty());
         });
         capture("long-form-scroll");
+        verifyScrollHintsKeepButtonGeometry(scroll[0]);
         text("Finish long form").click();
         assertEquals("finish", call.get(5, TimeUnit.SECONDS).getString("button"));
+    }
+
+    private void verifyScrollHintsKeepButtonGeometry(ScrollView scroll) throws Exception {
+        final View[] host = new View[1];
+        final View[] button = new View[1];
+        final View[] focus = new View[1];
+        final Drawable[] hints = new Drawable[1];
+        final int[] heights = new int[3];
+        final Rect[] bounds = {new Rect(), new Rect(), new Rect()};
+        instrumentation.runOnMainSync(() -> {
+            assertTrue("The form has its decorative scroll hint", scroll.getTag() instanceof Drawable);
+            hints[0] = (Drawable) scroll.getTag();
+            host[0] = (View) scroll.getParent();
+            button[0] = currentDialogRoot().findViewById(android.R.id.button1);
+            focus[0] = currentDialogRoot().findFocus();
+            assertNotNull(button[0]);
+            heights[0] = button[0].getMeasuredHeight();
+            assertTrue(button[0].isShown() && button[0].isClickable() && button[0].getGlobalVisibleRect(bounds[0]));
+        });
+        try {
+            instrumentation.runOnMainSync(() -> {
+                host[0].getOverlay().remove(hints[0]);
+                currentDialogRoot().requestLayout();
+            });
+            instrumentation.waitForIdleSync();
+            instrumentation.runOnMainSync(() -> {
+                heights[1] = button[0].getMeasuredHeight();
+                assertTrue(button[0].getGlobalVisibleRect(bounds[1]));
+                assertEquals("The overlay must not alter native button measurement", heights[0], heights[1]);
+                assertEquals("The overlay must not alter the original visible action area", bounds[0], bounds[1]);
+                assertSame("Removing decoration must retain input focus", focus[0], currentDialogRoot().findFocus());
+            });
+            capture("long-form-scroll-no-hints");
+        } finally {
+            instrumentation.runOnMainSync(() -> {
+                host[0].getOverlay().add(hints[0]);
+                currentDialogRoot().requestLayout();
+            });
+            instrumentation.waitForIdleSync();
+        }
+        instrumentation.runOnMainSync(() -> {
+            heights[2] = button[0].getMeasuredHeight();
+            assertTrue("The restored action remains visible and clickable", button[0].isShown() && button[0].isClickable()
+                    && button[0].getGlobalVisibleRect(bounds[2]));
+            assertEquals("Restoring hints must preserve native button measurement", heights[1], heights[2]);
+            assertEquals("Restoring hints must preserve the visible action area", bounds[1], bounds[2]);
+            assertSame("Restoring decoration must retain input focus", focus[0], currentDialogRoot().findFocus());
+        });
+        JSONObject geometry = new JSONObject().put("schema", "tv.scroll-hints-geometry.v1");
+        String[] states = {"overlayEnabled", "overlayRemoved", "overlayRestored"};
+        for (int i = 0; i < states.length; i++) geometry.put(states[i], new JSONObject().put("buttonMeasuredHeight", heights[i])
+                .put("buttonVisibleBounds", new JSONArray().put(bounds[i].left).put(bounds[i].top).put(bounds[i].right).put(bounds[i].bottom)));
+        File report = new File(activity.getExternalFilesDir(null), "spider-dialog-verification/scroll-hints-geometry.json");
+        try (FileOutputStream output = new FileOutputStream(report)) {
+            output.write(geometry.toString(2).getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     private View currentDialogRoot() {
