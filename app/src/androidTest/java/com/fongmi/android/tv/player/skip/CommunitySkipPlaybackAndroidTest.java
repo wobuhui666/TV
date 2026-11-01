@@ -52,7 +52,8 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public final class CommunitySkipPlaybackAndroidTest {
 
-    private static final long DURATION = 30_000;
+    // Production Exo classifies streams under one minute as live; this must be a VOD fixture.
+    private static final long DURATION = 90_000;
     private static final Map<String, Object> SETTINGS = Map.ofEntries(
             Map.entry("player_engine", PlayerSetting.ENGINE_EXO), Map.entry("tunnel", false),
             Map.entry("preload", false), Map.entry("preload_next", false), Map.entry("incognito", true),
@@ -140,13 +141,13 @@ public final class CommunitySkipPlaybackAndroidTest {
             assertEquals(List.of(9_000L), seeks);
             assertEquals(9_000, manager.getPosition(), 50);
         });
-        seekPaused(23_200);
+        seekPaused(73_200);
         play();
         main(() -> { tick(); manager.pause(); });
         await(() -> manager.getPlaybackState() == Player.STATE_READY, "Credits seek ready");
         main(() -> {
-            assertEquals(List.of(9_000L, 27_000L), seeks);
-            assertEquals(27_000, manager.getPosition(), 50);
+            assertEquals(List.of(9_000L, 87_000L), seeks);
+            assertEquals(87_000, manager.getPosition(), 50);
             assertTrue("The post-credit scene must still be playable", manager.getPosition() < manager.getDuration());
             assertEquals("Credits with a later scene must not request the next episode", 0, nextRequests);
             assertEquals("Community ranges must not overwrite manual offsets", C.TIME_UNSET, history.getOpening());
@@ -238,7 +239,7 @@ public final class CommunitySkipPlaybackAndroidTest {
             setField(session, "fetchStarted", true);
             setField(session, "policy", new SegmentSkipPolicy(List.of(
                     new SkipSegment(SkipSegment.Type.INTRO, 5_000, 9_000, "fixture"),
-                    new SkipSegment(SkipSegment.Type.CREDITS, 23_000, 27_000, "fixture")), DURATION));
+                    new SkipSegment(SkipSegment.Type.CREDITS, 73_000, 87_000, "fixture")), DURATION));
             runtime.stop();
             setField(runtime, "active", session);
         } catch (ReflectiveOperationException failure) {
