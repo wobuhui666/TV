@@ -1,8 +1,5 @@
 package com.fongmi.android.tv.player.subtitle;
 
-import android.os.Parcel;
-
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.Format;
 import androidx.media3.common.Metadata;
@@ -36,15 +33,6 @@ public final class LocalSubtitleOrigin implements Metadata.Entry {
     }
 
     @Override
-    public int describeContents() {
-        return 0;
-    }
-
-    @Override
-    public void writeToParcel(@NonNull Parcel destination, int flags) {
-    }
-
-    @Override
     public boolean equals(@Nullable Object other) {
         return other instanceof LocalSubtitleOrigin;
     }
@@ -54,15 +42,4 @@ public final class LocalSubtitleOrigin implements Metadata.Entry {
         return LocalSubtitleOrigin.class.hashCode();
     }
 
-    public static final Creator<LocalSubtitleOrigin> CREATOR = new Creator<>() {
-        @Override
-        public LocalSubtitleOrigin createFromParcel(Parcel source) {
-            return INSTANCE;
-        }
-
-        @Override
-        public LocalSubtitleOrigin[] newArray(int size) {
-            return new LocalSubtitleOrigin[size];
-        }
-    };
 }
