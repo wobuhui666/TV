@@ -230,6 +230,12 @@ public final class SpiderDialogTest {
     }
 
     private void verifyScrollHintsKeepButtonGeometry(ScrollView scroll) throws Exception {
+        // Compare equivalent native layout passes. ButtonBarLayout updates its minimum
+        // height during measurement, so the first explicit relayout can change its clip.
+        for (int pass = 0; pass < 2; pass++) {
+            instrumentation.runOnMainSync(() -> currentDialogRoot().requestLayout());
+            instrumentation.waitForIdleSync();
+        }
         final View[] host = new View[1];
         final View[] button = new View[1];
         final View[] focus = new View[1];
