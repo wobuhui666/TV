@@ -213,6 +213,13 @@ public final class SpiderDialogTest {
             scroll[0].scrollTo(0, scroll[0].getChildAt(0).getHeight());
             assertTrue("At the bottom earlier inputs remain above", scroll[0].canScrollVertically(-1));
             assertFalse("At the bottom the downward scroll hint must disappear", scroll[0].canScrollVertically(1));
+            assertTrue("The final input must remain fully visible inside the dialog", focused.getGlobalVisibleRect(fieldBounds)
+                    && fieldBounds.height() + 1 >= focused.getHeight());
+            View finish = currentDialogRoot().findViewById(android.R.id.button1);
+            Rect buttonBounds = new Rect();
+            assertNotNull("The original dialog action must remain attached", finish);
+            assertTrue("Scroll hints must preserve the complete dialog button panel", finish.isShown()
+                    && finish.getGlobalVisibleRect(buttonBounds) && buttonBounds.height() + 1 >= finish.getHeight());
         });
         capture("long-form-scroll");
         text("Finish long form").click();

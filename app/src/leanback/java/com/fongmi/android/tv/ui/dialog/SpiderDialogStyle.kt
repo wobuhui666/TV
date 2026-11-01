@@ -3,14 +3,16 @@ package com.fongmi.android.tv.ui.dialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
+import android.graphics.ColorFilter
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
-import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -48,66 +50,80 @@ object SpiderDialogStyle {
 
     private fun addScrollHints(view: View) {
         if (view is ScrollView) {
-            val parent = view.parent as? ViewGroup ?: return
-            if (parent is ScrollHints) return
-            val index = parent.indexOfChild(view)
-            val params = view.layoutParams
-            parent.removeViewAt(index)
-            parent.addView(ScrollHints(view), index, params)
+            if (view.tag !is ScrollHints) view.tag = ScrollHints(view)
             return
         }
         if (view is ViewGroup) for (index in 0 until view.childCount) addScrollHints(view.getChildAt(index))
     }
 
-    /** Paint in the form's existing side gutter without adding a focus or touch target. */
-    private class ScrollHints(private val scroll: ScrollView) : FrameLayout(scroll.context) {
+    /** The parent overlay keeps the original ScrollView measurement and button-panel space. */
+    private class ScrollHints(private val scroll: ScrollView) : Drawable(), View.OnAttachStateChangeListener {
         private val path = Path()
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
-            strokeWidth = jetStreamDp(1) * 1.5f
+            strokeWidth = scroll.jetStreamDp(1) * 1.5f
         }
-        private val scrollChanged = ViewTreeObserver.OnScrollChangedListener { invalidate() }
+        private val scrollChanged = ViewTreeObserver.OnScrollChangedListener { invalidateSelf() }
+        private val layoutChanged = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateBounds() }
+        private var host: View? = null
+        private var observer: ViewTreeObserver? = null
 
         init {
-            isFocusable = false
-            isFocusableInTouchMode = false
-            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-            addView(scroll, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            bindJetStreamTheme {
-                paint.color = jetStreamColor(R.color.jetstream_on_surface_variant)
+            scroll.bindJetStreamTheme {
+                paint.color = scroll.jetStreamColor(R.color.jetstream_on_surface_variant)
                 paint.alpha = 112
-                invalidate()
+                invalidateSelf()
             }
+            scroll.addOnAttachStateChangeListener(this)
+            if (scroll.isAttachedToWindow) attach()
         }
 
-        override fun onAttachedToWindow() {
-            super.onAttachedToWindow()
-            scroll.viewTreeObserver.addOnScrollChangedListener(scrollChanged)
+        private fun attach() {
+            if (host != null) return
+            host = scroll.parent as? View ?: return
+            host?.overlay?.add(this)
+            observer = scroll.viewTreeObserver.also { it.addOnScrollChangedListener(scrollChanged) }
+            scroll.addOnLayoutChangeListener(layoutChanged)
+            updateBounds()
         }
 
-        override fun onDetachedFromWindow() {
-            if (scroll.viewTreeObserver.isAlive) scroll.viewTreeObserver.removeOnScrollChangedListener(scrollChanged)
-            super.onDetachedFromWindow()
+        override fun onViewAttachedToWindow(view: View) = attach()
+
+        override fun onViewDetachedFromWindow(view: View) {
+            observer?.takeIf { it.isAlive }?.removeOnScrollChangedListener(scrollChanged)
+            observer = null
+            scroll.removeOnLayoutChangeListener(layoutChanged)
+            host?.overlay?.remove(this)
+            host = null
         }
 
-        override fun dispatchDraw(canvas: Canvas) {
-            super.dispatchDraw(canvas)
-            val x = scroll.right - jetStreamDp(12)
-            if (scroll.canScrollVertically(-1)) arrow(canvas, x, scroll.top + jetStreamDp(12), -1)
-            if (scroll.canScrollVertically(1)) arrow(canvas, x, scroll.bottom - jetStreamDp(12), 1)
+        private fun updateBounds() {
+            setBounds(scroll.left, scroll.top, scroll.right, scroll.bottom)
+            invalidateSelf()
+        }
+
+        override fun draw(canvas: Canvas) {
+            if (!scroll.isShown || bounds.isEmpty) return
+            val x = bounds.right - scroll.jetStreamDp(12)
+            if (scroll.canScrollVertically(-1)) arrow(canvas, x, bounds.top + scroll.jetStreamDp(12), -1)
+            if (scroll.canScrollVertically(1)) arrow(canvas, x, bounds.bottom - scroll.jetStreamDp(12), 1)
         }
 
         private fun arrow(canvas: Canvas, x: Float, y: Float, direction: Int) {
-            val halfWidth = jetStreamDp(3)
-            val halfHeight = jetStreamDp(1) * 1.5f
+            val halfWidth = scroll.jetStreamDp(3)
+            val halfHeight = scroll.jetStreamDp(1) * 1.5f
             path.reset()
             path.moveTo(x - halfWidth, y - direction * halfHeight)
             path.lineTo(x, y + direction * halfHeight)
             path.lineTo(x + halfWidth, y - direction * halfHeight)
             canvas.drawPath(path, paint)
         }
+
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha; invalidateSelf() }
+        override fun setColorFilter(filter: ColorFilter?) { paint.colorFilter = filter; invalidateSelf() }
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
     }
 
     private fun style(view: View) {
