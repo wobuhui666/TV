@@ -230,57 +230,43 @@ public final class SpiderDialogTest {
     }
 
     private void verifyScrollHintsKeepButtonGeometry(ScrollView scroll) throws Exception {
-        // Compare equivalent native layout passes. ButtonBarLayout updates its minimum
-        // height during measurement, so the first explicit relayout can change its clip.
-        for (int pass = 0; pass < 2; pass++) {
-            instrumentation.runOnMainSync(() -> currentDialogRoot().requestLayout());
-            instrumentation.waitForIdleSync();
-        }
         final View[] host = new View[1];
-        final View[] button = new View[1];
-        final View[] focus = new View[1];
         final Drawable[] hints = new Drawable[1];
         final int[] heights = new int[3];
         final Rect[] bounds = {new Rect(), new Rect(), new Rect()};
+        // Overlay operations only invalidate drawing. Compare the actual operations in
+        // one UI transaction, without introducing unrelated native window relayouts.
         instrumentation.runOnMainSync(() -> {
             assertTrue("The form has its decorative scroll hint", scroll.getTag() instanceof Drawable);
             hints[0] = (Drawable) scroll.getTag();
             host[0] = (View) scroll.getParent();
-            button[0] = currentDialogRoot().findViewById(android.R.id.button1);
-            focus[0] = currentDialogRoot().findFocus();
-            assertNotNull(button[0]);
-            heights[0] = button[0].getMeasuredHeight();
-            assertTrue(button[0].isShown() && button[0].isClickable() && button[0].getGlobalVisibleRect(bounds[0]));
+            View button = currentDialogRoot().findViewById(android.R.id.button1);
+            View focus = currentDialogRoot().findFocus();
+            assertNotNull(button);
+            heights[0] = button.getMeasuredHeight();
+            assertTrue(button.isShown() && button.isClickable() && button.getGlobalVisibleRect(bounds[0]));
+            try {
+                host[0].getOverlay().remove(hints[0]);
+                heights[1] = button.getMeasuredHeight();
+                assertTrue(button.getGlobalVisibleRect(bounds[1]));
+                assertEquals("Decoration cannot change button measurement", heights[0], heights[1]);
+                assertEquals("Decoration cannot change the visible action area", bounds[0], bounds[1]);
+                assertSame("Decoration cannot change input focus", focus, currentDialogRoot().findFocus());
+            } finally {
+                host[0].getOverlay().add(hints[0]);
+            }
+            heights[2] = button.getMeasuredHeight();
+            assertTrue(button.isShown() && button.isClickable() && button.getGlobalVisibleRect(bounds[2]));
+            assertEquals(heights[0], heights[2]);
+            assertEquals(bounds[0], bounds[2]);
+            assertSame(focus, currentDialogRoot().findFocus());
         });
         try {
-            instrumentation.runOnMainSync(() -> {
-                host[0].getOverlay().remove(hints[0]);
-                currentDialogRoot().requestLayout();
-            });
-            instrumentation.waitForIdleSync();
-            instrumentation.runOnMainSync(() -> {
-                heights[1] = button[0].getMeasuredHeight();
-                assertTrue(button[0].getGlobalVisibleRect(bounds[1]));
-                assertEquals("The overlay must not alter native button measurement", heights[0], heights[1]);
-                assertEquals("The overlay must not alter the original visible action area", bounds[0], bounds[1]);
-                assertSame("Removing decoration must retain input focus", focus[0], currentDialogRoot().findFocus());
-            });
+            instrumentation.runOnMainSync(() -> host[0].getOverlay().remove(hints[0]));
             capture("long-form-scroll-no-hints");
         } finally {
-            instrumentation.runOnMainSync(() -> {
-                host[0].getOverlay().add(hints[0]);
-                currentDialogRoot().requestLayout();
-            });
-            instrumentation.waitForIdleSync();
+            instrumentation.runOnMainSync(() -> host[0].getOverlay().add(hints[0]));
         }
-        instrumentation.runOnMainSync(() -> {
-            heights[2] = button[0].getMeasuredHeight();
-            assertTrue("The restored action remains visible and clickable", button[0].isShown() && button[0].isClickable()
-                    && button[0].getGlobalVisibleRect(bounds[2]));
-            assertEquals("Restoring hints must preserve native button measurement", heights[1], heights[2]);
-            assertEquals("Restoring hints must preserve the visible action area", bounds[1], bounds[2]);
-            assertSame("Restoring decoration must retain input focus", focus[0], currentDialogRoot().findFocus());
-        });
         JSONObject geometry = new JSONObject().put("schema", "tv.scroll-hints-geometry.v1");
         String[] states = {"overlayEnabled", "overlayRemoved", "overlayRestored"};
         for (int i = 0; i < states.length; i++) geometry.put(states[i], new JSONObject().put("buttonMeasuredHeight", heights[i])
