@@ -55,7 +55,7 @@ public class RexPosterPresenter extends Presenter {
         holder.binding.name.setText(vod.getName());
         String meta = RexCaptions.subtitle(vod);
         holder.binding.meta.setText(meta);
-        holder.binding.meta.setVisibility(TextUtils.isEmpty(meta) ? View.GONE : View.VISIBLE);
+        holder.binding.meta.setVisibility(TextUtils.isEmpty(meta) ? View.INVISIBLE : View.VISIBLE);
         ImgUtil.load(vod.getName(), landscape ? RexSpotlightPresenter.landscapeOf(vod) : vod.getPic(), holder.binding.image);
         holder.view.setOnClickListener(view -> listener.onItemClick(vod, holder.binding.image));
         holder.view.setOnLongClickListener(view -> listener.onLongClick(vod));

@@ -49,6 +49,7 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
     private static final class Holder extends ViewHolder {
 
         private final AdapterDiscoverFilterPanelBinding binding;
+        private List<Integer> boundRows = List.of();
 
         private Holder(AdapterDiscoverFilterPanelBinding binding) {
             super(binding.getRoot());
@@ -56,20 +57,25 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
         }
 
         private void bind(DiscoverFilterPanel panel, Listener listener) {
-            int rowCount = panel.getRowCount();
+            List<Integer> visibleRows = panel.getVisibleRows();
             List<String> summaries = new ArrayList<>();
-            for (int row = 0; row < rowCount; row++) summaries.add(summaryLabel(binding.getRoot().getContext(), row, selected(panel.getRow(row))));
+            for (int row : visibleRows) summaries.add(summaryLabel(binding.getRoot().getContext(), panel, row, selected(panel.getRow(row))));
             int expanded = panel.getExpandedRow();
             int focused = binding.summary.getFocusedPosition();
-            binding.summary.setItems(summaries, expanded);
-            if (focused >= 0) binding.summary.setFocusedPosition(Math.min(focused, rowCount - 1));
-            binding.summary.setOnChipClickListener(listener::onFilterGroupClick);
+            int focusedRow = focused >= 0 && focused < boundRows.size() ? boundRows.get(focused) : -1;
+            binding.summary.setItems(summaries, visibleRows.indexOf(expanded));
+            int restored = visibleRows.indexOf(focusedRow);
+            if (focused >= 0) binding.summary.setFocusedPosition(restored >= 0 ? restored : Math.min(focused, visibleRows.size() - 1));
+            boundRows = List.copyOf(visibleRows);
+            binding.summary.setOnChipClickListener(position -> {
+                if (position >= 0 && position < visibleRows.size()) listener.onFilterGroupClick(visibleRows.get(position));
+            });
             binding.summary.setNextFocusLeftId(binding.summary.getId());
             binding.summary.setNextFocusRightId(binding.summary.getId());
             binding.options.setNextFocusLeftId(binding.options.getId());
             binding.options.setNextFocusRightId(binding.options.getId());
 
-            boolean expandedVisible = expanded >= 0 && expanded < rowCount;
+            boolean expandedVisible = visibleRows.contains(expanded);
             binding.optionsContainer.setVisibility(expandedVisible ? View.VISIBLE : View.GONE);
             if (!expandedVisible) {
                 binding.options.clearListeners();
@@ -82,7 +88,7 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
                 labels.add(options.get(i).getLabel());
                 if (options.get(i).isSelected()) selected = i;
             }
-            binding.optionTitle.setText(groupName(binding.getRoot().getContext(), expanded));
+            binding.optionTitle.setText(groupName(binding.getRoot().getContext(), panel, expanded));
             binding.options.setItems(labels, selected);
             int row = expanded;
             binding.options.setOnChipClickListener(position -> {
@@ -90,8 +96,8 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
             });
         }
 
-        private String summaryLabel(Context context, int row, DiscoverFilterOption selected) {
-            String group = groupName(context, row);
+        private String summaryLabel(Context context, DiscoverFilterPanel panel, int row, DiscoverFilterOption selected) {
+            String group = groupName(context, panel, row);
             if (selected == null || row <= 1) return selected == null ? group : selected.getLabel();
             if ((row == 2 || row == 3) && selected.getValue().isEmpty()) return group;
             if (row == 6 && selected.getValue().isEmpty()) return group;
@@ -104,7 +110,8 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
             return null;
         }
 
-        private String groupName(Context context, int row) {
+        private String groupName(Context context, DiscoverFilterPanel panel, int row) {
+            if (!panel.getLabel(row).isEmpty()) return panel.getLabel(row);
             int resource = switch (row) {
                 case 0 -> R.string.discover_filter_library;
                 case 1 -> R.string.discover_filter_media;
@@ -118,6 +125,7 @@ public final class DiscoverFilterPanelPresenter extends Presenter {
         }
 
         private void unbind() {
+            boundRows = List.of();
             binding.summary.clearListeners();
             binding.options.clearListeners();
         }

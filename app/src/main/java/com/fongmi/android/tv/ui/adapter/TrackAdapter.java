@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fongmi.android.tv.bean.Track;
 import com.fongmi.android.tv.databinding.AdapterTrackBinding;
+import com.fongmi.android.tv.ui.dialog.TrackRowStyle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +60,7 @@ public class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.ViewHolder> 
         Track item = mItems.get(position);
         holder.binding.text.setText(item.getName());
         holder.binding.text.setSelected(item.isSelected());
+        TrackRowStyle.bind(holder.binding.text, item);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {

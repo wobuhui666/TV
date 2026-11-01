@@ -22,8 +22,8 @@
     <com.fongmi.android.tv.ui.custom.JetStreamVodTitleTextView
         android:id="@+id/name"
         android:layout_width="match_parent"
-        android:layout_height="24dp"
-        android:layout_marginTop="10dp"
+        android:layout_height="26dp"
+        android:layout_marginTop="8dp"
         android:duplicateParentState="true"
         android:ellipsize="end"
         android:gravity="start|center_vertical"

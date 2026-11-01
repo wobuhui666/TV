@@ -142,6 +142,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         JetStreamEmptyStateView emptyState = mBinding.progressLayout.findViewById(R.id.empty_state);
         emptyState.setText(R.string.tv_empty_discover_retry);
         buildStablePage();
+        mBinding.filterShortcut.setOnClickListener(view -> focusFilters());
         loadFeatured();
         loadRex();
         refreshResults(true);
@@ -632,9 +633,17 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         return !isInactive() && featureFinished && queryFinished && mBinding.progressLayout.isEmpty();
     }
 
+    private boolean focusFilters() {
+        return !isInactive() && requestAdapterFocus(findObjectPosition(filterPanel), R.id.summary);
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         int code = event.getKeyCode();
+        if (code == KeyEvent.KEYCODE_MENU && mAdapter != null) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) focusFilters();
+            return true;
+        }
         if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_NUMPAD_ENTER) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && (retryKeyCode == code || canRetryDiscovery())) {
                 if (event.getRepeatCount() == 0 && retryKeyCode == KeyEvent.KEYCODE_UNKNOWN) retryKeyCode = code;

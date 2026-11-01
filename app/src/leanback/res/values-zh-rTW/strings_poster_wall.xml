@@ -1,0 +1,8 @@
+<resources>
+    <string name="poster_wall_update_day">更新日</string>
+    <string name="poster_wall_original_order">預設順序</string>
+    <string name="poster_wall_filter_current">篩選目前榜單</string>
+    <string name="poster_wall_filters">篩選</string>
+    <string name="poster_wall_all_media">電影和劇集</string>
+    <string name="poster_wall_all_update_days">全部更新日</string>
+</resources>

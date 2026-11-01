@@ -44,23 +44,46 @@
             android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_marginEnd="8dp"
+            android:gravity="start|center_vertical"
             android:singleLine="true"
             android:textSize="12sp" />
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/yearSeparator"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:text="·"
+            android:textSize="12sp"
+            android:visibility="gone" />
         <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
             android:id="@+id/remark"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:gravity="start|center_vertical"
             android:ellipsize="end"
             android:singleLine="true"
             android:textSize="12sp" />
         <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+            android:id="@+id/sourceSeparator"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:text="·"
+            android:textSize="12sp"
+            android:visibility="gone" />
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
             android:id="@+id/site"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_marginStart="6dp"
             android:maxWidth="64dp"
+            android:gravity="start|center_vertical"
             android:ellipsize="end"
             android:singleLine="true"
             android:textSize="12sp" />

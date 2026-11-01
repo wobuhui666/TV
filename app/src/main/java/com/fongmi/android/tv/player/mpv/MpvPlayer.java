@@ -1100,6 +1100,10 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 .setCodecs(codec)
                 .setSampleMimeType(getSampleMimeType(type, codec))
                 .setSelectionFlags(trackSelectionFlags(prefix));
+        if (type == C.TRACK_TYPE_TEXT && propBoolean(prefix + "external")) {
+            builder.setMetadata(com.fongmi.android.tv.player.subtitle.LocalSubtitleOrigin.forUrl(
+                    propString(prefix + "external-filename", "")));
+        }
         int bitrate = propInt(prefix + "demux-bitrate", C.LENGTH_UNSET);
         if (bitrate > 0) builder.setAverageBitrate(bitrate);
         if (type == C.TRACK_TYPE_VIDEO) {

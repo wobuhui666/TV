@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -38,6 +39,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -185,10 +187,23 @@ public final class SpiderDialogTest {
             }
             assertNotNull(scroll[0]);
             assertTrue(first[0].requestFocus());
+            scroll[0].scrollTo(0, 0);
+            assertFalse("At the top only the downward scroll hint is needed", scroll[0].canScrollVertically(-1));
+            assertTrue("The long form has more inputs below the viewport", scroll[0].canScrollVertically(1));
+            assertFalse("Scroll decoration must not become a remote focus target", ((View) scroll[0].getParent()).isFocusable());
+            assertFalse("Scroll decoration must not intercept taps as a button", ((View) scroll[0].getParent()).isClickable());
         });
+        capture("long-form-scroll-top");
         for (int i = 2; i <= 12; i++) {
             device.pressDPadDown();
             focused("Field " + i);
+            if (i == 8) {
+                instrumentation.runOnMainSync(() -> {
+                    assertTrue("Middle inputs have earlier content above", scroll[0].canScrollVertically(-1));
+                    assertTrue("Middle inputs have later content below", scroll[0].canScrollVertically(1));
+                });
+                capture("long-form-scroll-middle");
+            }
         }
         instrumentation.runOnMainSync(() -> {
             assertTrue("Long forms must scroll while remote focus stays in the inputs", scroll[0].getScrollY() > 0);
@@ -197,10 +212,69 @@ public final class SpiderDialogTest {
             assertEquals("Field 12", focused.getContentDescription().toString());
             Rect fieldBounds = new Rect();
             assertTrue("The final input must be visible after scrolling", focused.getGlobalVisibleRect(fieldBounds));
+            scroll[0].scrollTo(0, scroll[0].getChildAt(0).getHeight());
+            assertTrue("At the bottom earlier inputs remain above", scroll[0].canScrollVertically(-1));
+            assertFalse("At the bottom the downward scroll hint must disappear", scroll[0].canScrollVertically(1));
+            assertTrue("The final input must remain fully visible inside the dialog", focused.getGlobalVisibleRect(fieldBounds)
+                    && fieldBounds.height() + 1 >= focused.getHeight());
+            View finish = currentDialogRoot().findViewById(android.R.id.button1);
+            Rect buttonBounds = new Rect();
+            assertNotNull("The original dialog action must remain attached", finish);
+            assertTrue("The original dialog action must remain visible and clickable", finish.isShown() && finish.isClickable()
+                    && finish.getGlobalVisibleRect(buttonBounds) && !buttonBounds.isEmpty());
         });
         capture("long-form-scroll");
+        verifyScrollHintsKeepButtonGeometry(scroll[0]);
         text("Finish long form").click();
         assertEquals("finish", call.get(5, TimeUnit.SECONDS).getString("button"));
+    }
+
+    private void verifyScrollHintsKeepButtonGeometry(ScrollView scroll) throws Exception {
+        final View[] host = new View[1];
+        final Drawable[] hints = new Drawable[1];
+        final int[] heights = new int[3];
+        final Rect[] bounds = {new Rect(), new Rect(), new Rect()};
+        // Overlay operations only invalidate drawing. Compare the actual operations in
+        // one UI transaction, without introducing unrelated native window relayouts.
+        instrumentation.runOnMainSync(() -> {
+            assertTrue("The form has its decorative scroll hint", scroll.getTag() instanceof Drawable);
+            hints[0] = (Drawable) scroll.getTag();
+            host[0] = (View) scroll.getParent();
+            View button = currentDialogRoot().findViewById(android.R.id.button1);
+            View focus = currentDialogRoot().findFocus();
+            assertNotNull(button);
+            heights[0] = button.getMeasuredHeight();
+            assertTrue(button.isShown() && button.isClickable() && button.getGlobalVisibleRect(bounds[0]));
+            try {
+                host[0].getOverlay().remove(hints[0]);
+                heights[1] = button.getMeasuredHeight();
+                assertTrue(button.getGlobalVisibleRect(bounds[1]));
+                assertEquals("Decoration cannot change button measurement", heights[0], heights[1]);
+                assertEquals("Decoration cannot change the visible action area", bounds[0], bounds[1]);
+                assertSame("Decoration cannot change input focus", focus, currentDialogRoot().findFocus());
+            } finally {
+                host[0].getOverlay().add(hints[0]);
+            }
+            heights[2] = button.getMeasuredHeight();
+            assertTrue(button.isShown() && button.isClickable() && button.getGlobalVisibleRect(bounds[2]));
+            assertEquals(heights[0], heights[2]);
+            assertEquals(bounds[0], bounds[2]);
+            assertSame(focus, currentDialogRoot().findFocus());
+        });
+        try {
+            instrumentation.runOnMainSync(() -> host[0].getOverlay().remove(hints[0]));
+            capture("long-form-scroll-no-hints");
+        } finally {
+            instrumentation.runOnMainSync(() -> host[0].getOverlay().add(hints[0]));
+        }
+        JSONObject geometry = new JSONObject().put("schema", "tv.scroll-hints-geometry.v1");
+        String[] states = {"overlayEnabled", "overlayRemoved", "overlayRestored"};
+        for (int i = 0; i < states.length; i++) geometry.put(states[i], new JSONObject().put("buttonMeasuredHeight", heights[i])
+                .put("buttonVisibleBounds", new JSONArray().put(bounds[i].left).put(bounds[i].top).put(bounds[i].right).put(bounds[i].bottom)));
+        File report = new File(activity.getExternalFilesDir(null), "spider-dialog-verification/scroll-hints-geometry.json");
+        try (FileOutputStream output = new FileOutputStream(report)) {
+            output.write(geometry.toString(2).getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     private View currentDialogRoot() {

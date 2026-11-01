@@ -9,6 +9,9 @@ on:
       compare_baseline:
         type: boolean
         default: true
+      polish:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       baseline_ref:
@@ -19,6 +22,10 @@ on:
         description: Also measure the baseline, or rerun optimized checks only
         type: boolean
         default: true
+      polish:
+        description: Include fixture-based poster-wall and subtitle presentation checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,6 +41,8 @@ jobs:
     env:
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       RESPONSIVENESS_REVISION: ${{ matrix.revision }}
+      TV_POLISH_TESTS: ${{ inputs.polish }}
+      TMDB_API_KEY: ${{ inputs.polish && 'synthetic-wall-fixture-key' || '' }}
     steps:
       - name: Free runner space for Android builds and emulator
         run: |
@@ -139,6 +148,7 @@ jobs:
             catvod/build/test-results/
             quickjs/build/test-results/
             artifacts/fongmi-features/
+            artifacts/tv-polish/
           retention-days: 14
           if-no-files-found: warn
       - name: Upload optimized TV APK

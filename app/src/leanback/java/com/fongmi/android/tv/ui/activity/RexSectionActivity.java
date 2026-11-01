@@ -3,6 +3,7 @@ package com.fongmi.android.tv.ui.activity;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -17,6 +18,7 @@ import com.fongmi.android.tv.api.rex.DoubanBridgeClient;
 import com.fongmi.android.tv.api.rex.RexNowClient;
 import com.fongmi.android.tv.api.rex.RexTmdbClient;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
+import com.fongmi.android.tv.bean.DiscoverRequestState;
 import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
@@ -48,6 +50,11 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
     private RexSection section;
     private int page;
     private int totalPages = 1;
+    private final List<ArrayObjectAdapter> rows = new ArrayList<>();
+    private final DiscoverRequestState requestState = new DiscoverRequestState();
+    private PosterWallFilterController filters;
+    private int generation;
+    private boolean initialFocus = true;
 
     public static void start(Activity activity, RexSection section) {
         Intent intent = new Intent(activity, RexSectionActivity.class);
@@ -70,6 +77,8 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
         mBinding.title.setText(section.getLabelRes());
         applySourceLabel();
         setRecyclerView();
+        filters = new PosterWallFilterController(mBinding.filterContainer, section.getQuery(), this::onFiltersChanged);
+        generation = requestState.reset();
         load(1);
     }
 
@@ -81,7 +90,8 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
             default -> 0;
         };
         mBinding.sourceLabel.setVisibility(label == 0 ? View.GONE : View.VISIBLE);
-        if (label != 0) mBinding.sourceLabel.setText(label);
+        if (label != 0) mBinding.sourceLabel.setText(isRemote() ? getString(label)
+                : getString(label) + " · " + getString(R.string.poster_wall_filter_current));
     }
 
     private void setRecyclerView() {
@@ -94,21 +104,25 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
     }
 
     private void load(int targetPage) {
-        page = targetPage;
         if (targetPage == 1 && mAdapter.size() == 0) mBinding.progressLayout.showProgress();
+        int ticket = generation;
         switch (section.getSource()) {
-            case TMDB_LIST, TMDB_DISCOVER -> RexTmdbClient.fetchPage(section.getQuery(), targetPage, BuildConfig.TMDB_API_KEY, tag, new RexTmdbClient.PageListener() {
+            case TMDB_LIST, TMDB_DISCOVER -> RexTmdbClient.fetchPage(filters.query(), targetPage, BuildConfig.TMDB_API_KEY, tag, new RexTmdbClient.PageListener() {
                 @Override
                 public void onSuccess(List<Vod> items, int target, int pages) {
-                    if (isInactive()) return;
+                    if (isInactive() || ticket != generation) return;
+                    page = target;
                     totalPages = pages;
-                    complete(items);
+                    complete(items, true);
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    if (isInactive()) return;
-                    complete(List.of());
+                    if (isInactive() || ticket != generation) return;
+                    com.fongmi.android.tv.bean.Result result = newResult(List.of());
+                    scroller.endLoading(result);
+                    scroller.setEnable(totalPages);
+                    if (targetPage == 1) mBinding.progressLayout.showContent(true, 0);
                 }
             });
             case REXNOW_ANIME -> RexNowClient.fetchAnime(tag, new RexNowClient.WeeklyListener() {
@@ -117,13 +131,14 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
                     if (isInactive()) return;
                     List<Vod> all = new ArrayList<>();
                     for (List<Vod> group : weekly.values()) all.addAll(group);
-                    complete(RexNowClient.mergeDistinct(List.of(), all, 0));
+                    filters.setLocalItems(RexNowClient.mergeDistinct(List.of(), all, 0), weekly);
+                    completeLocal();
                 }
 
                 @Override
                 public void onError(Exception e) {
                     if (isInactive()) return;
-                    complete(List.of());
+                    completeLocal(List.of());
                 }
             });
             case BRIDGE_CATALOG -> loadBridge();
@@ -137,13 +152,13 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
             @Override
             public void onSuccess(List<Vod> items) {
                 if (isInactive()) return;
-                complete(items);
+                completeLocal(items);
             }
 
             @Override
             public void onError(Exception e) {
                 if (isInactive()) return;
-                complete(List.of());
+                completeLocal(List.of());
             }
         };
     }
@@ -159,7 +174,7 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
             @Override
             public void onSuccess(List<Vod> items) {
                 if (isInactive()) return;
-                complete(items);
+                completeLocal(items);
             }
 
             @Override
@@ -180,10 +195,43 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
         return section.getFeedCategory().isEmpty() ? "trending" : section.getFeedCategory();
     }
 
-    private void complete(List<Vod> items) {
+    private boolean isRemote() {
+        return section.getSource() == RexSection.Source.TMDB_LIST || section.getSource() == RexSection.Source.TMDB_DISCOVER;
+    }
+
+    private void onFiltersChanged() {
+        initialFocus = false;
+        if (!isRemote()) {
+            completeLocal();
+            return;
+        }
+        RexTmdbClient.cancel(tag);
+        generation = requestState.reset();
+        page = 0;
+        totalPages = 1;
+        rows.clear();
+        mAdapter.clear();
+        scroller.reset();
+        load(1);
+    }
+
+    private void completeLocal(List<Vod> items) {
+        filters.setLocalItems(items, null);
+        completeLocal();
+    }
+
+    private void completeLocal() {
+        page = totalPages = 1;
+        rows.clear();
+        mAdapter.clear();
+        complete(filters.filterLocal(), false);
+    }
+
+    private void complete(List<Vod> items, boolean remote) {
         scroller.endLoading(newResult(items));
+        scroller.setEnable(totalPages);
         if (page == 1) mBinding.progressLayout.showContent(true, items.size());
-        add(items);
+        add(remote ? requestState.addAllAndGetAdded(generation, items) : items);
     }
 
     private com.fongmi.android.tv.bean.Result newResult(List<Vod> items) {
@@ -194,19 +242,33 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
 
     private void add(List<Vod> items) {
         if (items.isEmpty()) return;
+        int offset = 0;
+        if (!rows.isEmpty()) {
+            ArrayObjectAdapter last = rows.get(rows.size() - 1);
+            int count = Math.min(COLUMN - last.size(), items.size());
+            if (count > 0) {
+                last.addAll(last.size(), items.subList(0, count));
+                offset = count;
+            }
+        }
         int width = (ResUtil.getScreenWidth() - ResUtil.dp2px(112 + 16 * (COLUMN - 1))) / COLUMN;
         VodPresenter presenter = new VodPresenter(this, Style.rect(), new int[]{width, Math.round(width / 0.75f)});
-        for (List<Vod> part : Lists.partition(items, COLUMN)) {
+        for (List<Vod> part : Lists.partition(items.subList(offset, items.size()), COLUMN)) {
             ArrayObjectAdapter row = new ArrayObjectAdapter(presenter);
             row.addAll(0, part);
+            rows.add(row);
             mAdapter.add(new ListRow(row));
         }
-        if (page == 1) requestFocus();
+        if (initialFocus) {
+            initialFocus = false;
+            requestFocus();
+        }
     }
 
     private void requestFocus() {
+        int ticket = generation;
         mBinding.recycler.postDelayed(() -> {
-            if (isInactive()) return;
+            if (isInactive() || ticket != generation || mBinding.filterContainer.hasFocus()) return;
             RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(0);
             View target = holder == null ? null : findFocusable(holder.itemView);
             if (target != null && target.requestFocus()) return;
@@ -255,7 +317,7 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
 
     @Override
     public boolean onLoadMore(String ignored) {
-        if (isInactive() || page >= totalPages) return false;
+        if (isInactive() || !isRemote() || page >= totalPages) return false;
         load(page + 1);
         return true;
     }
@@ -266,7 +328,18 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
         RexNowClient.cancel(tag);
         DoubanBridgeClient.cancel(tag);
         if (scroller != null) mBinding.recycler.removeOnScrollListener(scroller);
+        if (filters != null) filters.release();
         super.onDestroy();
+    }
+
+    @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_MENU && filters != null) {
+            if (event.getAction() == KeyEvent.ACTION_UP) filters.focus();
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && filters != null
+                && mBinding.filterContainer.hasFocus() && event.getAction() == KeyEvent.ACTION_UP && filters.collapse()) return true;
+        return super.dispatchKeyEvent(event);
     }
 
     private boolean isInactive() {

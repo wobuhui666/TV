@@ -10,6 +10,7 @@
     android:paddingBottom="24dp">
 
     <com.fongmi.android.tv.ui.custom.JetStreamStrongLabelTextView
+        android:id="@+id/filterTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="20dp"
@@ -18,6 +19,7 @@
         android:textSize="20sp" />
 
     <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
+        android:id="@+id/filterHint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="3dp"
