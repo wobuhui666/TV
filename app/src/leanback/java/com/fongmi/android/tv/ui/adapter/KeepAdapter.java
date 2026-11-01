@@ -76,8 +76,11 @@ public class KeepAdapter extends BaseDiffAdapter<Keep, KeepAdapter.ViewHolder> {
         Keep item = getItem(position);
         setClickListener(holder);
         holder.binding.name.setText(item.getVodName());
+        holder.binding.year.setVisibility(View.GONE);
+        holder.binding.yearSeparator.setVisibility(View.GONE);
         holder.binding.remark.setVisibility(View.GONE);
-        holder.binding.site.setVisibility(View.VISIBLE);
+        holder.binding.sourceSeparator.setVisibility(View.GONE);
+        holder.binding.site.setVisibility(item.getSiteName().isEmpty() ? View.GONE : View.VISIBLE);
         holder.binding.site.setText(item.getSiteName());
         holder.binding.delete.setVisibility(!delete ? View.GONE : View.VISIBLE);
         ImgUtil.load(item.getVodName(), item.getVodPic(), holder.binding.image);

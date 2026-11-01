@@ -39,7 +39,7 @@ public class VodRectHolder extends BaseVodHolder {
         binding.name.setText(item.getName());
         binding.year.setText(item.getYear());
         binding.site.setText(item.getSiteName());
-        binding.site.setVisibility(item.getSiteVisible());
+        binding.site.setVisibility(item.getSiteName().isEmpty() ? View.GONE : item.getSiteVisible());
         binding.year.setVisibility(item.getYearVisible());
         binding.name.setVisibility(item.getNameVisible());
         updateSourceSummary(item);
@@ -52,6 +52,11 @@ public class VodRectHolder extends BaseVodHolder {
     public void updateSourceSummary(Vod item) {
         binding.remark.setText(item.getSourceSummary());
         binding.remark.setVisibility(item.getRemarkVisible());
+        boolean year = binding.year.getVisibility() == View.VISIBLE;
+        boolean remark = binding.remark.getVisibility() == View.VISIBLE;
+        boolean site = binding.site.getVisibility() == View.VISIBLE;
+        binding.yearSeparator.setVisibility(year && (remark || site) ? View.VISIBLE : View.GONE);
+        binding.sourceSeparator.setVisibility(site && remark ? View.VISIBLE : View.GONE);
     }
 
     @Override

@@ -505,6 +505,9 @@ public class TvPreviewActivity extends BaseActivity implements JetStreamSettingV
             ((TextView) card.findViewById(R.id.remark)).setText("8." + (position % 9) + " · 4K");
             TextView year = card.findViewById(R.id.year);
             year.setText("2026"); year.setVisibility(View.VISIBLE);
+            card.findViewById(R.id.yearSeparator).setVisibility(View.VISIBLE);
+            card.findViewById(R.id.sourceSeparator).setVisibility(View.GONE);
+            card.findViewById(R.id.site).setVisibility(View.GONE);
             int[] colors = {0xFF334C80, 0xFF366757, 0xFF785459, 0xFF6A5C91, 0xFF9A723C};
             GradientDrawable poster = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 new int[] {colors[position % 5], Color.rgb(22, 30, 46)});
