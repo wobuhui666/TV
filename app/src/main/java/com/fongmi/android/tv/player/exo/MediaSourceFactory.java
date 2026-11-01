@@ -126,7 +126,8 @@ public class MediaSourceFactory implements MediaSource.Factory {
         for (MediaItem.SubtitleConfiguration sub : mediaItem.localConfiguration.subtitleConfigurations) {
             androidx.media3.common.Format format = new androidx.media3.common.Format.Builder()
                     .setId(sub.id).setSampleMimeType(sub.mimeType).setLanguage(sub.language)
-                    .setLabel(sub.label).setSelectionFlags(sub.selectionFlags).setRoleFlags(sub.roleFlags).build();
+                    .setLabel(sub.label).setSelectionFlags(sub.selectionFlags).setRoleFlags(sub.roleFlags)
+                    .setMetadata(com.fongmi.android.tv.player.subtitle.LocalSubtitleOrigin.forUrl(sub.uri.toString())).build();
             boolean sup = androidx.media3.common.MimeTypes.APPLICATION_PGS.equals(sub.mimeType);
             boolean nativeAss = subtitles.usesNativeAss() && androidx.media3.common.MimeTypes.TEXT_SSA.equals(sub.mimeType);
             androidx.media3.extractor.text.SubtitleParser.Factory parsers = subtitles.parserFactory();

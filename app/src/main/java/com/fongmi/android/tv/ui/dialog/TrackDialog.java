@@ -180,6 +180,8 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
                 Format format = trackGroup.getTrackFormat(j);
                 String name = provider.getTrackName(format);
                 Track item = new Track(type, name, PlayerHelper.describeFormat(format));
+                item.setLocalSubtitle(type == C.TRACK_TYPE_TEXT
+                        && com.fongmi.android.tv.player.subtitle.LocalSubtitleOrigin.isLocal(format));
                 item.setSelected(trackGroup.isTrackSelected(j));
                 if (secondary) item.setSelected(item.getFormat().equals(player.getSecondaryTrack()));
                 items.add(item);

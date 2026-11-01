@@ -3,6 +3,7 @@ package com.fongmi.android.tv.bean;
 import android.text.TextUtils;
 
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -21,6 +22,8 @@ public class Track {
     private String name;
     private String format;
     private boolean selected;
+    @Ignore
+    private transient boolean localSubtitle;
 
     public Track(int type, String name, String format) {
         this.type = type;
@@ -83,6 +86,14 @@ public class Track {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    public boolean isLocalSubtitle() {
+        return localSubtitle;
+    }
+
+    public void setLocalSubtitle(boolean localSubtitle) {
+        this.localSubtitle = localSubtitle;
     }
 
     public Track key(String key) {
