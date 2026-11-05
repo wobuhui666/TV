@@ -21,6 +21,10 @@ on:
         description: Verify poster-wall filters, subtitle labels and source-form hints
         type: boolean
         default: false
+      compact_home:
+        description: Verify compact home, filter-only discovery, source actions and library navigation
+        type: boolean
+        default: false
       baseline_ref:
         description: Baseline commit for responsiveness comparison
         type: string
@@ -103,6 +107,7 @@ jobs:
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+          TMDB_API_KEY: ${{ inputs.compact_home && 'compact-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
@@ -117,7 +122,62 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Prepare emulator checks
+        env:
+          TV_COMPACT_HOME: ${{ inputs.compact_home }}
+        run: |
+          cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
+          set -euo pipefail
+          if [ "$TV_COMPACT_HOME" = 'true' ]; then
+            out=artifacts/compact-home
+            mkdir -p "$out"
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS || true
+            collect_compact() {
+              adb pull /sdcard/Android/data/com.fongmi.android.tv.preview/files/native-usability-evidence "$out/" >/dev/null 2>&1 || true
+              adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
+              adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
+            }
+            trap collect_compact EXIT
+            adb logcat -c
+            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest
+            adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
+              com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
+            python3 - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path('artifacts/compact-home')
+          output = (root / 'instrumentation.txt').read_text()
+          match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', output, re.M)
+          summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': bool(match),
+                     'passedTests': int(match[1]) if match else 0}
+          (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, indent=2))
+          if not match:
+              raise SystemExit('Compact home instrumentation failed')
+          PY
+            collect_compact
+            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest
+          else
+            bash .github/scripts/verify-tv-ui.sh
+            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest,com.fongmi.android.tv.player.TimeshiftPlaybackAndroidTest,com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest,com.fongmi.android.tv.test.TimeshiftControlsTest,com.fongmi.android.tv.player.TimeshiftExoIntegrationTest
+            bash .github/scripts/verify-playback-specs.sh
+          fi
+          VERIFY
       - name: Verify themes and touch on emulator
+        env:
+          TV_COMPACT_HOME: ${{ inputs.compact_home }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -126,10 +186,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: |
-            bash .github/scripts/verify-tv-ui.sh
-            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest,com.fongmi.android.tv.player.TimeshiftPlaybackAndroidTest,com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest,com.fongmi.android.tv.test.TimeshiftControlsTest,com.fongmi.android.tv.player.TimeshiftExoIntegrationTest
-            bash .github/scripts/verify-playback-specs.sh
+          script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Upload screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -139,6 +196,7 @@ jobs:
             artifacts/tv-ui/
             artifacts/upstream-features/
             artifacts/playback-specs/
+            artifacts/compact-home/
             app/build/test-results/
             app/build/reports/tests/
           if-no-files-found: warn

@@ -100,6 +100,7 @@ public class PosterHomeCatalogTest {
         List<Vod> items = new ArrayList<>();
         for (int i = 0; i < 30; i++) items.add(vod("source:" + i, "影片" + i, "movie", "2026", true));
         Vod action = new Vod();
+        action.setId("");
         action.setName("配置 CK");
         Field field = Vod.class.getDeclaredField("action");
         field.setAccessible(true);
@@ -118,6 +119,18 @@ public class PosterHomeCatalogTest {
         item.setYear(year);
         item.setPic("poster");
         item.setBackdrop(landscape ? "backdrop" : "poster");
+        // Local unit tests use Android return-default-value stubs, so initialize the fields
+        // whose production getters normally normalize null through TextUtils.isEmpty().
+        try {
+            Field action = Vod.class.getDeclaredField("action");
+            action.setAccessible(true);
+            action.set(item, "");
+            Field tag = Vod.class.getDeclaredField("vodTag");
+            tag.setAccessible(true);
+            tag.set(item, "");
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError(error);
+        }
         return item;
     }
 }

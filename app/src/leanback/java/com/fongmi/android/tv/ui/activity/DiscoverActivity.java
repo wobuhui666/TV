@@ -473,6 +473,8 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         if (isInactive()) return;
         DiscoverListQuery query = currentQuery(1);
         if (!force && query.equals(lastQuery)) return;
+        View retry = getCurrentFocus();
+        if (filtersOnly && retry != null && retry.getId() == R.id.retry) focusFilters();
         lastQuery = query;
         DiscoverApi.cancel(queryTag);
         queryGeneration = requestState.reset();
@@ -552,6 +554,10 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
 
     private void appendResultRows(List<Vod> values) {
         if (values.isEmpty()) return;
+        if (filtersOnly && resultRowCount == 1 && mAdapter.get(resultStartPosition) instanceof EmptyResults) {
+            mAdapter.removeItems(resultStartPosition, 1);
+            resultRowCount = 0;
+        }
         int column = Product.getColumn(Style.rect());
         int offset = 0;
         if (!resultAdapters.isEmpty()) {
