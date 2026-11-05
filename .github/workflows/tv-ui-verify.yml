@@ -25,6 +25,10 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
+      live_home:
+        description: Capture real TMDB homepage with a runtime Actions credential
+        type: boolean
+        default: false
       baseline_ref:
         description: Baseline commit for responsiveness comparison
         type: string
@@ -38,7 +42,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
@@ -107,7 +111,7 @@ jobs:
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-          TMDB_API_KEY: ${{ inputs.compact_home && 'compact-ui-fixture' || '' }}
+          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
@@ -125,10 +129,13 @@ jobs:
       - name: Prepare emulator checks
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIVE_HOME: ${{ inputs.live_home }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_COMPACT_HOME" = 'true' ]; then
+          if [ "$TV_LIVE_HOME" = 'true' ]; then
+            bash .github/scripts/verify-live-home.sh
+          elif [ "$TV_COMPACT_HOME" = 'true' ]; then
             out=artifacts/compact-home
             mkdir -p "$out"
             python3 - <<'PY'
@@ -152,7 +159,7 @@ jobs:
             }
             trap collect_compact EXIT
             adb logcat -c
-            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest
+            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.test.TmdbConnectionSettingsIntegrationTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
             python3 - <<'PY'
@@ -175,9 +182,23 @@ jobs:
             bash .github/scripts/verify-playback-specs.sh
           fi
           VERIFY
+      - name: Prepare runtime TMDB preview credential
+        if: inputs.live_home
+        env:
+          TMDB_PREVIEW_KEY: ${{ secrets.TV94_TMDB_PREVIEW_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re
+          secret = os.environ.get('TMDB_PREVIEW_KEY', '').strip()
+          assert re.fullmatch(r'[a-fA-F0-9]{32}', secret), 'Configure TV94_TMDB_PREVIEW_KEY before live verification'
+          target = pathlib.Path(os.environ['RUNNER_TEMP']) / 'tv-tmdb-preview.key'
+          target.write_text(secret)
+          target.chmod(0o600)
+          PY
       - name: Verify themes and touch on emulator
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIVE_HOME: ${{ inputs.live_home }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -187,6 +208,13 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
+      - name: Remove runtime preview credential
+        if: always() && inputs.live_home
+        run: |
+          python3 - <<'PY'
+          import os, pathlib
+          (pathlib.Path(os.environ['RUNNER_TEMP']) / 'tv-tmdb-preview.key').unlink(missing_ok=True)
+          PY
       - name: Upload screenshots and diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -197,6 +225,7 @@ jobs:
             artifacts/upstream-features/
             artifacts/playback-specs/
             artifacts/compact-home/
+            artifacts/live-home/
             app/build/test-results/
             app/build/reports/tests/
           if-no-files-found: warn

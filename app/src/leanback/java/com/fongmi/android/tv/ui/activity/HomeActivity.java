@@ -82,6 +82,7 @@ import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.TmdbEndpoint;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
@@ -108,6 +109,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private FeaturedVodPresenter mFeaturedPresenter;
     private PosterHomeController mPosterHome;
     private int mHomeLayout;
+    private String mTmdbEndpoints;
     private final HomeSourceState mHomeSource = new HomeSourceState();
     private HomeSourceState.Request mActionSourceRequest;
     private ViewTreeObserver.OnGlobalFocusChangeListener mCompactContentFocus;
@@ -161,6 +163,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mInitialFocusPending = savedInstanceState == null;
         mResult = Result.empty();
         mHomeLayout = BrowseExperienceSettings.getHomeLayout();
+        mTmdbEndpoints = currentTmdbEndpoints();
         if (BrowseExperienceSettings.isPosterHomeEnabled()) {
             mPosterHome = new PosterHomeController(this, visible -> {
                 if (mPosterHeroVisible == visible) return;
@@ -1155,9 +1158,18 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             recreate();
             return;
         }
+        String endpoints = currentTmdbEndpoints();
+        if (!TextUtils.equals(mTmdbEndpoints, endpoints)) {
+            mTmdbEndpoints = endpoints;
+            getVideo();
+        }
         if (mPosterHome != null) mPosterHome.resumeKeepShelf();
         if (BrowseExperienceSettings.isHistoryActionsEnabled() && mPresenter.isDelete()) setHistoryDelete(false);
         mClock.start();
+    }
+
+    private String currentTmdbEndpoints() {
+        return TmdbEndpoint.getApiBase() + "\n" + TmdbEndpoint.getImageBase();
     }
 
     @Override

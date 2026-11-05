@@ -10,6 +10,10 @@ import com.github.catvod.utils.Prefers;
 
 public class Setting {
 
+    public static final int TMDB_DEFAULT_PROXY = 0;
+    public static final int TMDB_DIRECT = 1;
+    public static final int TMDB_CUSTOM_PROXY = 2;
+
     public static final int THEME_DEFAULT = -1;
     public static final int THEME_FOLLOW_WALLPAPER = 0;
     public static final int THEME_BILIBILI_PINK = 0xFFFF6699;
@@ -66,6 +70,18 @@ public class Setting {
 
     public static String getTmdbProxyUrl() {
         return Prefers.getString("tmdb_proxy_url", "");
+    }
+
+    public static int getTmdbConnectionMode() {
+        int stored = Prefers.getInt("tmdb_connection_mode", -1);
+        if (stored >= TMDB_DEFAULT_PROXY && stored <= TMDB_CUSTOM_PROXY) return stored;
+        // Preserve the selected endpoint when upgrading from the custom-URL-only setting.
+        return getTmdbProxyUrl().trim().isEmpty() ? TMDB_DEFAULT_PROXY : TMDB_CUSTOM_PROXY;
+    }
+
+    public static void putTmdbConnectionMode(int mode) {
+        int value = mode >= TMDB_DEFAULT_PROXY && mode <= TMDB_CUSTOM_PROXY ? mode : TMDB_DEFAULT_PROXY;
+        Prefers.put("tmdb_connection_mode", value);
     }
 
     /** 豆瓣云桥地址（空 = 官方默认；可填自建实例），仅本机存储。 */

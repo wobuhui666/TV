@@ -155,7 +155,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowValue(JetStreamSettingView.KEY_LIVE, LiveConfig.getDesc());
         setRowValue(JetStreamSettingView.KEY_WALL, WallConfig.getDesc());
         setRowValue(JetStreamSettingView.KEY_WALL_VISIBLE, Setting.getSwitch(JetStreamWallpaper.isVisible()));
+        int[] connectionModes = {R.string.setting_tmdb_default_proxy, R.string.setting_tmdb_direct, R.string.setting_tmdb_custom_proxy};
+        setRowValue(JetStreamSettingView.KEY_TMDB_CONNECTION, getString(connectionModes[Setting.getTmdbConnectionMode()]));
         setRowValue(JetStreamSettingView.KEY_TMDB_PROXY, getTmdbProxyStatus());
+        setRowVisible(JetStreamSettingView.KEY_TMDB_PROXY, Setting.getTmdbConnectionMode() == Setting.TMDB_CUSTOM_PROXY);
     }
 
     private void refreshPlaybackRows() {
@@ -363,6 +366,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_LIVE -> onLive();
             case JetStreamSettingView.KEY_WALL -> onWall();
             case JetStreamSettingView.KEY_WALL_VISIBLE -> setWallVisible(!JetStreamWallpaper.isVisible());
+            case JetStreamSettingView.KEY_TMDB_CONNECTION -> onTmdbConnection();
             case JetStreamSettingView.KEY_TMDB_PROXY -> onTmdbProxy();
             case JetStreamSettingView.KEY_VOD_HOME -> onVodHome();
             case JetStreamSettingView.KEY_VOD_HISTORY -> onVodHistory();
@@ -534,14 +538,33 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setApiUrl(R.string.setting_tmdb_proxy, TmdbEndpoint.getCustomRoot(), this::setTmdbProxy);
     }
 
+    private void onTmdbConnection() {
+        String[] modes = {getString(R.string.setting_tmdb_default_proxy), getString(R.string.setting_tmdb_direct), getString(R.string.setting_tmdb_custom_proxy)};
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.setting_tmdb_connection)
+                .setSingleChoiceItems(modes, Setting.getTmdbConnectionMode(), (dialog, which) -> {
+                    boolean changed = Setting.getTmdbConnectionMode() != which;
+                    Setting.putTmdbConnectionMode(which);
+                    if (changed) refreshTmdbConnection();
+                    refreshSourceRows();
+                    dialog.dismiss();
+                    if (which == Setting.TMDB_CUSTOM_PROXY && TmdbEndpoint.getCustomRoot().isEmpty()) onTmdbProxy();
+                }).show();
+    }
+
     private void setTmdbProxy(String url) {
         String root = TmdbEndpoint.normalizeRoot(url);
-        if (!TextUtils.equals(root, TmdbEndpoint.getCustomRoot())) {
-            DiscoverApi.clearTmdbCache();
-            RexFeedLoader.clearCache();
-        }
+        boolean changed = !TextUtils.equals(root, TmdbEndpoint.getCustomRoot())
+                || Setting.getTmdbConnectionMode() != Setting.TMDB_CUSTOM_PROXY;
         Setting.putTmdbProxyUrl(root);
-        setRowValue(JetStreamSettingView.KEY_TMDB_PROXY, getTmdbProxyStatus());
+        Setting.putTmdbConnectionMode(Setting.TMDB_CUSTOM_PROXY);
+        if (changed) refreshTmdbConnection();
+        refreshSourceRows();
+    }
+
+    private void refreshTmdbConnection() {
+        DiscoverApi.clearTmdbCache();
+        RexFeedLoader.clearCache();
+        TmdbNetwork.clearRouteCache();
     }
 
     private String getTmdbProxyStatus() {

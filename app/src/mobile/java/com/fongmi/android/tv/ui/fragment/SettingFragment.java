@@ -48,6 +48,7 @@ import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
 import com.fongmi.android.tv.utils.TmdbEndpoint;
+import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.github.catvod.bean.Doh;
 import com.github.catvod.net.CloudflarePreferredSettings;
 import com.github.catvod.net.OkHttp;
@@ -323,8 +324,14 @@ public class SettingFragment extends BaseFragment implements ConfigListener, Sit
     private void setTmdbProxy(View view) {
         setApiUrl(R.string.setting_tmdb_proxy, TmdbEndpoint.getCustomRoot(), value -> {
             String root = TmdbEndpoint.normalizeRoot(value);
-            if (!TextUtils.equals(root, TmdbEndpoint.getCustomRoot())) DiscoverApi.clearTmdbCache();
+            int mode = root.isEmpty() ? Setting.TMDB_DEFAULT_PROXY : Setting.TMDB_CUSTOM_PROXY;
+            boolean changed = !TextUtils.equals(root, TmdbEndpoint.getCustomRoot()) || Setting.getTmdbConnectionMode() != mode;
             Setting.putTmdbProxyUrl(root);
+            Setting.putTmdbConnectionMode(mode);
+            if (changed) {
+                DiscoverApi.clearTmdbCache();
+                TmdbNetwork.clearRouteCache();
+            }
             mBinding.tmdbProxyText.setText(getTmdbProxyStatus());
         });
     }
