@@ -1,0 +1,40 @@
+{
+  "baselineSha": "8be56e629e71c9fd60740f714e079d60e975ec8a",
+  "currentSha": "d9c92c29ee4869baa00a9807d35c8bd59293d5bc",
+  "baselineCounts": {
+    "Error": 111,
+    "Warning": 349,
+    "Hint": 6
+  },
+  "currentCounts": {
+    "Error": 108,
+    "Warning": 349,
+    "Hint": 6
+  },
+  "newErrors": [],
+  "newWarnings": [
+    {
+      "id": "LeanbackUsesWifi",
+      "severity": "Warning",
+      "message": "Requiring Wifi permissions limits app availability on TVs that support only Ethernet",
+      "locations": [
+        {
+          "file": "app/src/main/AndroidManifest.xml",
+          "line": "13"
+        }
+      ]
+    },
+    {
+      "id": "DataExtractionRules",
+      "severity": "Warning",
+      "message": "The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher.",
+      "locations": [
+        {
+          "file": "app/src/main/AndroidManifest.xml",
+          "line": "42"
+        }
+      ]
+    }
+  ],
+  "passed": true
+}

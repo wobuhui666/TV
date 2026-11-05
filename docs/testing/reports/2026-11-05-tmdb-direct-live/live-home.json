@@ -1,0 +1,110 @@
+{
+  "liveMetadata": true,
+  "connection": "direct",
+  "apiHost": "api.themoviedb.org",
+  "imageHost": "image.tmdb.org",
+  "successfulApiPaths": [
+    "\/3\/movie\/now_playing",
+    "\/3\/movie\/top_rated",
+    "\/3\/movie\/popular",
+    "\/3\/tv\/popular",
+    "\/3\/trending\/all\/day",
+    "\/3\/tv\/top_rated"
+  ],
+  "successfulImageResponses": 41,
+  "decodedHeroArtwork": true,
+  "decodedMoviePosters": true,
+  "decodedSeriesPosters": true,
+  "catalogs": {
+    "trending_day": {
+      "count": 20,
+      "preview": [
+        {
+          "id": "tmdb:movie:1294189",
+          "title": "猫鼬",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:movie:1423191",
+          "title": "生化危机：爆发夜",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:tv:225385",
+          "title": "黑鸽",
+          "year": "2024"
+        },
+        {
+          "id": "tmdb:movie:1792170",
+          "title": "模范公民",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:tv:258989",
+          "title": "The Greatest",
+          "year": "2026"
+        }
+      ]
+    },
+    "now_playing": {
+      "count": 20,
+      "preview": [
+        {
+          "id": "tmdb:movie:791523",
+          "title": "荒野丛林",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:movie:1058424",
+          "title": "希望",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:movie:1423191",
+          "title": "生化危机：爆发夜",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:movie:1507696",
+          "title": "天启Z：新世界",
+          "year": "2026"
+        },
+        {
+          "id": "tmdb:movie:1596275",
+          "title": "假面恋人：换档追爱",
+          "year": "2026"
+        }
+      ]
+    },
+    "popular_tv": {
+      "count": 20,
+      "preview": [
+        {
+          "id": "tmdb:tv:5920",
+          "title": "超感神探",
+          "year": "2008"
+        },
+        {
+          "id": "tmdb:tv:1100",
+          "title": "老爸老妈的浪漫史",
+          "year": "2005"
+        },
+        {
+          "id": "tmdb:tv:2316",
+          "title": "办公室",
+          "year": "2005"
+        },
+        {
+          "id": "tmdb:tv:60735",
+          "title": "闪电侠",
+          "year": "2014"
+        },
+        {
+          "id": "tmdb:tv:18165",
+          "title": "吸血鬼日记",
+          "year": "2009"
+        }
+      ]
+    }
+  }
+}
