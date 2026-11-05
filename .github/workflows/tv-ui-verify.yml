@@ -159,7 +159,7 @@ jobs:
             }
             trap collect_compact EXIT
             adb logcat -c
-            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.test.TmdbConnectionSettingsIntegrationTest
+            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
             python3 - <<'PY'
