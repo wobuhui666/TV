@@ -9,7 +9,6 @@ import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
-import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.db.AppDatabase;
@@ -200,8 +199,8 @@ public final class HomePreviewFixtures {
 
         private String compactSource() {
             Result result = new Result();
-            result.setTypes(List.of(Class.objectFrom("{\"type_id\":\"movie\",\"type_name\":\"电影\"}"),
-                    Class.objectFrom("{\"type_id\":\"tv\",\"type_name\":\"剧集\"}")));
+            result.setTypes(List.of(com.fongmi.android.tv.bean.Class.objectFrom("{\"type_id\":\"movie\",\"type_name\":\"电影\"}"),
+                    com.fongmi.android.tv.bean.Class.objectFrom("{\"type_id\":\"tv\",\"type_name\":\"剧集\"}")));
             List<Vod> items = new ArrayList<>();
             for (int i = 0; i < 25; i++) items.add(sourcePoster(i, "source-preview-" + i));
             // The 26th entry has no image or ID, just like a source's login/configuration action.
