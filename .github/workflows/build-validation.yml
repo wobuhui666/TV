@@ -86,13 +86,13 @@ jobs:
           GRADLE
           chmod +x ./gradlew
 
-      - name: Check shared network tests and mobile settings compilation
+      - name: Check shared tests and build the mobile debug app
         if: matrix.package == 'sourceprobe'
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :catvod:testDebugUnitTest \
             :quickjs:testDebugUnitTest \
-            :app:compileMobileArm64_v8aDebugJavaWithJavac \
+            :app:assembleMobileArm64_v8aDebug \
             --no-daemon --build-cache --max-workers=2
 
       - name: Check Python and JavaScript source API compatibility
@@ -116,15 +116,20 @@ jobs:
             :app:assembleLeanbackArm64_v8aDebugAndroidTest \
             --no-daemon --build-cache --max-workers=2
 
+      - name: Run TV Android lint
+        if: matrix.package == 'sourceprobe'
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
+            :app:lintLeanbackArm64_v8aDebug \
+            --no-daemon --build-cache --max-workers=2
+
       - name: Verify packages and collect APKs
         run: |
           python - <<'PY'
           import hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
-          root = pathlib.Path('app/build/outputs/apk')
-          apks = list(root.rglob('*.apk'))
           groups = {
-              'app': [p for p in apks if 'androidTest' not in p.parts],
-              'test': [p for p in apks if 'androidTest' in p.parts],
+              'app': list(pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug').glob('*.apk')),
+              'test': list(pathlib.Path('app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug').glob('*.apk')),
           }
           package = os.environ['VALIDATION_PACKAGE']
           app_id = 'com.fongmi.android.tv.' + package
@@ -175,6 +180,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload mobile debug APK
+        if: matrix.package == 'sourceprobe'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-validation-arm64-${{ github.run_id }}
+          path: app/build/outputs/apk/mobileArm64_v8a/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload unit test reports
         if: always() && matrix.package == 'sourceprobe'
         uses: actions/upload-artifact@v4
@@ -183,6 +197,7 @@ jobs:
           path: |
             app/build/test-results/
             app/build/reports/tests/
+            app/build/reports/lint-results-leanbackArm64_v8aDebug.*
             catvod/build/test-results/
             quickjs/build/test-results/
           if-no-files-found: warn

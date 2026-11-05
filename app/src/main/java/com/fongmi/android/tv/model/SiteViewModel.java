@@ -17,6 +17,7 @@ import com.github.catvod.utils.Trans;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
 public class SiteViewModel extends ViewModel {
 
@@ -64,7 +65,13 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void homeContent() {
-        execute(TaskType.RESULT, result, () -> SiteApi.homeContent(VodConfig.get().getHome()));
+        Site site = VodConfig.get().getHome();
+        execute(TaskType.RESULT, result, () -> SiteApi.homeContent(site));
+    }
+
+    /** Captures the selected source before dispatch, so a later switch cannot change this request. */
+    public void homeContent(Site site, Consumer<Result> onResult) {
+        execute(TaskType.RESULT, onResult, () -> SiteApi.homeContent(site));
     }
 
     public void categoryContent(String key, String tid, String page, boolean filter, HashMap<String, String> extend) {
@@ -120,9 +127,13 @@ public class SiteViewModel extends ViewModel {
     }
 
     private void execute(TaskType type, MutableLiveData<Result> liveData, Callable<Result> callable) {
-        tasks.execute(type, Constant.TIMEOUT_VOD, callable, liveData::setValue, error -> {
-            if (error instanceof ExtractException) liveData.setValue(Result.error(error.getMessage()));
-            else liveData.setValue(Result.empty());
+        execute(type, liveData::setValue, callable);
+    }
+
+    private void execute(TaskType type, Consumer<Result> onResult, Callable<Result> callable) {
+        tasks.execute(type, Constant.TIMEOUT_VOD, callable, onResult, error -> {
+            if (error instanceof ExtractException) onResult.accept(Result.error(error.getMessage()));
+            else onResult.accept(Result.empty());
             error.printStackTrace();
         });
     }

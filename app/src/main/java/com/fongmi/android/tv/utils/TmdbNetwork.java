@@ -40,6 +40,19 @@ public final class TmdbNetwork {
         return (isTmdbUrl(request.url()) ? client() : OkHttp.client()).newCall(request);
     }
 
+    /** The TMDB transport has its own dispatcher; cancel without creating a client. */
+    public static void cancel(Object tag) {
+        if (tag == null) return;
+        cancel(OkHttp.client(), tag);
+        OkHttpClient tmdb = client;
+        if (tmdb != null && tmdb != OkHttp.client()) cancel(tmdb, tag);
+    }
+
+    private static void cancel(OkHttpClient transport, Object tag) {
+        for (Call call : transport.dispatcher().queuedCalls()) if (tag.equals(call.request().tag())) call.cancel();
+        for (Call call : transport.dispatcher().runningCalls()) if (tag.equals(call.request().tag())) call.cancel();
+    }
+
     private static synchronized OkHttpClient client() {
         if (client == null) client = OkHttp.trustedClient().newBuilder()
                 .connectTimeout(3500, TimeUnit.MILLISECONDS).readTimeout(8, TimeUnit.SECONDS)

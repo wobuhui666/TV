@@ -2,6 +2,8 @@ package com.fongmi.android.tv.ui.home;
 
 import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.ui.rex.RexFeedResult;
+import com.fongmi.android.tv.ui.rex.RexSections;
 
 import org.junit.Test;
 
@@ -9,6 +11,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.lang.reflect.Field;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -61,6 +64,50 @@ public class PosterHomeCatalogTest {
         assertEquals(20, PosterHomeCatalog.filter(items, PosterHomeCatalog.ALL).size());
         assertEquals(5, PosterHomeCatalog.hero(content, PosterHomeCatalog.ALL).size());
         assertTrue(PosterHomeCatalog.hero(Map.of(), PosterHomeCatalog.ALL).isEmpty());
+    }
+
+    @Test
+    public void shouldDeduplicateOnlyExactIdentitiesWithinAShelf() {
+        List<Vod> items = List.of(vod("tmdb:movie:1", "同名", "movie", "2026", true),
+                vod("tmdb:movie:1", "同名", "movie", "2026", true),
+                vod("tmdb:movie:2", "同名", "movie", "1990", true),
+                vod("tmdb:tv:1", "同名", "tv", "2026", true));
+        assertEquals(List.of("tmdb:movie:1", "tmdb:movie:2", "tmdb:tv:1"),
+                PosterHomeCatalog.compactItems(items, PosterHomeCatalog.ALL).stream().map(Vod::getId).toList());
+        assertEquals(2, PosterHomeCatalog.compactItems(items, PosterHomeCatalog.MOVIES).size());
+    }
+
+    @Test
+    public void shouldKeepCompactHomeToItsSelectedShelves() {
+        assertEquals(List.of("trending_day", "douban_movie", "douban_tv"), PosterHomeCatalog.compactKeys(PosterHomeCatalog.ALL));
+        assertFalse(PosterHomeCatalog.compactKeys(PosterHomeCatalog.MOVIES).contains("douban_tv"));
+        assertFalse(PosterHomeCatalog.compactKeys(PosterHomeCatalog.TV).contains("now_playing"));
+        assertEquals(List.of("top_movie", "top_tv"), PosterHomeCatalog.compactKeys(PosterHomeCatalog.TOP));
+    }
+
+    @Test
+    public void shouldBuildHeroFromFeedSnapshotsAndKeepDoubanFallback() {
+        List<RexFeedResult> feeds = List.of(new RexFeedResult(RexSections.byKey("douban_movie"),
+                List.of(vod("douban:1", "电影", "movie", "2026", false))),
+                new RexFeedResult(RexSections.byKey("douban_tv"), List.of(vod("douban:2", "剧集", "tv", "2026", false))));
+        assertEquals(2, PosterHomeCatalog.compactHero(feeds, PosterHomeCatalog.ALL).size());
+        assertEquals("剧集", PosterHomeCatalog.compactHero(feeds, PosterHomeCatalog.TV).get(0).getName());
+        assertTrue(PosterHomeCatalog.compactHero(feeds, PosterHomeCatalog.TOP).isEmpty());
+    }
+
+    @Test
+    public void shouldPreserveActionsAfterThePreviewCapWithoutArtwork() throws Exception {
+        List<Vod> items = new ArrayList<>();
+        for (int i = 0; i < 30; i++) items.add(vod("source:" + i, "影片" + i, "movie", "2026", true));
+        Vod action = new Vod();
+        action.setName("配置 CK");
+        Field field = Vod.class.getDeclaredField("action");
+        field.setAccessible(true);
+        field.set(action, "login");
+        items.add(action);
+        assertEquals(20, PosterHomeCatalog.sourceVideos(items).size());
+        assertEquals(List.of(action), PosterHomeCatalog.sourceActions(items));
+        assertTrue(PosterHomeCatalog.compactItems(List.of(action), PosterHomeCatalog.ALL).isEmpty());
     }
 
     private static Vod vod(String id, String title, String type, String year, boolean landscape) {

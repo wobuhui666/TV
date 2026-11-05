@@ -2,9 +2,10 @@ package com.fongmi.android.tv.setting;
 
 import com.github.catvod.utils.Prefers;
 
-/** Independent, opt-in browsing features. Reset never touches sources or watch history. */
+/** Home layout and independent browsing features. Reset never touches sources or watch history. */
 public final class BrowseExperienceSettings {
     private static final String HOME = "browse_poster_home";
+    private static final String HOME_LAYOUT = "browse_home_layout_v1";
     private static final String FILTER = "browse_search_filter";
     private static final String SOURCES = "browse_detail_sources";
     private static final String SMART = "browse_smart_sources";
@@ -12,14 +13,27 @@ public final class BrowseExperienceSettings {
     private static final String KEEP_SHELF = "browse_poster_keep_shelf";
     private static final String HERO_ROTATION = "browse_hero_rotation";
 
+    public static final int HOME_COMPACT = 0;
+    public static final int HOME_SOURCE = 1;
+    public static final int HOME_POSTERS = 2;
+
     public static final int HERO_ROTATION_ORIGINAL = 0;
     public static final int HERO_ROTATION_FOCUS_PAUSED = 1;
     public static final int HERO_ROTATION_MANUAL = 2;
 
     private BrowseExperienceSettings() {}
 
-    public static boolean isPosterHomeEnabled() { return Prefers.getBoolean(HOME, false); }
-    public static void putPosterHomeEnabled(boolean enabled) { Prefers.put(HOME, enabled); }
+    // A missing v1 preference intentionally selects compact home on both install and upgrade.
+    public static int getHomeLayout() { return normalizeHomeLayout(Prefers.getInt(HOME_LAYOUT, HOME_COMPACT)); }
+    public static boolean isCompactHomeEnabled() { return getHomeLayout() == HOME_COMPACT; }
+    public static boolean isPosterHomeEnabled() { return getHomeLayout() != HOME_SOURCE; }
+    public static void putHomeLayout(int layout) {
+        int value = normalizeHomeLayout(layout);
+        Prefers.put(HOME_LAYOUT, value);
+        Prefers.put(HOME, value != HOME_SOURCE);
+    }
+    /** Compatibility entry point for explicitly selecting either legacy layout. */
+    public static void putPosterHomeEnabled(boolean enabled) { putHomeLayout(enabled ? HOME_POSTERS : HOME_SOURCE); }
     public static int getSearchFilterMode() { return Math.max(0, Math.min(2, Prefers.getInt(FILTER, 0))); }
     public static void putSearchFilterMode(int mode) { Prefers.put(FILTER, Math.max(0, Math.min(2, mode))); }
     public static boolean isDetailSourcesEnabled() { return Prefers.getBoolean(SOURCES, false); }
@@ -35,6 +49,10 @@ public final class BrowseExperienceSettings {
 
     private static int normalizeHeroRotation(int mode) {
         return mode >= HERO_ROTATION_ORIGINAL && mode <= HERO_ROTATION_MANUAL ? mode : HERO_ROTATION_ORIGINAL;
+    }
+
+    private static int normalizeHomeLayout(int layout) {
+        return layout >= HOME_COMPACT && layout <= HOME_POSTERS ? layout : HOME_COMPACT;
     }
 
     public static void restoreOriginal() {

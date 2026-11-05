@@ -3,12 +3,15 @@ package com.fongmi.android.tv.ui.home;
 import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.ui.rex.RexFeedResult;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /** Presentation policy only: no source queries or playback selection happen on the home wall. */
@@ -36,6 +39,68 @@ public final class PosterHomeCatalog {
         return result;
     }
 
+    public static List<String> compactKeys(int category) {
+        return switch (category) {
+            case MOVIES -> List.of("douban_movie", "now_playing", "popular_movie", "top_movie");
+            case TV -> List.of("douban_tv", "popular_tv");
+            case TOP -> List.of("top_movie", "top_tv");
+            default -> List.of("trending_day", "douban_movie", "douban_tv");
+        };
+    }
+
+    /** Keep identities intact: titles alone must not collapse different films or seasons. */
+    public static List<Vod> compactItems(List<Vod> items, int category) {
+        if (items == null) return List.of();
+        List<Vod> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (Vod item : items) {
+            if (item == null || item.getId().isEmpty() || item.getName().isEmpty() || item.getPic().isEmpty()
+                    || item.isAction() || item.isFolder()) continue;
+            if (category == MOVIES && !DiscoverMediaKey.MOVIE.equals(item.getTypeName())) continue;
+            if (category == TV && !DiscoverMediaKey.TV.equals(item.getTypeName())) continue;
+            if (!seen.add(item.getId())) continue;
+            result.add(item);
+            if (result.size() == 20) break;
+        }
+        return result;
+    }
+
+    public static List<Vod> compactHero(List<RexFeedResult> feeds, int category) {
+        Map<DiscoverApi.Row, List<Vod>> content = new java.util.EnumMap<>(DiscoverApi.Row.class);
+        for (RexFeedResult feed : feeds) {
+            DiscoverApi.Row row = switch (feed.getSection().getKey()) {
+                case "trending_day" -> DiscoverApi.Row.TMDB_DAY;
+                case "now_playing" -> DiscoverApi.Row.TMDB_NOW_PLAYING;
+                case "popular_movie" -> DiscoverApi.Row.TMDB_POPULAR_MOVIE;
+                case "popular_tv" -> DiscoverApi.Row.TMDB_POPULAR_TV;
+                case "top_movie" -> DiscoverApi.Row.TMDB_TOP_MOVIE;
+                case "top_tv" -> DiscoverApi.Row.TMDB_TOP_TV;
+                case "douban_movie" -> DiscoverApi.Row.DOUBAN_HOT_MOVIE;
+                case "douban_tv" -> DiscoverApi.Row.DOUBAN_HOT_TV;
+                default -> null;
+            };
+            if (row != null) content.put(row, compactItems(feed.getItems(), category));
+        }
+        return hero(content, category);
+    }
+
+    public static List<Vod> sourceVideos(List<Vod> items) {
+        List<Vod> result = new ArrayList<>();
+        if (items == null) return result;
+        for (Vod item : items) {
+            if (item == null || item.isAction() || item.isFolder() || item.getName().isEmpty()) continue;
+            result.add(item);
+            if (result.size() == 20) break;
+        }
+        return result;
+    }
+
+    public static List<Vod> sourceActions(List<Vod> items) {
+        List<Vod> result = new ArrayList<>();
+        if (items != null) for (Vod item : items) if (item != null && item.isAction()) result.add(item);
+        return result;
+    }
+
     public static boolean visible(DiscoverApi.Row row, int category) {
         return switch (category) {
             case MOVIES -> row != DiscoverApi.Row.DOUBAN_HOT_TV && row != DiscoverApi.Row.TMDB_POPULAR_TV
@@ -51,7 +116,7 @@ public final class PosterHomeCatalog {
         Map<String, Vod> result = new LinkedHashMap<>();
         DiscoverApi.Row[] order = {
                 DiscoverApi.Row.TMDB_DAY, DiscoverApi.Row.TMDB_POPULAR_TV,
-                DiscoverApi.Row.TMDB_NOW_PLAYING, DiscoverApi.Row.TMDB_TOP_MOVIE,
+                DiscoverApi.Row.TMDB_NOW_PLAYING, DiscoverApi.Row.TMDB_POPULAR_MOVIE, DiscoverApi.Row.TMDB_TOP_MOVIE,
                 DiscoverApi.Row.TMDB_TOP_TV, DiscoverApi.Row.DOUBAN_HOT_MOVIE,
                 DiscoverApi.Row.DOUBAN_HOT_TV
         };

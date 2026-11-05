@@ -84,7 +84,7 @@ import static org.junit.Assert.*;
 /** Real native activities and D-pad events, using in-memory posters and a deliberately offline client. */
 @RunWith(AndroidJUnit4.class)
 public final class NativeBrowseIntegrationTest {
-    private static final String[] PREFERENCES = {"browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1", "browse_history_actions", "browse_poster_keep_shelf", "browse_hero_rotation", "source_selection_mode"};
+    private static final String[] PREFERENCES = {"browse_home_layout_v1", "browse_poster_home", "browse_search_filter", "browse_detail_sources", "browse_smart_sources", "browse_poster_source_priority_v1", "browse_history_actions", "browse_poster_keep_shelf", "browse_hero_rotation", "source_selection_mode"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final List<Activity> previousActivities = new ArrayList<>();

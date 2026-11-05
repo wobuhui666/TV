@@ -18,11 +18,13 @@ import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.bean.DiscoverHero;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.databinding.AdapterHomeWallCategoriesBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallFooterBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallShelfBinding;
+import com.fongmi.android.tv.databinding.AdapterHomeSourceBinding;
 import com.fongmi.android.tv.ui.activity.DiscoverActivity;
 import com.fongmi.android.tv.ui.activity.DiscoverDetailActivity;
 import com.fongmi.android.tv.ui.activity.SettingActivity;
@@ -49,6 +51,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /** Optional native discovery surface; the activity continues to own navigation and history. */
 public final class PosterHomeController implements VodPresenter.OnClickListener {
@@ -60,6 +63,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private static final long DEADLINE_MS = 24_000;
     private final Activity activity;
     private final Listener listener;
+    private final boolean compact;
     private final PosterKeepShelfController keepShelf;
     private final Object requestTag = new Object();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -68,7 +72,11 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private final Hero hero = new Hero();
     private final Categories categories = new Categories();
     private final Footer footer = new Footer();
-    private final RexFeedLoader rexLoader = new RexFeedLoader();
+    private final Source source = new Source();
+    private final Map<String, RexFeedResult> compactFeeds = new LinkedHashMap<>();
+    private VodPresenter.OnClickListener sourceListener;
+    private Runnable openLibrary = () -> {};
+    private final RexFeedLoader rexLoader;
     private ArrayObjectAdapter rexSpotlightAdapter;
     private ListRow rexSpotlightRow;
     private final List<Shelf> rexShelves = new ArrayList<>();
@@ -81,9 +89,25 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private Runnable deadline;
 
     public PosterHomeController(Activity activity, Listener listener) {
+        this(activity, listener, false);
+    }
+
+    public PosterHomeController(Activity activity, Listener listener, boolean compact) {
         this.activity = activity;
         this.listener = listener;
+        this.compact = compact;
+        rexLoader = new RexFeedLoader(compact);
         keepShelf = new PosterKeepShelfController(activity);
+        if (compact) {
+            for (RexSection section : RexSections.home()) {
+                if (section.isShelf()) continue;
+                Shelf shelf = new Shelf(section.getLabelRes(), null);
+                shelf.key = section.getKey();
+                shelf.section = section;
+                shelves.add(shelf);
+            }
+            return;
+        }
         shelves.add(new Shelf(R.string.home_wall_trending, DiscoverApi.Row.TMDB_DAY));
         shelves.add(new Shelf(R.string.home_wall_movie_shelf, DiscoverApi.Row.DOUBAN_HOT_MOVIE));
         shelves.add(new Shelf(R.string.home_wall_tv_shelf, DiscoverApi.Row.DOUBAN_HOT_TV));
@@ -98,6 +122,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         selector.addPresenter(Categories.class, new CategoriesPresenter());
         selector.addPresenter(Shelf.class, new ShelfPresenter());
         selector.addPresenter(Footer.class, new FooterPresenter());
+        if (compact) selector.addPresenter(Source.class, new SourcePresenter());
         selector.addPresenter(ListRow.class, new CustomRowPresenter(16, FocusHighlight.ZOOM_FACTOR_NONE, HorizontalGridView.FOCUS_SCROLL_ITEM, 48), RexSectionCardPresenter.class);
         keepShelf.register(selector);
     }
@@ -135,6 +160,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         }, PosterHomeController.this));
         rexSpotlightRow = new ListRow(rexSpotlightAdapter);
         page.add(rexSpotlightRow);
+        if (compact) page.add(source);
         page.add(footer);
         updateHistoryOrder();
     }
@@ -162,6 +188,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         if (row == hero) return !hero.value.isEmpty();
         if (row instanceof Shelf shelf) return !shelf.items.isEmpty();
         if (row == rexSpotlightRow) return rexSpotlightAdapter != null && rexSpotlightAdapter.size() > 0;
+        if (row == source) return compact;
         if (keepShelf.isRow(row)) return keepShelf.isFocusable();
         return row == categories || row == footer;
     }
@@ -184,6 +211,13 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     public void refresh() {
         refreshKeepShelf();
+        if (compact) {
+            if (closed || page == null) return;
+            footer.loading = true;
+            notifyRow(footer);
+            refreshRex();
+            return;
+        }
         if (closed || page == null || pending > 0) return;
         int request = ++generation;
         pending = shelves.size();
@@ -234,6 +268,10 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     private void render() {
+        if (compact) {
+            renderCompact();
+            return;
+        }
         List<Vod> heroItems = PosterHomeCatalog.hero(content, category);
         if (!RexFeedResult.sameItems(hero.value.getItems(), heroItems)) {
             hero.value.replace(heroItems);
@@ -296,6 +334,13 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     private void applyRexResults(List<RexFeedResult> results) {
         List<RexFeedResult> feeds = results == null ? List.of() : results;
+        if (compact) {
+            compactFeeds.clear();
+            for (RexFeedResult feed : feeds) compactFeeds.put(feed.getSection().getKey(), feed);
+            footer.loading = rexLoader.isLoading();
+            renderCompact();
+            return;
+        }
         rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(feeds), new BaseDiffCallback<RexFeedResult>());
         applyRexShelves(feeds);
         footer.empty = !shelfAny && !rexAny();
@@ -345,6 +390,83 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
                 || !rexShelves.isEmpty();
     }
 
+    private void renderCompact() {
+        List<RexFeedResult> feeds = new ArrayList<>(compactFeeds.values());
+        List<Vod> heroItems = PosterHomeCatalog.compactHero(feeds, category);
+        if (!RexFeedResult.sameItems(hero.value.getItems(), heroItems)) {
+            hero.value.replace(heroItems);
+            notifyRow(hero);
+        }
+        List<String> keys = PosterHomeCatalog.compactKeys(category);
+        for (Shelf shelf : shelves) {
+            RexFeedResult feed = compactFeeds.get(shelf.key);
+            List<Vod> items = keys.contains(shelf.key) && feed != null
+                    ? PosterHomeCatalog.compactItems(feed.getItems(), category) : List.of();
+            boolean changed = !RexFeedResult.sameItems(shelf.items, items);
+            shelf.items = items;
+            if (page == null) continue;
+            int index = page.indexOf(shelf);
+            if (items.isEmpty()) {
+                if (index >= 0) page.remove(shelf);
+            } else {
+                if (index < 0) page.add(compactShelfEnd(), shelf);
+                else if (changed) notifyRow(shelf);
+            }
+        }
+        // A category is an ordered set of shelves, independent of response arrival order.
+        int anchor = page == null ? -1 : compactShelfEnd();
+        if (anchor >= 0) {
+            int count = 0;
+            for (Shelf shelf : shelves) if (page.indexOf(shelf) >= 0) count++;
+            int position = anchor - count;
+            for (String key : keys) for (Shelf shelf : shelves) {
+                if (shelf.key.equals(key) && page.indexOf(shelf) >= 0) {
+                    if (page.indexOf(shelf) != position) page.move(page.indexOf(shelf), position);
+                    position++;
+                }
+            }
+        }
+        List<RexFeedResult> specialty = new ArrayList<>();
+        if (category == PosterHomeCatalog.ALL || category == PosterHomeCatalog.TV) {
+            for (RexSection section : RexSections.home()) {
+                RexFeedResult feed = compactFeeds.get(section.getKey());
+                if (!section.isShelf() || feed == null) continue;
+                List<Vod> items = PosterHomeCatalog.compactItems(feed.getItems(), category);
+                if (!items.isEmpty()) specialty.add(new RexFeedResult(section, items));
+            }
+        }
+        if (rexSpotlightAdapter != null) {
+            rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(specialty), new BaseDiffCallback<RexFeedResult>());
+            if (page != null) {
+                if (specialty.isEmpty()) page.remove(rexSpotlightRow);
+                else if (page.indexOf(rexSpotlightRow) < 0) page.add(page.indexOf(source), rexSpotlightRow);
+            }
+        }
+        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && specialty.isEmpty();
+        notifyRow(footer);
+        listener.onHeroChanged(!hero.value.isEmpty());
+    }
+
+    private int compactShelfEnd() {
+        int index = page.indexOf(rexSpotlightRow);
+        return index >= 0 ? index : page.indexOf(source);
+    }
+
+    public void setSourceListener(VodPresenter.OnClickListener listener, Runnable openLibrary) {
+        sourceListener = listener;
+        this.openLibrary = openLibrary;
+    }
+
+    public void updateSource(String key, String name, Result result, boolean loading) {
+        if (!compact) return;
+        source.key = key;
+        source.name = name;
+        source.loading = loading;
+        source.actions = PosterHomeCatalog.sourceActions(result.getList());
+        source.items = PosterHomeCatalog.sourceVideos(result.getList());
+        notifyRow(source);
+    }
+
     private static void collapse(View view, boolean empty, int height) {
         view.setVisibility(empty ? View.GONE : View.VISIBLE);
         ViewGroup.LayoutParams params = view.getLayoutParams();
@@ -368,6 +490,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     private static final class Shelf {
         String key;
+        RexSection section;
         final int title;
         final DiscoverApi.Row row;
         List<Vod> items = List.of();
@@ -377,6 +500,22 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             this.row = row;
         }
     }
+
+    private static final class Source {
+        String key = "";
+        String name = "";
+        boolean loading;
+        List<Vod> items = List.of();
+        List<Vod> actions = List.of();
+    }
+
+    // Equal source responses may contain new object instances. Rebind the click closures as well
+    // as visible fields so HomeActivity's current-request identity guard accepts retained cards.
+    private static final BaseDiffCallback<Vod> SOURCE_DIFF = new BaseDiffCallback<>() {
+        @Override public boolean areContentsTheSame(Vod oldItem, @NonNull Vod newItem) {
+            return oldItem == newItem && super.areContentsTheSame(oldItem, newItem);
+        }
+    };
 
     private final class HeroPresenter extends Presenter {
         private final DiscoverHeroPresenter delegate = new DiscoverHeroPresenter(PosterHomeController.this);
@@ -421,6 +560,11 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             int[] labels = {R.string.home_wall_all, R.string.home_wall_movies, R.string.home_wall_tv, R.string.home_wall_top};
             for (int i = 0; i < labels.length; i++) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(i), activity.getString(labels[i]), 0));
             binding.categories.setItems(items);
+            binding.filter.setVisibility(compact ? View.VISIBLE : View.GONE);
+            if (compact) {
+                TouchFocus.bind(binding.filter);
+                binding.filter.setOnClickListener(view -> DiscoverActivity.startFilters(activity, category));
+            }
             binding.categories.setListener(new JetStreamHomeNavView.Listener() {
                 @Override
                 public void onNavClick(String key) {
@@ -476,6 +620,10 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             ShelfHolder shelfHolder = (ShelfHolder) holder;
             Shelf shelf = (Shelf) row;
             shelfHolder.binding.title.setText(shelf.title);
+            shelfHolder.binding.more.setVisibility(compact ? View.VISIBLE : View.GONE);
+            shelfHolder.binding.more.setOnClickListener(compact
+                    ? view -> RexSectionActivity.start(activity, shelf.section) : null);
+            if (compact) TouchFocus.bind(shelfHolder.binding.more);
             shelfHolder.adapter.setItems(shelf.items, new BaseDiffCallback<Vod>());
             collapse(holder.view, shelf.items.isEmpty(), ViewGroup.LayoutParams.WRAP_CONTENT);
         }
@@ -483,6 +631,87 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         @Override
         public void onUnbindViewHolder(@NonNull ViewHolder holder) {
             ((ShelfHolder) holder).adapter.clear();
+        }
+    }
+
+    private final class SourcePresenter extends Presenter {
+        private final VodPresenter.OnClickListener listener = new VodPresenter.OnClickListener() {
+            @Override public void onItemClick(Vod item) { onItemClick(item, null); }
+            @Override public void onItemClick(Vod item, View poster) {
+                if (sourceListener != null && source.items.contains(item)) sourceListener.onItemClick(item, poster);
+            }
+            @Override public boolean onLongClick(Vod item) {
+                return sourceListener != null && source.items.contains(item) && sourceListener.onLongClick(item);
+            }
+        };
+
+        @NonNull
+        @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent) {
+            AdapterHomeSourceBinding binding = AdapterHomeSourceBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+            ArrayObjectAdapter adapter = new ArrayObjectAdapter(new VodPresenter(listener, Style.rect(), new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)}) {
+                @NonNull @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent) {
+                    ViewHolder holder = super.onCreateViewHolder(parent);
+                    TouchFocus.bind(holder.view);
+                    return holder;
+                }
+            });
+            binding.posters.setAdapter(new ItemBridgeAdapter(adapter));
+            binding.posters.setRowHeight(ResUtil.dp2px(230));
+            binding.posters.setHorizontalSpacing(ResUtil.dp2px(20));
+            binding.posters.setItemAnimator(null);
+            binding.posters.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ITEM);
+            TouchFocus.bind(binding.library);
+            binding.library.setOnClickListener(view -> openLibrary.run());
+            return new SourceHolder(binding, adapter);
+        }
+
+        @Override public void onBindViewHolder(@NonNull ViewHolder viewHolder, Object row) {
+            SourceHolder holder = (SourceHolder) viewHolder;
+            AdapterHomeSourceBinding binding = holder.binding;
+            boolean removedFocus = binding.actions.hasFocus() && source.actions.isEmpty()
+                    || binding.posters.hasFocus() && source.items.isEmpty();
+            boolean changedSource = !holder.key.equals(source.key);
+            holder.key = source.key;
+            binding.title.setText(source.name.isEmpty() ? activity.getString(R.string.home_compact_source)
+                    : activity.getString(R.string.home_source_recommendations, source.name));
+            binding.status.setVisibility(source.loading || source.items.isEmpty() ? View.VISIBLE : View.GONE);
+            binding.status.setText(source.key.isEmpty() ? R.string.home_compact_no_source
+                    : source.loading ? R.string.home_compact_source_loading : R.string.home_compact_source_empty);
+            binding.library.setText(source.key.isEmpty() ? R.string.home_choose_source : R.string.home_tab_library);
+            binding.actions.setVisibility(source.actions.isEmpty() ? View.GONE : View.VISIBLE);
+            int focusedAction = binding.actions.getFocusedPosition();
+            binding.actions.setItems(source.actions.stream().map(item -> item.getName().isEmpty()
+                    ? activity.getString(R.string.home_compact_source_action) : item.getName()).toList());
+            if (!changedSource && focusedAction >= 0) binding.actions.setFocusedPosition(focusedAction);
+            List<Vod> actions = List.copyOf(source.actions);
+            String boundKey = source.key;
+            binding.actions.setOnChipClickListener((com.fongmi.android.tv.ui.custom.JetStreamChipRow.OnChipClickListener) position -> {
+                if (boundKey.equals(source.key) && sourceListener != null && position >= 0 && position < actions.size()) {
+                    sourceListener.onItemClick(actions.get(position));
+                }
+            });
+            holder.adapter.setItems(source.items, SOURCE_DIFF);
+            binding.posters.setVisibility(source.items.isEmpty() ? View.GONE : View.VISIBLE);
+            if (changedSource) binding.posters.setSelectedPosition(0);
+            if (removedFocus) binding.library.requestFocus();
+        }
+
+        @Override public void onUnbindViewHolder(@NonNull ViewHolder viewHolder) {
+            SourceHolder holder = (SourceHolder) viewHolder;
+            holder.binding.actions.clearListeners();
+            holder.adapter.clear();
+        }
+    }
+
+    private static final class SourceHolder extends Presenter.ViewHolder {
+        final AdapterHomeSourceBinding binding;
+        final ArrayObjectAdapter adapter;
+        String key = "";
+
+        SourceHolder(AdapterHomeSourceBinding binding, ArrayObjectAdapter adapter) {
+            super(binding.getRoot());
+            this.binding = binding;
+            this.adapter = adapter;
         }
     }
 
@@ -504,7 +733,10 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             AdapterHomeWallFooterBinding binding = AdapterHomeWallFooterBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
             TouchFocus.bind(binding.retry, binding.more, binding.settings);
             binding.retry.setOnClickListener(view -> refresh());
-            binding.more.setOnClickListener(view -> DiscoverActivity.start(activity));
+            binding.more.setOnClickListener(view -> {
+                if (compact) DiscoverActivity.startFilters(activity, category);
+                else DiscoverActivity.start(activity);
+            });
             binding.settings.setOnClickListener(view -> SettingActivity.start(activity));
             return new ViewHolder(binding.getRoot());
         }
@@ -515,6 +747,10 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             binding.status.setText(footer.loading ? R.string.home_wall_loading : footer.empty ? R.string.home_wall_empty : R.string.home_wall_more);
             binding.hint.setText(footer.empty ? R.string.home_wall_empty_hint : R.string.home_wall_ready);
             binding.retry.setText(footer.loading ? R.string.home_wall_loading : R.string.home_wall_retry);
+            if (compact) {
+                binding.more.setText(R.string.home_compact_filter);
+                binding.hint.setText(footer.empty ? R.string.home_compact_empty_hint : R.string.home_compact_ready);
+            }
         }
 
         @Override

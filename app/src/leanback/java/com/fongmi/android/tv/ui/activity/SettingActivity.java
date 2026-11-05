@@ -252,7 +252,8 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowValue(JetStreamSettingView.KEY_BROWSE_PRIORITY, priorityCount == 0 ? getString(R.string.poster_source_priority_default)
                 : getString(R.string.poster_source_priority_count, priorityCount));
         setRowValue(JetStreamSettingView.KEY_TMDB_RECOVERY, Setting.getSwitch(TmdbNetwork.isRouteRecoveryEnabled()));
-        setRowValue(JetStreamSettingView.KEY_BROWSE_HOME, getString(BrowseExperienceSettings.isPosterHomeEnabled() ? R.string.browse_home_posters : R.string.browse_home_original));
+        int[] homeLayouts = {R.string.browse_home_compact, R.string.browse_home_original, R.string.browse_home_posters};
+        setRowValue(JetStreamSettingView.KEY_BROWSE_HOME, getString(homeLayouts[BrowseExperienceSettings.getHomeLayout()]));
         int[] modes = {R.string.browse_filter_original, R.string.browse_filter_relevant, R.string.browse_filter_strict};
         setRowValue(JetStreamSettingView.KEY_BROWSE_FILTER, getString(modes[BrowseExperienceSettings.getSearchFilterMode()]));
         setRowValue(JetStreamSettingView.KEY_BROWSE_SOURCES, Setting.getSwitch(BrowseExperienceSettings.isDetailSourcesEnabled()));
@@ -271,6 +272,16 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         new MaterialAlertDialogBuilder(this).setTitle(R.string.browse_hero_rotation)
                 .setSingleChoiceItems(modes, BrowseExperienceSettings.getHeroRotationMode(), (dialog, which) -> {
                     BrowseExperienceSettings.putHeroRotationMode(which);
+                    refreshBrowseRows();
+                    dialog.dismiss();
+                }).show();
+    }
+
+    private void setHomeLayout() {
+        String[] layouts = {getString(R.string.browse_home_compact), getString(R.string.browse_home_original), getString(R.string.browse_home_posters)};
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.browse_home)
+                .setSingleChoiceItems(layouts, BrowseExperienceSettings.getHomeLayout(), (dialog, which) -> {
+                    BrowseExperienceSettings.putHomeLayout(which);
                     refreshBrowseRows();
                     dialog.dismiss();
                 }).show();
@@ -397,7 +408,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_DANMAKU_SPIDER -> setDanmakuSpider();
             case JetStreamSettingView.KEY_INCOGNITO -> setIncognito();
             case JetStreamSettingView.KEY_TMDB_RECOVERY -> { TmdbNetwork.setRouteRecoveryEnabled(!TmdbNetwork.isRouteRecoveryEnabled()); refreshBrowseRows(); }
-            case JetStreamSettingView.KEY_BROWSE_HOME -> { BrowseExperienceSettings.putPosterHomeEnabled(!BrowseExperienceSettings.isPosterHomeEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_BROWSE_HOME -> setHomeLayout();
             case JetStreamSettingView.KEY_BROWSE_PRIORITY -> PosterSourcePriorityDialog.show(this, this::refreshBrowseRows);
             case JetStreamSettingView.KEY_BROWSE_FILTER -> setBrowseFilter();
             case JetStreamSettingView.KEY_BROWSE_SOURCES -> { BrowseExperienceSettings.putDetailSourcesEnabled(!BrowseExperienceSettings.isDetailSourcesEnabled()); refreshBrowseRows(); }
