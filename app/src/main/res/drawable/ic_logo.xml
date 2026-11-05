@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Default in-app home/toolbar mark for circular JetStreamHomeLogoView.
-     Do NOT fill the disc flush — leave a ring between the brand mass and the oval rim
-     (pairs with view padding in JetStreamHomeLogoView). scale about (80,80). -->
+<!-- Circular default in-app toolbar mark. Transparent corners keep the cream badge
+     round even when the surrounding logo view adds padding. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -9,7 +8,7 @@
     android:viewportHeight="160">
     <path
         android:fillColor="#F3EFE7"
-        android:pathData="M0,0h160v160H0z" />
+        android:pathData="M80,0A80,80 0,1 1,80,160A80,80 0,1 1,80,0Z" />
     <!-- 0.92 about center: translate = 80*(1-0.92)=6.4 — slight inset vs full tile. -->
     <group
         android:translateX="6.4"

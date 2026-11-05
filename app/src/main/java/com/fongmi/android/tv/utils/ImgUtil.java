@@ -44,8 +44,7 @@ public class ImgUtil {
     public static void logo(ImageView view) {
         try {
             // Custom site logo: circle crop to match round home disc.
-            // Default error mark is the square-ish brand vector — fitCenter (not circleCrop)
-            // so leanback/mobile toolbars keep a balanced mark; view may still oval-mask.
+            // The default vector has its own circular badge; fitCenter preserves the brand mark.
             String logo = UrlUtil.convert(VodConfig.get().getConfig().getLogo());
             Glide.with(view)
                     .load(logo)
