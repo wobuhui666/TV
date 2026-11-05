@@ -113,7 +113,7 @@ jobs:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
           TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
-      - name: Prepare QuickJS for the x86_64 preview emulator
+      - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
       - name: Upload preview APK
         if: always()

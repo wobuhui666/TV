@@ -65,7 +65,7 @@ import okhttp3.ResponseBody;
 /** Production filter activity and fallback loader, with entirely synthetic responses. */
 @RunWith(AndroidJUnit4.class)
 public final class CompactDiscoveryIntegrationTest {
-    private static final String[] PREFERENCES = {"tmdb_proxy_url", "browse_bridge_base", "browse_bridge_sk", "browse_home_layout_v1", "browse_poster_home"};
+    private static final String[] PREFERENCES = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_base", "browse_bridge_sk", "browse_home_layout_v1", "browse_poster_home"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> activities = new ArrayList<>();
     private final List<HttpUrl> requests = new CopyOnWriteArrayList<>();
@@ -118,6 +118,7 @@ public final class CompactDiscoveryIntegrationTest {
             saveCache(DiscoverApi.class);
             saveCache(RexFeedLoader.class);
             Setting.putTmdbProxyUrl("https://compact-fixture.invalid/");
+            Setting.putTmdbConnectionMode(Setting.TMDB_CUSTOM_PROXY);
             Setting.putBridgeSk("");
             BrowseExperienceSettings.putHomeLayout(BrowseExperienceSettings.HOME_COMPACT);
             setField(OkHttp.get(), "client", fixtureClient);
