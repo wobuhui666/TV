@@ -2,6 +2,11 @@ name: Build isolated TV validation APKs
 
 on:
   workflow_dispatch:
+    inputs:
+      lint_baseline_ref:
+        description: Compare lint errors against this existing commit; blank requires a clean full lint report
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -118,10 +123,46 @@ jobs:
 
       - name: Run TV Android lint
         if: matrix.package == 'sourceprobe'
+        env:
+          LINT_BASELINE_REF: ${{ inputs.lint_baseline_ref }}
         run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
-            :app:lintLeanbackArm64_v8aDebug \
-            --no-daemon --build-cache --max-workers=2
+          if [ -z "$LINT_BASELINE_REF" ]; then
+            ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
+              :app:lintLeanbackArm64_v8aDebug \
+              --no-daemon --build-cache --max-workers=2
+          else
+            # Collect both complete reports, then reject only errors introduced by this branch.
+            # The report comparison is the failure gate; no lint issue IDs are disabled.
+            [[ "$LINT_BASELINE_REF" =~ ^[0-9a-fA-F]{40}$ ]] || { echo 'Pass a full baseline commit SHA'; exit 1; }
+            git fetch --no-tags --depth=1 origin "$LINT_BASELINE_REF"
+            baseline_sha=$(git rev-parse FETCH_HEAD)
+            baseline_root="$RUNNER_TEMP/tv-lint-baseline"
+            git worktree add --detach "$baseline_root" "$baseline_sha"
+            printf 'toolchainVersion=21\n' > "$baseline_root/gradle/gradle-daemon-jvm.properties"
+            chmod +x "$baseline_root/gradlew"
+            cat > "$RUNNER_TEMP/tv-lint-report.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              p.pluginManager.withPlugin('com.android.application') {
+                  p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                      dsl.lint.abortOnError = false
+                  }
+              }
+          }
+          GRADLE
+            ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" -I "$RUNNER_TEMP/tv-lint-report.init.gradle" \
+              :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2
+            "$baseline_root/gradlew" -p "$baseline_root" \
+              -I "$RUNNER_TEMP/tv-validation.init.gradle" -I "$RUNNER_TEMP/tv-lint-report.init.gradle" \
+              :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2
+            mkdir -p artifacts/lint
+            cp "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug."* artifacts/lint/
+            python3 .github/scripts/compare-lint-reports.py \
+              --baseline-report "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug.xml" \
+              --current-report app/build/reports/lint-results-leanbackArm64_v8aDebug.xml \
+              --baseline-root "$baseline_root" --current-root "$GITHUB_WORKSPACE" \
+              --baseline-sha "$baseline_sha" --current-sha "$GITHUB_SHA" \
+              --output artifacts/lint/comparison.json
+          fi
 
       - name: Verify packages and collect APKs
         run: |
@@ -198,6 +239,7 @@ jobs:
             app/build/test-results/
             app/build/reports/tests/
             app/build/reports/lint-results-leanbackArm64_v8aDebug.*
+            artifacts/lint/
             catvod/build/test-results/
             quickjs/build/test-results/
           if-no-files-found: warn

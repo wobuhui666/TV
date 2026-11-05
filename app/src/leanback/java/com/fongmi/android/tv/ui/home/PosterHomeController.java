@@ -512,6 +512,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     // Equal source responses may contain new object instances. Rebind the click closures as well
     // as visible fields so HomeActivity's current-request identity guard accepts retained cards.
     private static final BaseDiffCallback<Vod> SOURCE_DIFF = new BaseDiffCallback<>() {
+        @SuppressLint("DiffUtilEquals") // Object identity intentionally refreshes source click closures.
         @Override public boolean areContentsTheSame(Vod oldItem, @NonNull Vod newItem) {
             return oldItem == newItem && super.areContentsTheSame(oldItem, newItem);
         }
@@ -646,6 +647,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         };
 
         @NonNull
+        @SuppressLint("RestrictedApi")
         @Override public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent) {
             AdapterHomeSourceBinding binding = AdapterHomeSourceBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
             ArrayObjectAdapter adapter = new ArrayObjectAdapter(new VodPresenter(listener, Style.rect(), new int[]{ResUtil.dp2px(132), ResUtil.dp2px(176)}) {

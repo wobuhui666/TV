@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browse_home">首頁版面</string>
+    <string name="browse_home_compact">精簡首頁</string>
+    <string name="browse_home_original">舊版來源首頁</string>
+    <string name="browse_home_posters">舊版海報首頁</string>
+    <string name="home_compact_filter">篩選找片</string>
+    <string name="home_compact_all">查看全部</string>
+    <string name="home_compact_source">目前來源更新</string>
+    <string name="home_compact_source_action">來源操作</string>
+    <string name="home_compact_source_loading">正在載入目前來源…</string>
+    <string name="home_compact_source_empty">暫無更新，可在片庫瀏覽分類或重新載入。</string>
+    <string name="home_compact_no_source">加入自己的內容來源後，可瀏覽片庫與播放。</string>
+    <string name="home_compact_library_loading">片庫正在載入，請稍後重試</string>
+    <string name="home_compact_library_empty">暫無可用分類</string>
+    <string name="home_compact_library_retry">重新載入</string>
+    <string name="home_compact_empty_hint">可以重新整理海報或篩選找片，片庫和搜尋也可繼續使用。</string>
+    <string name="home_compact_ready">按類型、地區、年份篩選，找到喜歡的作品。</string>
+    <string name="home_compact_filter_empty">沒有找到作品，可以調整篩選條件。</string>
+    <string name="home_compact_filter_error">載入失敗，請重試或調整篩選條件。</string>
+</resources>
