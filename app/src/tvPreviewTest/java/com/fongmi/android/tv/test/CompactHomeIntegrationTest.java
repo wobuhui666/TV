@@ -126,6 +126,12 @@ public final class CompactHomeIntegrationTest {
         });
         text("配置 CK").click();
         await("source action uses the production SiteApi action path", () -> fixture.actionCalls.get() == 1);
+        await("content child focus hides the toolbar even when the selected row did not change", () -> home.toolbar().getVisibility() == View.GONE);
+        main(() -> {
+            View source = rowView(home.sourcePosition());
+            assertNotNull(source);
+            assertTrue("The source header remains inside the viewport", source.getTop() >= 0);
+        });
         NativeUiEvidence.capture("compact-source-actions");
     }
 

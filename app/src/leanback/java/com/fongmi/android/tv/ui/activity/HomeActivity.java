@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -109,6 +110,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private int mHomeLayout;
     private final HomeSourceState mHomeSource = new HomeSourceState();
     private HomeSourceState.Request mActionSourceRequest;
+    private ViewTreeObserver.OnGlobalFocusChangeListener mCompactContentFocus;
     private boolean mPosterHeroVisible;
     private SiteViewModel mViewModel;
     private Result mResult;
@@ -191,6 +193,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     protected void initEvent() {
         mBinding.title.setListener(this);
+        if (mHomeLayout == BrowseExperienceSettings.HOME_COMPACT) {
+            // Focus can enter an already selected row after its selection callback kept the
+            // toolbar visible. Track the actual child focus hand-off as well as row selection.
+            mCompactContentFocus = (previous, focused) -> {
+                if (focused == null || !isDescendant(mBinding.recycler, focused)) return;
+                RecyclerView.ViewHolder holder = mBinding.recycler.findContainingViewHolder(focused);
+                int position = holder == null ? mBinding.recycler.getSelectedPosition() : holder.getBindingAdapterPosition();
+                if (position > 0) setToolbarVisible(false);
+            };
+            mBinding.recycler.getViewTreeObserver().addOnGlobalFocusChangeListener(mCompactContentFocus);
+        }
         mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
@@ -1203,6 +1216,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onDestroy() {
+        if (mCompactContentFocus != null && mBinding.recycler.getViewTreeObserver().isAlive()) {
+            mBinding.recycler.getViewTreeObserver().removeOnGlobalFocusChangeListener(mCompactContentFocus);
+        }
         if (mPosterHome != null) mPosterHome.close();
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
