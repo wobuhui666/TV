@@ -80,6 +80,7 @@ public final class CompactDiscoveryIntegrationTest {
     private volatile boolean queryFails;
     private volatile boolean holdQuery;
     private volatile boolean holdFeed;
+    private volatile boolean holdDirect;
     private volatile boolean emptyQuery;
     private volatile boolean prepared;
 
@@ -97,7 +98,8 @@ public final class CompactDiscoveryIntegrationTest {
                 requests.add(url);
                 boolean held = holdQuery && url.encodedPath().endsWith("/discover/movie")
                         && "vote_average.desc".equals(url.queryParameter("sort_by"))
-                        || holdFeed && url.host().equals("assets.rexnow.tv");
+                        || holdFeed && url.host().equals("assets.rexnow.tv")
+                        || holdDirect && url.encodedPath().endsWith("/search_subjects");
                 if (held) {
                     heldCall.set(chain.call());
                     try {
@@ -256,6 +258,22 @@ public final class CompactDiscoveryIntegrationTest {
         instrumentation.waitForIdleSync();
         assertNull(results.get());
         assertEquals("No dated feed or direct fallback after closure", 1, requests.size());
+    }
+
+    @Test public void closingLoaderCancelsTheIndependentDoubanFallback() {
+        holdDirect = true;
+        AtomicReference<List<RexFeedResult>> results = new AtomicReference<>();
+        main(() -> {
+            loader = new RexFeedLoader(true);
+            loader.load(List.of(RexSections.byKey("douban_movie")), results::set);
+        });
+        await("Direct Douban fallback begins", () -> heldCall.get() != null);
+        main(loader::close);
+        assertTrue(heldCall.get().isCanceled());
+        release.countDown();
+        await("Fallback body delivery settles", () -> fixtureClient.dispatcher().runningCallsCount() == 0);
+        instrumentation.waitForIdleSync();
+        assertNull(results.get());
     }
 
     private String response(HttpUrl url) {
