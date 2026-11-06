@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="assrt_search_title">Search online subtitles</string>
+    <string name="assrt_query_hint">Title or release filename</string>
+    <string name="assrt_search">Search</string>
+    <string name="assrt_search_hint">Search by title, season and episode, or release filename.</string>
+    <string name="assrt_searching">Searching subtitles…</string>
+    <string name="assrt_loading_files">Loading subtitle files…</string>
+    <string name="assrt_downloading">Downloading subtitle…</string>
+    <string name="assrt_choose_result">Choose a subtitle release.</string>
+    <string name="assrt_choose_file">Choose the language and file for this release.</string>
+    <string name="assrt_choose_extracted">Choose a subtitle from the downloaded archive.</string>
+    <string name="assrt_empty">No matching subtitles. Try another title or release filename.</string>
+    <string name="assrt_search_error">Could not search subtitles. Try again.</string>
+    <string name="assrt_rate_limit">Too many subtitle requests. Please try again later.</string>
+    <string name="assrt_files_error">Could not read subtitle files. Return to the results and try again.</string>
+    <string name="assrt_files_empty">No downloadable subtitle files are available.</string>
+    <string name="assrt_download_error">Could not load this subtitle. Choose another file or return and try again.</string>
+    <string name="assrt_query_empty">Enter a title or filename.</string>
+    <string name="assrt_unavailable">Online subtitle search is currently unavailable.</string>
+    <string name="assrt_loaded">Subtitle loaded</string>
+    <string name="assrt_media_changed">Playback changed. Reopen subtitle search for the current title.</string>
+    <string name="assrt_previous">Previous page</string>
+    <string name="assrt_next">Next page</string>
+    <string name="assrt_back">Back to results</string>
+    <string name="assrt_source">Subtitle service provided by assrt.net</string>
+    <string name="assrt_browser_unavailable">No browser is available to open assrt.net.</string>
+</resources>

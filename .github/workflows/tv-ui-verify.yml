@@ -17,6 +17,10 @@ on:
         description: Verify episode identity, mixed-release controller navigation and Android Parcel
         type: boolean
         default: false
+      assrt_subtitles:
+        description: Verify ASSRT search, file selection, download and real Exo subtitle loading
+        type: boolean
+        default: false
       responsiveness:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
@@ -116,6 +120,7 @@ jobs:
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
           TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
+          ASSRT_API_TOKEN: ${{ inputs.assrt_subtitles && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
@@ -135,10 +140,49 @@ jobs:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
+          TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_EPISODE_NAVIGATION" = 'true' ]; then
+          if [ "$TV_ASSRT_SUBTITLES" = 'true' ]; then
+            out=artifacts/assrt-subtitles
+            mkdir -p "$out"
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            collect_assrt() {
+              adb pull /sdcard/Android/data/com.fongmi.android.tv.preview/files/native-usability-evidence "$out/screenshots" >/dev/null 2>&1 || true
+              adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
+              adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
+            }
+            trap collect_assrt EXIT
+            adb logcat -c
+            adb shell am instrument -w -r -e native_ui_evidence true -e class com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest \
+              com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
+            python3 - <<'PY'
+          import json, os, pathlib, re
+          root = pathlib.Path('artifacts/assrt-subtitles')
+          output = (root / 'instrumentation.txt').read_text()
+          match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', output, re.M)
+          summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': bool(match),
+                     'passedTests': int(match[1]) if match else 0,
+                     'scope': 'Local ASSRT HTTP, shipping TV dialogs and Exo subtitles; no live service or MPV native rendering'}
+          (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, indent=2))
+          if not match:
+              raise SystemExit('ASSRT subtitle instrumentation failed')
+          PY
+            collect_assrt
+          elif [ "$TV_EPISODE_NAVIGATION" = 'true' ]; then
             python3 - <<'PY'
           import json, pathlib, subprocess
           for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
@@ -219,6 +263,7 @@ jobs:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
+          TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -246,6 +291,7 @@ jobs:
             artifacts/playback-specs/
             artifacts/compact-home/
             artifacts/live-home/
+            artifacts/assrt-subtitles/
             app/build/test-results/
             app/build/reports/tests/
             app/schemas/

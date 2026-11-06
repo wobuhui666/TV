@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="assrt_search_title">搜索在线字幕</string>
+    <string name="assrt_query_hint">片名或发行文件名</string>
+    <string name="assrt_search">搜索</string>
+    <string name="assrt_search_hint">可搜索片名、季集或发行文件名。</string>
+    <string name="assrt_searching">正在搜索字幕…</string>
+    <string name="assrt_loading_files">正在读取字幕文件…</string>
+    <string name="assrt_downloading">正在下载字幕…</string>
+    <string name="assrt_choose_result">请选择字幕版本。</string>
+    <string name="assrt_choose_file">请选择此版本的语言和文件。</string>
+    <string name="assrt_choose_extracted">请选择压缩包中的字幕。</string>
+    <string name="assrt_empty">没有找到字幕，可尝试其他片名或发行文件名。</string>
+    <string name="assrt_search_error">搜索字幕失败，请重试。</string>
+    <string name="assrt_rate_limit">字幕请求较频繁，请稍后重试。</string>
+    <string name="assrt_files_error">读取字幕文件失败，请返回结果页重试。</string>
+    <string name="assrt_files_empty">此版本暂时没有可下载的字幕文件。</string>
+    <string name="assrt_download_error">无法加载该字幕，请选择其他文件或返回重试。</string>
+    <string name="assrt_query_empty">请输入片名或文件名。</string>
+    <string name="assrt_unavailable">在线字幕搜索暂不可用。</string>
+    <string name="assrt_loaded">字幕已加载</string>
+    <string name="assrt_media_changed">播放内容已变化，请为当前影片重新打开字幕搜索。</string>
+    <string name="assrt_previous">上一页</string>
+    <string name="assrt_next">下一页</string>
+    <string name="assrt_back">返回结果</string>
+    <string name="assrt_source">字幕服务由 assrt.net 提供</string>
+    <string name="assrt_browser_unavailable">未找到可打开 assrt.net 的浏览器。</string>
+</resources>

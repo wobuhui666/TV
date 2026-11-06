@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add pinned QuickJS and AVIF x86_64 libraries to the disposable emulator preview APK."""
+"""Add pinned x86_64 JNI libraries to the disposable emulator preview APK."""
 
 import hashlib
 import json
@@ -21,6 +21,9 @@ AVIF_VERSION = "1.1.1.14d8e3c4"
 AVIF_WRAPPER_SHA256 = "d46e1e215388a6ccd9cd2e333929ba3f03671e5e72a7ab1f1f0a2a35c8bd66a5"
 AVIF_LIBRARY_SHA256 = "d63e4fe8cba8992b28a4497b9a174c0549ed875ec4b28115ec7cf6c55136c5a4"
 AVIF_LIBRARY = "libavif_android.so"
+ARCHIVE_VERSION = "1.1.7"
+ARCHIVE_WRAPPER_SHA256 = "060587bbec1b6b79f8b1fd02eebfbe638174d7889a6c3cfd6ce3f34b5da4d46b"
+ARCHIVE_LIBRARY = "libarchive-jni.so"
 
 
 def run(*args):
@@ -82,14 +85,26 @@ def main():
         if hashlib.sha256(avif_library).hexdigest() != AVIF_LIBRARY_SHA256:
             raise SystemExit("AVIF x86_64 library checksum mismatch")
 
+        archive_url = ("https://repo.maven.apache.org/maven2/me/zhanghai/android/libarchive/library/"
+                       f"{ARCHIVE_VERSION}/library-{ARCHIVE_VERSION}.aar")
+        with urllib.request.urlopen(archive_url, timeout=60) as response:
+            archive_content = response.read(16 * 1024 * 1024 + 1)
+        if hashlib.sha256(archive_content).hexdigest() != ARCHIVE_WRAPPER_SHA256:
+            raise SystemExit("libarchive wrapper checksum mismatch")
+        archive_wrapper = directory / "libarchive.aar"
+        archive_wrapper.write_bytes(archive_content)
+        with zipfile.ZipFile(archive_wrapper) as bundle:
+            archive_library = bundle.read("jni/x86_64/" + ARCHIVE_LIBRARY)
+
         library_entry = "lib/x86_64/" + LIBRARY
         avif_entry = "lib/x86_64/" + AVIF_LIBRARY
+        archive_entry = "lib/x86_64/" + ARCHIVE_LIBRARY
         prepared = []
         for index, original in enumerate((apk, test_apk)):
             unsigned = directory / f"unsigned-{index}.apk"
             with zipfile.ZipFile(original) as source, zipfile.ZipFile(unsigned, "w") as output:
                 for item in source.infolist():
-                    if index == 0 and item.filename in (library_entry, avif_entry):
+                    if index == 0 and item.filename in (library_entry, avif_entry, archive_entry):
                         continue
                     if re.match(r"META-INF/[^/]+\.(SF|RSA|DSA|EC)$", item.filename, re.I):
                         continue
@@ -99,6 +114,7 @@ def main():
                 if index == 0:
                     output.writestr(library_entry, library, compress_type=zipfile.ZIP_STORED)
                     output.writestr(avif_entry, avif_library, compress_type=zipfile.ZIP_STORED)
+                    output.writestr(archive_entry, archive_library, compress_type=zipfile.ZIP_STORED)
             aligned = directory / f"preview-{index}.apk"
             run(build_tools / "zipalign", "-P", "16", "-f", "4", unsigned, aligned)
             run(build_tools / "apksigner", "sign", "--ks", keystore,
@@ -109,10 +125,11 @@ def main():
         with zipfile.ZipFile(prepared[0][1]) as bundle:
             assert hashlib.sha256(bundle.read(library_entry)).hexdigest() == LIBRARY_SHA256
             assert hashlib.sha256(bundle.read(avif_entry)).hexdigest() == AVIF_LIBRARY_SHA256
+            assert bundle.read(archive_entry) == archive_library
         for original, aligned in prepared:
             original.write_bytes(aligned.read_bytes())
             Path(str(original) + ".idsig").unlink(missing_ok=True)
-    print("Prepared isolated preview with QuickJS and AVIF x86_64 JNI")
+    print("Prepared isolated preview with QuickJS, AVIF and libarchive x86_64 JNI")
 
 
 if __name__ == "__main__":

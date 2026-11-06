@@ -5,6 +5,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
 import androidx.media3.common.MediaChapter;
 import androidx.media3.common.MediaEdition;
 import androidx.media3.common.MediaItem;
@@ -12,6 +13,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionParameters;
+import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
 import androidx.media3.ui.danmaku.DanmakuConfig;
@@ -36,6 +38,7 @@ import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.player.mpv.MpvPlayerEngine;
 import com.fongmi.android.tv.player.parse.ParseJob;
 import com.fongmi.android.tv.player.track.TrackUtil;
+import com.fongmi.android.tv.player.util.PlayerHelper;
 import com.fongmi.android.tv.setting.DanmakuSetting;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.utils.MpvLogCollector;
@@ -59,6 +62,8 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     private ParseJob parseJob;
     private PlaySpec spec;
     private Player player;
+    private Sub pendingPrimarySubtitle;
+    private Format pendingSecondarySubtitle;
 
     private DanmakuConfig danmakuConfig;
     private long pendingStartPositionMs;
@@ -319,10 +324,85 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void setSub(Sub sub) {
-        if (sub == null || sub.isEmpty()) return;
+        setSub(sub, false);
+    }
+
+    /** Online subtitle selection must not resume a paused video or change its speed. */
+    public void setSub(Sub sub, boolean preservePlaybackState) {
+        if (sub == null || sub.isEmpty() || engine == null || player == null) return;
+        pendingPrimarySubtitle = null;
+        pendingSecondarySubtitle = null;
+        if (preservePlaybackState && engine.getType() == PlayerEngine.Type.EXO) {
+            pendingPrimarySubtitle = sub;
+            String selected = engine.getSecondaryTrack();
+            for (Tracks.Group group : getCurrentTracks().getGroups()) {
+                if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+                for (int i = 0; i < group.length; i++) {
+                    Format format = group.getTrackFormat(i);
+                    if (PlayerHelper.describeFormat(format).equals(selected)) pendingSecondarySubtitle = format;
+                }
+            }
+        }
         if (spec != null) spec.setSub(sub);
-        if (engine.addSubtitle(sub)) play();
+        boolean playing = player.getPlayWhenReady();
+        if (engine.addSubtitle(sub)) {
+            if (preservePlaybackState) player.setPlayWhenReady(playing);
+            else play();
+        } else if (preservePlaybackState) restartCurrent(getPosition(), false);
         else startCurrent();
+    }
+
+    private void restoreSelectedSubtitle(Tracks tracks) {
+        if (pendingPrimarySubtitle != null) {
+            Tracks.Group target = null;
+            int index = C.INDEX_UNSET;
+            int matches = 0;
+            for (Tracks.Group group : tracks.getGroups()) {
+                if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+                for (int i = 0; i < group.length; i++) {
+                    Format format = group.getTrackFormat(i);
+                    if (!pendingPrimarySubtitle.getName().equals(format.label)
+                            || (format.selectionFlags & C.SELECTION_FLAG_FORCED) == 0) continue;
+                    target = group;
+                    index = i;
+                    matches++;
+                }
+            }
+            if (matches == 1) {
+                // A manual choice takes priority over automatic language/default preferences.
+                pendingPrimarySubtitle = null;
+                player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon()
+                        .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                        .setOverrideForType(new TrackSelectionOverride(target.getMediaTrackGroup(), List.of(index)))
+                        .build());
+            }
+        }
+        if (pendingSecondarySubtitle != null) {
+            Format identity = subtitleIdentity(pendingSecondarySubtitle);
+            Format target = null;
+            int matches = 0;
+            for (Tracks.Group group : tracks.getGroups()) {
+                if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+                for (int i = 0; i < group.length; i++) {
+                    Format format = group.getTrackFormat(i);
+                    if (!identity.equals(subtitleIdentity(format))) continue;
+                    target = format;
+                    matches++;
+                }
+            }
+            if (matches == 1) {
+                // Adding an external source changes Media3's source prefix and selection flags.
+                pendingSecondarySubtitle = null;
+                Track track = new Track(C.TRACK_TYPE_TEXT, target.label, PlayerHelper.describeFormat(target));
+                track.setSelected(true);
+                setSecondaryTrack(track);
+            }
+        }
+    }
+
+    private static Format subtitleIdentity(Format format) {
+        return format.buildUpon().setId(null).setSelectionFlags(0).build();
     }
 
     public void setFormat(String format) {
@@ -448,6 +528,8 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void clear() {
+        pendingPrimarySubtitle = null;
+        pendingSecondarySubtitle = null;
         pendingTimeshiftRebuild = false;
         timeshift.clear();
         spec = null;
@@ -677,6 +759,8 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void start(PlaySpec spec, long timeout, long startPositionMs) {
+        pendingPrimarySubtitle = null;
+        pendingSecondarySubtitle = null;
         DiagnosticLog.record("playback", "request startPositionMs=" + startPositionMs + " decode=" + decode);
         forcePlatformEngine = false;
         // A new media item is decoded by Exo again: only a track that again cannot be rendered
@@ -697,6 +781,8 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void parse(String key, Result result, boolean useParse, MediaMetadata metadata, long startPositionMs) {
+        pendingPrimarySubtitle = null;
+        pendingSecondarySubtitle = null;
         stopParse();
         forcePlatformEngine = false;
         pendingStartPositionMs = startPositionMs;
@@ -893,6 +979,7 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
                 List<Track> secondary = Track.find(getKey() + "|secondary");
                 engine.setSecondaryTrack(secondary.isEmpty() ? null : secondary.get(0).getFormat());
             }
+            restoreSelectedSubtitle(tracks);
             callback.onTracksChanged();
             initTrack = true;
             recoverUnrenderedAudio(tracks);

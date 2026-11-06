@@ -26,7 +26,7 @@
 | 双播放内核 | Exo / Media3 与 MPV；音视频／字幕轨道、清晰度、倍速、缩放、软硬解、章节、标题、选集与续播。 |
 | 播放规格胶囊 | TV 点播／直播开播时显示分辨率、编码、动态范围、声道和明确的年龄分级，配合短时展开／收起动效。 |
 | 片头片尾 | 原有手动设置与新的社区区间跳过；TheIntroDB、IntroDB、TheOtherDB 互补，保留片头前剧情和片尾后彩蛋。 |
-| 字幕与本地文件 | 主副双字幕、libass 样式／动画、字体导入；SRT / ASS / SSA / VTT 上传，本地同名字幕发现、STRM 指针与“本地字幕”标记。 |
+| 字幕与本地文件 | 主副双字幕、libass 样式／动画、字体导入；ASSRT 在线字幕搜索与 ZIP／RAR 文件选择，SRT / ASS / SSA / VTT 上传，本地同名字幕发现、STRM 指针与“本地字幕”标记。 |
 | AI 字幕 | Exo PCM 音频的本地实时语音识别，七种语言模型；可选默认翻译、MTranServer 或 OpenAI 兼容翻译，双语／仅译文显示。 |
 | 弹幕 | 来源弹幕、配置／自定义 API、自动匹配与手动加载；可调字号、透明度、速度、偏移、密度、滚动区域及显示类型。 |
 | 音频与画面 | 对白、夜间、音乐、自定义音效，五段 EQ、中置增强、响度归一化和限幅；MPV 另提供 GPU Next、Vulkan、HDR、Anime4K 等选项。 |
@@ -112,6 +112,14 @@
 **AI 字幕**是独立保留的功能，默认关闭。在“设置 → 播放 → 实时语音字幕与翻译”选择语言并下载对应本地模型，识别 Exo 输出的 PCM 音频。当前语言为普通话、粤语、英语、日语、德语、法语和西班牙语；可仅显示识别原文，或使用默认翻译、MTranServer、OpenAI 兼容服务，选择双语或仅译文。TV 可通过局域网手机推送服务凭据。
 
 AI 字幕目前接入 **Exo** 音频链，需下载模型并占用设备算力与存储；翻译服务需按所选提供方配置。开启后使用 PCM 输出，不沿用编码直通。MPV 的普通／双字幕继续可用，不能视为已经接入同一实时识别链。
+
+#### 在线字幕搜索（ASSRT）
+
+TV 和手机版可在 **播放器 → 字幕轨道 → 搜索在线字幕** 中，按片名、季集或发行文件名搜索。选择字幕版本后，再按语言、格式和文件名选择下载项；直接字幕文件可以加载，ZIP／RAR 包含多个字幕时会继续列出文件供选择，分卷包暂不支持。
+
+字幕数据与下载链接来自 [ASSRT](https://assrt.net)，页面保留来源链接。官方发布包通过构建配置内置服务凭据，使用者无需填写 API Key。自行构建时，设置 GitHub Actions Secret／环境变量 `ASSRT_API_TOKEN`，或在不提交的 `local.properties` 中设置 `assrtApiToken`；真实凭据不写进仓库。
+
+ASSRT 服务的 API 请求限制为每分钟 20 次，字幕下载链接临时生成。遇到链接失效时，可返回结果页重新选择版本以取得新链接。关闭搜索或切换播放内容会取消当前请求，加载字幕保留原来的进度、倍速和暂停状态。
 
 ### 直播、来源扩展与登录
 
@@ -271,6 +279,6 @@ TV 正式发布同时提供两种包名，按是否要与 FongMi/TV 同时安装
 
 感谢 [FongMi/TV](https://github.com/FongMi/TV)、[CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader) 以及相关开源项目的作者与贡献者。
 
-项目采用 [GNU GPL v3.0](LICENSE.md)。第三方组件保留各自许可证，详见 [libass 说明](third_party/libass/NOTICE.md)、[MPV 来源与重编说明](third_party/mpv/README.md) 和[宣传素材署名](docs/media/CREDITS.md)。
+项目采用 [GNU GPL v3.0](LICENSE.md)。第三方组件保留各自许可证，详见 [libass 说明](third_party/libass/NOTICE.md)、[MPV 来源与重编说明](third_party/mpv/README.md)、[libarchive 字幕解包说明](third_party/libarchive/NOTICE.md) 和[宣传素材署名](docs/media/CREDITS.md)。
 
 应用是播放与配置工具，不提供影视资源、订阅或第三方内容的使用权。请自行添加并合法使用有权访问的来源。

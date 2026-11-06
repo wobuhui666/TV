@@ -45,6 +45,7 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
     private boolean selectionHandled;
     private int type;
     private boolean secondary;
+    private SubtitleSearchDialog.Services subtitleSearchServices;
 
     public static TrackDialog create() {
         return new TrackDialog();
@@ -66,6 +67,11 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
     }
 
     public TrackDialog secondary(boolean secondary) { this.secondary = secondary; return this; }
+
+    public TrackDialog subtitleSearchServices(SubtitleSearchDialog.Services services) {
+        this.subtitleSearchServices = services;
+        return this;
+    }
 
     public void show(FragmentActivity activity) {
         for (Fragment f : activity.getSupportFragmentManager().getFragments()) if (f instanceof TrackDialog) return;
@@ -101,6 +107,7 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
         binding.recycler.setVisibility(adapter.getItemCount() == 0 ? View.GONE : View.VISIBLE);
         binding.offset.setVisibility(hasText() || hasAudio() ? View.VISIBLE : View.GONE);
         binding.choose.setVisibility(hasChoose() ? View.VISIBLE : View.GONE);
+        binding.search.setVisibility(hasChoose() ? View.VISIBLE : View.GONE);
         binding.subtitle.setVisibility(hasText() ? View.VISIBLE : View.GONE);
         binding.effects.setVisibility(!secondary && (type == C.TRACK_TYPE_AUDIO || type == C.TRACK_TYPE_TEXT) ? View.VISIBLE : View.GONE);
         binding.effects.setText(type == C.TRACK_TYPE_AUDIO ? R.string.audio_effect_title : R.string.subtitle_advanced);
@@ -117,6 +124,10 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
         binding.offset.setOnClickListener(this::onOffset);
         binding.choose.setOnClickListener(this::onChoose);
         binding.subtitle.setOnClickListener(this::onSubtitle);
+        binding.search.setOnClickListener(view -> {
+            SubtitleSearchDialog.show(requireActivity(), player, subtitleSearchServices);
+            dismiss();
+        });
     }
 
     private void onOffset(View view) {
@@ -142,6 +153,7 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
     private void focusInitialView() {
         if (adapter.getItemCount() > 0) return;
         View target = binding.choose;
+        if (binding.search.getVisibility() == View.VISIBLE) target = binding.search;
         if (target.getVisibility() != View.VISIBLE) target = binding.offset;
         if (target.getVisibility() != View.VISIBLE) target = binding.subtitle;
         if (target.getVisibility() != View.VISIBLE) target = binding.effects;
@@ -162,7 +174,8 @@ public final class TrackDialog extends BasePlaybackSelectionDialog implements Tr
         return binding.effects.getVisibility() == View.VISIBLE
                 || binding.choose.getVisibility() == View.VISIBLE
                 || binding.offset.getVisibility() == View.VISIBLE
-                || binding.subtitle.getVisibility() == View.VISIBLE;
+                || binding.subtitle.getVisibility() == View.VISIBLE
+                || binding.search.getVisibility() == View.VISIBLE;
     }
 
     private List<Track> getTrack() {
