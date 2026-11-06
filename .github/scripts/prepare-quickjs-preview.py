@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add the pinned QuickJS x86_64 library to the disposable emulator preview APK."""
+"""Add pinned QuickJS and AVIF x86_64 libraries to the disposable emulator preview APK."""
 
 import hashlib
 import json
@@ -16,6 +16,11 @@ WRAPPER_VERSION = "3.2.3"
 WRAPPER_SHA256 = "b1d0c550818f07e411b6e6f0eb21b28d83ed2e227d6129395be9e5a2167f4f0c"
 LIBRARY_SHA256 = "3728422a3a48450372e0e528da3c75da74e7e86825eeb766b2d814e54e5015d1"
 LIBRARY = "libquickjs-android-wrapper.so"
+GLIDE_VERSION = "5.0.7"
+AVIF_VERSION = "1.1.1.14d8e3c4"
+AVIF_WRAPPER_SHA256 = "d46e1e215388a6ccd9cd2e333929ba3f03671e5e72a7ab1f1f0a2a35c8bd66a5"
+AVIF_LIBRARY_SHA256 = "d63e4fe8cba8992b28a4497b9a174c0549ed875ec4b28115ec7cf6c55136c5a4"
+AVIF_LIBRARY = "libavif_android.so"
 
 
 def run(*args):
@@ -26,6 +31,8 @@ def main():
     versions = Path("gradle/libs.versions.toml").read_text()
     if not re.search(r'^quickjs\s*=\s*"' + re.escape(WRAPPER_VERSION) + r'"\s*$', versions, re.M):
         raise SystemExit("Update the emulator QuickJS library pin when changing the app dependency")
+    if not re.search(r'^glide\s*=\s*"' + re.escape(GLIDE_VERSION) + r'"\s*$', versions, re.M):
+        raise SystemExit("Update the emulator AVIF dependency pin when changing Glide")
     metadata_file = Path("app/build/outputs/apk/leanbackArm64_v8a/preview/output-metadata.json")
     metadata = json.loads(metadata_file.read_text())
     if not metadata["applicationId"].endswith(".preview") or len(metadata["elements"]) != 1:
@@ -60,13 +67,29 @@ def main():
         if hashlib.sha256(library).hexdigest() != LIBRARY_SHA256:
             raise SystemExit("QuickJS x86_64 library checksum mismatch")
 
+        # Glide probes AVIF before standard image decoders, even for TMDB JPEG artwork.
+        # The ARM64 build strips x86_64 JNI, so the emulator needs this matching decoder too.
+        avif_url = ("https://repo.maven.apache.org/maven2/org/aomedia/avif/android/avif/"
+                    f"{AVIF_VERSION}/avif-{AVIF_VERSION}.aar")
+        with urllib.request.urlopen(avif_url, timeout=60) as response:
+            avif_content = response.read(16 * 1024 * 1024 + 1)
+        if hashlib.sha256(avif_content).hexdigest() != AVIF_WRAPPER_SHA256:
+            raise SystemExit("AVIF wrapper checksum mismatch")
+        avif_wrapper = directory / "avif.aar"
+        avif_wrapper.write_bytes(avif_content)
+        with zipfile.ZipFile(avif_wrapper) as bundle:
+            avif_library = bundle.read("jni/x86_64/" + AVIF_LIBRARY)
+        if hashlib.sha256(avif_library).hexdigest() != AVIF_LIBRARY_SHA256:
+            raise SystemExit("AVIF x86_64 library checksum mismatch")
+
         library_entry = "lib/x86_64/" + LIBRARY
+        avif_entry = "lib/x86_64/" + AVIF_LIBRARY
         prepared = []
         for index, original in enumerate((apk, test_apk)):
             unsigned = directory / f"unsigned-{index}.apk"
             with zipfile.ZipFile(original) as source, zipfile.ZipFile(unsigned, "w") as output:
                 for item in source.infolist():
-                    if index == 0 and item.filename == library_entry:
+                    if index == 0 and item.filename in (library_entry, avif_entry):
                         continue
                     if re.match(r"META-INF/[^/]+\.(SF|RSA|DSA|EC)$", item.filename, re.I):
                         continue
@@ -75,6 +98,7 @@ def main():
                     output.writestr(item, source.read(item.filename))
                 if index == 0:
                     output.writestr(library_entry, library, compress_type=zipfile.ZIP_STORED)
+                    output.writestr(avif_entry, avif_library, compress_type=zipfile.ZIP_STORED)
             aligned = directory / f"preview-{index}.apk"
             run(build_tools / "zipalign", "-P", "16", "-f", "4", unsigned, aligned)
             run(build_tools / "apksigner", "sign", "--ks", keystore,
@@ -84,10 +108,11 @@ def main():
             prepared.append((original, aligned))
         with zipfile.ZipFile(prepared[0][1]) as bundle:
             assert hashlib.sha256(bundle.read(library_entry)).hexdigest() == LIBRARY_SHA256
+            assert hashlib.sha256(bundle.read(avif_entry)).hexdigest() == AVIF_LIBRARY_SHA256
         for original, aligned in prepared:
             original.write_bytes(aligned.read_bytes())
             Path(str(original) + ".idsig").unlink(missing_ok=True)
-    print("Prepared isolated preview with QuickJS x86_64 " + LIBRARY_SHA256)
+    print("Prepared isolated preview with QuickJS and AVIF x86_64 JNI")
 
 
 if __name__ == "__main__":

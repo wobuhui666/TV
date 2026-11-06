@@ -1,0 +1,17 @@
+{
+  "headSha": "4b9d92a1c8c15817bb9528b68617432e7162b342",
+  "passed": true,
+  "suites": [
+    {
+      "class": "com.fongmi.android.tv.test.FolderFilterNavigationTest",
+      "passed": true,
+      "tests": 4
+    },
+    {
+      "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+      "passed": true,
+      "tests": 5
+    }
+  ],
+  "passedTests": 9
+}

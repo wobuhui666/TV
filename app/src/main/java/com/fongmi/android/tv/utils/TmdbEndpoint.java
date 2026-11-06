@@ -14,23 +14,39 @@ public final class TmdbEndpoint {
     public static final String DEFAULT_ROOT = "https://tapi.coolmarket.eu.org/";
     public static final String DEFAULT_API_BASE = DEFAULT_ROOT + "3/";
     public static final String DEFAULT_IMAGE_BASE = DEFAULT_ROOT + "t/p/";
+    public static final String DIRECT_ROOT = "https://api.themoviedb.org/";
+    public static final String DIRECT_API_BASE = DIRECT_ROOT + "3/";
+    public static final String DIRECT_IMAGE_BASE = "https://image.tmdb.org/t/p/";
 
     private TmdbEndpoint() {
     }
 
     @NonNull
     public static String getApiBase() {
-        return getEffectiveRoot() + "3/";
+        return getApiBase(Setting.getTmdbConnectionMode(), getCustomRoot());
     }
 
     @NonNull
     public static String getImageBase() {
-        return getEffectiveRoot() + "t/p/";
+        return getImageBase(Setting.getTmdbConnectionMode(), getCustomRoot());
     }
 
     @NonNull
     public static String getEffectiveRoot() {
-        String root = getCustomRoot();
+        return getEffectiveRoot(Setting.getTmdbConnectionMode(), getCustomRoot());
+    }
+
+    static String getApiBase(int mode, String customRoot) {
+        return mode == Setting.TMDB_DIRECT ? DIRECT_API_BASE : getEffectiveRoot(mode, customRoot) + "3/";
+    }
+
+    static String getImageBase(int mode, String customRoot) {
+        return mode == Setting.TMDB_DIRECT ? DIRECT_IMAGE_BASE : getEffectiveRoot(mode, customRoot) + "t/p/";
+    }
+
+    private static String getEffectiveRoot(int mode, String customRoot) {
+        if (mode == Setting.TMDB_DIRECT) return DIRECT_ROOT;
+        String root = mode == Setting.TMDB_CUSTOM_PROXY ? normalizeRoot(customRoot) : "";
         return root.isEmpty() ? DEFAULT_ROOT : root;
     }
 
@@ -40,7 +56,11 @@ public final class TmdbEndpoint {
     }
 
     public static boolean isCustom() {
-        return !getCustomRoot().isEmpty();
+        return Setting.getTmdbConnectionMode() == Setting.TMDB_CUSTOM_PROXY && !getCustomRoot().isEmpty();
+    }
+
+    public static boolean isDirect() {
+        return Setting.getTmdbConnectionMode() == Setting.TMDB_DIRECT;
     }
 
     @NonNull

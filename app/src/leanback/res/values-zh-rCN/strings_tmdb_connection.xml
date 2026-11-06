@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setting_tmdb_connection">TMDB 连接方式</string>
+    <string name="setting_tmdb_default_proxy">默认反代</string>
+    <string name="setting_tmdb_direct">直连官方</string>
+    <string name="setting_tmdb_custom_proxy">自定义反代</string>
+</resources>

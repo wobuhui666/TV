@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_compact_filter">Filter titles</string>
+    <string name="home_compact_all">View all</string>
+    <string name="home_compact_source">Source updates</string>
+    <string name="home_compact_source_action">Source action</string>
+    <string name="home_compact_source_loading">Loading the current source…</string>
+    <string name="home_compact_source_empty">No updates yet. Browse source categories in Library or reload.</string>
+    <string name="home_compact_no_source">Add your content source to browse Library and play titles.</string>
+    <string name="home_compact_library_loading">Library is loading. Please try again shortly.</string>
+    <string name="home_compact_library_empty">No categories available</string>
+    <string name="home_compact_library_retry">Reload</string>
+    <string name="home_compact_empty_hint">Refresh posters or filter titles. Library and Search are also available.</string>
+    <string name="home_compact_ready">Find titles by type, region, and year.</string>
+    <string name="home_compact_filter_empty">No titles found. Try adjusting the filters.</string>
+    <string name="home_compact_filter_error">Loading failed. Retry or adjust the filters.</string>
+</resources>

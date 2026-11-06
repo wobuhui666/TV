@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.BuildConfig;
+import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.rex.DoubanBridgeClient;
 import com.fongmi.android.tv.api.rex.RexNowClient;
 import com.fongmi.android.tv.api.rex.RexTmdbClient;
@@ -167,26 +168,61 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
     private void loadBridge() {
         String sk = Setting.getBridgeSk();
         if (sk == null || sk.trim().isEmpty()) {
-            RexNowClient.fetchDouban(feedCategory(), tag, feedListener());
+            loadBridgeFallback();
             return;
         }
         DoubanBridgeClient.fetchCatalog(Setting.getBridgeBase(), sk, null, section.getCollectionId(), 0, tag, new DoubanBridgeClient.Listener() {
             @Override
             public void onSuccess(List<Vod> items) {
                 if (isInactive()) return;
-                completeLocal(items);
+                if (items.isEmpty() && BrowseExperienceSettings.isCompactHomeEnabled()) loadBridgeFallback();
+                else completeLocal(items);
             }
 
             @Override
             public void onError(Exception e) {
                 if (isInactive()) return;
-                RexNowClient.fetchDouban(feedCategory(), tag, feedListener());
+                loadBridgeFallback();
             }
 
             @Override
             public void onUnauthorized() {
                 if (isInactive()) return;
-                RexNowClient.fetchDouban(feedCategory(), tag, feedListener());
+                loadBridgeFallback();
+            }
+        });
+    }
+
+    private void loadBridgeFallback() {
+        if (isInactive()) return;
+        if (!BrowseExperienceSettings.isCompactHomeEnabled()) {
+            RexNowClient.fetchDouban(feedCategory(), tag, feedListener());
+            return;
+        }
+        String type = section.getCollectionId().startsWith("movie") ? DiscoverMediaKey.MOVIE : DiscoverMediaKey.TV;
+        RexNowClient.fetchDouban(feedCategory(), tag, new RexNowClient.ItemsListener() {
+            @Override public void onSuccess(List<Vod> items) {
+                if (isInactive()) return;
+                List<Vod> selected = items.stream().filter(item -> type.equals(item.getTypeName())).toList();
+                if (selected.isEmpty()) loadDirectDouban();
+                else completeLocal(selected);
+            }
+            @Override public void onError(Exception error) {
+                if (!isInactive()) loadDirectDouban();
+            }
+        });
+    }
+
+    private void loadDirectDouban() {
+        DiscoverApi.Row row = section.getCollectionId().startsWith("movie")
+                ? DiscoverApi.Row.DOUBAN_HOT_MOVIE : DiscoverApi.Row.DOUBAN_HOT_TV;
+        int ticket = generation;
+        DiscoverApi.fetch(row, BuildConfig.TMDB_API_KEY, tag, new DiscoverApi.Listener() {
+            @Override public void onSuccess(DiscoverApi.Row row, List<Vod> items) {
+                if (!isInactive() && ticket == generation) completeLocal(items);
+            }
+            @Override public void onError(DiscoverApi.Row row, Exception error) {
+                if (!isInactive() && ticket == generation) completeLocal(List.of());
             }
         });
     }
@@ -324,6 +360,7 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
 
     @Override
     protected void onDestroy() {
+        DiscoverApi.cancel(tag);
         RexTmdbClient.cancel(tag);
         RexNowClient.cancel(tag);
         DoubanBridgeClient.cancel(tag);

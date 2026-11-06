@@ -7,12 +7,29 @@
     android:clipToPadding="false"
     android:orientation="vertical">
 
-    <com.fongmi.android.tv.ui.custom.JetStreamSectionHeaderView
-        android:id="@+id/title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="48dp"
-        android:layout_marginEnd="48dp" />
+        android:layout_marginEnd="48dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.fongmi.android.tv.ui.custom.JetStreamSectionHeaderView
+            android:id="@+id/title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamButtonTextView
+            android:id="@+id/more"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:text="@string/home_compact_all"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <androidx.leanback.widget.HorizontalGridView
         android:id="@+id/posters"

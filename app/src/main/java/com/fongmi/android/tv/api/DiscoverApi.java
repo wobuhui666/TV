@@ -139,9 +139,7 @@ public class DiscoverApi {
     }
 
     public static void cancel(Object tag) {
-        if (tag == null) return;
-        for (Call call : OkHttp.client().dispatcher().queuedCalls()) if (tag.equals(call.request().tag())) call.cancel();
-        for (Call call : OkHttp.client().dispatcher().runningCalls()) if (tag.equals(call.request().tag())) call.cancel();
+        TmdbNetwork.cancel(tag);
     }
 
     public static void clearTmdbCache() {

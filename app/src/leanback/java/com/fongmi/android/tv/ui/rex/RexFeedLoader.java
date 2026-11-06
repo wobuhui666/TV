@@ -6,6 +6,7 @@ import android.os.Looper;
 import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.BuildConfig;
+import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.rex.DoubanBridgeClient;
 import com.fongmi.android.tv.api.rex.RexNowClient;
 import com.fongmi.android.tv.api.rex.RexTmdbClient;
@@ -49,6 +50,17 @@ public final class RexFeedLoader {
     private int generation;
     private boolean done;
     private boolean closed;
+    private final boolean directDoubanFallback;
+
+    public RexFeedLoader() {
+        this(false);
+    }
+
+    public RexFeedLoader(boolean directDoubanFallback) {
+        this.directDoubanFallback = directDoubanFallback;
+    }
+
+    public boolean isLoading() { return !closed && !done && pending > 0; }
 
     public void load(List<RexSection> sections, Listener listener) {
         if (closed) return;
@@ -160,22 +172,24 @@ public final class RexFeedLoader {
         DoubanBridgeClient.fetchCatalog(Setting.getBridgeBase(), sk, null, section.getCollectionId(), 0, tag, new DoubanBridgeClient.Listener() {
             @Override
             public void onSuccess(List<Vod> items) {
-                accept(section, items, request);
+                if (items.isEmpty() && directDoubanFallback) fetchDoubanFallback(section, request);
+                else accept(section, items, request);
             }
 
             @Override
             public void onError(Exception e) {
-                fetchDoubanFallback(section, request);
+                if (isCurrent(request)) fetchDoubanFallback(section, request);
             }
 
             @Override
             public void onUnauthorized() {
-                fetchDoubanFallback(section, request);
+                if (isCurrent(request)) fetchDoubanFallback(section, request);
             }
         });
     }
 
     private void fetchDoubanFallback(RexSection section, int request) {
+        if (!isCurrent(request)) return;
         String category = section.getFeedCategory().isEmpty() ? "trending" : section.getFeedCategory();
         String mediaType = section.getCollectionId().startsWith("movie") ? DiscoverMediaKey.MOVIE : DiscoverMediaKey.TV;
         RexNowClient.fetchDouban(category, tag, new RexNowClient.ItemsListener() {
@@ -183,11 +197,31 @@ public final class RexFeedLoader {
             public void onSuccess(List<Vod> items) {
                 List<Vod> filtered = new ArrayList<>();
                 for (Vod item : items) if (mediaType.equals(item.getTypeName())) filtered.add(item);
-                accept(section, filtered, request);
+                if (filtered.isEmpty() && directDoubanFallback) fetchDirectDouban(section, request);
+                else accept(section, filtered, request);
             }
 
             @Override
             public void onError(Exception e) {
+                if (directDoubanFallback) fetchDirectDouban(section, request);
+                else accept(section, List.of(), request);
+            }
+        });
+    }
+
+    private boolean isCurrent(int request) {
+        return !closed && !done && request == generation;
+    }
+
+    private void fetchDirectDouban(RexSection section, int request) {
+        if (!isCurrent(request)) return;
+        DiscoverApi.Row row = section.getCollectionId().startsWith("movie")
+                ? DiscoverApi.Row.DOUBAN_HOT_MOVIE : DiscoverApi.Row.DOUBAN_HOT_TV;
+        DiscoverApi.fetch(row, BuildConfig.TMDB_API_KEY, tag, new DiscoverApi.Listener() {
+            @Override public void onSuccess(DiscoverApi.Row row, List<Vod> items) {
+                accept(section, items, request);
+            }
+            @Override public void onError(DiscoverApi.Row row, Exception error) {
                 accept(section, List.of(), request);
             }
         });
@@ -244,6 +278,7 @@ public final class RexFeedLoader {
         RexTmdbClient.cancel(tag);
         RexNowClient.cancel(tag);
         DoubanBridgeClient.cancel(tag);
+        if (directDoubanFallback) DiscoverApi.cancel(tag);
     }
 
     @Nullable

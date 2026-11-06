@@ -37,7 +37,8 @@ public final class TvHomePreviewActivity extends HomeActivity {
         fixture.installSites();
         SiteViewModel model = (SiteViewModel) HomePreviewFixtures.field(this, "mViewModel");
         // Use the production request path so later configuration refreshes also retain offline categories.
-        model.init().homeContent();
+        model.init();
+        onRefresh();
         replaceHistory(fixture.histories);
     }
 
@@ -55,6 +56,7 @@ public final class TvHomePreviewActivity extends HomeActivity {
     public int historyPosition() { return pageAdapter().indexOf(R.string.home_history) + 1; }
     public int categoriesPosition() { return pageAdapter().indexOf(HomePreviewFixtures.field(controller(), "categories")); }
     public int popularPosition() { return pageAdapter().indexOf(((List<?>) HomePreviewFixtures.field(controller(), "shelves")).get(0)); }
+    public int sourcePosition() { return pageAdapter().indexOf(HomePreviewFixtures.field(controller(), "source")); }
     public long focusGeneration() { return (long) HomePreviewFixtures.field(this, "mHistoryFocusGeneration"); }
     public boolean toolbarTouchActive() { return (boolean) HomePreviewFixtures.field(this, "mToolbarTouchActive"); }
     public void replaceHistory(List<History> values) { invoke("applyHistory", new Class<?>[] {List.class, boolean.class}, values, false); }

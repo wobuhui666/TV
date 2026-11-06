@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setting_tmdb_connection">TMDB connection</string>
+    <string name="setting_tmdb_default_proxy">Default proxy</string>
+    <string name="setting_tmdb_direct">Direct connection</string>
+    <string name="setting_tmdb_custom_proxy">Custom proxy</string>
+</resources>

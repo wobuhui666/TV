@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -67,6 +68,7 @@ import com.fongmi.android.tv.ui.custom.JetStreamHomeNavView;
 import com.fongmi.android.tv.ui.dialog.HistoryActionsDialog;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
 import com.fongmi.android.tv.ui.home.PosterHomeController;
+import com.fongmi.android.tv.ui.home.HomeSourceState;
 import com.fongmi.android.tv.ui.presenter.FeaturedVodPresenter;
 import com.fongmi.android.tv.ui.presenter.HeaderPresenter;
 import com.fongmi.android.tv.ui.presenter.HistoryPresenter;
@@ -80,9 +82,11 @@ import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.PermissionUtil;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.utils.TmdbEndpoint;
 import com.fongmi.android.tv.utils.UrlUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.net.OkHttp;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -104,6 +108,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private HistoryPresenter mPresenter;
     private FeaturedVodPresenter mFeaturedPresenter;
     private PosterHomeController mPosterHome;
+    private int mHomeLayout;
+    private String mTmdbEndpoints;
+    private final HomeSourceState mHomeSource = new HomeSourceState();
+    private HomeSourceState.Request mActionSourceRequest;
+    private ViewTreeObserver.OnGlobalFocusChangeListener mCompactContentFocus;
     private boolean mPosterHeroVisible;
     private SiteViewModel mViewModel;
     private Result mResult;
@@ -153,6 +162,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void initView(Bundle savedInstanceState) {
         mInitialFocusPending = savedInstanceState == null;
         mResult = Result.empty();
+        mHomeLayout = BrowseExperienceSettings.getHomeLayout();
+        mTmdbEndpoints = currentTmdbEndpoints();
         if (BrowseExperienceSettings.isPosterHomeEnabled()) {
             mPosterHome = new PosterHomeController(this, visible -> {
                 if (mPosterHeroVisible == visible) return;
@@ -160,8 +171,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 updateHomeContentInsets(visible);
                 if (mBinding.toolbar.hasFocus()) mBinding.recycler.scrollToPosition(0);
                 else if (mBinding.recycler.getSelectedPosition() > 0) mBinding.recycler.setWindowAlignmentOffset(ResUtil.dp2px(16));
-            });
+            }, mHomeLayout == BrowseExperienceSettings.HOME_COMPACT);
             mPosterHome.setKeepShelfFocusFallback(() -> requestRecyclerFocus());
+            mPosterHome.setSourceListener(this, this::openLibrary);
         }
         mClock = Clock.create(mBinding.clock);
         mBinding.progressLayout.showProgress();
@@ -184,6 +196,17 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     protected void initEvent() {
         mBinding.title.setListener(this);
+        if (mHomeLayout == BrowseExperienceSettings.HOME_COMPACT) {
+            // Focus can enter an already selected row after its selection callback kept the
+            // toolbar visible. Track the actual child focus hand-off as well as row selection.
+            mCompactContentFocus = (previous, focused) -> {
+                if (focused == null || !isDescendant(mBinding.recycler, focused)) return;
+                RecyclerView.ViewHolder holder = mBinding.recycler.findContainingViewHolder(focused);
+                int position = holder == null ? mBinding.recycler.getSelectedPosition() : holder.getBindingAdapterPosition();
+                if (position > 0) setToolbarVisible(false);
+            };
+            mBinding.recycler.getViewTreeObserver().addOnGlobalFocusChangeListener(mCompactContentFocus);
+        }
         mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override
             public void onChildViewHolderSelected(@NonNull RecyclerView parent, @Nullable RecyclerView.ViewHolder child, int position, int subposition) {
@@ -264,12 +287,12 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void setViewModel() {
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
+        mViewModel.getAction().observe(this, result -> {
+            if (result != null && (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT
+                    || mHomeSource.accepts(mActionSourceRequest, VodConfig.getCid(), getHome().getKey()))) Notify.show(result.getMsg());
+        });
         mViewModel.getResult().observe(this, result -> {
-            if (mPosterHome != null) {
-                // Keep the source categories ready for the library without replacing the wall.
-                Cache.clear().put(mResult = result);
-                return;
-            }
+            if (result == null || mPosterHome != null) return;
             boolean restoreFocus = mRestoreRefreshFocus && mRefreshFocusGeneration == mHistoryFocusGeneration
                     && mRefreshFocusCid == VodConfig.getCid() && canRestoreHistoryFocus();
             boolean keepTop = !restoreFocus && (mInitialFocusPending || mBinding.toolbar.hasFocus());
@@ -554,8 +577,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void getVideo() {
         if (mPosterHome != null) {
-            mResult = Result.empty();
-            mViewModel.homeContent();
+            loadHomeSource();
             mPosterHome.refresh();
             return;
         }
@@ -574,6 +596,43 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         mRefreshFocusGeneration = mHistoryFocusGeneration;
         mRefreshFocusCid = VodConfig.getCid();
         mViewModel.homeContent();
+    }
+
+    private void loadHomeSource() {
+        Site site = getHome();
+        HomeSourceState.Request request = mHomeSource.begin(VodConfig.getCid(), site.getKey());
+        mResult = Result.empty();
+        Cache.clear();
+        mPosterHome.updateSource(site.getKey(), site.getName(), mResult, mHomeSource.isLoading());
+        if (site.getKey().isEmpty()) return;
+        mViewModel.homeContent(site, result -> {
+            if (isFinishing() || isDestroyed() || !mHomeSource.complete(request, VodConfig.getCid(), getHome().getKey(), result)) return;
+            Cache.clear().put(mResult = mHomeSource.getResult());
+            mPosterHome.updateSource(site.getKey(), site.getName(), mResult, false);
+        });
+    }
+
+    private void openLibrary() {
+        if (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT) {
+            VodActivity.start(this, mResult);
+            return;
+        }
+        if (getHome().getKey().isEmpty()) {
+            if (VodConfig.get().getSites().isEmpty()) SettingActivity.start(this);
+            else showDialog();
+            return;
+        }
+        if (mHomeSource.isLoading()) {
+            Notify.show(R.string.home_compact_library_loading);
+            return;
+        }
+        if (!mResult.getTypes().isEmpty()) {
+            VodActivity.start(this, getHome().getKey(), mResult);
+            return;
+        }
+        new MaterialAlertDialogBuilder(this).setMessage(R.string.home_compact_library_empty)
+                .setPositiveButton(R.string.home_compact_library_retry, (dialog, which) -> loadHomeSource())
+                .setNegativeButton(R.string.home_choose_source, (dialog, which) -> showDialog()).show();
     }
 
     private boolean isRefreshRemovingFocusedRow() {
@@ -664,7 +723,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         List<JetStreamHomeNavView.NavItem> items = new ArrayList<>();
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_home), getString(R.string.home_tab_home), R.drawable.ic_home_vod));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_vod), getString(R.string.home_tab_library), R.drawable.ic_home_vod));
-        items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
+        if (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
         if (LiveConfig.hasUrl()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_live), getString(R.string.home_live), R.drawable.ic_home_live));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_search), getString(R.string.home_search), R.drawable.ic_home_search));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_my), getString(R.string.home_tab_my), R.drawable.ic_home_setting));
@@ -842,7 +901,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public void onNavClick(String key) {
         int resId = Integer.parseInt(key);
         if (resId == R.string.home_tab_home) requestRecyclerFocus(firstFocusableRowIndex());
-        else if (resId == R.string.home_vod) VodActivity.start(this, mResult);
+        else if (resId == R.string.home_vod) openLibrary();
         else if (resId == R.string.home_live) LiveActivity.start(this);
         else if (resId == R.string.home_discover) DiscoverActivity.start(this);
         else if (resId == R.string.home_keep) KeepActivity.start(this);
@@ -864,16 +923,26 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     public void onItemClick(Vod item, View poster) {
-        if (item.isAction()) mViewModel.action(getHome().getKey(), item.getAction());
-        else if (getHome().isIndex()) CollectActivity.start(this, item.getName());
+        if (!isCurrentSourceItem(item)) return;
+        if (item.isAction()) {
+            mActionSourceRequest = mHomeSource.getRequest();
+            mViewModel.action(getHome().getKey(), item.getAction());
+        } else if (getHome().isIndex()) CollectActivity.start(this, item.getName());
         else VideoActivity.start(this, getHome().getKey(), item.getId(), item.getName(), item.getPic(), poster);
     }
 
     @Override
     public boolean onLongClick(Vod item) {
+        if (!isCurrentSourceItem(item)) return false;
         if (item.isAction()) return false;
         CollectActivity.start(this, item.getName());
         return true;
+    }
+
+    private boolean isCurrentSourceItem(Vod item) {
+        return item != null && (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT
+                || !mHomeSource.isLoading() && mHomeSource.accepts(mHomeSource.getRequest(), VodConfig.getCid(), getHome().getKey())
+                && mResult.getList().stream().anyMatch(candidate -> candidate == item));
     }
 
     @Override
@@ -1085,13 +1154,22 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     protected void onResume() {
         super.onResume();
-        if ((mPosterHome != null) != BrowseExperienceSettings.isPosterHomeEnabled()) {
+        if (mHomeLayout != BrowseExperienceSettings.getHomeLayout()) {
             recreate();
             return;
+        }
+        String endpoints = currentTmdbEndpoints();
+        if (!TextUtils.equals(mTmdbEndpoints, endpoints)) {
+            mTmdbEndpoints = endpoints;
+            getVideo();
         }
         if (mPosterHome != null) mPosterHome.resumeKeepShelf();
         if (BrowseExperienceSettings.isHistoryActionsEnabled() && mPresenter.isDelete()) setHistoryDelete(false);
         mClock.start();
+    }
+
+    private String currentTmdbEndpoints() {
+        return TmdbEndpoint.getApiBase() + "\n" + TmdbEndpoint.getImageBase();
     }
 
     @Override
@@ -1150,6 +1228,9 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onDestroy() {
+        if (mCompactContentFocus != null && mBinding.recycler.getViewTreeObserver().isAlive()) {
+            mBinding.recycler.getViewTreeObserver().removeOnGlobalFocusChangeListener(mCompactContentFocus);
+        }
         if (mPosterHome != null) mPosterHome.close();
         mHistoryFocusGeneration++;
         cancelHistoryLoad();

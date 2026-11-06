@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browse_home">首页布局</string>
+    <string name="browse_home_compact">精简首页</string>
+    <string name="browse_home_original">旧版来源首页</string>
+    <string name="browse_home_posters">旧版海报首页</string>
+    <string name="home_compact_filter">筛选找片</string>
+    <string name="home_compact_all">查看全部</string>
+    <string name="home_compact_source">当前源更新</string>
+    <string name="home_compact_source_action">源操作</string>
+    <string name="home_compact_source_loading">正在加载当前源…</string>
+    <string name="home_compact_source_empty">暂无更新，可在片库浏览分类或重试加载。</string>
+    <string name="home_compact_no_source">添加自己的内容源后，可浏览片库与播放。</string>
+    <string name="home_compact_library_loading">片库正在加载，请稍后重试</string>
+    <string name="home_compact_library_empty">暂无可用分类</string>
+    <string name="home_compact_library_retry">重新加载</string>
+    <string name="home_compact_empty_hint">可以刷新海报或筛选找片，片库和搜索也可继续使用。</string>
+    <string name="home_compact_ready">按类型、地区、年份筛选，找到喜欢的作品。</string>
+    <string name="home_compact_filter_empty">没有找到作品，可以调整筛选条件。</string>
+    <string name="home_compact_filter_error">加载失败，请重试或调整筛选条件。</string>
+</resources>

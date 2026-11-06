@@ -83,7 +83,7 @@ import static org.junit.Assert.*;
 /** Real wall activities, Compose chip clicks and delayed HTTP fixtures; no external API is called. */
 @RunWith(AndroidJUnit4.class)
 public final class PosterWallFiltersIntegrationTest {
-    private static final String[] SETTINGS = {"tmdb_proxy_url", "browse_bridge_sk"};
+    private static final String[] SETTINGS = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_sk"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final Map<String, Object> savedSettings = new HashMap<>();
@@ -141,6 +141,7 @@ public final class PosterWallFiltersIntegrationTest {
             saveCache(DiscoverApi.class, "CACHE");
             saveCache(RexFeedLoader.class, "CACHE");
             Setting.putTmdbProxyUrl("https://wall-fixture.invalid/");
+            Setting.putTmdbConnectionMode(Setting.TMDB_CUSTOM_PROXY);
             Setting.putBridgeSk("");
             setField(OkHttp.get(), "client", fixtureClient);
             setField(TmdbNetwork.class, "client", fixtureClient);
@@ -169,7 +170,9 @@ public final class PosterWallFiltersIntegrationTest {
                 SharedPreferences.Editor editor = Prefers.getPrefers().edit();
                 for (String key : SETTINGS) {
                     Object value = savedSettings.get(key);
-                    if (value instanceof String text) editor.putString(key, text); else editor.remove(key);
+                    if (value instanceof String text) editor.putString(key, text);
+                    else if (value instanceof Integer mode) editor.putInt(key, mode);
+                    else editor.remove(key);
                 }
                 assertTrue(editor.commit());
             });

@@ -517,6 +517,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                         )
                     ),
                     RowSpec(KEY_WALL_VISIBLE, context.getString(R.string.setting_wall_visible), toggle = true),
+                    RowSpec(KEY_TMDB_CONNECTION, context.getString(R.string.setting_tmdb_connection)),
                     RowSpec(
                         key = KEY_TMDB_PROXY,
                         label = context.getString(R.string.setting_tmdb_proxy)
@@ -660,6 +661,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_LIVE = "live"
         const val KEY_WALL = "wall"
         const val KEY_WALL_VISIBLE = "wall_visible"
+        const val KEY_TMDB_CONNECTION = "tmdb_connection"
         const val KEY_TMDB_PROXY = "tmdb_proxy"
         const val KEY_TMDB_RECOVERY = "tmdb_route_recovery"
         const val KEY_VOD_HOME = "vod_home"

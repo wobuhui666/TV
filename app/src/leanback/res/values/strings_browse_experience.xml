@@ -2,9 +2,10 @@
 <resources>
     <string name="browse_tmdb_recovery">TMDB 网络兼容</string>
     <string name="browse_section">首页与发现</string>
-    <string name="browse_home">首页海报墙</string>
-    <string name="browse_home_original">原有首页</string>
-    <string name="browse_home_posters">推荐海报墙</string>
+    <string name="browse_home">Home layout</string>
+    <string name="browse_home_compact">Compact home</string>
+    <string name="browse_home_original">Legacy source home</string>
+    <string name="browse_home_posters">Legacy poster home</string>
     <string name="browse_search_filter">搜索相关性</string>
     <string name="browse_filter_original">原有匹配</string>
     <string name="browse_filter_relevant">过滤无关结果</string>

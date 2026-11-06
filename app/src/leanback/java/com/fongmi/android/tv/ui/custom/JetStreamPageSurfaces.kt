@@ -278,7 +278,7 @@ class JetStreamHomeLogoView @JvmOverloads constructor(
     init {
         background = jetStreamHomeLogoBackground()
         foreground = jetStreamHomeLogoForeground()
-        // Default resource mark is square-ish; FIT_CENTER + light inset sits better in the disc.
+        // Keep the default circular badge slightly inset from the surrounding disc.
         // Custom network logos (BitmapDrawable via Glide circleCrop) fill the disc without inset.
         scaleType = ScaleType.FIT_CENTER
         elevation = jetStreamDp(1)
