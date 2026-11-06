@@ -127,17 +127,28 @@ public final class SeekKeyOwnershipAndroidTest {
 
     @Test public void shouldCancelPendingKeysFromRealVodLiveAndCastReplacementCallbacks() {
         main(() -> {
-            VideoActivity video = new VideoActivity();
+            // These fixtures exercise the production cancellation callbacks with an active
+            // owner. PlaybackOwnershipAndroidTest separately verifies the ownership guard.
+            VideoActivity video = new VideoActivity() {
+                @Override protected boolean isNativePlaybackCurrent() { return true; }
+            };
+            video.setIntent(new Intent().putExtra("key", "seek-fixture").putExtra("id", "video"));
             putKeyDown(video, vod);
             vod.onKeyDown(key(100, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
             vod.onKeyDown(key(100, KeyEvent.ACTION_UP, 22, 0, 7, 0));
             video.onMediaItemTransition(MediaItem.EMPTY, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED);
-            CastActivity cast = new CastActivity();
+            CastActivity cast = new CastActivity() {
+                @Override protected boolean isNativePlaybackCurrent() { return true; }
+            };
+            cast.setIntent(new Intent());
             putKeyDown(cast, vod);
             vod.onKeyDown(key(200, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
             vod.onKeyDown(key(200, KeyEvent.ACTION_UP, 22, 0, 7, 0));
             cast.onMediaItemTransition(MediaItem.EMPTY, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED);
-            LiveActivity channel = new LiveActivity();
+            LiveActivity channel = new LiveActivity() {
+                @Override protected boolean isNativePlaybackCurrent() { return true; }
+            };
+            channel.setIntent(new Intent());
             putKeyDown(channel, live);
             live.onKeyDown(key(300, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
             live.onKeyDown(key(300, KeyEvent.ACTION_UP, 22, 0, 7, 0));
@@ -204,9 +215,15 @@ public final class SeekKeyOwnershipAndroidTest {
 
     private static void putKeyDown(Object host, Object input) {
         try {
-            Field field = host.getClass().getDeclaredField("mKeyDown");
-            field.setAccessible(true);
-            field.set(host, input);
+            for (Class<?> type = host.getClass(); type != null; type = type.getSuperclass()) {
+                try {
+                    Field field = type.getDeclaredField("mKeyDown");
+                    field.setAccessible(true);
+                    field.set(host, input);
+                    return;
+                } catch (NoSuchFieldException ignored) { }
+            }
+            throw new NoSuchFieldException("mKeyDown");
         } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 

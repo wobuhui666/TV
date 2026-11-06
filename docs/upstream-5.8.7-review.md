@@ -36,7 +36,7 @@ Media3 继续固定为 `wobuhui666/media` 的 `342f6590e02ac390e0bd6b4488b8a1bff
 
 GitHub Actions 使用 `build-validation.yml` 构建 TV／手机 arm64 APK、运行应用与库的
 完整 JUnit，并比较当前 TV lint 与本地起点的完整报告。
-`tv-ui-verify.yml` 的 `upstream_stability` 入口运行 12 套、77 项 Android 回归，
+`tv-ui-verify.yml` 的 `upstream_stability` 入口运行 12 套、78 项 Android 回归，
 包括显式选集、目录筛选、真实按键接管、绑定归属、迟到弹幕、MediaSession、时移、
 混版导航、Parcel、History、Logvar 与 ASSRT。结果、每套日志及截图作为 GHA artifact 保存。
 验证报告中的通过状态以对应工作流实际结果为准。

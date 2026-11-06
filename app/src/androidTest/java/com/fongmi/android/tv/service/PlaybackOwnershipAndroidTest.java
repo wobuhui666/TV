@@ -51,18 +51,25 @@ public class PlaybackOwnershipAndroidTest {
     private final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
     private final List<Harness> harnesses = new ArrayList<>();
     private int savedEngine;
+    private int savedBackground;
 
     @Before public void setup() {
         assertTrue(context.getPackageName().endsWith(".preview") || context.getPackageName().endsWith(".sourceprobe"));
         savedEngine = PlayerSetting.getEngine();
+        savedBackground = PlayerSetting.getBackground();
         PlayerSetting.putEngine(PlayerSetting.ENGINE_EXO);
+        PlayerSetting.putBackground(0);
     }
 
     @After public void cleanup() {
-        main(() -> {
-            for (Harness harness : harnesses) harness.close();
-        });
-        PlayerSetting.putEngine(savedEngine);
+        try {
+            main(() -> {
+                for (Harness harness : harnesses) harness.close();
+            });
+        } finally {
+            PlayerSetting.putEngine(savedEngine);
+            PlayerSetting.putBackground(savedBackground);
+        }
     }
 
     @Test public void shouldTransferBindingBeforeNotifyingTheOldOwner() {
@@ -193,6 +200,20 @@ public class PlaybackOwnershipAndroidTest {
             harness.activity.request();
             harness.activity.started(true);
             harness.activity.dispatchPending();
+            assertEquals(List.of(42), delivered);
+        });
+    }
+
+    @Test public void shouldDeliverCreatedResultsImmediatelyWhenBackgroundPlaybackIsEnabled() throws Exception {
+        PlayerSetting.putBackground(1);
+        Harness harness = harnessWithController();
+        main(() -> {
+            MutableLiveData<Integer> result = new MutableLiveData<>();
+            List<Integer> delivered = new ArrayList<>();
+            harness.activity.watch(result, delivered);
+            harness.activity.request();
+            assertEquals(Lifecycle.State.CREATED, harness.activity.getLifecycle().getCurrentState());
+            result.setValue(42);
             assertEquals(List.of(42), delivered);
         });
     }

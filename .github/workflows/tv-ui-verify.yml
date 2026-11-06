@@ -162,11 +162,12 @@ jobs:
           PY
             adb shell wm size 1920x1080
             adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
             suites=(
               com.fongmi.android.tv.playback.vod.ExplicitEpisodeSelectionAndroidTest=7
               com.fongmi.android.tv.test.FolderFilterNavigationTest=6
               com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest=7
-              com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest=10
+              com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest=11
               com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
               com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest=5
               com.fongmi.android.tv.player.TimeshiftExoIntegrationTest=2
