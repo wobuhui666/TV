@@ -114,7 +114,7 @@ Choose a theme, open a source, and browse or search for a title. The TV settings
 
 | Entry point | What it controls |
 | --- | --- |
-| TV Settings → Home and discovery | Poster-wall home, personal shelf, history-card actions, hero rotation, search relevance, and poster source selection/priority. |
+| TV Settings → Home and discovery | Home layout, Douban bridge URL/key, personal shelf, history-card actions, hero rotation, search relevance, and poster source selection/priority. |
 | Settings → Playback | Engine, speed, scale, temporary seek acceleration, background playback, live speech subtitles, and community intro/credit skipping. |
 | Player → Subtitle tracks → Advanced subtitles | Secondary subtitles, ASS styles, offsets, and font import. |
 | Player → Audio tracks → Audio effects | Dialogue emphasis, EQ, loudness normalization, and limiting. |
@@ -135,6 +135,21 @@ Recommendation walls load TMDB and Douban data independently. Poster-wall filter
 Search can use original relevance, filter unrelated results, or require a strict normalized title match. Those settings are separate from source-selection modes: **Legacy**, **Group results only**, and optional **Smart** selection. Smart selection uses title/episode matching and source reliability when trying another line or, if enabled, another site; it does not treat list position as an episode number.
 
 Poster-detail source selection is another optional entry point. It can use metadata aliases, years, seasons, and media types to rank candidates, and a per-configuration priority list can put your usual sources first. Results arrive progressively and retain the focused card. A match is a candidate for you to choose, not proof that the source is playable. See [the browsing guide](docs/native-discovery.md) for each setting, its default, and how to restore the original browsing experience.
+
+### Douban cloud bridge
+
+The Douban cloud bridge is an optional third-party recommendation service. It supplies title lists, artwork, and metadata for the TV home's popular Douban movie and series sections and their **View all** pages. Playback still uses your configured sources.
+
+Configure it under **TV Settings → Home and discovery**:
+
+| Option | What to enter |
+| --- | --- |
+| Douban bridge URL | Leave empty to use `https://douban-bridge.baran.wang`, or enter the root URL of another compatible service. Do not append API paths such as `/v1/catalog`. |
+| Douban bridge key (sk_) | Obtain a key from the operator of your chosen bridge service. This is separate from your TMDB API key and source cookies/login credentials; they cannot replace one another. |
+
+Save the settings and return home to browse recommendations. Without a key, the app skips the bridge and uses the public rexnow Douban feed. Authentication or request failures also trigger that fallback. The compact home and its **View all** pages additionally try the independent Douban API if the public feed fails or returns no titles. Douban and TMDB sections load independently, so bridge failures do not block TMDB recommendations.
+
+The URL and key are stored in local app settings. Use a trusted bridge address, as the key is sent to that service with requests. Full app backups also include these settings, so do not publish backups containing your key. Changing **Home layout** preserves these settings; **Restore original browsing experience** clears the bridge URL and key.
 
 ## Playback and audio
 
