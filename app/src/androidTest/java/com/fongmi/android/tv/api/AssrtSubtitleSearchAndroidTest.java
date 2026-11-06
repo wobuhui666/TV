@@ -3,6 +3,7 @@ package com.fongmi.android.tv.api;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -20,6 +21,7 @@ import androidx.test.uiautomator.UiDevice;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.bean.AssrtSubtitle;
 import com.fongmi.android.tv.bean.AssrtSubtitleFile;
 import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.bean.Track;
@@ -44,6 +46,7 @@ import org.junit.runner.RunWith;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -142,19 +145,28 @@ public final class AssrtSubtitleSearchAndroidTest {
                 return new MockResponse().setResponseCode(404).setBody("Unexpected local fixture request");
             }
         });
-        server.start();
-        client = new AssrtApi.Client(server.url("/v1").toString(), TOKEN,
+        server.start(InetAddress.getByName("127.0.0.1"), 0);
+        client = new AssrtApi.Client(url("/v1"), TOKEN,
                 request -> OkHttp.client().newCall(request), App::post, SystemClock::elapsedRealtime);
         services = new SubtitleSearchDialog.Services() {
             @Override public boolean isConfigured() { return true; }
             @Override public void search(String query, int position, Object tag, AssrtApi.SearchListener listener) {
-                client.search(query, position, tag, listener);
+                client.search(query, position, tag, new AssrtApi.SearchListener() {
+                    @Override public void onSuccess(List<AssrtSubtitle> items) { listener.onSuccess(items); }
+                    @Override public void onError(Exception error) { logFailure("search", error); listener.onError(error); }
+                });
             }
             @Override public void detail(long id, Object tag, AssrtApi.DetailListener listener) {
-                client.detail(id, tag, listener);
+                client.detail(id, tag, new AssrtApi.DetailListener() {
+                    @Override public void onSuccess(AssrtSubtitle item) { listener.onSuccess(item); }
+                    @Override public void onError(Exception error) { logFailure("detail", error); listener.onError(error); }
+                });
             }
             @Override public void download(AssrtSubtitleFile file, Object tag, SubtitleDownload.Listener listener) {
-                SubtitleDownload.download(file, tag, listener);
+                SubtitleDownload.download(file, tag, new SubtitleDownload.Listener() {
+                    @Override public void onSuccess(List<Sub> files) { listener.onSuccess(files); }
+                    @Override public void onError(Exception error) { logFailure("download", error); listener.onError(error); }
+                });
             }
             @Override public void cancel(Object tag) { client.cancel(tag); SubtitleDownload.cancel(tag); }
         };
@@ -392,8 +404,14 @@ public final class AssrtSubtitleSearchAndroidTest {
         Intent intent = new Intent(instrumentation.getTargetContext(), AssrtSubtitlePreviewActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("existing_subtitle", existing);
         activity = (AssrtSubtitlePreviewActivity) instrumentation.startActivitySync(intent);
-        await(() -> activity.manager != null && activity.manager.getPlaybackState() == Player.STATE_READY
-                && activity.manager.isVod(), "local PCM VOD ready");
+        try {
+            await(() -> activity.manager != null && activity.manager.getPlaybackState() == Player.STATE_READY
+                    && activity.manager.isVod(), "local PCM VOD ready", 30_000);
+        } catch (AssertionError failure) {
+            throw new AssertionError("local PCM VOD ready: " + value(() -> "state="
+                    + (activity.manager == null ? "no manager" : activity.manager.getPlaybackState())
+                    + ", error=" + safeMessage(activity.error)), failure);
+        }
         main(() -> {
             assertNull(activity.error);
             activity.manager.pause();
@@ -550,11 +568,11 @@ public final class AssrtSubtitleSearchAndroidTest {
         if (rar) {
             // ASSRT exposes the original archive alongside (or instead of) on-the-fly files.
             item.addProperty("filename", "Fixture.Subtitles.rar");
-            item.addProperty("url", server.url("/download/subtitles.rar").toString());
-        } else if (zip) files.add(file("Fixture.Subtitles.zip", server.url("/download/subtitles.zip").toString(), "1KB"));
+            item.addProperty("url", url("/download/subtitles.rar"));
+        } else if (zip) files.add(file("Fixture.Subtitles.zip", url("/download/subtitles.zip"), "1KB"));
         else {
-            files.add(file(OTHER, server.url("/download/other.srt").toString(), "1KB"));
-            files.add(file(WANTED, server.url("/download/wanted.srt").toString(), "1KB"));
+            files.add(file(OTHER, url("/download/other.srt"), "1KB"));
+            files.add(file(WANTED, url("/download/wanted.srt"), "1KB"));
         }
         item.add("filelist", files);
         return envelope(item);
@@ -650,8 +668,25 @@ public final class AssrtSubtitleSearchAndroidTest {
         main(() -> value.set(task.get()));
         return value.get();
     }
-    private void await(BooleanSupplier condition, String message) {
-        long deadline = SystemClock.uptimeMillis() + 12_000;
+    private String url(String path) {
+        // Numeric loopback addresses bypass the app's configured public DoH resolver.
+        return server.url(path).newBuilder().host("127.0.0.1").build().toString();
+    }
+
+    private static void logFailure(String stage, Exception error) {
+        Log.w("AssrtSubtitleTest", stage + " failed: " + error.getClass().getName() + ": " + safeMessage(error.getMessage()));
+    }
+
+    private static String safeMessage(String message) {
+        return message == null ? "none" : message.replace(TOKEN, "<redacted>")
+                .replaceAll("(?i)Bearer\\s+\\S+", "Bearer <redacted>")
+                .replaceAll("(?i)https?://\\S+", "<url>");
+    }
+
+    private void await(BooleanSupplier condition, String message) { await(condition, message, 12_000); }
+
+    private void await(BooleanSupplier condition, String message, long timeout) {
+        long deadline = SystemClock.uptimeMillis() + timeout;
         while (SystemClock.uptimeMillis() < deadline) {
             if (read(condition::getAsBoolean)) return;
             SystemClock.sleep(50);
