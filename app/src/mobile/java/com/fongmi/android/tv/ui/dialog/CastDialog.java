@@ -2,6 +2,8 @@ package com.fongmi.android.tv.ui.dialog;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.DialogInterface;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,7 +20,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.CastVideo;
-import com.fongmi.android.tv.bean.CastHistorySnapshot;
+import com.fongmi.android.tv.bean.CastSnapshot;
 import com.fongmi.android.tv.bean.CastRequestState;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Device;
@@ -87,6 +89,40 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         return this;
     }
 
+    @Override
+    public void onCreate(@Nullable Bundle state) {
+        super.onCreate(state);
+        if (state == null) return;
+        fm = state.getBoolean("castFm", fm);
+        try {
+            history = History.objectFrom(state.getString("castHistory"));
+        } catch (RuntimeException ignored) {
+            history = null;
+        }
+        if (state.containsKey("castUrl")) {
+            Bundle savedHeaders = state.getBundle("castHeaders");
+            java.util.Map<String, String> headers = new java.util.HashMap<>();
+            if (savedHeaders != null) for (String name : savedHeaders.keySet()) headers.put(name, savedHeaders.getString(name));
+            video = new CastVideo(state.getString("castName", ""), state.getString("castUrl", ""),
+                    state.getLong("castPosition"), headers);
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putBoolean("castFm", fm);
+        if (history != null) state.putString("castHistory", history.toString());
+        if (video != null) {
+            state.putString("castName", video.name());
+            state.putString("castUrl", video.url());
+            state.putLong("castPosition", video.position());
+            Bundle headers = new Bundle();
+            video.headers().forEach(headers::putString);
+            state.putBundle("castHeaders", headers);
+        }
+    }
+
     public void show(FragmentActivity activity) {
         for (Fragment f : activity.getSupportFragmentManager().getFragments()) if (f instanceof CastDialog) return;
         show(activity.getSupportFragmentManager(), null);
@@ -148,7 +184,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private Listener listener() { return (Listener) requireActivity(); }
 
     private boolean isCurrent(CastRequestState state, CastRequestState.Request request, History sentHistory) {
-        if (binding == null || !isAdded() || state != requests
+        if (binding == null || !isAdded() || getDialog() == null || !getDialog().isShowing() || state != requests
                 || !state.isCurrent(request, listener().getCastPlaybackIdentity())) return false;
         History current = listener().getCastHistory();
         return sentHistory == null || current == null || sameHistory(sentHistory, current);
@@ -168,7 +204,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     private FormBody body(History snapshot) {
         FormBody.Builder body = new FormBody.Builder().add("device", device).add("config", config);
         if (snapshot != null) {
-            History transported = CastHistorySnapshot.transport(snapshot, this::shareUrl);
+            History transported = CastSnapshot.transport(snapshot, this::shareUrl);
             body.add("history", transported.toString());
         }
         return body.build();
@@ -208,12 +244,12 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         CastVideo currentVideo = listener().getCastVideo();
         if (currentVideo == null) currentVideo = video;
         if (identity != openedMedia || currentVideo == null
-                || !Objects.equals(video.url(), currentVideo.url())
+                || (video != null && !Objects.equals(video.url(), currentVideo.url()))
                 || (history != null && currentHistory != null && !sameHistory(history, currentHistory))) {
             dismiss();
             return;
         }
-        History snapshot = CastHistorySnapshot.capture(currentHistory == null ? history : currentHistory, currentVideo.position());
+        History snapshot = CastSnapshot.capture(currentHistory == null ? history : currentHistory, currentVideo.position());
         if (activeCall != null) activeCall.cancel();
         CastRequestState state = requests;
         CastRequestState.Request request = state.begin(identity);
@@ -245,13 +281,38 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     public void onDestroyView() {
-        if (requests != null) requests.close();
-        if (activeCall != null) activeCall.cancel();
+        cancelRequests();
         binding = null;
         super.onDestroyView();
         DLNACastManager.get().setDeviceListener(null);
         DLNACastManager.get().release(requireActivity());
         scanTask.stop();
+    }
+
+    private void cancelRequests() {
+        if (requests != null) requests.close();
+        if (activeCall != null) activeCall.cancel();
+        activeCall = null;
+    }
+
+    @Override public void dismiss() {
+        cancelRequests();
+        super.dismiss();
+    }
+
+    @Override public void dismissAllowingStateLoss() {
+        cancelRequests();
+        super.dismissAllowingStateLoss();
+    }
+
+    @Override public void onCancel(@NonNull DialogInterface dialog) {
+        cancelRequests();
+        super.onCancel(dialog);
+    }
+
+    @Override public void onDismiss(@NonNull DialogInterface dialog) {
+        cancelRequests();
+        super.onDismiss(dialog);
     }
 
     private final ActivityResultLauncher<Intent> launcher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {

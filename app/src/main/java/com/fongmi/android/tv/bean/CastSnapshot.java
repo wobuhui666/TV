@@ -3,9 +3,19 @@ package com.fongmi.android.tv.bean;
 import com.fongmi.android.tv.db.AppDatabase;
 
 import java.util.function.UnaryOperator;
+import java.util.HashMap;
+import java.util.Map;
 
-public final class CastHistorySnapshot {
-    private CastHistorySnapshot() {}
+public final class CastSnapshot {
+    private CastSnapshot() {}
+
+    public static Map<String, String> headers(Map<String, String> source) {
+        Map<String, String> snapshot = new HashMap<>();
+        if (source != null) source.forEach((name, value) -> {
+            if (name != null && value != null) snapshot.put(name, value);
+        });
+        return Map.copyOf(snapshot);
+    }
 
     public static History capture(History source, long positionMs) {
         if (source == null) return null;
