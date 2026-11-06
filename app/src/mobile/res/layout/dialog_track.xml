@@ -57,6 +57,8 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/search"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp"

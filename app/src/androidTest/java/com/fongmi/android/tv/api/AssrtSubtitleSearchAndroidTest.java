@@ -104,6 +104,7 @@ public final class AssrtSubtitleSearchAndroidTest {
         String applicationId = instrumentation.getTargetContext().getPackageName();
         assertTrue("Use an isolated validation app", applicationId.equals("com.fongmi.android.tv.preview")
                 || applicationId.equals("com.fongmi.android.tv.sourceprobe"));
+        instrumentation.setInTouchMode(false);
         saved = new HashMap<>(Prefers.getPrefers().getAll());
         main(() -> {
             SETTINGS.forEach(Prefers::put);
@@ -179,8 +180,9 @@ public final class AssrtSubtitleSearchAndroidTest {
     public void shouldSearchFromTrackMenuAndLoadOnlyTheChosenFileWithoutResumingPlayback() throws Exception {
         launch(false);
         main(() -> activity.openTracks(services));
-        await(() -> shown(trackDialog(), R.id.search), "online subtitle track action");
+        await(() -> ready(trackDialog(), R.id.search), "online subtitle track action owns input focus");
         main(() -> assertTrue(view(trackDialog(), R.id.search).requestFocus()));
+        await(() -> view(trackDialog(), R.id.search).hasFocus(), "online subtitle track action focused");
         NativeUiEvidence.capture("assrt-track-search-entry");
         device.pressDPadCenter();
         awaitSearch();
@@ -428,7 +430,9 @@ public final class AssrtSubtitleSearchAndroidTest {
     }
 
     private void startSearch() {
+        awaitSearch();
         main(() -> assertTrue(view(searchDialog(), R.id.search).requestFocus()));
+        await(() -> view(searchDialog(), R.id.search).hasFocus(), "subtitle search action focused");
         device.pressDPadCenter();
     }
 
@@ -444,10 +448,15 @@ public final class AssrtSubtitleSearchAndroidTest {
         chooseRow(name);
     }
 
-    private void awaitSearch() { await(() -> shown(searchDialog(), R.id.keyword), "search dialog"); }
-    private void awaitRow(String name) { await(() -> row(name) != null, "subtitle row: " + name); }
+    private void awaitSearch() { await(() -> ready(searchDialog(), R.id.search), "search dialog owns input focus"); }
+    private void awaitRow(String name) {
+        await(() -> ready(searchDialog(), R.id.recycler) && row(name) != null && row(name).isLaidOut(),
+                "subtitle row: " + name);
+    }
     private void chooseRow(String name) {
+        awaitRow(name);
         main(() -> assertTrue(row(name).requestFocus()));
+        await(() -> row(name) != null && row(name).hasFocus(), "subtitle row focused: " + name);
         device.pressDPadCenter();
     }
 
@@ -483,9 +492,10 @@ public final class AssrtSubtitleSearchAndroidTest {
         return fragment.getDialog().getWindow().getDecorView().findViewById(id);
     }
 
-    private static boolean shown(DialogFragment fragment, int id) {
+    private static boolean ready(DialogFragment fragment, int id) {
         View field = view(fragment, id);
-        return field != null && field.isShown();
+        return field != null && field.isShown() && field.isLaidOut()
+                && fragment.getDialog().getWindow().getDecorView().hasWindowFocus();
     }
 
     private Format format(String label) {

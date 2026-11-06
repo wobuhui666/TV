@@ -43,6 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:focusable="true"
+            android:focusableInTouchMode="true"
             android:minWidth="0dp"
             android:text="@string/assrt_search" />
 
@@ -80,6 +81,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:focusable="true"
+            android:focusableInTouchMode="true"
             android:text="@string/assrt_back"
             android:visibility="gone" />
 
@@ -89,6 +91,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:focusable="true"
+            android:focusableInTouchMode="true"
             android:text="@string/assrt_previous"
             android:visibility="gone" />
 
@@ -99,6 +102,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:focusable="true"
+            android:focusableInTouchMode="true"
             android:text="@string/assrt_next"
             android:visibility="gone" />
 
@@ -125,6 +129,7 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true"
+        android:focusableInTouchMode="true"
         android:minHeight="40dp"
         android:paddingVertical="8dp"
         android:text="@string/assrt_source"
