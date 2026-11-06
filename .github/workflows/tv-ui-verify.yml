@@ -13,6 +13,10 @@ on:
         description: Include native next-episode cache regressions
         type: boolean
         default: false
+      episode_navigation:
+        description: Verify episode identity, mixed-release controller navigation and Android Parcel
+        type: boolean
+        default: false
       responsiveness:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
@@ -130,10 +134,25 @@ jobs:
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
+          TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_LIVE_HOME" = 'true' ]; then
+          if [ "$TV_EPISODE_NAVIGATION" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest,com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest,com.fongmi.android.tv.api.LogvarMatchingAndroidTest
+          elif [ "$TV_LIVE_HOME" = 'true' ]; then
             bash .github/scripts/verify-live-home.sh
           elif [ "$TV_COMPACT_HOME" = 'true' ]; then
             out=artifacts/compact-home
@@ -199,6 +218,7 @@ jobs:
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
+          TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -228,5 +248,6 @@ jobs:
             artifacts/live-home/
             app/build/test-results/
             app/build/reports/tests/
+            app/schemas/
           if-no-files-found: warn
           retention-days: 14

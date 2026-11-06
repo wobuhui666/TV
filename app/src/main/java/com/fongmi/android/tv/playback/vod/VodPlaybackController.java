@@ -12,6 +12,7 @@ import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.player.skip.CommunitySkipRuntime;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.SourceSelectionSetting;
+import com.fongmi.android.tv.source.EpisodeNavigator;
 import com.fongmi.android.tv.source.EpisodeTarget;
 import com.fongmi.android.tv.source.SmartSourceSelector;
 import com.fongmi.android.tv.source.SourceReliabilityStore;
@@ -156,7 +157,7 @@ public class VodPlaybackController {
 
     public void selectEpisode(Episode item) {
         if (!state.hasFlags()) return;
-        state.setEpisodeTarget(EpisodeTarget.of(item));
+        state.setEpisodeTarget(EpisodeTarget.of(item, state.getMediaSeason()));
         Flag selected = state.getFlag();
         for (Flag flag : state.getFlags()) flag.toggle(flag == selected, item);
         historyPolicy.updateEpisode(state.getHistory(), state.getFlag(), item);
@@ -201,7 +202,8 @@ public class VodPlaybackController {
 
     private void switchSource(Vod item, boolean autoFallback) {
         clearPreload();
-        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisode()) state.setEpisodeTarget(EpisodeTarget.of(state.getEpisode()));
+        if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && state.hasEpisode()
+                && (!autoFallback || !state.hasEpisodeTarget())) state.setEpisodeTarget(EpisodeTarget.of(state.getEpisode(), state.getMediaSeason()));
         state.setAutoFallback(autoFallback);
         state.clearPlayRequest();
         saveCurrentHistory();
@@ -274,9 +276,9 @@ public class VodPlaybackController {
     private boolean tryCrossSiteEpisode(int offset) {
         if (!SourceSelectionSetting.getMode().selectsAutomatically()
                 || !SourceSelectionSetting.isCrossSiteEnabled() || !state.hasEpisode()) return false;
-        Integer current = state.getEpisodeTarget().getNumber();
-        if (current == null) return false;
-        state.setEpisodeTarget(EpisodeTarget.of(current + offset));
+        EpisodeTarget next = state.getEpisodeTarget().offset(offset);
+        if (next == null) return false;
+        state.setEpisodeTarget(next);
         fallbackPolicy.search(host.getVodName(), true);
         return true;
     }
@@ -462,7 +464,10 @@ public class VodPlaybackController {
 
     private void seamless(Flag flag) {
         History history = state.getHistory();
-        Episode episode = history == null ? null : flag.find(history.getVodRemarks(), host.getVodMark().isEmpty());
+        EpisodeTarget target = history == null ? null : state.hasEpisodeTarget() ? state.getEpisodeTarget()
+                : EpisodeTarget.of(history.getEpisode(), state.getMediaSeason());
+        Episode episode = target == null ? null : SmartSourceSelector.findEpisode(flag, target, state.getMediaSeason());
+        if (episode == null && target != null && target.isUnnumbered()) episode = flag.find(history.getVodRemarks(), host.getVodMark().isEmpty());
         host.renderQualityVisible(episode != null && episode.isSelected() && state.getQuality().getUrl().isMulti());
         if (episode == null || episode.isSelected()) return;
         history.setVodRemarks(episode.getName());
@@ -501,7 +506,6 @@ public class VodPlaybackController {
     private Episode getRelativeEpisode(int offset) {
         List<Episode> episodes = state.getFlag().getEpisodes();
         int current = state.getFlag().getPosition();
-        int position = Math.clamp(current + offset, 0, episodes.size() - 1);
-        return episodes.get(position);
+        return EpisodeNavigator.relative(episodes, current, offset);
     }
 }

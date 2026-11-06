@@ -81,11 +81,8 @@ public final class MediaMatcher {
     }
 
     public static Integer extractEpisodeNumber(String value) {
-        String text = normalize(value);
-        Matcher matcher = Pattern.compile("(?i)(?:ep(?:isode)?|第)\\s*([0-9]{1,4})").matcher(text);
-        if (matcher.find()) return Integer.parseInt(matcher.group(1));
-        matcher = Pattern.compile("(?<!\\d)(\\d{1,4})(?!\\d)").matcher(text);
-        return matcher.find() ? Integer.parseInt(matcher.group(1)) : null;
+        EpisodeLabel label = EpisodeLabelParser.parse(value);
+        return label.isSingleEpisode() && !label.isPreview() ? label.number() : null;
     }
 
     public static String normalizedEpisodeName(String value) {

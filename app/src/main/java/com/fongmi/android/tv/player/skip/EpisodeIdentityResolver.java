@@ -3,6 +3,8 @@ package com.fongmi.android.tv.player.skip;
 import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
+import com.fongmi.android.tv.source.EpisodeLabel;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
 import com.fongmi.android.tv.utils.TmdbEndpoint;
 import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.github.catvod.utils.Trans;
@@ -32,13 +34,8 @@ import okhttp3.Response;
 public final class EpisodeIdentityResolver {
 
     private static final String NUMBER = "[零〇一二两三四五六七八九十百0-9]{1,6}";
-    private static final Pattern SE = Pattern.compile("(?i)(?<![a-z0-9])s([0-9]{1,3})[ ._-]*e([0-9]{1,4})(?![0-9])");
-    private static final Pattern CROSS = Pattern.compile("(?i)(?<![a-z0-9])([0-9]{1,3})x([0-9]{1,4})(?![0-9])");
     private static final Pattern SEASON = Pattern.compile("(?i)(?<![a-z0-9])(?:season\\s*|s)([0-9]{1,3})(?![0-9])|第\\s*(" + NUMBER + ")\\s*季");
-    private static final Pattern EPISODE = Pattern.compile("(?i)(?<![a-z0-9])(?:ep(?:isode)?\\s*|e)([0-9]{1,4})(?![0-9])|第\\s*(" + NUMBER + ")\\s*[集话]|(?<![零〇一二两三四五六七八九十百0-9])(" + NUMBER + ")\\s*[集话]");
-    private static final Pattern BARE_EPISODE = Pattern.compile("^(" + NUMBER + ")$");
     private static final Pattern UNSUPPORTED = Pattern.compile("(?i)预告|花絮|合集|全集|trailer|preview|teaser|\\bpart\\s*[0-9]|第\\s*" + NUMBER + "\\s*部分|[上中下](?:部分|半|集|部|篇){0,2}[\\s\\]）)]*$|(?:[零〇一二两三四五六七八九十百0-9]|[集话])\\s*[-~至到+、,/&]\\s*(?:e|ep|第)?\\s*[零〇一二两三四五六七八九十百0-9]|e[0-9]+\\s*e[0-9]+");
-    private static final Pattern SPECIAL = Pattern.compile("(?i)特别篇|特别集|特辑|\\b(?:special|ova|oad|sp)\\b");
     private static final Pattern YEAR = Pattern.compile("(?<![0-9])(?:19|20)[0-9]{2}(?![0-9])");
     private static final Pattern MOVIE = Pattern.compile("(?i)电影|movie|film");
     private static final long CACHE_TTL_MS = TimeUnit.HOURS.toMillis(6);
@@ -69,11 +66,22 @@ public final class EpisodeIdentityResolver {
 
     @Nullable
     public EpisodeIdentity resolve(String vodId, String title, String year, String typeName, String episodeName) throws IOException {
+        return resolve(vodId, title, year, typeName, episodeName, true);
+    }
+
+    public static boolean isMovie(String vodId, String typeName) {
+        DiscoverMediaKey key = DiscoverMediaKey.parse(vodId);
+        return key == null ? MOVIE.matcher(normalize(typeName)).find() : key.isMovie();
+    }
+
+    @Nullable
+    public EpisodeIdentity resolve(String vodId, String title, String year, String typeName, String episodeName, boolean reliableEpisodeLabel) throws IOException {
         deadlineNs = System.nanoTime() + lookupTimeoutNs;
         DiscoverMediaKey mediaKey = DiscoverMediaKey.parse(vodId);
         if (cancelled || UNSUPPORTED.matcher(normalize(episodeName)).find()) return null;
-        if (mediaKey != null ? mediaKey.isMovie() : MOVIE.matcher(normalize(typeName)).find())
+        if (isMovie(vodId, typeName))
             return resolveMovie(mediaKey == null ? 0 : mediaKey.getId(), title, year);
+        if (!reliableEpisodeLabel) return null;
         ParsedEpisode parsed = parseEpisode(title, episodeName);
         if (parsed == null || cancelled) return null;
         long explicitId = mediaKey == null ? 0 : mediaKey.getId();
@@ -204,53 +212,19 @@ public final class EpisodeIdentityResolver {
         String name = normalize(episodeName);
         String showTitle = normalize(title);
         if (name.isEmpty() || UNSUPPORTED.matcher(name).find()) return null;
-        Integer titleSeason = findSeason(showTitle);
-        Integer episodeSeason = findSeason(name);
-        if (titleSeason != null && titleSeason < 0 || episodeSeason != null && episodeSeason < 0) return null;
-        Integer season = titleSeason;
-        int episode = 0;
-        int compoundCount = 0;
-        String remaining = name;
-        for (Pattern pattern : new Pattern[]{SE, CROSS}) {
-            Matcher compound = pattern.matcher(name);
-            while (compound.find()) {
-                if (++compoundCount > 1) return null;
-                season = number(compound.group(1));
-                episode = number(compound.group(2));
-                remaining = name.substring(0, compound.start()) + name.substring(compound.end());
-            }
-        }
-        if (compoundCount > 0 && EPISODE.matcher(remaining).find()) return null;
-        if (episodeSeason != null) {
-            if (season != null && !season.equals(episodeSeason)) return null;
-            season = episodeSeason;
-        }
-        if (titleSeason != null && season != null && !titleSeason.equals(season)) return null;
-        if (SPECIAL.matcher(name).find() && (season == null || season != 0)) return null;
-        if (episode == 0) {
-            Matcher marker = EPISODE.matcher(name);
-            if (marker.find()) {
-                episode = number(firstGroup(marker));
-                if (marker.find()) return null;
-            } else {
-                Matcher bare = BARE_EPISODE.matcher(name);
-                if (bare.matches()) episode = number(bare.group(1));
-            }
-        }
-        if (episode <= 0 || episode > 9999 || season != null && season > 999) return null;
+        EpisodeLabel label = EpisodeLabelParser.parse(name);
+        EpisodeLabel show = EpisodeLabelParser.parse(showTitle);
+        if (label.isAmbiguous() || show.isAmbiguous()) return null;
+        Integer season = label.season() == null ? show.season() : label.season();
+        if (show.season() != null && label.season() != null && !show.season().equals(label.season())) return null;
+        // A special can be identified by an explicit season zero in the show title.
+        boolean titledSpecial = label.isSpecial() && season != null && season == 0
+                && label.isSingleEpisode() && label.part().isEmpty() && !label.isPreview();
+        if (!label.isApiSafe() && !titledSpecial) return null;
+        if (label.number() == null || label.number() <= 0 || label.number() > 9999
+                || season != null && season > 999) return null;
         String queryTitle = SEASON.matcher(showTitle).replaceAll("").replaceAll("[（(](?:19|20)[0-9]{2}[）)]\\s*$", "").trim();
-        return new ParsedEpisode(queryTitle, season, episode);
-    }
-
-    private static Integer findSeason(String value) {
-        Matcher matcher = SEASON.matcher(value);
-        Integer season = null;
-        while (matcher.find()) {
-            int candidate = number(firstGroup(matcher));
-            if (season != null && season != candidate) return -1;
-            season = candidate;
-        }
-        return season;
+        return new ParsedEpisode(queryTitle, season, label.number());
     }
 
     static List<Long> matchingCandidates(JsonObject search, String title, String year, @Nullable Integer season) {
@@ -319,38 +293,6 @@ public final class EpisodeIdentityResolver {
         JsonObject external = object(detail, "external_ids");
         String imdb = external == null ? "" : string(external, "imdb_id");
         return new EpisodeIdentity(expectedId, imdb, (int) integer(selected, "season_number"), parsed.episode());
-    }
-
-    private static String firstGroup(Matcher matcher) {
-        for (int i = 1; i <= matcher.groupCount(); i++) if (matcher.group(i) != null) return matcher.group(i);
-        return "";
-    }
-
-    private static int number(String value) {
-        if (value.matches("[0-9]+")) return Integer.parseInt(value);
-        int total = 0;
-        int current = 0;
-        for (char character : value.toCharArray()) {
-            int digit = switch (character) {
-                case '零', '〇' -> 0;
-                case '一' -> 1;
-                case '二', '两' -> 2;
-                case '三' -> 3;
-                case '四' -> 4;
-                case '五' -> 5;
-                case '六' -> 6;
-                case '七' -> 7;
-                case '八' -> 8;
-                case '九' -> 9;
-                default -> -1;
-            };
-            if (character == '十' || character == '百') {
-                total += (current == 0 ? 1 : current) * (character == '十' ? 10 : 100);
-                current = 0;
-            } else if (digit >= 0) current = current * 10 + digit;
-            else return 0;
-        }
-        return total + current;
     }
 
     private static String normalize(String value) {

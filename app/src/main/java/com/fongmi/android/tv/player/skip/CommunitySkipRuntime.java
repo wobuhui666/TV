@@ -29,6 +29,7 @@ public final class CommunitySkipRuntime {
     public void start(Vod media, History history, Episode episode) {
         stop();
         if (!Setting.isCommunitySkipEnabled() || media == null || history == null || episode == null) return;
+        if (episode.isGeneratedLabel() && !EpisodeIdentityResolver.isMovie(media.getId(), media.getTypeName())) return;
         Session session = new Session(history);
         active = session;
         String id = media.getId();
@@ -36,10 +37,11 @@ public final class CommunitySkipRuntime {
         String year = media.getYear();
         String type = media.getTypeName();
         String episodeName = episode.getName();
+        boolean reliableEpisodeLabel = !episode.isGeneratedLabel();
         submit(session, () -> {
             EpisodeIdentity identity;
             try {
-                identity = session.resolver.resolve(id, title, year, type, episodeName);
+                identity = session.resolver.resolve(id, title, year, type, episodeName, reliableEpisodeLabel);
             } catch (IOException ignored) {
                 return;
             }

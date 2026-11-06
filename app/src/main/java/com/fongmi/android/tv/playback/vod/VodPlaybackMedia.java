@@ -24,7 +24,7 @@ public final class VodPlaybackMedia {
 
     public static void searchDanmaku(Result result, History history, Episode episode, Consumer<Danmaku> set, Consumer<Danmaku> add) {
         if (!DanmakuApi.canSearch()) return;
-        DanmakuApi.search(history.getVodName(), episode.getName(), result, danmaku -> {
+        DanmakuApi.search(history.getVodName(), episode.getName(), result, !episode.isGeneratedLabel(), danmaku -> {
             if (DanmakuSetting.isSpiderFirst() && !result.getDanmaku().isEmpty()) add.accept(danmaku);
             else set.accept(danmaku);
         });

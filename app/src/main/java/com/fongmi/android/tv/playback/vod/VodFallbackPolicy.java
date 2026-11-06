@@ -77,7 +77,8 @@ public class VodFallbackPolicy {
         EpisodeTarget target = state.getEpisodeTarget();
         for (int i = position; i < state.getFlags().size(); i++) {
             Flag flag = state.getFlags().get(i);
-            if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART && SmartSourceSelector.findEpisode(flag, target) == null) continue;
+            if (SourceSelectionSetting.getMode() == SourceSelectionMode.SMART
+                    && SmartSourceSelector.findEpisode(flag, target, state.getMediaSeason()) == null) continue;
             host.showSwitchLine(flag);
             controller.selectFlag(flag);
             return true;

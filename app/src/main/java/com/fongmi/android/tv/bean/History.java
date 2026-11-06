@@ -6,6 +6,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.C;
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
@@ -16,6 +17,9 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.impl.Diffable;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
+import com.fongmi.android.tv.source.EpisodeTarget;
+import com.fongmi.android.tv.source.SmartSourceSelector;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
@@ -42,6 +46,9 @@ public class History implements Diffable<History> {
     private String vodRemarks;
     @SerializedName("episodeUrl")
     private String episodeUrl;
+    @ColumnInfo(defaultValue = "0")
+    @SerializedName("episodeLabelGenerated")
+    private boolean episodeLabelGenerated;
     @SerializedName("revSort")
     private boolean revSort;
     @SerializedName("revPlay")
@@ -174,6 +181,14 @@ public class History implements Diffable<History> {
         this.episodeUrl = episodeUrl;
     }
 
+    public boolean isEpisodeLabelGenerated() {
+        return episodeLabelGenerated;
+    }
+
+    public void setEpisodeLabelGenerated(boolean episodeLabelGenerated) {
+        this.episodeLabelGenerated = episodeLabelGenerated;
+    }
+
     public boolean isRevSort() {
         return revSort;
     }
@@ -296,7 +311,9 @@ public class History implements Diffable<History> {
     }
 
     public Episode getEpisode() {
-        return Episode.create(getVodRemarks(), getEpisodeUrl());
+        Episode episode = Episode.create(getVodRemarks(), getEpisodeUrl());
+        episode.setGeneratedLabel(isEpisodeLabelGenerated());
+        return episode;
     }
 
     public int getSiteVisible() {
@@ -379,16 +396,25 @@ public class History implements Diffable<History> {
     public void findEpisode(List<Flag> flags) {
         if (flags.isEmpty()) return;
         setVodFlag(flags.get(0).getFlag());
-        if (!flags.get(0).getEpisodes().isEmpty()) setVodRemarks(flags.get(0).getEpisodes().get(0).getName());
+        if (!flags.get(0).getEpisodes().isEmpty()) {
+            Episode first = flags.get(0).getEpisodes().get(0);
+            setVodRemarks(first.getName());
+            setEpisodeUrl(first.getUrl());
+            setEpisodeLabelGenerated(first.isGeneratedLabel());
+        }
         for (History item : findByName(getVodName())) {
             if (getPosition() > 0) break;
+            EpisodeTarget target = EpisodeTarget.of(item.getEpisode(), EpisodeLabelParser.parse(item.getVodName()).season());
             for (Flag flag : flags) {
-                Episode episode = flag.find(item.getVodRemarks(), true);
+                Episode episode = SmartSourceSelector.findEpisode(flag, target, EpisodeLabelParser.parse(getVodName()).season());
+                if (episode == null && target.isUnnumbered()) episode = flag.find(item.getVodRemarks(), true);
                 if (episode == null) continue;
                 item.copyTo(this);
                 setVodFlag(flag.getFlag());
                 setPosition(item.getPosition());
                 setVodRemarks(episode.getName());
+                setEpisodeUrl(episode.getUrl());
+                setEpisodeLabelGenerated(episode.isGeneratedLabel());
                 break;
             }
         }

@@ -22,17 +22,14 @@ import androidx.core.view.WindowInsetsControllerCompat;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.source.MediaMatcher;
 import com.github.catvod.utils.Shell;
 
 import java.net.NetworkInterface;
 import java.util.Formatter;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Util {
-
-    private static final Pattern EPISODE = Pattern.compile("(?i)(?:ep|第|e|[\\-\\.\\s])\\s?(\\d{1,4})");
 
     public static void toggleFullscreen(Activity activity, boolean fullscreen) {
         if (fullscreen) hideSystemUI(activity);
@@ -116,17 +113,8 @@ public class Util {
     }
 
     public static int getNumber(String text) {
-        try {
-            text = text.replaceAll("\\[.*?\\]|\\(.*?\\)", "");
-            text = text.replaceAll("\\b(19|20)\\d{2}\\b", "");
-            text = text.toLowerCase().replaceAll("2160p|1080p|720p|480p|4k|h26[45]|x26[45]|mp4", "");
-            Matcher matcher = EPISODE.matcher(text);
-            if (matcher.find()) return Integer.parseInt(matcher.group(1));
-            String number = text.replaceAll("\\D+", "");
-            return number.isEmpty() ? -1 : Integer.parseInt(number);
-        } catch (Exception e) {
-            return -1;
-        }
+        Integer number = MediaMatcher.extractEpisodeNumber(text);
+        return number == null ? -1 : number;
     }
 
     public static String clean(String text) {

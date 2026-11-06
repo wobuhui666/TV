@@ -9,7 +9,9 @@ import com.fongmi.android.tv.bean.History;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import java.lang.reflect.Method;
@@ -84,6 +86,52 @@ public class VodHistoryPolicyTest {
 
         assertEquals(C.TIME_UNSET, history.getPosition());
         assertEquals(C.TIME_UNSET, history.getDuration());
+    }
+
+    @Test
+    public void shouldCarryGeneratedLabelProvenanceIntoTheRestoredEpisode() {
+        History history = new History();
+        Episode generated = Episode.create("03", "third-file");
+        generated.setGeneratedLabel(true);
+        VodHistoryPolicy policy = new VodHistoryPolicy();
+
+        policy.updateEpisode(history, Flag.create("line"), generated);
+
+        assertTrue(history.isEpisodeLabelGenerated());
+        assertTrue(history.getEpisode().isGeneratedLabel());
+        assertEquals(-1, history.getEpisode().getNumber());
+        assertEquals("third-file", history.getEpisode().getUrl());
+
+        policy.updateEpisode(history, Flag.create("line"), Episode.create("第3集", "known-episode"));
+
+        assertFalse(history.isEpisodeLabelGenerated());
+        assertEquals(3, history.getEpisode().getNumber());
+    }
+
+    @Test
+    public void shouldKeepEpisodeProvenanceAttachedToItsOwnHistoryWhenMergingOffsets() throws Exception {
+        History otherSource = new History();
+        otherSource.setEpisodeLabelGenerated(true);
+        otherSource.setVodRemarks("03");
+        otherSource.setEpisodeUrl("generated-file");
+        otherSource.setOpening(45_000);
+        otherSource.setOpeningSource("manual");
+        History current = new History();
+        current.setVodRemarks("第3集");
+        current.setEpisodeUrl("known-episode");
+        Method copy = History.class.getDeclaredMethod("copyTo", History.class);
+        copy.setAccessible(true);
+
+        copy.invoke(otherSource, current);
+
+        assertFalse(current.isEpisodeLabelGenerated());
+        assertEquals("known-episode", current.getEpisodeUrl());
+        assertEquals(45_000, current.getOpening());
+
+        current.setEpisodeLabelGenerated(true);
+        otherSource.setEpisodeLabelGenerated(false);
+        copy.invoke(otherSource, current);
+        assertTrue(current.isEpisodeLabelGenerated());
     }
 
     @Test
