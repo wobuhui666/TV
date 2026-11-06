@@ -396,6 +396,8 @@ public final class SubtitleSearchDialog extends BasePlaybackSelectionDialog {
         }
         @Override public void onBindViewHolder(@NonNull Holder holder, int position) {
             Row row = items.get(position);
+            holder.text.setSingleLine(false);
+            holder.text.setMaxLines(3);
             holder.text.setText(row.description().isEmpty() ? row.title() : row.title() + "\n" + row.description());
             holder.itemView.setOnClickListener(view -> {
                 int index = holder.getBindingAdapterPosition();

@@ -202,6 +202,8 @@ public final class AssrtSubtitleSearchAndroidTest {
         assertTrue("Showing search must not consume API quota", requests.isEmpty());
         startSearch();
         awaitRow(RECORD_TITLE);
+        main(() -> assertTrue("Release language and format are visible on multiple lines",
+                ((TextView) row(RECORD_TITLE)).getLineCount() >= 2));
         NativeUiEvidence.capture("assrt-search-results");
         chooseRow(RECORD_TITLE);
         awaitRow(WANTED);
