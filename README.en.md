@@ -149,7 +149,7 @@ Configure it under **TV Settings → Home and discovery**:
 
 Save the settings and return home to browse recommendations. Without a key, the app skips the bridge and uses the public rexnow Douban feed. Authentication or request failures also trigger that fallback. The compact home and its **View all** pages additionally try the independent Douban API if the public feed fails or returns no titles. Douban and TMDB sections load independently, so bridge failures do not block TMDB recommendations.
 
-The URL and key are stored in local app settings. Use a trusted bridge address, as the key is sent to that service with requests. Changing **Home layout** preserves these settings; **Restore original browsing experience** clears the bridge URL and key.
+The URL and key are stored in local app settings. Use a trusted bridge address, as the key is sent to that service with requests. Full app backups also include these settings, so do not publish backups containing your key. Changing **Home layout** preserves these settings; **Restore original browsing experience** clears the bridge URL and key.
 
 ## Playback and audio
 
