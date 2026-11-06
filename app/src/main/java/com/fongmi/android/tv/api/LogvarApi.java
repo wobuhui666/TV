@@ -43,8 +43,9 @@ public class LogvarApi {
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     private static final Pattern TITLE_SEASON = Pattern.compile("(?i)(?<![a-z0-9])(?:season\\s*|s)[0-9]{1,3}(?![a-z0-9])|第\\s*[零〇一二两三四五六七八九十百千0-9]+\\s*季");
     private static final String PLATFORMS = "qq|tencent|qiyi|iqiyi|bilibili[0-9]*|bili|mgtv|mango|youku|renren|hanjutv|bahamut|baha|dandan(?:play)?|animeko|tmdb|local|hongguo|aiyifan|sohu|pptv|douyin|ixigua|letv|leshi|maiduidui|xigua|vod|unknown";
-    private static final Pattern PLATFORM_PREFIX = Pattern.compile("(?i)^\\s*(?:【|\\[)(?:" + PLATFORMS + ")(?:】|\\])\\s*");
-    private static final Pattern SOURCE_SUFFIX = Pattern.compile("(?i)\\s*from\\s*(?:" + PLATFORMS + ")\\s*$");
+    private static final String PLATFORM_LIST = "(?:" + PLATFORMS + ")(?:[&＆](?:" + PLATFORMS + "))*";
+    private static final Pattern PLATFORM_PREFIX = Pattern.compile("(?i)^\\s*(?:【|\\[)" + PLATFORM_LIST + "(?:】|\\])\\s*");
+    private static final Pattern SOURCE_SUFFIX = Pattern.compile("(?i)\\s*from\\s*" + PLATFORM_LIST + "\\s*$");
     private static final Pattern TITLE_CATEGORY = Pattern.compile("(?i)\\s*【(?:电视剧|动漫|电影|动画|综艺|纪录片|番剧|剧集|TV|TV Series|Movie|OVA|ONA|Special|未知|其他|Other)】\\s*$");
     private static final Pattern SPECIAL_CATEGORY = Pattern.compile("(?i)【(?:特别篇|特典|OVA|OAD|Special|剧场版|Movie|电影)】");
     private static final Pattern TITLE_YEAR = Pattern.compile("[（(](?:(?:19|20)[0-9]{2}|N/A)[）)]\\s*$");

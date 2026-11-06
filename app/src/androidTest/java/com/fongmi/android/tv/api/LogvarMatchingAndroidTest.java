@@ -85,7 +85,7 @@ public class LogvarMatchingAndroidTest {
 
     @Test
     public void unknownSeasonShouldSearchEpisodesAndAcceptOneDecoratedSeason() throws Exception {
-        respondJson(episodes("剧名 第二季(2024)【动漫】from bilibili", "【bilibili1】 03", "203"));
+        respondJson(episodes("剧名 第二季(2024)【动漫】from bilibili&tencent", "【bilibili1&qq】 03", "203"));
         List<Danmaku> items = search("剧名", "第3集", null, true);
 
         assertEquals(1, items.size());

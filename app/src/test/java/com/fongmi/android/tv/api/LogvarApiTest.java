@@ -196,7 +196,7 @@ public class LogvarApiTest {
     @Test
     public void shouldRouteUnseasonedEpisodesToSearchWithoutInventingSeasonOne() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
-            server.enqueue(new MockResponse().setBody(episodes("Show 第二季(2024)【动漫】from bilibili", "【bilibili1】 03", 31)));
+            server.enqueue(new MockResponse().setBody(episodes("Show 第二季(2024)【动漫】from bilibili&tencent", "【bilibili1&qq】 03", 31)));
             assertEquals(1, auto(server, "Show", "第3集", "", true).size());
             RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
             assertEquals("GET", request.getMethod());
