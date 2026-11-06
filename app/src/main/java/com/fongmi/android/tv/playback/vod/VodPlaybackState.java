@@ -6,6 +6,7 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.source.EpisodeTarget;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -67,7 +68,11 @@ public class VodPlaybackState {
 
     public EpisodeTarget getEpisodeTarget() {
         if (episodeTarget != null) return episodeTarget;
-        return hasEpisode() ? EpisodeTarget.of(getEpisode()) : new EpisodeTarget(null, "");
+        return hasEpisode() ? EpisodeTarget.of(getEpisode(), getMediaSeason()) : new EpisodeTarget(null, "");
+    }
+
+    public Integer getMediaSeason() {
+        return media == null ? null : EpisodeLabelParser.parse(media.getName()).season();
     }
 
     public void setEpisodeTarget(EpisodeTarget episodeTarget) {

@@ -24,7 +24,10 @@ public class VodHistoryPolicy {
         History history = History.find(key);
         history = history == null ? create(key, item) : history;
         LegacySkipMigration.clearBoundaries(history);
-        if (!TextUtils.isEmpty(mark)) history.setVodRemarks(mark);
+        if (!TextUtils.isEmpty(mark)) {
+            if (!mark.equals(history.getVodRemarks())) history.setEpisodeLabelGenerated(false);
+            history.setVodRemarks(mark);
+        }
         if (Setting.isIncognito() && history.getKey().equals(key)) history.delete();
         history.setVodName(item.getName());
         return history;
@@ -63,6 +66,7 @@ public class VodHistoryPolicy {
         history.setVodFlag(flag.getFlag());
         history.setVodRemarks(episode.getName());
         history.setEpisodeUrl(episode.getUrl());
+        history.setEpisodeLabelGenerated(episode.isGeneratedLabel());
     }
 
     public void updateTime(History history, long time, long position, long duration) {

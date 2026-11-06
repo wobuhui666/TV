@@ -50,7 +50,11 @@ public class DanmakuApi {
     }
 
     public static void search(String name, String episode, Result result, Consumer<Danmaku> found) {
-        searchAuto(name, episode, result, new SearchCallback() {
+        search(name, episode, result, true, found);
+    }
+
+    public static void search(String name, String episode, Result result, boolean reliableEpisodeLabel, Consumer<Danmaku> found) {
+        searchAuto(name, episode, result, reliableEpisodeLabel, new SearchCallback() {
             @Override
             public void onSuccess(List<Danmaku> items) {
                 items.stream().findFirst().ifPresent(found);
@@ -63,22 +67,31 @@ public class DanmakuApi {
     }
 
     public static void searchAuto(String name, String episode, Result result, SearchCallback callback) {
+        searchAuto(name, episode, result, true, callback);
+    }
+
+    public static void searchAuto(String name, String episode, Result result, boolean reliableEpisodeLabel, SearchCallback callback) {
         if (!TextUtils.isEmpty(DanmakuSetting.getEffectiveLogvarUrl())) {
-            LogvarApi.searchAuto(name, episode, result, new LogvarApi.Listener() {
+            LogvarApi.searchAuto(name, episode, result, reliableEpisodeLabel, new LogvarApi.Listener() {
                 @Override
                 public void onSuccess(List<Danmaku> items) {
-                    if (items.isEmpty()) searchLegacy(name, episode, callback);
+                    if (items.isEmpty()) searchLegacyAuto(name, episode, reliableEpisodeLabel, callback);
                     else callback.onSuccess(items);
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    searchLegacy(name, episode, callback);
+                    searchLegacyAuto(name, episode, reliableEpisodeLabel, callback);
                 }
             });
         } else {
-            searchLegacy(name, episode, callback);
+            searchLegacyAuto(name, episode, reliableEpisodeLabel, callback);
         }
+    }
+
+    private static void searchLegacyAuto(String name, String episode, boolean reliableEpisodeLabel, SearchCallback callback) {
+        if (reliableEpisodeLabel) searchLegacy(name, episode, callback);
+        else App.post(() -> callback.onSuccess(List.of()));
     }
 
     public static void searchManual(String name, String episode, SearchCallback callback) {

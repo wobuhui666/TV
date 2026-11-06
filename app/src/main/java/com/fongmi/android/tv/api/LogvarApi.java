@@ -7,18 +7,23 @@ import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.setting.DanmakuSetting;
+import com.fongmi.android.tv.source.EpisodeLabel;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Trans;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
@@ -32,10 +37,8 @@ public class LogvarApi {
 
     private static final String TAG = LogvarApi.class.getSimpleName();
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private static final Pattern SEASON_PATTERN = Pattern.compile("(?i)\\bS(\\d{1,2})\\b|(?:第)?([0-9一二三四五六七八九十两]+)季");
-    private static final Pattern EPISODE_CHINESE_PATTERN = Pattern.compile("第\\s*0*(\\d{1,4})\\s*[集话話]");
-    private static final Pattern EPISODE_EP_PATTERN = Pattern.compile("(?i)\\bE(?:P)?0*(\\d{1,4})\\b");
-    private static final Pattern EPISODE_NUMBER_PATTERN = Pattern.compile("^\\D*0*(\\d{1,4})\\D*$");
+    private static final Pattern TITLE_SEASON = Pattern.compile("(?i)(?<![a-z0-9])(?:season\\s*|s)[0-9]{1,3}(?![a-z0-9])|第\\s*[零〇一二两三四五六七八九十百千0-9]+\\s*季");
+    private static final Pattern TITLE_YEAR = Pattern.compile("[（(](?:19|20)[0-9]{2}[）)]\\s*$");
 
     public interface Listener {
 
@@ -49,6 +52,10 @@ public class LogvarApi {
     }
 
     public static void searchAuto(String name, String episode, @Nullable Result result, Listener listener) {
+        searchAuto(name, episode, result, true, listener);
+    }
+
+    public static void searchAuto(String name, String episode, @Nullable Result result, boolean reliableEpisodeLabel, Listener listener) {
         String base = normalizeBase(DanmakuSetting.getEffectiveLogvarUrl());
         if (base.isEmpty()) {
             postSuccess(listener, Collections.emptyList());
@@ -59,17 +66,17 @@ public class LogvarApi {
             searchByVideoUrl(base, videoUrl, new Listener() {
                 @Override
                 public void onSuccess(List<Danmaku> items) {
-                    if (items.isEmpty()) searchByMatch(base, name, episode, listener);
+                    if (items.isEmpty()) searchByMatch(base, name, episode, reliableEpisodeLabel, listener);
                     else listener.onSuccess(items);
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    searchByMatch(base, name, episode, listener);
+                    searchByMatch(base, name, episode, reliableEpisodeLabel, listener);
                 }
             });
         } else {
-            searchByMatch(base, name, episode, listener);
+            searchByMatch(base, name, episode, reliableEpisodeLabel, listener);
         }
     }
 
@@ -130,7 +137,13 @@ public class LogvarApi {
         });
     }
 
-    private static void searchByMatch(String base, String name, String episode, Listener listener) {
+    private static void searchByMatch(String base, String name, String episode, boolean reliableEpisodeLabel, Listener listener) {
+        EpisodeLabel label = EpisodeLabelParser.parse(episode);
+        EpisodeLabel title = EpisodeLabelParser.parse(name);
+        if (!reliableEpisodeLabel || !label.isApiSafe() || conflictingSeasons(title, label)) {
+            postSuccess(listener, Collections.emptyList());
+            return;
+        }
         String url = buildMatchUrl(base);
         if (url.isEmpty()) {
             postSuccess(listener, Collections.emptyList());
@@ -144,7 +157,7 @@ public class LogvarApi {
             public void onResponse(Call call, Response response) {
                 try (ResponseBody body = response.body()) {
                     String text = body == null ? "" : body.string();
-                    postSuccess(listener, response.isSuccessful() ? parseMatch(base, text) : Collections.emptyList());
+                    postSuccess(listener, response.isSuccessful() ? parseAutoMatch(base, text, name, episode) : Collections.emptyList());
                 } catch (Exception e) {
                     postError(listener, e);
                 }
@@ -191,16 +204,21 @@ public class LogvarApi {
     public static String buildMatchFileName(String name, String episode) {
         String title = safe(name);
         String epName = safe(episode);
-        int season = parseSeason(title + " " + epName);
-        int ep = parseEpisode(epName);
-        if (ep > 0) return String.format(Locale.ROOT, "%s S%02dE%02d", title, Math.max(1, season), ep).trim();
+        EpisodeLabel label = EpisodeLabelParser.parse(epName);
+        EpisodeLabel show = EpisodeLabelParser.parse(title);
+        Integer season = label.season() == null ? show.season() : label.season();
+        // A release filename carries version/group information needed by the matcher.
+        // Unknown seasons remain unknown instead of silently becoming season one.
+        if (label.isApiSafe() && !conflictingSeasons(show, label) && season != null && label.edition().isEmpty()) {
+            return String.format(Locale.ROOT, "%s S%02dE%02d", title, season, label.number()).trim();
+        }
         return (title + " " + epName).trim();
     }
 
     public static String buildSearchEpisodeQuery(String episode) {
         String value = safe(episode);
-        int ep = parseEpisode(value);
-        return ep > 0 ? String.valueOf(ep) : value;
+        EpisodeLabel label = EpisodeLabelParser.parse(value);
+        return label.isApiSafe() ? String.valueOf(label.number()) : value;
     }
 
     public static String preferredVideoUrl(@Nullable Result result) {
@@ -217,19 +235,84 @@ public class LogvarApi {
 
     public static List<Danmaku> parseMatch(String base, String json) {
         List<Danmaku> items = new ArrayList<>();
-        JsonArray matches = getArray(parseObject(json), "matches");
+        JsonObject response = parseObject(json);
+        if (explicitFailure(response)) return items;
+        JsonArray matches = getArray(response, "matches");
         if (matches == null) return items;
+        Set<String> seen = new LinkedHashSet<>();
         for (JsonElement element : matches) {
             JsonObject item = object(element);
             String episodeId = string(item, "episodeId");
             String title = joinName(string(item, "animeTitle"), string(item, "episodeTitle"));
             String url = buildCommentUrl(base, episodeId);
-            if (!url.isEmpty()) {
+            if (!url.isEmpty() && seen.add(episodeId)) {
                 items.add(createDanmaku(title.isEmpty() ? "Logvar" : title, url));
-                break;
             }
         }
         return items;
+    }
+
+    /** Automatic binding needs one consistent title/episode, not merely the first candidate. */
+    public static List<Danmaku> parseAutoMatch(String base, String json, String name, String episode) {
+        EpisodeLabel expected = EpisodeLabelParser.parse(episode);
+        EpisodeLabel show = EpisodeLabelParser.parse(name);
+        if (!expected.isApiSafe() || conflictingSeasons(show, expected)) return Collections.emptyList();
+        String expectedTitle = normalizedMatchTitle(name);
+        if (expectedTitle.isEmpty()) return Collections.emptyList();
+        JsonObject response = parseObject(json);
+        if (explicitFailure(response)) return Collections.emptyList();
+        JsonArray matches = getArray(response, "matches");
+        if (matches == null) return Collections.emptyList();
+        Integer expectedSeason = expected.season() == null ? show.season() : expected.season();
+        List<Danmaku> items = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (JsonElement element : matches) {
+            JsonObject item = object(element);
+            String animeTitle = string(item, "animeTitle");
+            String episodeTitle = string(item, "episodeTitle");
+            EpisodeLabel candidate = EpisodeLabelParser.parse(episodeTitle);
+            EpisodeLabel candidateShow = EpisodeLabelParser.parse(animeTitle);
+            if (!candidate.isApiSafe() || conflictingSeasons(candidateShow, candidate)
+                    || !expected.number().equals(candidate.number())
+                    || !expectedTitle.equals(normalizedMatchTitle(animeTitle))) continue;
+            Integer candidateSeason = candidate.season() == null ? candidateShow.season() : candidate.season();
+            if (expectedSeason != null ? !expectedSeason.equals(candidateSeason) : candidateSeason != null) continue;
+            String episodeId = string(item, "episodeId");
+            String url = buildCommentUrl(base, episodeId);
+            if (url.isEmpty() || !seen.add(episodeId)) continue;
+            items.add(createDanmaku(joinName(animeTitle, episodeTitle), url));
+            if (items.size() > 1) return Collections.emptyList();
+        }
+        return items;
+    }
+
+    private static boolean conflictingSeasons(EpisodeLabel title, EpisodeLabel episode) {
+        return title.isAmbiguous() || episode.isAmbiguous() || title.season() != null && episode.season() != null
+                && !title.season().equals(episode.season());
+    }
+
+    private static boolean explicitFailure(JsonObject response) {
+        for (String key : new String[]{"success", "isMatched"}) {
+            try {
+                JsonElement value = response.get(key);
+                if (value != null && !value.isJsonNull() && !value.getAsBoolean()) return true;
+            } catch (RuntimeException error) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String normalizedMatchTitle(String title) {
+        String normalized = safe(title);
+        try {
+            normalized = Trans.t2s(false, normalized);
+        } catch (Throwable ignored) {
+        }
+        normalized = Normalizer.normalize(normalized, Normalizer.Form.NFKC);
+        normalized = TITLE_SEASON.matcher(normalized).replaceAll("");
+        normalized = TITLE_YEAR.matcher(normalized).replaceAll("");
+        return normalized.replaceAll("[^\\p{L}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
     }
 
     public static List<Danmaku> parseEpisodes(String base, String json) {
@@ -256,64 +339,6 @@ public class LogvarApi {
         if (url == null) return false;
         String value = url.trim().toLowerCase(Locale.ROOT);
         return value.startsWith("http://") || value.startsWith("https://");
-    }
-
-    private static int parseSeason(String text) {
-        Matcher matcher = SEASON_PATTERN.matcher(safe(text));
-        if (!matcher.find()) return 1;
-        String value = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
-        return parsePositiveNumber(value, 1);
-    }
-
-    private static int parseEpisode(String text) {
-        String value = safe(text);
-        int ep = findNumber(EPISODE_CHINESE_PATTERN, value);
-        if (ep > 0) return ep;
-        ep = findNumber(EPISODE_EP_PATTERN, value);
-        if (ep > 0) return ep;
-        return findNumber(EPISODE_NUMBER_PATTERN, value);
-    }
-
-    private static int findNumber(Pattern pattern, String text) {
-        Matcher matcher = pattern.matcher(text);
-        return matcher.find() ? parsePositiveNumber(matcher.group(1), 0) : 0;
-    }
-
-    private static int parsePositiveNumber(String text, int fallback) {
-        try {
-            int value = Integer.parseInt(text);
-            return value > 0 ? value : fallback;
-        } catch (Exception ignored) {
-            int value = parseChineseNumber(text);
-            return value > 0 ? value : fallback;
-        }
-    }
-
-    private static int parseChineseNumber(String text) {
-        String value = safe(text);
-        if (value.isEmpty()) return 0;
-        int ten = value.indexOf('十');
-        if (ten >= 0) {
-            int high = ten == 0 ? 1 : chineseDigit(value.charAt(ten - 1));
-            int low = ten == value.length() - 1 ? 0 : chineseDigit(value.charAt(ten + 1));
-            return high * 10 + low;
-        }
-        return chineseDigit(value.charAt(value.length() - 1));
-    }
-
-    private static int chineseDigit(char ch) {
-        return switch (ch) {
-            case '一', '壹' -> 1;
-            case '二', '贰', '兩', '两' -> 2;
-            case '三', '叁' -> 3;
-            case '四', '肆' -> 4;
-            case '五', '伍' -> 5;
-            case '六', '陆' -> 6;
-            case '七', '柒' -> 7;
-            case '八', '捌' -> 8;
-            case '九', '玖' -> 9;
-            default -> 0;
-        };
     }
 
     private static JsonObject parseObject(String json) {

@@ -64,4 +64,11 @@ public class Migrations {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_History_cid_createTime` ON `History` (`cid`, `createTime`)");
         }
     };
+
+    public static final Migration MIGRATION_37_38 = new Migration(37, 38) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE History ADD COLUMN episodeLabelGenerated INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 }

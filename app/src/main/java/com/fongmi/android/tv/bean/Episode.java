@@ -7,11 +7,14 @@ import android.text.TextUtils;
 import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.impl.Diffable;
-import com.fongmi.android.tv.utils.Util;
+import com.fongmi.android.tv.source.EpisodeLabel;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
+import com.fongmi.android.tv.source.EpisodeTarget;
 import com.github.catvod.utils.Trans;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Objects;
+import java.util.Locale;
 
 public class Episode implements Parcelable, Diffable<Episode> {
 
@@ -25,12 +28,14 @@ public class Episode implements Parcelable, Diffable<Episode> {
     private int index;
     private int number;
     private boolean selected;
+    private boolean generatedLabel;
+    private transient EpisodeLabel label;
 
     private Episode(String name, String desc, String url) {
-        this.number = Util.getNumber(name);
         this.name = name;
         this.desc = desc;
         this.url = url;
+        this.number = getNumber();
     }
 
     public Episode() {
@@ -42,6 +47,7 @@ public class Episode implements Parcelable, Diffable<Episode> {
         this.url = in.readString();
         this.number = in.readInt();
         this.selected = in.readByte() != 0;
+        this.generatedLabel = in.readByte() != 0;
     }
 
     public static Episode create(String name, String url) {
@@ -58,6 +64,8 @@ public class Episode implements Parcelable, Diffable<Episode> {
 
     public void setName(String name) {
         this.name = name;
+        this.label = null;
+        this.number = getNumber();
     }
 
     public String getDesc() {
@@ -77,7 +85,23 @@ public class Episode implements Parcelable, Diffable<Episode> {
     }
 
     public int getNumber() {
+        EpisodeLabel parsed = getLabel();
+        number = !generatedLabel && parsed.isSingleEpisode() && !parsed.isPreview() ? parsed.number() : -1;
         return number;
+    }
+
+    public EpisodeLabel getLabel() {
+        if (label == null) label = EpisodeLabelParser.parse(getName());
+        return label;
+    }
+
+    public boolean isGeneratedLabel() {
+        return generatedLabel;
+    }
+
+    public void setGeneratedLabel(boolean generatedLabel) {
+        this.generatedLabel = generatedLabel;
+        this.number = getNumber();
     }
 
     public boolean isSelected() {
@@ -94,9 +118,12 @@ public class Episode implements Parcelable, Diffable<Episode> {
 
     public int getScore(String name, int number) {
         if (getName().equalsIgnoreCase(name)) return 100;
-        if (number != -1 && getNumber() == number) return 80;
-        if (number == -1 && name.length() >= 2 && getName().toLowerCase().contains(name.toLowerCase())) return 70;
-        if (number == -1 && getName().length() >= 2 && name.toLowerCase().contains(getName().toLowerCase())) return 60;
+        EpisodeTarget target = new EpisodeTarget(null, name);
+        if (target.matches(this)) return 80;
+        if (target.isUnnumbered() && !getLabel().isAmbiguous() && getLabel().number() == null) {
+            if (name.length() >= 2 && getName().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) return 70;
+            if (getName().length() >= 2 && name.toLowerCase(Locale.ROOT).contains(getName().toLowerCase(Locale.ROOT))) return 60;
+        }
         return 0;
     }
 
@@ -109,6 +136,7 @@ public class Episode implements Parcelable, Diffable<Episode> {
         if (Trans.pass()) return this;
         this.name = Trans.s2t(name);
         this.desc = Trans.s2t(desc);
+        this.label = null;
         return this;
     }
 
@@ -134,8 +162,9 @@ public class Episode implements Parcelable, Diffable<Episode> {
         dest.writeString(this.name);
         dest.writeString(this.desc);
         dest.writeString(this.url);
-        dest.writeInt(this.number);
+        dest.writeInt(getNumber());
         dest.writeByte(this.selected ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.generatedLabel ? (byte) 1 : (byte) 0);
     }
 
     @Override

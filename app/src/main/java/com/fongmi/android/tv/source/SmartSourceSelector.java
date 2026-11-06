@@ -29,6 +29,7 @@ public final class SmartSourceSelector {
             int reliabilityScore = reliability == null ? 0 : reliability.score(source);
             int coverage = flag == null ? 0 : flag.coverage;
             int score = (sameSite ? 1000 : 0) + coverage * 10 + source.getFlags().size() + reliabilityScore;
+            if (flag != null) score += target.score(flag.episode()) * 1000;
             candidates.add(new Candidate(source, score));
         }
         candidates.sort(Comparator.comparingInt(Candidate::score).reversed());
@@ -39,10 +40,11 @@ public final class SmartSourceSelector {
         if (source == null || target == null) return null;
         List<FlagSelection> matches = new ArrayList<>();
         for (Flag flag : source.getFlags()) {
-            Episode episode = findEpisode(flag, target);
+            Episode episode = findEpisode(flag, target, MediaMatcher.identity(source).getSeason());
             if (episode == null) continue;
             int score = flag.getFlag().equals(preferredFlag) ? 100 : 0;
-            score += flag.getEpisodes().size();
+            score += Math.min(flag.getEpisodes().size(), 1000);
+            score += target.score(episode) * 1000;
             score += reliability == null ? 0 : reliability.score(source);
             matches.add(new FlagSelection(flag, episode, score, flag.getEpisodes().size()));
         }
@@ -51,9 +53,26 @@ public final class SmartSourceSelector {
     }
 
     public static Episode findEpisode(Flag flag, EpisodeTarget target) {
+        return findEpisode(flag, target, null);
+    }
+
+    public static Episode findEpisode(Flag flag, EpisodeTarget target, Integer sourceSeason) {
         if (flag == null || target == null) return null;
-        for (Episode episode : flag.getEpisodes()) if (target.matches(episode)) return episode;
-        return null;
+        Episode selected = null;
+        int best = -1;
+        boolean ambiguous = false;
+        for (Episode episode : flag.getEpisodes()) {
+            if (!target.matches(episode, sourceSeason)) continue;
+            int score = target.score(episode);
+            if (score > best) {
+                selected = episode;
+                best = score;
+                ambiguous = false;
+            } else if (score == best && selected != null && !selected.getUrl().equals(episode.getUrl())) {
+                ambiguous = true;
+            }
+        }
+        return ambiguous ? null : selected;
     }
 
     public record FlagSelection(Flag flag, Episode episode, int score, int coverage) {

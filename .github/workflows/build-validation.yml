@@ -239,6 +239,7 @@ jobs:
             app/build/test-results/
             app/build/reports/tests/
             app/build/reports/lint-results-leanbackArm64_v8aDebug.*
+            app/schemas/
             artifacts/lint/
             catvod/build/test-results/
             quickjs/build/test-results/

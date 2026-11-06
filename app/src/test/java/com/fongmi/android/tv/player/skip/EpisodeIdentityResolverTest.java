@@ -55,6 +55,21 @@ public class EpisodeIdentityResolverTest {
     }
 
     @Test
+    public void shouldParseMixedReleaseFileLabelsWithoutUsingSizeOrQualityNumbers() {
+        String release = "[494.7MB][ANi] 暗部共生少女 - 04 [1080P][Baha][WEB-DL][AAC AVC].mp4";
+        EpisodeIdentityResolver.ParsedEpisode parsed = EpisodeIdentityResolver.parseEpisode("暗部共生少女 第二季", release);
+        assertNotNull(parsed);
+        assertEquals(Integer.valueOf(2), parsed.season());
+        assertEquals(4, parsed.episode());
+        assertEquals("暗部共生少女", parsed.queryTitle());
+
+        parsed = EpisodeIdentityResolver.parseEpisode("暗部共生少女", "[1.4GB]Toaru.Anbu.no.Item.S01E01.1080p.WEB-DL.x265.mkv");
+        assertNotNull(parsed);
+        assertEquals(Integer.valueOf(1), parsed.season());
+        assertEquals(1, parsed.episode());
+    }
+
+    @Test
     public void shouldRejectConflictingSeasonsAndCombinedOrSplitEpisodes() {
         assertNull(EpisodeIdentityResolver.parseEpisode("Show 第二季", "S01E03"));
         assertNull(EpisodeIdentityResolver.parseEpisode("Show S01 第2季", "第3集"));
@@ -71,6 +86,7 @@ public class EpisodeIdentityResolverTest {
         assertNotNull(parsed);
         assertEquals(Integer.valueOf(0), parsed.season());
         assertEquals(Integer.valueOf(0), EpisodeIdentityResolver.parseEpisode("Show", "S00E01 Special").season());
+        assertEquals(Integer.valueOf(0), EpisodeIdentityResolver.parseEpisode("Show S00", "第1集 Special").season());
     }
 
     @Test
@@ -115,6 +131,31 @@ public class EpisodeIdentityResolverTest {
             assertNull(resolver.resolve("tmdb:movie:123", "Show", "2020", "movie", "第1部分 Part 1"));
             assertNull(resolver.resolve("tmdb:movie:123", "Show", "2020", "movie", "预告"));
             assertEquals(0, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldRejectGeneratedSeriesLabelsBeforeMetadataRequests() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            EpisodeIdentityResolver resolver = resolver(server);
+            assertNull(resolver.resolve("tmdb:tv:123", "Show", "2020", "tv", "01", false));
+            assertNull(resolver.resolve("tmdb:tv:123", "Show", "2020", "tv", "S02E03", false));
+            assertNull(resolver.resolve("source-id-123", "Show 第二季", "2020", "tv", "01", false));
+            assertEquals(0, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldResolveGeneratedMovieLabelsWithoutRequiringEpisodeNumbers() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            EpisodeIdentityResolver offline = new EpisodeIdentityResolver("", server.url("/3/").toString(), new OkHttpClient()::newCall);
+            assertEquals(EpisodeIdentity.movie(123, ""), offline.resolve("tmdb:movie:123", "Film", "2020", "", "01", false));
+            assertEquals(0, server.getRequestCount());
+
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":123,\"title\":\"Film\",\"release_date\":\"2020-01-01\"}]}"));
+            server.enqueue(new MockResponse().setBody("{\"id\":123,\"title\":\"Film\",\"release_date\":\"2020-01-01\",\"external_ids\":{\"imdb_id\":\"tt1234567\"}}"));
+            assertEquals(EpisodeIdentity.movie(123, "tt1234567"), resolver(server).resolve("source-123", "Film", "2020", "movie", "01", false));
+            assertEquals(2, server.getRequestCount());
         }
     }
 

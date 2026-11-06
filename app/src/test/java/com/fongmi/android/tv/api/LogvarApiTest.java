@@ -31,10 +31,36 @@ public class LogvarApiTest {
 
     @Test
     public void shouldBuildMatchFileNameFromEpisodeTitle() {
-        assertEquals("庆余年 S01E01", LogvarApi.buildMatchFileName("庆余年", "第01集"));
-        assertEquals("庆余年 S01E12", LogvarApi.buildMatchFileName("庆余年", "EP12"));
+        assertEquals("庆余年 第01集", LogvarApi.buildMatchFileName("庆余年", "第01集"));
+        assertEquals("庆余年 EP12", LogvarApi.buildMatchFileName("庆余年", "EP12"));
         assertEquals("庆余年 第二季 S02E03", LogvarApi.buildMatchFileName("庆余年 第二季", "第03集"));
         assertEquals("庆余年 预告", LogvarApi.buildMatchFileName("庆余年", "预告"));
+    }
+
+    @Test
+    public void shouldNormalizeOnlySafeKnownSeasonEpisodes() {
+        assertEquals("Show S02E03", LogvarApi.buildMatchFileName("Show", "S02E03"));
+        assertEquals("Show 第二季 S02E12", LogvarApi.buildMatchFileName("Show 第二季", "第十二集"));
+        assertEquals("Show 第二季 S02E12", LogvarApi.buildMatchFileName("Show 第二季", "ＥＰ１２"));
+        assertEquals("Show S00E01", LogvarApi.buildMatchFileName("Show", "S00E01"));
+        assertEquals("Show S01 S02E03", LogvarApi.buildMatchFileName("Show S01", "S02E03"));
+    }
+
+    @Test
+    public void shouldKeepReleaseVersionsAndAmbiguousLabelsIntact() {
+        String filename = "[494.7MB][ANi] 暗部共生少女 - 04 [1080P][Baha][WEB-DL][AAC AVC].mp4";
+        assertEquals("暗部共生少女 " + filename, LogvarApi.buildMatchFileName("暗部共生少女", filename));
+        for (String episode : new String[]{"1080p", "03预告", "特别篇 第1集", "第12集上", "第12集下", "第1-2集", "2026-10-05"}) {
+            assertEquals("Show " + episode, LogvarApi.buildMatchFileName("Show", episode));
+            assertEquals(episode, LogvarApi.buildSearchEpisodeQuery(episode));
+        }
+    }
+
+    @Test
+    public void shouldParseChineseAndCompoundManualEpisodeQueries() {
+        assertEquals("12", LogvarApi.buildSearchEpisodeQuery("第十二集"));
+        assertEquals("12", LogvarApi.buildSearchEpisodeQuery("ＥＰ１２"));
+        assertEquals("3", LogvarApi.buildSearchEpisodeQuery("S02E03"));
     }
 
     @Test
@@ -55,6 +81,47 @@ public class LogvarApiTest {
         assertEquals(1, items.size());
         assertEquals("生万物 第1集", field(items.get(0), "name"));
         assertEquals("http://host:9321/87654321/api/v2/comment/10001?format=xml", field(items.get(0), "url"));
+    }
+
+    @Test
+    public void shouldRejectExplicitFailedMatches() {
+        String match = "\"matches\":[{\"episodeId\":10001,\"animeTitle\":\"Show\",\"episodeTitle\":\"第1集\"}]";
+        assertTrue(LogvarApi.parseMatch("http://host", "{\"success\":false," + match + "}").isEmpty());
+        assertTrue(LogvarApi.parseMatch("http://host", "{\"isMatched\":false," + match + "}").isEmpty());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", "{\"isMatched\":false," + match + "}", "Show", "第1集").isEmpty());
+    }
+
+    @Test
+    public void shouldKeepMultipleCandidatesForManualChoice() {
+        String json = matches("Show", "第1集", 1, "Show", "第1集", 2);
+        assertEquals(2, LogvarApi.parseMatch("http://host", json).size());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", json, "Show", "第1集").isEmpty());
+    }
+
+    @Test
+    public void shouldFindUniqueConsistentCandidateInsteadOfFirstMatch() throws Exception {
+        String json = matches("Show", "第2集", 2, "Show", "第1集", 1);
+        List<Danmaku> items = LogvarApi.parseAutoMatch("http://host", json, "Show", "第1集");
+        assertEquals(1, items.size());
+        assertEquals("http://host/api/v2/comment/1?format=xml", field(items.get(0), "url"));
+    }
+
+    @Test
+    public void shouldRequireMatchingKnownSeasonsAndTitles() {
+        assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show 第二季", "第3集", 1), "Show 第二季", "第3集").size());
+        assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show", "S02E03", 1), "Show", "S02E03").size());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "S01E03", 1), "Show", "S02E03").isEmpty());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "第3集", 1), "Show", "S02E03").isEmpty());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Another Show", "第3集", 1), "Show", "第3集").isEmpty());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show3", "第3集", 1), "Show2", "第3集").isEmpty());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "S02E03", 1), "Show S01", "S02E03").isEmpty());
+    }
+
+    @Test
+    public void shouldNeverAutoBindPartsPreviewsOrQualityNumbers() {
+        for (String episode : new String[]{"1080p", "第12集上", "第12集下", "03预告", "特别篇 第1集", "第1-2集"}) {
+            assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "第12集", 1), "Show", episode).isEmpty());
+        }
     }
 
     @Test
@@ -81,5 +148,15 @@ public class LogvarApiTest {
         Field field = Danmaku.class.getDeclaredField(name);
         field.setAccessible(true);
         return (String) field.get(danmaku);
+    }
+
+    private String matches(Object... fields) {
+        StringBuilder json = new StringBuilder("{\"success\":true,\"isMatched\":true,\"matches\":[");
+        for (int i = 0; i < fields.length; i += 3) {
+            if (i > 0) json.append(',');
+            json.append("{\"animeTitle\":\"").append(fields[i]).append("\",\"episodeTitle\":\"").append(fields[i + 1])
+                    .append("\",\"episodeId\":").append(fields[i + 2]).append('}');
+        }
+        return json.append("]}").toString();
     }
 }

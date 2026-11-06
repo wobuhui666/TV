@@ -80,6 +80,22 @@ public class SourceSelectionTest {
     }
 
     @Test
+    public void prefersCurrentReleaseOverLongerAlternativeLine() {
+        Vod source = vod("Show", "site-a", "a");
+        Flag other = new Flag("preferred-but-other-release");
+        other.getEpisodes().add(Episode.create("[Other] Show - 01 [720p].mp4", "other-1"));
+        other.getEpisodes().add(Episode.create("[Other] Show - 02 [720p].mp4", "other-2"));
+        Flag same = new Flag("same-release");
+        Episode sameEpisode = Episode.create("[ANi] Show - 01 [1080p].mp4", "same-1");
+        same.getEpisodes().add(sameEpisode);
+        source.setFlags(List.of(other, same));
+        EpisodeTarget target = EpisodeTarget.of(Episode.create("[ANi] Show - 01 [1080p].mp4", "old-url"));
+
+        assertSame(same, SmartSourceSelector.selectFlag(source, target, other.getFlag(), null).flag());
+        assertSame(sameEpisode, SmartSourceSelector.selectFlag(source, target, other.getFlag(), null).episode());
+    }
+
+    @Test
     public void modesKeepLegacyAndGroupedBehaviorSeparate() {
         assertEquals(false, SourceSelectionPolicies.forMode(SourceSelectionMode.LEGACY).groupResults());
         assertEquals(true, SourceSelectionPolicies.forMode(SourceSelectionMode.GROUP_ONLY).groupResults());
