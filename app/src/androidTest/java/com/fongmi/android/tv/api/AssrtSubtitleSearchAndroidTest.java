@@ -239,6 +239,10 @@ public final class AssrtSubtitleSearchAndroidTest {
         chooseRow(RECORD_TITLE);
         awaitRow(WANTED);
         chooseRow(WANTED);
+        await(() -> downloadCount() == 1, "selected primary subtitle download started");
+        assertTrue("The primary selection downloads the chosen S02E03 file", requests.stream()
+                .filter(request -> request.getRequestUrl().encodedPath().startsWith("/download/"))
+                .allMatch(request -> request.getRequestUrl().encodedPath().equals("/download/wanted.srt")));
         await(() -> searchDialog() == null && selectedText(WANTED), "new primary subtitle selected");
         main(() -> {
             assertNotNull(format(AssrtSubtitlePreviewActivity.EXISTING_NAME));
@@ -468,7 +472,8 @@ public final class AssrtSubtitleSearchAndroidTest {
 
     private void awaitSearch() { await(() -> ready(searchDialog(), R.id.search), "search dialog owns input focus"); }
     private void awaitRow(String name) {
-        await(() -> ready(searchDialog(), R.id.recycler) && row(name) != null && row(name).isLaidOut(),
+        await(() -> ready(searchDialog(), R.id.recycler) && recycler().hasFocus()
+                        && row(name) != null && row(name).isLaidOut(),
                 "subtitle row: " + name);
     }
     private void chooseRow(String name) {
