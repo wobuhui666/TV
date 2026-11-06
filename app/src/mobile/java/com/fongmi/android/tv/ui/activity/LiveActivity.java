@@ -831,7 +831,12 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     protected void onReclaim() {
-        mLive.reclaim(player().getPosition());
+        mLive.reclaim(reclaimPositionMs());
+    }
+
+    @Override
+    protected void onPlaybackEnded() {
+        mLive.playbackEnded();
     }
 
     @Override
@@ -846,7 +851,6 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
                 player().reset();
                 break;
             case Player.STATE_ENDED:
-                mLive.playbackEnded();
                 updatePlayControl(false);
                 break;
         }
@@ -964,10 +968,12 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
     }
 
     private void onPaused() {
+        if (!isNativePlaybackCurrent()) return;
         controller().pause();
     }
 
     private void onPlay() {
+        if (!isNativePlaybackCurrent()) return;
         controller().play();
     }
 
@@ -992,7 +998,18 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
 
     @Override
     public void onCasted() {
-        player().stop();
+        if (isOwner() && !isStop()) player().stop();
+    }
+
+    @Override
+    public CastVideo getCastVideo() {
+        if (!isOwner() || isStop() || player().isEmpty()) return null;
+        return new CastVideo(mBinding.control.title.getText().toString(), player().getUrl(), C.TIME_UNSET, player().getHeaders());
+    }
+
+    @Override
+    public Object getCastPlaybackIdentity() {
+        return isOwner() && !isStop() ? player().getPlayer().getCurrentMediaItem() : null;
     }
 
     @Override

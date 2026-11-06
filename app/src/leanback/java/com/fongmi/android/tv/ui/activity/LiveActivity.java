@@ -605,7 +605,17 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected void onReclaim() {
-        mLive.reclaim(player().getPosition());
+        mLive.reclaim(reclaimPositionMs());
+    }
+
+    @Override
+    protected void onPlaybackEnded() {
+        mLive.playbackEnded();
+    }
+
+    @Override
+    protected void onPlaybackOwnershipLost() {
+        cancelPendingSeek();
     }
 
     @Override
@@ -620,7 +630,6 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
                 break;
             case Player.STATE_ENDED:
                 if (mSpecs != null) mSpecs.dismiss();
-                mLive.playbackEnded();
                 updatePlayControl(false);
                 break;
         }
@@ -628,6 +637,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     protected void onPlayingChanged(boolean isPlaying) {
+        if (!isPlaying) cancelPendingSeek();
         if (isPlaying || isPaused()) updatePlayControl(isPlaying);
         if (isPlaying && isJetStreamControlVisible()) hideControl();
         if (isPlaying && mSpecs != null) {
@@ -1271,12 +1281,13 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void onPaused() {
-        if (!isPlaybackReady()) return;
+        cancelPendingSeek();
+        if (!isNativePlaybackCurrent()) return;
         controller().pause();
     }
 
     private void onPlay() {
-        if (!isPlaybackReady()) return;
+        if (!isNativePlaybackCurrent()) return;
         controller().play();
     }
 
@@ -1348,6 +1359,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
 
     @Override
     public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        if (!isNativePlaybackCurrent()) return;
         cancelPendingSeek();
     }
 

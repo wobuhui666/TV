@@ -187,7 +187,8 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
             @Override
             public void onSeekTo(long positionMs) {
-                if (!isPlaybackReady() || player().isEmpty()) return;
+                cancelPendingSeek();
+                if (!isNativePlaybackCurrent() || player().isEmpty()) return;
                 controller().seekTo(positionMs);
             }
 
@@ -228,6 +229,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     private void start() {
         cancelPendingSeek();
+        preparePlaybackIntent();
         claimLocalPlayback();
         mPlaybackKey = mAction.getCurrentURI();
         startPlayer(mPlaybackKey, mAction.result(), false, Constant.TIMEOUT_PLAY, buildMetadata());
@@ -530,12 +532,13 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void onPaused() {
-        if (!isPlaybackReady()) return;
+        cancelPendingSeek();
+        if (!isNativePlaybackCurrent()) return;
         controller().pause();
     }
 
     private void onPlay() {
-        if (!isPlaybackReady()) return;
+        if (!isNativePlaybackCurrent()) return;
         if (isEnded()) controller().seekTo(0);
         if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
@@ -543,7 +546,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     }
 
     private void consumePendingSeek() {
-        if (service() == null || player().isEmpty() || mRenderer == null) return;
+        if (!isNativePlaybackCurrent() || player().isEmpty() || mRenderer == null) return;
         long seekMs = mRenderer.consumePendingSeekMs();
         if (seekMs >= 0) player().seekTo(seekMs);
     }
@@ -608,9 +611,19 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
                 player().reset();
                 break;
             case Player.STATE_ENDED:
-                checkEnded();
                 break;
         }
+    }
+
+    @Override
+    protected void onPlaybackEnded() {
+        checkEnded();
+    }
+
+    @Override
+    protected void onPlaybackOwnershipLost() {
+        cancelPendingSeek();
+        mClock.setCallback(null);
     }
 
     private void setPosition() {
@@ -637,6 +650,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     protected void onPlayingChanged(boolean isPlaying) {
+        if (!isPlaying) cancelPendingSeek();
         syncJetStreamControl();
         if (isPlaying) {
             hideCenter();
@@ -670,13 +684,13 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     @Override
     public void onSeekEnd(long time) {
         mKeyDown.reset();
-        if (!isPlaybackReady() || player().isEmpty()) return;
+        if (!isNativePlaybackCurrent() || player().isEmpty()) return;
         seekTo(time);
     }
 
     @Override
     public boolean canSeek() {
-        return isPlaybackReady() && player().canSeek();
+        return isNativePlaybackCurrent() && player().canSeek();
     }
 
     @Override
@@ -690,6 +704,7 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
 
     @Override
     public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        if (!isNativePlaybackCurrent()) return;
         cancelPendingSeek();
     }
 

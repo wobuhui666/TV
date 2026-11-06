@@ -21,6 +21,10 @@ on:
         description: Verify ASSRT search, file selection, download and real Exo subtitle loading
         type: boolean
         default: false
+      upstream_stability:
+        description: Verify upstream folder, episode, playback ownership and subtitle regressions
+        type: boolean
+        default: false
       responsiveness:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
@@ -50,7 +54,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
@@ -141,10 +145,48 @@ jobs:
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
+          TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_ASSRT_SUBTITLES" = 'true' ]; then
+          if [ "$TV_UPSTREAM_STABILITY" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            suites=(
+              com.fongmi.android.tv.playback.vod.ExplicitEpisodeSelectionAndroidTest=7
+              com.fongmi.android.tv.test.FolderFilterNavigationTest=6
+              com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest=7
+              com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest=11
+              com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
+              com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest=5
+              com.fongmi.android.tv.player.TimeshiftExoIntegrationTest=2
+              com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest=10
+              com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest=14
+              com.fongmi.android.tv.bean.VodContentRatingParcelTest=2
+              com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest=2
+              com.fongmi.android.tv.api.LogvarMatchingAndroidTest=9
+            )
+            classes=()
+            counts=()
+            for suite in "${suites[@]}"; do
+              classes+=("${suite%=*}")
+              counts+=("${suite##*=}")
+            done
+            IFS=,
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "${classes[*]}" artifacts/fongmi-stability "${counts[*]}"
+            unset IFS
+          elif [ "$TV_ASSRT_SUBTITLES" = 'true' ]; then
             out=artifacts/assrt-subtitles
             mkdir -p "$out"
             python3 - <<'PY'
@@ -246,7 +288,7 @@ jobs:
           fi
           VERIFY
       - name: Prepare runtime TMDB preview credential
-        if: inputs.live_home
+        if: inputs.live_home && !inputs.upstream_stability
         env:
           TMDB_PREVIEW_KEY: ${{ secrets.TV94_TMDB_PREVIEW_KEY }}
         run: |
@@ -264,6 +306,7 @@ jobs:
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
+          TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -274,7 +317,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
-        if: always() && inputs.live_home
+        if: always() && inputs.live_home && !inputs.upstream_stability
         run: |
           python3 - <<'PY'
           import os, pathlib
@@ -292,6 +335,7 @@ jobs:
             artifacts/compact-home/
             artifacts/live-home/
             artifacts/assrt-subtitles/
+            artifacts/fongmi-stability/
             app/build/test-results/
             app/build/reports/tests/
             app/schemas/

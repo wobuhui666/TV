@@ -71,7 +71,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         args.putString("typeId", typeId);
         args.putBoolean("folder", folder);
         args.putParcelable("style", style);
-        args.putSerializable("extend", extend);
+        args.putSerializable("extend", new HashMap<>(extend));
         TypeFragment fragment = new TypeFragment();
         fragment.setArguments(args);
         return fragment;
@@ -98,7 +98,9 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     private List<Filter> getFilter() {
-        return Cache.copy(getTypeId());
+        String typeId = getTypeId();
+        if (!Cache.contains(typeId)) typeId = getParent().getType().getTypeId();
+        return Cache.copy(typeId);
     }
 
     private Site getSite() {
@@ -322,7 +324,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             headerVisible = mBinding.recycler.isHeaderVisible();
         } else {
             if (getSite().isIndex()) CollectActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null, poster);
+            else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster);
         }
     }
 

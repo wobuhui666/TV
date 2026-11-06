@@ -16,6 +16,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.UiDevice;
 
+import com.fongmi.android.tv.bean.Cache;
+import com.fongmi.android.tv.bean.Class;
+import com.fongmi.android.tv.bean.Filter;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.ui.activity.TvFolderPreviewActivity;
 import com.fongmi.android.tv.ui.fragment.FolderFragment;
 import com.fongmi.android.tv.ui.fragment.TypeFragment;
@@ -27,7 +31,10 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
@@ -55,20 +62,23 @@ public final class FolderFilterNavigationTest {
     }
 
     @Test
-    public void filterRequestedFromCommitReturnsToRootBeforeFetching() throws Exception {
+    public void filterRequestedFromCommitKeepsNestedCategoryAndBackStack() throws Exception {
         openNestedFolders();
         main(() -> {
             FragmentManager manager = activity.folder().getChildFragmentManager();
             manager.beginTransaction().runOnCommit(() -> {
                 activity.showFilters(true);
-                assertEquals("Navigation waits until the current transaction finishes", 2, manager.getBackStackEntryCount());
+                assertEquals("Showing filters preserves the current navigation", 2, manager.getBackStackEntryCount());
             }).commit();
             manager.executePendingTransactions();
         });
-        awaitRootFilters();
-        selectRootFilter();
-        assertFalse("A root filter must never be sent to the nested category", fixture.requested("folder-level-2", "A"));
-        capture("root-filter-from-commit");
+        awaitFilters("folder-level-2", 2);
+        selectFilter("folder-level-2");
+        assertFalse("Filtering a folder leaves the root request untouched", fixture.requested(TvFolderPreviewActivity.ROOT_ID, "A"));
+        main(() -> activity.folder().goBack());
+        await("Back restores the previous folder", () -> "folder-level-1".equals(activity.currentCategoryId())
+                && activity.folder().getChildFragmentManager().getBackStackEntryCount() == 1);
+        capture("folder-filter-from-commit");
     }
 
     @Test
@@ -85,13 +95,13 @@ public final class FolderFilterNavigationTest {
         });
         instrumentation.getTargetContext().startActivity(intent().addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT));
         await("activity resumes", () -> activity.getLifecycle().getCurrentState() == Lifecycle.State.RESUMED);
-        awaitRootFilters();
-        selectRootFilter();
-        capture("root-filter-after-resume");
+        awaitFilters("folder-level-2", 2);
+        selectFilter("folder-level-2");
+        capture("folder-filter-after-resume");
     }
 
     @Test
-    public void viewRecreationRetainsNestedNavigationAndQueuedRootFilter() throws Exception {
+    public void viewRecreationRetainsNestedNavigationAndQueuedFilter() throws Exception {
         openNestedFolders();
         FolderFragment folder = activity.folder();
         main(() -> activity.getSupportFragmentManager().beginTransaction().detach(folder).commitNow());
@@ -109,9 +119,9 @@ public final class FolderFilterNavigationTest {
             assertNull(folder.getView());
             activity.getSupportFragmentManager().beginTransaction().attach(folder).commitNow();
         });
-        awaitRootFilters();
-        selectRootFilter();
-        capture("root-filter-after-view-recreation");
+        awaitFilters("folder-level-2", 2);
+        selectFilter("folder-level-2");
+        capture("folder-filter-after-view-recreation");
     }
 
     @Test
@@ -134,6 +144,90 @@ public final class FolderFilterNavigationTest {
         capture("cancelled-filter-keeps-folder");
     }
 
+    @Test
+    public void inheritedFiltersKeepIndependentSelectionsThroughBackAndViewRecreation() throws Exception {
+        main(() -> activity.showFilters(true));
+        awaitFilters(TvFolderPreviewActivity.ROOT_ID, 0);
+        selectFilter(TvFolderPreviewActivity.ROOT_ID);
+        TypeFragment root = activity.currentCategory();
+        main(() -> activity.folder().openFolder("folder-level-1", extend(root)));
+        await("first folder inherits the selected root filter", () -> "folder-level-1".equals(activity.currentCategoryId())
+                && fixture.requested("folder-level-1", "A") && categoryEntryVisible("folder-level-1"));
+        TypeFragment first = activity.currentCategory();
+        main(() -> {
+            assertNotSame("Each folder owns its filter values", extend(root), extend(first));
+            activity.showFilters(true);
+        });
+        awaitFilters("folder-level-1", 1);
+        await("inherited selection is shown", () -> filterOption().isSelected());
+        clickFilter();
+        await("clearing the child filter refreshes only that category", () -> requestedWithoutFilter("folder-level-1"));
+        main(() -> {
+            assertEquals("A", extend(root).get("region"));
+            assertFalse(extend(first).containsKey("region"));
+            activity.folder().openFolder("folder-level-2", extend(first));
+        });
+        await("second folder starts with its parent's current filter values", () -> "folder-level-2".equals(activity.currentCategoryId())
+                && requestedWithoutFilter("folder-level-2") && categoryEntryVisible("folder-level-2"));
+        main(() -> activity.showFilters(true));
+        awaitFilters("folder-level-2", 2);
+        selectFilter("folder-level-2");
+        main(() -> {
+            assertFalse("Filtering a descendant cannot alter its hidden parent", extend(first).containsKey("region"));
+            FolderFragment folder = activity.folder();
+            activity.getSupportFragmentManager().beginTransaction().detach(folder).commitNow();
+            activity.getSupportFragmentManager().beginTransaction().attach(folder).commitNow();
+        });
+        awaitFilters("folder-level-2", 2);
+        await("recreated filter controls retain this folder's selection", () -> filterOption().isSelected());
+        main(() -> activity.folder().goBack());
+        await("Back restores the parent's filter snapshot", () -> activity.currentCategory() == first
+                && !extend(first).containsKey("region") && activity.folder().getChildFragmentManager().getBackStackEntryCount() == 1);
+        main(() -> activity.showFilters(true));
+        awaitFilters("folder-level-1", 1);
+        await("parent filter selection stays cleared", () -> !filterOption().isSelected());
+        main(() -> activity.folder().goBack());
+        await("Back restores the root's original selection", () -> activity.currentCategory() == root
+                && "A".equals(extend(root).get("region")) && !activity.folder().canBack());
+        main(() -> activity.showFilters(true));
+        awaitFilters(TvFolderPreviewActivity.ROOT_ID, 0);
+        await("root filter remains selected", () -> filterOption().isSelected());
+        capture("folder-filter-snapshots");
+    }
+
+    @Test
+    public void explicitlyEmptyChildFiltersDoNotInheritRootControls() {
+        String categoryId = "folder-explicitly-unfiltered";
+        Map<String, List<Filter>> cache = filterCache();
+        boolean cached = cache.containsKey(categoryId);
+        List<Filter> previous = cache.get(categoryId);
+        try {
+            main(() -> {
+                Class type = new Class();
+                type.setTypeId(categoryId);
+                type.setFilters(List.of());
+                Result result = new Result();
+                result.setTypes(List.of(type));
+                new Cache().put(result);
+                assertTrue(Cache.contains(categoryId));
+                activity.folder().openFolder(categoryId, new HashMap<>());
+            });
+            await("unfiltered child category loads", () -> categoryId.equals(activity.currentCategoryId())
+                    && fixture.requested(categoryId, null) && categoryEntryVisible(categoryId));
+            main(() -> activity.showFilters(true));
+            main(() -> {
+                assertEquals(categoryId, activity.currentCategoryId());
+                assertEquals(1, activity.folder().getChildFragmentManager().getBackStackEntryCount());
+                assertNull("An explicit empty filter set suppresses root fallback", filterOption());
+            });
+        } finally {
+            main(() -> {
+                if (cached) cache.put(categoryId, previous);
+                else cache.remove(categoryId);
+            });
+        }
+    }
+
     private void openNestedFolders() {
         main(() -> activity.folder().openFolder("folder-level-1", new HashMap<>()));
         await("first folder loads", () -> "folder-level-1".equals(activity.currentCategoryId())
@@ -143,18 +237,46 @@ public final class FolderFilterNavigationTest {
                 && fixture.requested("folder-level-2", null) && categoryEntryVisible("folder-level-2"));
     }
 
-    private void awaitRootFilters() {
-        await("root filter controls become visible", () -> TvFolderPreviewActivity.ROOT_ID.equals(activity.currentCategoryId())
-                && activity.folder().getChildFragmentManager().getBackStackEntryCount() == 0 && filterOption() != null);
+    private void awaitFilters(String categoryId, int depth) {
+        await("filter controls appear in " + categoryId, () -> categoryId.equals(activity.currentCategoryId())
+                && activity.folder().getChildFragmentManager().getBackStackEntryCount() == depth && filterOption() != null);
     }
 
-    private void selectRootFilter() {
+    private void selectFilter(String categoryId) {
+        clickFilter();
+        await("filter applies to " + categoryId, () -> fixture.requested(categoryId, "A"));
+    }
+
+    private void clickFilter() {
         main(() -> {
             TextView option = filterOption();
             assertNotNull(option);
             assertTrue("The actual filter control accepts a click", option.performClick());
         });
-        await("filter applies to the root request", () -> fixture.requested(TvFolderPreviewActivity.ROOT_ID, "A"));
+    }
+
+    private boolean requestedWithoutFilter(String categoryId) {
+        return fixture.requests.stream().anyMatch(request -> categoryId.equals(request.get("category").getAsString())
+                && !request.getAsJsonObject("filters").has("region"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private HashMap<String, String> extend(TypeFragment category) {
+        return (HashMap<String, String>) category.requireArguments().getSerializable("extend");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, List<Filter>> filterCache() {
+        try {
+            java.lang.Class<?> loader = java.lang.Class.forName(Cache.class.getName() + "$Loader");
+            Field instance = loader.getDeclaredField("INSTANCE");
+            instance.setAccessible(true);
+            Field values = Cache.class.getDeclaredField("cache");
+            values.setAccessible(true);
+            return (Map<String, List<Filter>>) values.get(instance.get(null));
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError(error);
+        }
     }
 
     private TextView filterOption() {

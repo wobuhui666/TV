@@ -40,7 +40,7 @@
 | 网络与工具 | 按规则代理、DoH、ECH、Cloudflare 优选、TMDB 网络兼容；缓存分类清理、诊断包、来源健康和网盘分享链接检查。 |
 | 应用更新 | 按包名／ABI 校验 OTA，镜像下载与 SHA-256 校验；标准版、独立共存版和可取消的重要版本提醒。 |
 
-当前默认分支为 [`ui/apple-tv-redesign`](https://github.com/wobuhui666/TV/tree/ui/apple-tv-redesign)。开发默认版本与 FongMi **5.8.5** 对齐；正式发布版本附加 UTC 构建时间，例如 `5.8.5+YYYYMMDD.HHMMSS`，便于区分同一上游版本的不同修复。
+当前默认分支为 [`ui/apple-tv-redesign`](https://github.com/wobuhui666/TV/tree/ui/apple-tv-redesign)。开发默认版本以 FongMi **5.8.7** 为版本基线，按本项目架构适配上游更新；正式发布版本附加 UTC 构建时间，例如 `5.8.7+YYYYMMDD.HHMMSS`。本轮的适配与保留项目见 [上游同步说明](docs/upstream-5.8.7-review.md)。
 
 <details>
 <summary>展开界面预览：从首页到播放与设置</summary>

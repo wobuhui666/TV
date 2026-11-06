@@ -11,8 +11,8 @@ import zipfile
 
 EPOCH = datetime(2020, 1, 1, tzinfo=timezone.utc)
 MAX_VERSION_CODE = 2_100_000_000
-LOCAL_VERSION_CODE = 585
-BASE_VERSION_NAME = "5.8.5"
+LOCAL_VERSION_CODE = 587
+BASE_VERSION_NAME = "5.8.7"
 ABIS = {"arm64_v8a": "arm64-v8a", "armeabi_v7a": "armeabi-v7a"}
 PACKAGE_NAME = "com.fongmi.android.tv"
 COEXIST_PACKAGE_NAME = "com.wobuhui666.android.tv"

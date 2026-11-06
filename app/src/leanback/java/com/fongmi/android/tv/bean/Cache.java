@@ -26,6 +26,10 @@ public class Cache {
         result.getTypes().forEach(type -> get().cache.put(type.getTypeId(), type.getFilters()));
     }
 
+    public static boolean contains(String typeId) {
+        return get().cache.containsKey(typeId);
+    }
+
     public static List<Filter> get(Class type) {
         return get(type.getTypeId());
     }
