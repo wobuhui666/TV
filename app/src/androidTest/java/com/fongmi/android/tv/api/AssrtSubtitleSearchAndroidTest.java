@@ -408,7 +408,7 @@ public final class AssrtSubtitleSearchAndroidTest {
             await(() -> activity.manager != null && activity.manager.getPlaybackState() == Player.STATE_READY
                     && activity.manager.isVod(), "local PCM VOD ready", 30_000);
         } catch (AssertionError failure) {
-            throw new AssertionError("local PCM VOD ready: " + value(() -> "state="
+            throw new AssertionError("local PCM VOD ready: " + read(() -> "state="
                     + (activity.manager == null ? "no manager" : activity.manager.getPlaybackState())
                     + ", error=" + safeMessage(activity.error)), failure);
         }
