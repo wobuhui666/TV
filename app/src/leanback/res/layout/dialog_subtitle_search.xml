@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fongmi.android.tv.ui.custom.JetStreamPlaybackSheetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSheetHeaderView
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="8dp"
+        app:jetStreamTitle="@string/assrt_search_title" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamDialogContentLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp">
+
+        <com.fongmi.android.tv.ui.custom.JetStreamDenseDialogTextInputEditText
+            android:id="@+id/keyword"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/assrt_query_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="textCapWords"
+            android:maxLength="255"
+            android:minHeight="48dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp"
+            android:singleLine="true" />
+
+        <com.fongmi.android.tv.ui.custom.MaterialPlaybackButton
+            android:id="@+id/search"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:focusable="true"
+            android:paddingHorizontal="12dp"
+            android:text="@string/assrt_search" />
+
+    </com.fongmi.android.tv.ui.custom.JetStreamDialogContentLayout>
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="14sp" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamSmallCircularProgressIndicator
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginVertical="12dp"
+        android:visibility="gone" />
+
+    <com.fongmi.android.tv.ui.custom.JetStreamDialogContentLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="8dp">
+
+        <com.fongmi.android.tv.ui.custom.MaterialPlaybackButton
+            android:id="@+id/back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:focusable="true"
+            android:text="@string/assrt_back"
+            android:visibility="gone" />
+
+        <com.fongmi.android.tv.ui.custom.MaterialPlaybackButton
+            android:id="@+id/previous"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:paddingHorizontal="8dp"
+            android:text="@string/assrt_previous"
+            android:visibility="gone" />
+
+        <com.fongmi.android.tv.ui.custom.MaterialPlaybackButton
+            android:id="@+id/next"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:focusable="true"
+            android:paddingHorizontal="8dp"
+            android:text="@string/assrt_next"
+            android:visibility="gone" />
+
+    </com.fongmi.android.tv.ui.custom.JetStreamDialogContentLayout>
+
+    <com.fongmi.android.tv.ui.custom.JetStreamDialogListRecyclerView
+        android:id="@+id/recycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_weight="1"
+        android:paddingVertical="8dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    <com.fongmi.android.tv.ui.custom.MaterialPlaybackTextButton
+        android:id="@+id/source"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="16dp"
+        android:focusable="true"
+        android:paddingHorizontal="8dp"
+        android:text="@string/assrt_source"
+        android:textSize="12sp" />
+
+</com.fongmi.android.tv.ui.custom.JetStreamPlaybackSheetLayout>

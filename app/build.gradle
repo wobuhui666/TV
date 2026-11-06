@@ -48,6 +48,7 @@ android {
         versionName tvVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "TMDB_API_KEY", buildConfigString(localOrEnv('tmdbApiKey', 'TMDB_API_KEY'))
+        buildConfigField "String", "ASSRT_API_TOKEN", buildConfigString(localOrEnv('assrtApiToken', 'ASSRT_API_TOKEN'))
         buildConfigField "String", "TMDB_LOGO_SIZE", buildConfigString(localOrEnv('tmdbLogoSize', 'TMDB_LOGO_SIZE') ?: 'w500')
         javaCompileOptions {
             annotationProcessorOptions {
@@ -186,6 +187,7 @@ dependencies {
     implementation project(':catvod')
     implementation project(':chaquo')
     implementation project(':quickjs')
+    implementation 'me.zhanghai.android.libarchive:library:1.1.7'
     implementation libs.appcompat
     implementation libs.coroutines.android
     implementation libs.lifecycle.service

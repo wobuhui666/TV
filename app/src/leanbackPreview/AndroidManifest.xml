@@ -3,6 +3,8 @@
         <activity android:name="com.fongmi.android.tv.test.SeekInputActivity" android:exported="false" android:theme="@style/Theme.App" />
         <activity android:name="com.fongmi.android.tv.test.CorePlaybackActivity"
             android:exported="false" android:theme="@style/Theme.App" />
+        <activity android:name="com.fongmi.android.tv.test.AssrtSubtitlePreviewActivity"
+            android:exported="false" android:theme="@style/Theme.App" />
         <activity android:name=".ui.activity.TvPreviewActivity"
             android:exported="true" android:screenOrientation="landscape"
             android:configChanges="uiMode"

@@ -319,9 +319,18 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void setSub(Sub sub) {
-        if (sub == null || sub.isEmpty()) return;
+        setSub(sub, false);
+    }
+
+    /** Online subtitle selection must not resume a paused video or change its speed. */
+    public void setSub(Sub sub, boolean preservePlaybackState) {
+        if (sub == null || sub.isEmpty() || engine == null || player == null) return;
         if (spec != null) spec.setSub(sub);
-        if (engine.addSubtitle(sub)) play();
+        boolean playing = player.getPlayWhenReady();
+        if (engine.addSubtitle(sub)) {
+            if (preservePlaybackState) player.setPlayWhenReady(playing);
+            else play();
+        } else if (preservePlaybackState) restartCurrent(getPosition(), false);
         else startCurrent();
     }
 

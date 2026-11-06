@@ -33,7 +33,7 @@ public final class CacheManager {
 
     /** Hold from before player creation until all engines and preload workers have stopped. */
     public static CacheLease playbackLease() {
-        return CacheLease.acquire(directory("exo"), directory("mpv"));
+        return CacheLease.acquire(directory("exo"), directory("mpv"), directory("assrt-subtitles"));
     }
 
     /** Call on a worker thread; sizes count only regular files inside the app cache root. */
@@ -42,7 +42,7 @@ public final class CacheManager {
         try {
             CacheFiles files = new CacheFiles(Path.cache());
             long images = files.size(directory("image_manager_disk_cache"));
-            long playback = files.size(directory("exo")) + files.size(directory("mpv"));
+            long playback = files.size(directory("exo")) + files.size(directory("mpv")) + files.size(directory("assrt-subtitles"));
             long updates = 0;
             for (File file : updateFiles()) if (isUpdate(file)) updates += files.size(file);
             entries.add(new Entry(Category.IMAGES, images));
@@ -88,6 +88,7 @@ public final class CacheManager {
                 case PLAYBACK:
                     clearOwned(files, directory("exo"), MediaSourceFactory::clearCacheResources, result);
                     result.add(files.clear(directory("mpv")));
+                    result.add(files.clear(directory("assrt-subtitles")));
                     break;
                 case UPDATES:
                     clearUpdates(files, Long.MAX_VALUE, result);

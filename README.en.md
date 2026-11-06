@@ -22,7 +22,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 | Search and source selection | Cross-source search, relevance levels, grouped results, optional Smart source selection, per-configuration preferred sources, and episode-aware fallback. |
 | Playback | ExoPlayer/Media3 and MPV; hardware/software options, playback speed, seek acceleration, repeat, aspect ratio, track selection, chapters, and editions when provided. |
 | Playback information | A TV specification capsule showing available input resolution, video/audio codec, dynamic range, bit depth, channel information, and explicit content ratings. |
-| Subtitles | Native ASS styles and animation, independent primary/secondary subtitles, timing/style/font controls, subtitle search/import, local subtitle discovery, and VTT upload. |
+| Subtitles | Native ASS styles and animation, independent primary/secondary subtitles, timing/style/font controls, ASSRT search and ZIP/RAR file selection, subtitle import, local subtitle discovery, and VTT upload. |
 | Live speech subtitles | Optional local speech recognition on the Exo PCM path; downloadable language packs and optional default, MTranServer, or OpenAI-compatible translation. |
 | Intro and credit skipping | TheIntroDB, IntroDB, and TheOtherDB time ranges; preserve scenes before the intro and after the credits, with manual settings taking priority. |
 | Next episode | Exo prepares eligible next episodes with up to 10 seconds of preloaded media; prepared same-episode cache can survive seeking. |
@@ -176,6 +176,14 @@ The documented playback paths cover SRT, ASS/SSA, WebVTT, TTML, SUP/PGS, embedde
 
 You can search for or import subtitles, upload VTT through the local interface, and discover matching subtitles beside local video files when the document/storage permissions allow sibling access. Local discovery accepts SRT, SSA, ASS, and VTT files. Local tracks carry a **Local subtitle** label and long filenames are shortened consistently. A selected-file permission alone may not permit scanning the surrounding directory.
 
+### Online subtitle search with ASSRT
+
+On TV and mobile, open **Player → Subtitle tracks → Search online subtitles** and search by title, season/episode, or release filename. Choose a subtitle release, then select its language, format, and file. Direct subtitle files can be loaded; ZIP/RAR archives containing several subtitles offer another file picker. Multipart archives are currently unsupported.
+
+Metadata and download links come from [ASSRT](https://assrt.net), with a source link in the search panel. Official builds include the service credential through build configuration, so users do not need to enter an API key. For your own build, set the GitHub Actions secret/environment variable `ASSRT_API_TOKEN`, or `assrtApiToken` in an uncommitted `local.properties` file. Keep real credentials out of the repository.
+
+ASSRT limits API requests to 20 per minute, and subtitle download links are temporary. If a link expires, return to the results and select the release again to obtain a fresh link. Closing search or changing media cancels current requests; loading a subtitle preserves position, playback speed, and pause state.
+
 ### Live speech subtitles and optional translation
 
 **Live speech subtitles & translation** is an optional feature, disabled by default. Local sherpa-onnx speech recognition consumes the Exo PCM audio path; it is not an MPV speech-recognition feature. Download the language pack before enabling it, and use a device that meets the pack's memory requirement.
@@ -323,7 +331,7 @@ The ARM node reported `redroid`; it was not physical Samsung hardware. These dat
 
 This fork builds on [FongMi/TV](https://github.com/FongMi/TV) and [CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader), with thanks to their authors and the wider open-source community.
 
-The project is distributed under [GNU GPL v3.0](LICENSE.md). Third-party components retain their own licenses and notices; see the attribution and reproducible-source information in [third_party/libass](third_party/libass) and [third_party/mpv](third_party/mpv).
+The project is distributed under [GNU GPL v3.0](LICENSE.md). Third-party components retain their own licenses and notices; see the attribution and reproducible-source information in [third_party/libass](third_party/libass), [third_party/mpv](third_party/mpv), and [third_party/libarchive](third_party/libarchive/NOTICE.md).
 
 Promotional footage includes **Sintel © Blender Foundation, CC BY 3.0**, demonstration photos from Unsplash, and a synthesized soundtrack. See [the complete media credits](docs/media/CREDITS.md).
 

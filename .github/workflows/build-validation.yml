@@ -27,6 +27,7 @@ jobs:
       VALIDATION_PACKAGE: ${{ matrix.package }}
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
       TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
 
     steps:
