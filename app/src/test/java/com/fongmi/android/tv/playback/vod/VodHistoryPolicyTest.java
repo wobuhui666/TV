@@ -11,12 +11,62 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 import java.lang.reflect.Method;
 
 public class VodHistoryPolicyTest {
+
+    @Test
+    public void shouldPreserveProgressOnlyForTheSameExplicitIdAndKeepGeneratedLabels() {
+        History history = new History();
+        history.setVodRemarks("old title");
+        history.setEpisodeUrl("selected-id");
+        history.setPosition(240_000);
+        history.setDuration(1_800_000);
+        Episode selected = Episode.create("04", "selected-id");
+        selected.setGeneratedLabel(true);
+        VodHistoryPolicy policy = new VodHistoryPolicy();
+
+        policy.updateEpisode(history, new Flag("new-line"), selected, true);
+
+        assertEquals(240_000, history.getPosition());
+        assertEquals(1_800_000, history.getDuration());
+        assertTrue(history.isEpisodeLabelGenerated());
+        policy.updateEpisode(history, new Flag("new-line"), Episode.create("04", "different-id"), true);
+        assertEquals(C.TIME_UNSET, history.getPosition());
+        assertEquals(C.TIME_UNSET, history.getDuration());
+        assertFalse(history.isEpisodeLabelGenerated());
+    }
+
+    @Test
+    public void shouldPreferIncomingHistoryForTheSameVideoAcrossReceiverConfigurations() {
+        History incoming = new History();
+        incoming.setKey("site@@@video@@@1");
+        History current = new History();
+        current.setKey("site@@@video@@@2");
+
+        assertSame(incoming, VodHistoryPolicy.preferredHistory("site@@@video@@@2", incoming, current));
+        assertSame(current, VodHistoryPolicy.preferredHistory("site@@@video@@@2", null, current));
+    }
+
+    @Test
+    public void shouldRejectIncomingHistoryForAnotherSiteOrVideoAndReuseOnlyAnExactCurrentKey() {
+        History incoming = new History();
+        incoming.setKey("other@@@video@@@1");
+        History current = new History();
+        current.setKey("site@@@video@@@2");
+
+        assertSame(current, VodHistoryPolicy.preferredHistory("site@@@video@@@2", incoming, current));
+        incoming.setKey("site@@@other-video@@@1");
+        assertSame(current, VodHistoryPolicy.preferredHistory("site@@@video@@@2", incoming, current));
+        current.setKey("site@@@video@@@1");
+        assertNull(VodHistoryPolicy.preferredHistory("site@@@video@@@2", incoming, current));
+        incoming.setKey(null);
+        assertNull(VodHistoryPolicy.preferredHistory("site@@@video@@@2", incoming, null));
+    }
 
     @Test
     public void shouldKeepLocalProgressWhenSourceReportsAnotherPosition() {

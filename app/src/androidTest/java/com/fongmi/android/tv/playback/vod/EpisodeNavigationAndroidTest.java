@@ -287,6 +287,7 @@ public class EpisodeNavigationAndroidTest {
         state.setHistory(history);
         VodPlaybackHost host = (VodPlaybackHost) Proxy.newProxyInstance(VodPlaybackHost.class.getClassLoader(),
                 new Class<?>[]{VodPlaybackHost.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("getVodPlayId")) return "";
                     if (method.getName().equals("requestPlayer")) requests.add((VodPlayRequest) args[0]);
                     else if (method.getName().equals("showNoNext")) noNext++;
                     else if (method.getName().equals("showNoPrev")) noPrevious++;

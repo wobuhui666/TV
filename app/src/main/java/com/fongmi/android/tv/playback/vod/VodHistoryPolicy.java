@@ -9,6 +9,7 @@ import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.player.skip.LegacySkipMigration;
 import com.fongmi.android.tv.setting.Setting;
@@ -21,8 +22,14 @@ public class VodHistoryPolicy {
     private static final long MAX_UNKNOWN_DURATION_POSITION_MS = TimeUnit.DAYS.toMillis(1);
 
     public History findOrCreate(String key, String mark, Vod item) {
-        History history = History.find(key);
+        return findOrCreate(key, mark, item, null);
+    }
+
+    public History findOrCreate(String key, String mark, Vod item, History preferred) {
+        History history = matchesVideo(key, preferred) ? preferred.copy() : History.find(key);
         history = history == null ? create(key, item) : history;
+        history.setKey(key);
+        history.setCid(VodConfig.getCid());
         LegacySkipMigration.clearBoundaries(history);
         if (!TextUtils.isEmpty(mark)) {
             if (!mark.equals(history.getVodRemarks())) history.setEpisodeLabelGenerated(false);
@@ -31,6 +38,21 @@ public class VodHistoryPolicy {
         if (Setting.isIncognito() && history.getKey().equals(key)) history.delete();
         history.setVodName(item.getName());
         return history;
+    }
+
+    static History preferredHistory(String key, History incoming, History current) {
+        if (key == null) return null;
+        if (matchesVideo(key, incoming)) return incoming;
+        return current != null && key.equals(current.getKey()) ? current : null;
+    }
+
+    private static boolean matchesVideo(String key, History history) {
+        if (history == null || key == null || history.getKey() == null) return false;
+        if (key.equals(history.getKey())) return true;
+        String[] requested = key.split(AppDatabase.SYMBOL, 3);
+        String[] saved = history.getKey().split(AppDatabase.SYMBOL, 3);
+        return requested.length >= 2 && saved.length >= 2 && !requested[0].isEmpty() && !requested[1].isEmpty()
+                && requested[0].equals(saved[0]) && requested[1].equals(saved[1]);
     }
 
     private History create(String key, Vod item) {
@@ -58,8 +80,13 @@ public class VodHistoryPolicy {
     }
 
     public void updateEpisode(History history, Flag flag, Episode episode) {
+        updateEpisode(history, flag, episode, false);
+    }
+
+    public void updateEpisode(History history, Flag flag, Episode episode, boolean matchId) {
         if (history == null || flag == null || episode == null) return;
-        if (!episode.matchesName(history.getEpisode())) {
+        boolean match = matchId ? episode.getUrl().equals(history.getEpisodeUrl()) : episode.matchesName(history.getEpisode());
+        if (!match) {
             history.setPosition(C.TIME_UNSET);
             history.setDuration(C.TIME_UNSET);
         }

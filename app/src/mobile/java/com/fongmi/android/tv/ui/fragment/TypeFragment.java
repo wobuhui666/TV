@@ -15,6 +15,7 @@ import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.Product;
 import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.bean.Filter;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Style;
@@ -30,8 +31,10 @@ import com.fongmi.android.tv.ui.custom.CustomScroller;
 import com.fongmi.android.tv.utils.Notify;
 import com.fongmi.android.tv.utils.ResUtil;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class TypeFragment extends BaseFragment implements CustomScroller.Callback, VodAdapter.OnClickListener, SwipeRefreshLayout.OnRefreshListener {
@@ -53,7 +56,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         args.putString("typeId", typeId);
         args.putBoolean("folder", folder);
         args.putParcelable("style", style);
-        args.putSerializable("extend", extend);
+        args.putSerializable("extend", extend == null ? new HashMap<String, String>() : new HashMap<>(extend));
         TypeFragment fragment = new TypeFragment();
         fragment.setArguments(args);
         return fragment;
@@ -234,6 +237,24 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         else mExtends.remove(key);
     }
 
+    public List<Filter> getFilters() {
+        FolderFragment parent = getParent();
+        if (parent == null) return Collections.emptyList();
+        Map<String, String> selected = new HashMap<>(mExtends == null ? getExtend() : mExtends);
+        for (Map.Entry<String, Value> entry : mPendingFilters.entrySet()) {
+            if (entry.getValue().isSelected()) selected.put(entry.getKey(), entry.getValue().getV());
+            else selected.remove(entry.getKey());
+        }
+        return parent.getType().getFilters().stream().map(filter -> copyFilter(filter, selected)).toList();
+    }
+
+    private Filter copyFilter(Filter filter, Map<String, String> selected) {
+        Filter copy = filter.copy();
+        Value value = selected.containsKey(copy.getKey()) ? Value.create(selected.get(copy.getKey())) : null;
+        copy.getValue().forEach(item -> item.setSelected(item.equals(value)));
+        return copy;
+    }
+
     @Override
     public void onRefresh() {
         if (!isViewReady() || mAdapter == null || mScroller == null || mViewModel == null) {
@@ -264,7 +285,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             Activity activity = getActivity();
             if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
             if (getSite().isIndex()) SearchActivity.start(activity, item.getName());
-            else VideoActivity.start(activity, getKey(), item.getId(), item.getName(), item.getPic(), isFolder() ? item.getName() : null);
+            else VideoActivity.start(activity, getKey(), item, isFolder() ? item.getName() : null);
         }
     }
 

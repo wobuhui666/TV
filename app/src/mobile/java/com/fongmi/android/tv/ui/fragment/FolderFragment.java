@@ -19,8 +19,10 @@ import com.fongmi.android.tv.bean.Value;
 import com.fongmi.android.tv.databinding.FragmentFolderBinding;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class FolderFragment extends BaseFragment {
@@ -32,7 +34,7 @@ public class FolderFragment extends BaseFragment {
     private boolean mPendingScrollToTop;
     private final Map<String, Value> mPendingFilters = new LinkedHashMap<>();
     private final FragmentManager.OnBackStackChangedListener mBackStackChangedListener = this::onBackStackChanged;
-    private final Runnable mApplyRootFilters = this::applyRootFilters;
+    private final Runnable mDispatchPendingCommands = this::dispatchPendingCommands;
 
     public static FolderFragment newInstance(String key, Class type, int y) {
         Bundle args = new Bundle();
@@ -94,7 +96,7 @@ public class FolderFragment extends BaseFragment {
 
     private HashMap<String, String> getExtend() {
         HashMap<String, String> extend = new HashMap<>();
-        for (Filter filter : mType.getFilters()) if (filter.getInit() != null) extend.put(filter.getKey(), filter.setSelected(filter.getInit()));
+        for (Filter filter : mType.getFilters()) if (filter.getInit() != null) extend.put(filter.getKey(), filter.getInit());
         return extend;
     }
 
@@ -141,15 +143,13 @@ public class FolderFragment extends BaseFragment {
         dispatchPendingCommands();
     }
 
+    public List<Filter> getFilters() {
+        TypeFragment child = getChild();
+        return child == null ? Collections.emptyList() : child.getFilters();
+    }
+
     private void dispatchPendingCommands() {
         if (!canDispatchPendingCommands()) return;
-        if (!mPendingFilters.isEmpty() && canBack()) {
-            // Wait until the navigation transaction has finished before returning to the
-            // root category. Applying a root filter to the current folder loses its scope.
-            getView().removeCallbacks(mApplyRootFilters);
-            getView().post(mApplyRootFilters);
-            return;
-        }
         TypeFragment child = getChild();
         if (child == null) return;
         applyPendingCommands(child);
@@ -170,14 +170,6 @@ public class FolderFragment extends BaseFragment {
 
     private boolean canDispatchPendingCommands() {
         return mViewReady && getView() != null && isAdded() && mPendingChild == null && !getChildFragmentManager().isStateSaved();
-    }
-
-    private void applyRootFilters() {
-        if (!canDispatchPendingCommands()) return;
-        if (!mPendingFilters.isEmpty() && canBack()) {
-            getChildFragmentManager().popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-        }
-        dispatchPendingCommands();
     }
 
     private void onChildCommitted(TypeFragment child) {
@@ -203,12 +195,12 @@ public class FolderFragment extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
-        if (getView() != null) getView().post(mApplyRootFilters);
+        if (getView() != null) getView().post(mDispatchPendingCommands);
     }
 
     @Override
     public void onDestroyView() {
-        if (getView() != null) getView().removeCallbacks(mApplyRootFilters);
+        if (getView() != null) getView().removeCallbacks(mDispatchPendingCommands);
         mViewReady = false;
         getChildFragmentManager().removeOnBackStackChangedListener(mBackStackChangedListener);
         mPendingChild = null;

@@ -9,6 +9,15 @@ import com.fongmi.android.tv.utils.ResUtil;
 
 public final class PlaybackOrientation {
 
+    public static int getVideoFrameHeight(int width, int height, float pixelRatio, int screenWidth, int screenHeight, int minHeight) {
+        if (width <= 0 || height <= 0) return 0;
+        if (!Float.isFinite(pixelRatio) || pixelRatio <= 0) pixelRatio = 1;
+        float aspectRatio = width * pixelRatio / height;
+        int calculated = Math.round(Math.min(screenWidth, screenHeight) / aspectRatio);
+        int maxHeight = Math.max(minHeight, Math.max(screenWidth, screenHeight) / 2);
+        return Math.clamp(calculated, minHeight, maxHeight);
+    }
+
     public static int getScreenOrientation(Context context) {
         int rotation = ResUtil.getDisplay(context).getRotation();
         int orientation = context.getResources().getConfiguration().orientation;

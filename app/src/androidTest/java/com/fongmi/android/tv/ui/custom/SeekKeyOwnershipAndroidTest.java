@@ -157,6 +157,40 @@ public final class SeekKeyOwnershipAndroidTest {
         main(() -> { assertEquals(1, activity.commits); assertEquals(20_000, activity.committed); });
     }
 
+    @Test public void shouldCancelOpposingKeyBurstsWithoutCommittingOrResuming() {
+        main(() -> {
+            vod.onKeyDown(key(100, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
+            vod.onKeyDown(key(100, KeyEvent.ACTION_UP, 22, 0, 7, 0));
+            vod.onKeyDown(key(200, KeyEvent.ACTION_DOWN, 21, 0, 7, 0));
+            vod.onKeyDown(key(200, KeyEvent.ACTION_UP, 21, 0, 7, 0));
+            assertEquals(0, activity.preview);
+        });
+        waitCommit();
+        main(() -> {
+            assertEquals("A zero-offset preview never reaches the seek/resume callback", 0, activity.commits);
+            assertEquals(1, activity.cancellations);
+        });
+    }
+
+    @Test public void shouldCancelHeldAndQueuedSeekKeysWhenNavigationTakesOver() {
+        for (int code : new int[]{KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_CENTER}) {
+            main(() -> {
+                int canceled = activity.cancellations;
+                vod.onKeyDown(key(100, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
+                vod.onKeyDown(key(200, KeyEvent.ACTION_DOWN, code, 0, 7, 0));
+                vod.onKeyDown(key(100, KeyEvent.ACTION_DOWN, 22, 25, 7, 0));
+                vod.onKeyDown(key(100, KeyEvent.ACTION_UP, 22, 0, 7, 0));
+                assertEquals(canceled + 1, activity.cancellations);
+                vod.onKeyDown(key(300, KeyEvent.ACTION_DOWN, 22, 0, 7, 0));
+                vod.onKeyDown(key(300, KeyEvent.ACTION_UP, 22, 0, 7, 0));
+                vod.onKeyDown(key(400, KeyEvent.ACTION_DOWN, code, 0, 7, 0));
+                assertEquals(canceled + 2, activity.cancellations);
+            });
+            waitCommit();
+            main(() -> assertEquals(0, activity.commits));
+        }
+    }
+
     private void swipe(long down) {
         MotionEvent start = MotionEvent.obtain(down, down, MotionEvent.ACTION_DOWN, 100, 100, 0);
         MotionEvent end = MotionEvent.obtain(down, down + 50, MotionEvent.ACTION_UP, 600, 100, 0);

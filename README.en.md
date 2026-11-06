@@ -39,7 +39,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 
 This list describes the current source branch, [`ui/apple-tv-redesign`](https://github.com/wobuhui666/TV/tree/ui/apple-tv-redesign). Source services, metadata, codecs, device capabilities, and the chosen playback engine determine which controls are available. See the feature sections below for the relevant requirements.
 
-The development defaults match FongMi **5.8.5** (`versionCode=585`); production OTA builds append a UTC timestamp to `5.8.5` and use a shared timestamp-based version code for both ARM builds. The [release built from PR #92](https://github.com/wobuhui666/TV/releases/tag/build-41321238755-1) includes the recent features below. Check the release notes and source revision of any earlier APK you install.
+The development version uses FongMi **5.8.7** as its version baseline (`versionCode=587`), with upstream changes adapted to this project's architecture. Production OTA builds append a UTC timestamp to `5.8.7` and use a shared timestamp-based version code for both ARM builds. See [the upstream integration notes](docs/upstream-5.8.7-review.md) for this update's scope. Check the release notes and source revision of any earlier APK you install.
 
 ## A closer look
 

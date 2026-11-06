@@ -15,7 +15,6 @@ import androidx.media3.common.Player;
 import androidx.media3.common.TrackSelectionParameters;
 import androidx.media3.common.TrackSelectionOverride;
 import androidx.media3.common.Tracks;
-import androidx.media3.common.VideoSize;
 import androidx.media3.ui.danmaku.DanmakuConfig;
 
 import com.fongmi.android.tv.App;
@@ -58,7 +57,6 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     private final CacheLease cacheLease;
     private final TimeshiftPlayback timeshift;
     private PlayerEngine engine;
-    private VideoSize videoSize;
     private ParseJob parseJob;
     private PlaySpec spec;
     private Player player;
@@ -272,11 +270,11 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public int getVideoWidth() {
-        return videoSize == null ? 0 : videoSize.width;
+        return player == null ? 0 : player.getVideoSize().width;
     }
 
     public int getVideoHeight() {
-        return videoSize == null ? 0 : videoSize.height;
+        return player == null ? 0 : player.getVideoSize().height;
     }
 
     public long getPosition() {
@@ -759,6 +757,7 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     }
 
     public void start(PlaySpec spec, long timeout, long startPositionMs) {
+        stopParse();
         pendingPrimarySubtitle = null;
         pendingSecondarySubtitle = null;
         DiagnosticLog.record("playback", "request startPositionMs=" + startPositionMs + " decode=" + decode);
@@ -963,11 +962,6 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
                 timeshift.seekTo(C.TIME_UNSET);
                 player.play();
             }
-        }
-
-        @Override
-        public void onVideoSizeChanged(@NonNull VideoSize size) {
-            videoSize = size;
         }
 
         @Override

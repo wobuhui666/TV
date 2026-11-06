@@ -175,7 +175,22 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     public static void cast(Activity activity, History history) {
-        start(activity, history.getSiteKey(), history.getVodId(), history.getVodName(), history.getVodPic(), null, false, true);
+        Intent intent = createIntent(activity, history.getSiteKey(), history.getVodId(), history.getVodName(), history.getVodPic());
+        intent.putExtra("history", history.toString());
+        intent.putExtra("cast", true);
+        activity.startActivity(intent);
+    }
+
+    public static void start(Activity activity, Vod item, View poster) {
+        start(activity, item.getSiteKey(), item, null, poster);
+    }
+
+    public static void start(Activity activity, String key, Vod item, String mark, View poster) {
+        Intent intent = createIntent(activity, key, item.getId(), item.getName(), item.getPic());
+        intent.putExtra("mark", TextUtils.isEmpty(item.getPlayId()) ? mark : null);
+        intent.putExtra("playId", item.getPlayId());
+        if (!item.getSourceCandidates().isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(item.getSourceCandidates()));
+        launch(activity, intent, poster);
     }
 
     public static void collect(Activity activity, String key, String id, String name, String pic) {
@@ -223,15 +238,24 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, boolean cast, List<Vod> sources, View poster) {
-        Intent intent = new Intent(activity, VideoActivity.class);
+        Intent intent = createIntent(activity, key, id, name, pic);
         intent.putExtra("collect", collect);
         intent.putExtra("cast", cast);
         intent.putExtra("mark", mark);
+        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
+        launch(activity, intent, poster);
+    }
+
+    private static Intent createIntent(Activity activity, String key, String id, String name, String pic) {
+        Intent intent = new Intent(activity, VideoActivity.class);
         intent.putExtra("name", name);
         intent.putExtra("pic", pic);
         intent.putExtra("key", key);
         intent.putExtra("id", id);
-        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
+        return intent;
+    }
+
+    private static void launch(Activity activity, Intent intent, View poster) {
         if (poster != null) {
             poster.setTransitionName(HERO_TRANSITION);
             activity.startActivity(intent, ActivityOptionsCompat.makeSceneTransitionAnimation(activity, poster, HERO_TRANSITION).toBundle());
@@ -274,6 +298,27 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     public String getHistoryKey() {
         return getKey().concat(AppDatabase.SYMBOL).concat(getId()).concat(AppDatabase.SYMBOL) + VodConfig.getCid();
+    }
+
+    @Override
+    public String getVodPlayId() {
+        return Objects.toString(getIntent().getStringExtra("playId"), "");
+    }
+
+    @Override
+    public void clearVodPlayId() {
+        getIntent().removeExtra("playId");
+    }
+
+    @Override
+    public History takeCastHistory() {
+        String history = getIntent().getStringExtra("history");
+        getIntent().removeExtra("history");
+        try {
+            return History.objectFrom(history);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private Site getSite() {
@@ -332,11 +377,15 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     protected void onNewIntent(Intent intent) {
         cancelPendingSeek();
         String oldId = getId();
+        String oldKey = getKey();
         super.onNewIntent(intent);
         String id = Objects.toString(intent.getStringExtra("id"), "");
-        if (TextUtils.isEmpty(id) || id.equals(oldId)) return;
+        boolean sameVideo = id.equals(oldId) && Objects.equals(intent.getStringExtra("key"), oldKey);
+        if (TextUtils.isEmpty(id) || (sameVideo && !intent.hasExtra("history") && TextUtils.isEmpty(intent.getStringExtra("playId")))) return;
         saveHistory(false);
-        getIntent().putExtras(intent);
+        if (sameVideo && !intent.hasExtra("sources") && getIntent().hasExtra("sources")) intent.putParcelableArrayListExtra("sources", getIntent().getParcelableArrayListExtra("sources"));
+        setIntent(intent);
+        preparePlaybackIntent();
         mVod.reset();
         checkId();
     }
@@ -574,7 +623,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
             @Override
             public void onSeekTo(long positionMs) {
-                if (controller() != null) controller().seekTo(positionMs);
+                cancelPendingSeek();
+                if (isNativePlaybackCurrent() && controller() != null) controller().seekTo(positionMs);
             }
 
             @Override
@@ -715,6 +765,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         getIntent().putExtra("key", item.getSiteKey());
         getIntent().putExtra("pic", item.getPic());
         getIntent().putExtra("id", item.getId());
+        getIntent().putExtra("playId", item.getPlayId());
+        if (!TextUtils.isEmpty(item.getPlayId())) getIntent().removeExtra("mark");
         mBinding.scroll.scrollTo(0, 0);
         mClock.setCallback(null);
         mVod.stopCommunitySkip();
@@ -766,7 +818,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void loadDanmaku(Result result, History history, Episode episode) {
-        VodPlaybackMedia.searchDanmaku(result, history, episode, player()::setDanmaku, player()::addDanmaku);
+        VodPlaybackMedia.searchDanmaku(result, history, episode, () -> isNativePlaybackCurrent() && mVod.isCurrentResult(result), player()::setDanmaku, player()::addDanmaku);
     }
 
     @Override
@@ -1945,7 +1997,18 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onReclaim() {
-        mVod.reclaim(player().getPosition());
+        mVod.reclaim(reclaimPositionMs());
+    }
+
+    @Override
+    protected void onPlaybackOwnershipLost() {
+        cancelPendingSeek();
+        mClock.setCallback(null);
+    }
+
+    @Override
+    protected void onPlaybackEnded() {
+        mVod.playbackEnded();
     }
 
     @Override
@@ -1964,7 +2027,6 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             case Player.STATE_ENDED:
                 if (mSpecs != null) mSpecs.dismiss();
                 hideProgress();
-                mVod.playbackEnded();
                 mClock.setCallback(null);
                 break;
         }
@@ -1973,6 +2035,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onPlayingChanged(boolean isPlaying) {
+        if (!isPlaying) cancelPendingSeek();
         if (isPlaying) {
             hideCenter();
             if (isJetStreamControlVisible()) hideControl();
@@ -2010,12 +2073,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
-        if (isRedirect()) return;
+        if (isRedirect() || !isBindingOwner()) return;
         if (event.getType() == RefreshEvent.Type.DETAIL) mVod.requestDetail();
         else if (event.getType() == RefreshEvent.Type.PLAYER) mVod.refresh();
         else if (event.getType() == RefreshEvent.Type.VOD) updateVod(event.getVod());
-        else if (event.getType() == RefreshEvent.Type.SUBTITLE) player().setSub(Sub.from(event.getPath()));
-        else if (event.getType() == RefreshEvent.Type.DANMAKU) player().setDanmaku(Danmaku.from(event.getPath()));
+        else if (event.getType() == RefreshEvent.Type.SUBTITLE && isNativePlaybackCurrent()) player().setSub(Sub.from(event.getPath()));
+        else if (event.getType() == RefreshEvent.Type.DANMAKU && isNativePlaybackCurrent()) player().setDanmaku(Danmaku.from(event.getPath()));
     }
 
     @Override
@@ -2055,12 +2118,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void onPaused() {
-        if (!isPlaybackReady()) return;
+        cancelPendingSeek();
+        if (!isNativePlaybackCurrent()) return;
         controller().pause();
     }
 
     private void onPlay() {
-        if (!isPlaybackReady()) return;
+        if (!isNativePlaybackCurrent()) return;
         if (mHistory != null && isEnded()) controller().seekTo(mHistory.getOpening());
         if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
@@ -2130,6 +2194,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onSeekEnd(long time) {
+        if (!isNativePlaybackCurrent()) return;
         if (mVod != null) mVod.onSeek();
         if (seekTo(time)) hideCenter();
         mKeyDown.reset();
@@ -2137,7 +2202,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public boolean canSeek() {
-        return isPlaybackReady() && player().canSeek();
+        return isNativePlaybackCurrent() && player().canSeek();
     }
 
     @Override
@@ -2151,6 +2216,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onMediaItemTransition(@Nullable androidx.media3.common.MediaItem item, int reason) {
+        if (!isNativePlaybackCurrent()) return;
         cancelPendingSeek();
     }
 
@@ -2259,14 +2325,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (mSpecs != null) mSpecs.dismiss();
         SyncplaySession.get().removeObserver(mSyncplayObserver);
         com.fongmi.android.tv.syncplay.SyncplaySession.get().detach(this);
-        if (mVod != null) mVod.clearPreload();
+        if (mVod != null && isBindingOwner()) mVod.clearPreload();
         if (mKeyDown != null) mKeyDown.reset();
         if (mVod != null) mVod.stopCommunitySkip();
         mRatingRequest++;
         MediaRatingHelper.cancel();
         mClock.release();
         saveHistory(true);
-        DanmakuApi.cancel();
+        if (isBindingOwner()) DanmakuApi.cancel();
         RefreshEvent.keep();
         App.removeCallbacks(restorePlaybackPanel);
         App.removeCallbacks(mR1, mR2, mR3, mR4);

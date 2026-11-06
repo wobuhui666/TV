@@ -89,6 +89,8 @@ public class Vod implements Parcelable, Diffable<Vod> {
     private String vodPlayFrom;
     @SerializedName("vod_play_url")
     private String vodPlayUrl;
+    @SerializedName("vod_play_id")
+    private String vodPlayId;
     @SerializedName("vod_tag")
     private String vodTag;
     @SerializedName("action")
@@ -128,6 +130,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         this.genreText = in.readString();
         this.vodPlayFrom = in.readString();
         this.vodPlayUrl = in.readString();
+        this.vodPlayId = in.readString();
         this.vodTag = in.readString();
         this.action = in.readString();
         this.land = (Integer) in.readValue(Integer.class.getClassLoader());
@@ -272,6 +275,14 @@ public class Vod implements Parcelable, Diffable<Vod> {
 
     public void setPlayUrl(String vodPlayUrl) {
         this.vodPlayUrl = vodPlayUrl;
+    }
+
+    public String getPlayId() {
+        return vodPlayId == null ? "" : vodPlayId;
+    }
+
+    public void setPlayId(String vodPlayId) {
+        this.vodPlayId = vodPlayId;
     }
 
     public String getTag() {
@@ -455,6 +466,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         dest.writeString(this.genreText);
         dest.writeString(this.vodPlayFrom);
         dest.writeString(this.vodPlayUrl);
+        dest.writeString(this.vodPlayId);
         dest.writeString(this.vodTag);
         dest.writeString(this.action);
         dest.writeValue(this.land);
@@ -474,7 +486,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
 
     @Override
     public boolean isSameContent(Vod other) {
-        return getName().equals(other.getName()) && getPic().equals(other.getPic()) && getRemarks().equals(other.getRemarks()) && Objects.equals(getSite(), other.getSite());
+        return getName().equals(other.getName()) && getPic().equals(other.getPic()) && getRemarks().equals(other.getRemarks()) && getPlayId().equals(other.getPlayId()) && Objects.equals(getSite(), other.getSite());
     }
 
     /** Home card diffing must not parse HTML descriptions or format nullable metadata. */

@@ -3,6 +3,7 @@ package com.fongmi.android.tv.source;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Vod;
+import com.github.catvod.utils.Trans;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -70,6 +71,35 @@ public final class SmartSourceSelector {
                 ambiguous = false;
             } else if (score == best && selected != null && !selected.getUrl().equals(episode.getUrl())) {
                 ambiguous = true;
+            }
+        }
+        return ambiguous ? null : selected;
+    }
+
+    /** Explicit list selections never fall back to a saved position or an unrelated episode. */
+    public static FlagSelection selectExplicitEpisode(Vod source, String value, String preferredFlag) {
+        if (source == null || value == null || value.isEmpty()) return null;
+        Flag preferred = source.getFlags().stream().filter(flag -> flag.getFlag().equals(preferredFlag)).findFirst().orElse(null);
+        if (preferred != null) for (Episode episode : preferred.getEpisodes()) {
+            if (episode.getUrl().equals(value)) return new FlagSelection(preferred, episode, 1000, preferred.getEpisodes().size());
+        }
+        for (Flag flag : source.getFlags()) for (Episode episode : flag.getEpisodes()) {
+            if (episode.getUrl().equals(value)) return new FlagSelection(flag, episode, 1000, flag.getEpisodes().size());
+        }
+
+        EpisodeTarget target = new EpisodeTarget(null, Trans.s2t(value));
+        Integer season = MediaMatcher.identity(source).getSeason();
+        FlagSelection selected = null;
+        boolean ambiguous = false;
+        for (Flag flag : source.getFlags()) for (Episode episode : flag.getEpisodes()) {
+            if (!target.matches(episode, season)) continue;
+            int score = target.score(episode);
+            if (selected == null || score > selected.score()) {
+                selected = new FlagSelection(flag, episode, score, flag.getEpisodes().size());
+                ambiguous = false;
+            } else if (score == selected.score()) {
+                if (!episode.getUrl().equals(selected.episode().getUrl())) ambiguous = true;
+                else if (flag == preferred) selected = new FlagSelection(flag, episode, score, flag.getEpisodes().size());
             }
         }
         return ambiguous ? null : selected;

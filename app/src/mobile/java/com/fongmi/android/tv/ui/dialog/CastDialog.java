@@ -18,6 +18,8 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.CastVideo;
+import com.fongmi.android.tv.bean.CastHistorySnapshot;
+import com.fongmi.android.tv.bean.CastRequestState;
 import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Device;
 import com.fongmi.android.tv.bean.History;
@@ -35,6 +37,7 @@ import com.github.catvod.utils.Path;
 import com.github.catvod.utils.Util;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -42,22 +45,26 @@ import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
 
-public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.OnClickListener, ScanTask.Listener, DLNACastManager.DeviceListener, Callback {
+public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.OnClickListener, ScanTask.Listener, DLNACastManager.DeviceListener {
 
-    private final FormBody.Builder body;
     private final OkHttpClient client;
+    private final String config;
+    private final String device;
 
     private DialogDeviceBinding binding;
     private DeviceAdapter adapter;
     private ScanTask scanTask;
     private CastVideo video;
+    private History history;
+    private CastRequestState requests;
+    private Object openedMedia;
+    private Call activeCall;
     private boolean fm;
 
     public CastDialog() {
         scanTask = new ScanTask(this);
-        body = new FormBody.Builder();
-        body.add("device", Device.get().toString());
-        body.add("config", Config.vod().toString());
+        device = Device.get().toString();
+        config = Config.vod().toString();
         client = OkHttp.client(Constant.TIMEOUT_SYNC);
     }
 
@@ -66,12 +73,7 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     }
 
     public CastDialog history(History history) {
-        String id = history.getVodId();
-        String fd = history.getVodId();
-        if (fd.startsWith("/")) fd = Server.get().getAddress() + "/file" + fd.replace(Path.rootPath(), "");
-        if (fd.startsWith("file")) fd = Server.get().getAddress() + "/" + fd.replace(Path.rootPath(), "").replace("://", "");
-        if (fd.contains("127.0.0.1")) fd = fd.replace("127.0.0.1", Util.getIp());
-        body.add("history", history.toString().replace(id, fd));
+        this.history = history == null ? null : history.copy();
         return this;
     }
 
@@ -97,6 +99,8 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     protected void initView() {
+        requests = new CastRequestState();
+        openedMedia = listener().getCastPlaybackIdentity();
         binding.scan.setVisibility(fm ? View.VISIBLE : View.GONE);
         DLNACastManager.get().init(requireActivity());
         DLNACastManager.get().setDeviceListener(this);
@@ -141,45 +145,97 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
         });
     }
 
-    private void onCasted() {
-        ((CastDialog.Listener) requireActivity()).onCasted();
+    private Listener listener() { return (Listener) requireActivity(); }
+
+    private boolean isCurrent(CastRequestState state, CastRequestState.Request request, History sentHistory) {
+        if (binding == null || !isAdded() || state != requests
+                || !state.isCurrent(request, listener().getCastPlaybackIdentity())) return false;
+        History current = listener().getCastHistory();
+        return sentHistory == null || current == null || sameHistory(sentHistory, current);
+    }
+
+    private static boolean sameHistory(History first, History second) {
+        return first.getCid() == second.getCid() && Objects.equals(first.getKey(), second.getKey())
+                && Objects.equals(first.getEpisodeUrl(), second.getEpisodeUrl());
+    }
+
+    private void onCasted(CastRequestState state, CastRequestState.Request request, History sentHistory) {
+        if (!isCurrent(state, request, sentHistory)) return;
+        listener().onCasted();
         dismiss();
+    }
+
+    private FormBody body(History snapshot) {
+        FormBody.Builder body = new FormBody.Builder().add("device", device).add("config", config);
+        if (snapshot != null) {
+            History transported = CastHistorySnapshot.transport(snapshot, this::shareUrl);
+            body.add("history", transported.toString());
+        }
+        return body.build();
+    }
+
+    private String shareUrl(String value) {
+        if (value.startsWith("/")) value = Server.get().getAddress() + "/file" + value.replace(Path.rootPath(), "");
+        if (value.startsWith("file")) value = Server.get().getAddress() + "/" + value.replace(Path.rootPath(), "").replace("://", "");
+        return value.replace("127.0.0.1", Util.getIp());
     }
 
     @Override
     public void onDeviceAdded(Device device) {
+        if (binding == null) return;
         binding.recycler.setVisibility(View.VISIBLE);
         adapter.sort(device);
     }
 
     @Override
     public void onDeviceRemoved(Device device) {
+        if (binding == null) return;
         adapter.remove(device);
     }
 
     @Override
     public void onFind(Device device) {
+        if (binding == null) return;
         binding.recycler.setVisibility(View.VISIBLE);
         adapter.sort(device);
     }
 
     @Override
-    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-        App.post(() -> Notify.show(e.getMessage()));
-    }
-
-    @Override
-    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-        try (Response res = response) {
-            if (res.body().string().equals("OK")) App.post(this::onCasted);
-            else App.post(() -> Notify.show(R.string.device_offline));
-        }
-    }
-
-    @Override
     public void onItemClick(Device item) {
-        if (item.isDLNA()) new DLNACast(video, this::onCasted).cast(item);
-        else OkHttp.newCall(client, item.getIp().concat("/action?do=cast"), body.build()).enqueue(this);
+        if (binding == null || !isAdded()) return;
+        Object identity = listener().getCastPlaybackIdentity();
+        History currentHistory = listener().getCastHistory();
+        CastVideo currentVideo = listener().getCastVideo();
+        if (currentVideo == null) currentVideo = video;
+        if (identity != openedMedia || currentVideo == null
+                || !Objects.equals(video.url(), currentVideo.url())
+                || (history != null && currentHistory != null && !sameHistory(history, currentHistory))) {
+            dismiss();
+            return;
+        }
+        History snapshot = CastHistorySnapshot.capture(currentHistory == null ? history : currentHistory, currentVideo.position());
+        if (activeCall != null) activeCall.cancel();
+        CastRequestState state = requests;
+        CastRequestState.Request request = state.begin(identity);
+        if (item.isDLNA()) new DLNACast(currentVideo, () -> onCasted(state, request, snapshot)).cast(item);
+        else {
+            activeCall = OkHttp.newCall(client, item.getIp().concat("/action?do=cast"), body(snapshot));
+            activeCall.enqueue(new Callback() {
+                @Override public void onFailure(@NonNull Call call, @NonNull IOException error) {
+                    App.post(() -> { if (isCurrent(state, request, snapshot)) Notify.show(R.string.device_offline); });
+                }
+                @Override public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    boolean success;
+                    try (Response res = response) {
+                        success = res.isSuccessful() && res.body() != null && res.body().string().equals("OK");
+                    }
+                    App.post(() -> {
+                        if (success) onCasted(state, request, snapshot);
+                        else if (isCurrent(state, request, snapshot)) Notify.show(R.string.device_offline);
+                    });
+                }
+            });
+        }
     }
 
     @Override
@@ -189,6 +245,9 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
 
     @Override
     public void onDestroyView() {
+        if (requests != null) requests.close();
+        if (activeCall != null) activeCall.cancel();
+        binding = null;
         super.onDestroyView();
         DLNACastManager.get().setDeviceListener(null);
         DLNACastManager.get().release(requireActivity());
@@ -202,5 +261,8 @@ public class CastDialog extends BaseBottomSheetDialog implements DeviceAdapter.O
     public interface Listener {
 
         void onCasted();
+        default History getCastHistory() { return null; }
+        default CastVideo getCastVideo() { return null; }
+        default Object getCastPlaybackIdentity() { return null; }
     }
 }

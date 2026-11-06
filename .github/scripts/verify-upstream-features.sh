@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Run after verify-tv-ui.sh has installed the isolated preview and instrumentation APKs.
+# Run after the isolated preview and instrumentation APKs have been installed.
 set -euo pipefail
 classes="${1:?Pass the comma-separated regression test classes}"
-out=artifacts/upstream-features
+out="${2:-artifacts/upstream-features}"
+expected_counts="${3:-}"
+native_ui_evidence="${UPSTREAM_NATIVE_UI_EVIDENCE:-false}"
 mkdir -p "$out"
 read_package() {
     python3 - "$1" <<'PY'
@@ -15,7 +17,7 @@ PY
 pkg=$(read_package app/build/outputs/apk/leanbackArm64_v8a/preview/output-metadata.json)
 test_pkg=$(read_package app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview/output-metadata.json)
 collect() {
-    for directory in upstream-verification spider-dialog-verification folder-filter-verification; do
+    for directory in upstream-verification spider-dialog-verification folder-filter-verification native-usability-evidence; do
         adb pull "/sdcard/Android/data/$pkg/files/$directory" "$out/" >/dev/null 2>&1 || true
     done
     adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
@@ -29,7 +31,8 @@ for suite in "${suites[@]}"; do
     adb logcat -c
     # A crash in one feature must not prevent the other features from producing evidence.
     # The final summary still fails the job unless every instrumentation invocation passes.
-    if adb shell am instrument -w -r -e class "$suite" "$test_pkg/androidx.test.runner.AndroidJUnitRunner" | tee "$out/$suite.txt"; then
+    if timeout 360s adb shell am instrument -w -r -e native_ui_evidence "$native_ui_evidence" -e class "$suite" \
+        "$test_pkg/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "$out/$suite.txt"; then
         printf '0' > "$out/$suite.status"
     else
         printf '1' > "$out/$suite.status"
@@ -37,18 +40,27 @@ for suite in "${suites[@]}"; do
     adb logcat -b all -d -v threadtime > "$out/$suite-logcat.txt" 2>&1 || true
     adb exec-out screencap -p > "$out/$suite-screen.png" 2>/dev/null || true
 done
-python3 - "$out" "$classes" <<'PY'
+python3 - "$out" "$classes" "$expected_counts" <<'PY'
 from pathlib import Path
 import json, os, re, sys
 root = Path(sys.argv[1])
 results = []
 output = []
-for name in sys.argv[2].split(','):
-    content = (root / (name + '.txt')).read_text()
+names = sys.argv[2].split(',')
+expected = [int(value) for value in sys.argv[3].split(',')] if sys.argv[3] else []
+if expected and (len(expected) != len(names) or any(value <= 0 for value in expected)):
+    raise SystemExit('Expected test counts must match the regression suites')
+for index, name in enumerate(names):
+    content = (root / (name + '.txt')).read_text(errors='replace')
     output.extend([name, content])
     match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', content, re.M)
+    tests = int(match[1]) if match else None
     passed = match is not None and (root / (name + '.status')).read_text() == '0'
-    results.append({'class': name, 'passed': passed, 'tests': int(match[1]) if match else None})
+    result = {'class': name, 'passed': passed, 'tests': tests}
+    if expected:
+        result['expectedTests'] = expected[index]
+        result['passed'] = passed and tests == expected[index]
+    results.append(result)
 passed = all(item['passed'] for item in results)
 summary = {'headSha': os.environ.get('GITHUB_SHA'), 'passed': passed, 'suites': results,
            'passedTests': sum(item['tests'] or 0 for item in results if item['passed'])}

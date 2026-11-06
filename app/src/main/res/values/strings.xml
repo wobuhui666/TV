@@ -256,6 +256,7 @@
     <string name="error_play_parse">Unable to parse url</string>
     <string name="error_play_drm">This device does not support the required DRM scheme</string>
     <string name="error_play_url">Unable to load url</string>
+    <string name="error_episode_not_found">Cannot find the requested episode. Select another episode.</string>
     <string name="error_play_flag">No flag data</string>
     <string name="error_play_timeout">Timed out</string>
     <string name="error_play_timeout_mpv">Exo timed out; retrying with the MPV engine</string>

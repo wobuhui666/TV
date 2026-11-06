@@ -157,7 +157,21 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     public static void cast(Activity activity, History history) {
-        start(activity, history.getSiteKey(), history.getVodId(), history.getVodName(), history.getVodPic());
+        Intent intent = createIntent(activity, history.getSiteKey(), history.getVodId(), history.getVodName(), history.getVodPic());
+        intent.putExtra("history", history.toString());
+        activity.startActivity(intent);
+    }
+
+    public static void start(Activity activity, Vod item) {
+        start(activity, item.getSiteKey(), item, null);
+    }
+
+    public static void start(Activity activity, String key, Vod item, String mark) {
+        Intent intent = createIntent(activity, key, item.getId(), item.getName(), item.getPic());
+        intent.putExtra("mark", TextUtils.isEmpty(item.getPlayId()) ? mark : null);
+        intent.putExtra("playId", item.getPlayId());
+        if (!item.getSourceCandidates().isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(item.getSourceCandidates()));
+        activity.startActivity(intent);
     }
 
     public static void collect(Activity activity, String key, String id, String name, String pic) {
@@ -189,15 +203,20 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     public static void start(Activity activity, String key, String id, String name, String pic, String mark, boolean collect, List<Vod> sources) {
-        Intent intent = new Intent(activity, VideoActivity.class);
+        Intent intent = createIntent(activity, key, id, name, pic);
         intent.putExtra("collect", collect);
         intent.putExtra("mark", mark);
+        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
+        activity.startActivity(intent);
+    }
+
+    private static Intent createIntent(Activity activity, String key, String id, String name, String pic) {
+        Intent intent = new Intent(activity, VideoActivity.class);
         intent.putExtra("name", name);
         intent.putExtra("pic", pic);
         intent.putExtra("key", key);
         intent.putExtra("id", id);
-        if (sources != null && !sources.isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(sources));
-        activity.startActivity(intent);
+        return intent;
     }
 
     private String getName() {
@@ -229,6 +248,27 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     public String getHistoryKey() {
         return getKey().concat(AppDatabase.SYMBOL).concat(getId()).concat(AppDatabase.SYMBOL) + VodConfig.getCid();
+    }
+
+    @Override
+    public String getVodPlayId() {
+        return Objects.toString(getIntent().getStringExtra("playId"), "");
+    }
+
+    @Override
+    public void clearVodPlayId() {
+        getIntent().removeExtra("playId");
+    }
+
+    @Override
+    public History takeCastHistory() {
+        String history = getIntent().getStringExtra("history");
+        getIntent().removeExtra("history");
+        try {
+            return History.objectFrom(history);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private Site getSite() {
@@ -295,12 +335,16 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     protected void onNewIntent(Intent intent) {
         String oldId = getId();
+        String oldKey = getKey();
         super.onNewIntent(intent);
         String id = Objects.toString(intent.getStringExtra("id"), "");
-        if (TextUtils.isEmpty(id) || id.equals(oldId)) return;
+        boolean sameVideo = id.equals(oldId) && Objects.equals(intent.getStringExtra("key"), oldKey);
+        if (TextUtils.isEmpty(id) || (sameVideo && !intent.hasExtra("history") && TextUtils.isEmpty(intent.getStringExtra("playId")))) return;
         mBinding.swipeLayout.setRefreshing(true);
         saveHistory(false);
-        getIntent().putExtras(intent);
+        if (sameVideo && !intent.hasExtra("sources") && getIntent().hasExtra("sources")) intent.putParcelableArrayListExtra("sources", getIntent().getParcelableArrayListExtra("sources"));
+        setIntent(intent);
+        preparePlaybackIntent();
         mVod.reset();
         setOrient();
         checkId();
@@ -411,11 +455,13 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         mBinding.video.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> mPiP.update(this, view));
     }
 
-    private void setVideoView(boolean isInPictureInPictureMode) {
-        if (isInPictureInPictureMode) {
+    private void setVideoView(boolean expanded) {
+        if (mAnimator.isRunning()) mAnimator.cancel();
+        if (expanded) {
             mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
         } else {
             mBinding.video.setLayoutParams(mFrameParams);
+            if (isNativePlaybackCurrent()) changeHeight(player().getPlayer().getVideoSize());
         }
     }
 
@@ -556,6 +602,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         getIntent().putExtra("key", item.getSiteKey());
         getIntent().putExtra("pic", item.getPic());
         getIntent().putExtra("id", item.getId());
+        getIntent().putExtra("playId", item.getPlayId());
+        if (!TextUtils.isEmpty(item.getPlayId())) getIntent().removeExtra("mark");
         mBinding.swipeLayout.setRefreshing(true);
         mBinding.swipeLayout.setEnabled(false);
         mBinding.scroll.scrollTo(0, 0);
@@ -605,7 +653,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void loadDanmaku(Result result, History history, Episode episode) {
-        VodPlaybackMedia.searchDanmaku(result, history, episode, player()::setDanmaku, player()::addDanmaku);
+        VodPlaybackMedia.searchDanmaku(result, history, episode, () -> isNativePlaybackCurrent() && mVod.isCurrentResult(result), player()::setDanmaku, player()::addDanmaku);
     }
 
     @Override
@@ -1096,7 +1144,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         if (isFullscreen()) return;
         setFullscreen(true);
         if (isLand() && !player().isPortrait()) setTransition();
-        mBinding.video.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
+        setVideoView(true);
         setRequestedOrientation(PlaybackOrientation.getEnterFullscreenOrientation(player().isPortrait()));
         mBinding.control.title.setVisibility(View.VISIBLE);
         setRotate(player().isPortrait());
@@ -1112,7 +1160,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         setRequestedOrientation(PlaybackOrientation.getExitFullscreenOrientation(isPort()));
         mBinding.episode.postDelayed(() -> mBinding.episode.scrollToPosition(mEpisodeAdapter.getPosition()), 100);
         mBinding.control.title.setVisibility(View.INVISIBLE);
-        mBinding.video.setLayoutParams(mFrameParams);
+        setVideoView(false);
         mKeyDown.resetScale();
         App.post(mR3, 2000);
         setRotate(false);
@@ -1366,7 +1414,17 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     protected void onReclaim() {
-        mVod.reclaim(player().getPosition());
+        mVod.reclaim(reclaimPositionMs());
+    }
+
+    @Override
+    protected void onPlaybackOwnershipLost() {
+        mClock.setCallback(null);
+    }
+
+    @Override
+    protected void onPlaybackEnded() {
+        mVod.playbackEnded();
     }
 
     @Override
@@ -1385,7 +1443,6 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
             case Player.STATE_ENDED:
                 hideProgress();
                 setR1Callback();
-                mVod.playbackEnded();
                 updatePlayControl(false);
                 mClock.setCallback(null);
                 break;
@@ -1404,8 +1461,8 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     protected void onSizeChanged(VideoSize size) {
-        changeHeight();
-        checkOrientation();
+        changeHeight(size);
+        checkOrientation(size);
     }
 
     @Override
@@ -1431,12 +1488,12 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onRefreshEvent(RefreshEvent event) {
-        if (isRedirect()) return;
+        if (isRedirect() || !isBindingOwner()) return;
         if (event.getType() == RefreshEvent.Type.DETAIL) mVod.requestDetail();
         else if (event.getType() == RefreshEvent.Type.PLAYER) mVod.refresh();
         else if (event.getType() == RefreshEvent.Type.VOD) updateVod(event.getVod());
-        else if (event.getType() == RefreshEvent.Type.SUBTITLE) player().setSub(Sub.from(event.getPath()));
-        else if (event.getType() == RefreshEvent.Type.DANMAKU) player().setDanmaku(Danmaku.from(event.getPath()));
+        else if (event.getType() == RefreshEvent.Type.SUBTITLE && isNativePlaybackCurrent()) player().setSub(Sub.from(event.getPath()));
+        else if (event.getType() == RefreshEvent.Type.DANMAKU && isNativePlaybackCurrent()) player().setDanmaku(Danmaku.from(event.getPath()));
     }
 
     @Override
@@ -1444,29 +1501,24 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         return mVod == null ? C.TIME_UNSET : mVod.startPositionMs();
     }
 
-    private void checkOrientation() {
-        if (isFullscreen() && !isRotate() && player().isPortrait()) {
+    private void checkOrientation(VideoSize size) {
+        if (isFullscreen() && !isRotate() && size.height > size.width) {
             setRequestedOrientation(PlaybackOrientation.getPortraitVideoSizeOrientation());
             setRotate(true);
-        } else if (isFullscreen() && isRotate() && player().isLandscape()) {
+        } else if (isFullscreen() && isRotate() && size.width > size.height) {
             setRequestedOrientation(PlaybackOrientation.getLandscapeVideoSizeOrientation());
             setRotate(false);
         }
     }
 
-    private void changeHeight() {
+    private void changeHeight(VideoSize size) {
         if (isLand() || isFullscreen() || isInPictureInPictureMode()) return;
-        int videoWidth = player().getVideoWidth();
-        int videoHeight = player().getVideoHeight();
-        if (videoWidth == 0 || videoHeight == 0) return;
-        int viewWidth = ResUtil.getScreenWidth();
-        int minHeight = ResUtil.dp2px(150);
-        int maxHeight = ResUtil.getScreenHeight() / 2;
-        int calculated = (int) (viewWidth * ((float) videoHeight / videoWidth));
-        int finalHeight = Math.clamp(calculated, minHeight, Math.max(minHeight, maxHeight));
-        if (finalHeight == mBinding.video.getHeight()) return;
+        int finalHeight = PlaybackOrientation.getVideoFrameHeight(size.width, size.height, size.pixelWidthHeightRatio,
+                ResUtil.getScreenWidth(), ResUtil.getScreenHeight(), ResUtil.dp2px(150));
+        if (finalHeight == 0) return;
         if (mAnimator.isRunning()) mAnimator.cancel();
-        mAnimator.setIntValues(mBinding.video.getHeight(), finalHeight);
+        if (finalHeight == mFrameParams.height) return;
+        mAnimator.setIntValues(mFrameParams.height, finalHeight);
         mAnimator.setDuration(300);
         mAnimator.start();
     }
@@ -1488,10 +1540,12 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     private void onPaused() {
+        if (!isNativePlaybackCurrent()) return;
         controller().pause();
     }
 
     private void onPlay() {
+        if (!isNativePlaybackCurrent()) return;
         if (mHistory != null && isEnded()) controller().seekTo(mHistory.getOpening());
         if (!player().isEmpty() && isIdle()) controller().prepare();
         controller().play();
@@ -1533,7 +1587,23 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
 
     @Override
     public void onCasted() {
-        player().stop();
+        if (isOwner() && !isStop()) player().stop();
+    }
+
+    @Override
+    public History getCastHistory() {
+        return isOwner() && !isStop() ? mHistory : null;
+    }
+
+    @Override
+    public CastVideo getCastVideo() {
+        if (!isOwner() || isStop() || player().isEmpty()) return null;
+        return new CastVideo(mBinding.name.getText().toString(), player().getUrl(), player().getPosition(), player().getHeaders());
+    }
+
+    @Override
+    public Object getCastPlaybackIdentity() {
+        return isOwner() && !isStop() ? player().getPlayer().getCurrentMediaItem() : null;
     }
 
     @Override
@@ -1716,11 +1786,11 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     protected void onDestroy() {
         if (mVod != null) mVod.stopCommunitySkip();
-        if (mVod != null) mVod.clearPreload();
+        if (mVod != null && isBindingOwner()) mVod.clearPreload();
         mClock.release();
         saveHistory(true);
         Timer.get().reset();
-        DanmakuApi.cancel();
+        if (isBindingOwner()) DanmakuApi.cancel();
         RefreshEvent.keep();
         App.removeCallbacks(mR1, mR2, mR3, mR4);
         super.onDestroy();

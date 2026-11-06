@@ -91,8 +91,18 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void replaceBinding(Runnable callback) {
-        if (onNewBinding != null) onNewBinding.run();
+        if (onNewBinding == callback) return;
+        Runnable previous = onNewBinding;
         onNewBinding = callback;
+        if (previous != null) previous.run();
+    }
+
+    public boolean isBindingOwner(Runnable callback) {
+        return onNewBinding == callback;
+    }
+
+    public void releaseBinding(Runnable callback) {
+        if (isBindingOwner(callback)) onNewBinding = null;
     }
 
     public PlayerManager player() {
@@ -181,10 +191,17 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     @Override
+    public void onRebind(Intent intent) {
+        if (isBrowserBind(intent)) clients.bind();
+        super.onRebind(intent);
+    }
+
+    @Override
     public boolean onUnbind(Intent intent) {
         if (isBrowserBind(intent)) releaseBrowser();
         if (isLocalBind(intent)) tryShutdown();
-        return super.onUnbind(intent);
+        boolean rebind = super.onUnbind(intent);
+        return isBrowserBind(intent) || rebind;
     }
 
     @Override
@@ -375,7 +392,7 @@ public class PlaybackService extends MediaLibraryService implements MediaLibrary
     }
 
     public void addPlayerCallback(PlayerCallback callback) {
-        playerCallbacks.add(callback);
+        if (!playerCallbacks.contains(callback)) playerCallbacks.add(callback);
     }
 
     public void removePlayerCallback(PlayerCallback callback) {

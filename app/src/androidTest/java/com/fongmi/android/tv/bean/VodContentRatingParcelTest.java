@@ -24,9 +24,11 @@ public class VodContentRatingParcelTest {
         vod.setGenreText("Drama");
         vod.setPlayFrom("source");
         vod.setPlayUrl("Episode$https://example.com/video.mp4");
+        vod.setPlayId("episode-04?token=a&x=1");
         Vod candidate = new Vod();
         candidate.setId("alternate");
         candidate.setContentRating("TV-14");
+        candidate.setPlayId("alternate-episode");
         vod.setSourceCandidates(Collections.singletonList(candidate));
 
         Vod restored = roundTrip(vod);
@@ -38,14 +40,17 @@ public class VodContentRatingParcelTest {
         assertEquals("Drama", restored.getGenreText());
         assertEquals("source", restored.getPlayFrom());
         assertEquals("Episode$https://example.com/video.mp4", restored.getPlayUrl());
+        assertEquals("episode-04?token=a&x=1", restored.getPlayId());
         assertEquals(1, restored.getSourceCandidates().size());
         assertEquals("alternate", restored.getSourceCandidates().get(0).getId());
         assertEquals("TV-14", restored.getSourceCandidates().get(0).getContentRating());
+        assertEquals("alternate-episode", restored.getSourceCandidates().get(0).getPlayId());
     }
 
     @Test
     public void shouldPreserveAbsentCertificationAcrossParcel() {
         assertEquals("", roundTrip(new Vod()).getContentRating());
+        assertEquals("", roundTrip(new Vod()).getPlayId());
     }
 
     private Vod roundTrip(Vod vod) {
