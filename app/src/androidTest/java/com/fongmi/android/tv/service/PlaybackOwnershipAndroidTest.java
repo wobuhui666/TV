@@ -3,6 +3,7 @@ package com.fongmi.android.tv.service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Looper;
+import android.service.media.MediaBrowserService;
 import android.view.ContextThemeWrapper;
 
 import androidx.lifecycle.Lifecycle;
@@ -15,7 +16,6 @@ import androidx.media3.common.SimpleBasePlayer;
 import androidx.media3.common.VideoSize;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.MediaSession;
-import androidx.media3.session.MediaLibraryService;
 import androidx.media3.ui.PlayerSeekView;
 import androidx.media3.ui.PlayerView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -100,7 +100,7 @@ public class PlaybackOwnershipAndroidTest {
     @Test public void shouldRestoreBrowserTrackingAcrossUnbindAndRebind() {
         main(() -> {
             PlaybackService service = new PlaybackService();
-            Intent browser = new Intent(MediaLibraryService.ACTION_MEDIA_BROWSER_SERVICE);
+            Intent browser = new Intent(MediaBrowserService.SERVICE_INTERFACE);
             service.onRebind(browser);
             assertTrue(service.hasMediaClient());
             assertTrue(service.onUnbind(browser));
@@ -118,7 +118,7 @@ public class PlaybackOwnershipAndroidTest {
             service.onRebind(local);
             assertFalse(service.hasMediaClient());
             assertFalse(service.onUnbind(local));
-            service.onRebind(new Intent(MediaLibraryService.ACTION_MEDIA_BROWSER_SERVICE));
+            service.onRebind(new Intent(MediaBrowserService.SERVICE_INTERFACE));
             service.onUnbind(local);
             assertTrue(service.hasMediaClient());
         });
