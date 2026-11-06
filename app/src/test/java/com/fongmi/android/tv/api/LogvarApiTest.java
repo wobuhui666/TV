@@ -6,8 +6,17 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import okhttp3.OkHttpClient;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class LogvarApiTest {
@@ -33,15 +42,15 @@ public class LogvarApiTest {
     public void shouldBuildMatchFileNameFromEpisodeTitle() {
         assertEquals("庆余年 第01集", LogvarApi.buildMatchFileName("庆余年", "第01集"));
         assertEquals("庆余年 EP12", LogvarApi.buildMatchFileName("庆余年", "EP12"));
-        assertEquals("庆余年 第二季 S02E03", LogvarApi.buildMatchFileName("庆余年 第二季", "第03集"));
+        assertEquals("庆余年 S02E03", LogvarApi.buildMatchFileName("庆余年 第二季", "第03集"));
         assertEquals("庆余年 预告", LogvarApi.buildMatchFileName("庆余年", "预告"));
     }
 
     @Test
     public void shouldNormalizeOnlySafeKnownSeasonEpisodes() {
         assertEquals("Show S02E03", LogvarApi.buildMatchFileName("Show", "S02E03"));
-        assertEquals("Show 第二季 S02E12", LogvarApi.buildMatchFileName("Show 第二季", "第十二集"));
-        assertEquals("Show 第二季 S02E12", LogvarApi.buildMatchFileName("Show 第二季", "ＥＰ１２"));
+        assertEquals("Show S02E12", LogvarApi.buildMatchFileName("Show 第二季", "第十二集"));
+        assertEquals("Show S02E12", LogvarApi.buildMatchFileName("Show 第二季", "ＥＰ１２"));
         assertEquals("Show S00E01", LogvarApi.buildMatchFileName("Show", "S00E01"));
         assertEquals("Show S01 S02E03", LogvarApi.buildMatchFileName("Show S01", "S02E03"));
     }
@@ -111,7 +120,7 @@ public class LogvarApiTest {
         assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show 第二季", "第3集", 1), "Show 第二季", "第3集").size());
         assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show", "S02E03", 1), "Show", "S02E03").size());
         assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "S01E03", 1), "Show", "S02E03").isEmpty());
-        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "第3集", 1), "Show", "S02E03").isEmpty());
+        assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show", "第3集", 1), "Show", "S02E03").size());
         assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Another Show", "第3集", 1), "Show", "第3集").isEmpty());
         assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show3", "第3集", 1), "Show2", "第3集").isEmpty());
         assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show", "S02E03", 1), "Show S01", "S02E03").isEmpty());
@@ -138,6 +147,106 @@ public class LogvarApiTest {
     }
 
     @Test
+    public void shouldAcceptUniqueDecoratedSeasonResultForUnseasonedInput() {
+        String json = episodes("Show 第二季(2024)【动漫】from bilibili", "【bilibili1】 03", 31);
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", json, "Show", "第3集").size());
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show(2024)【电视剧】from tencent", "【qq】 第03集", 32), "Show", "EP03").size());
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("【bilibili】Show(N/A)【动漫】from bilibili", "【bilibili1】 03", 33), "Show", "3").size());
+    }
+
+    @Test
+    public void shouldRequireManualChoiceForMultipleSeasonsOrReleaseYears() {
+        String seasons = episodes("Show 第一季(2023)【动漫】from bilibili", "【bilibili1】 03", 31,
+                "Show 第二季(2024)【动漫】from bilibili", "【bilibili1】 03", 32);
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", seasons, "Show", "第3集").isEmpty());
+        assertEquals(2, LogvarApi.parseEpisodes("http://host", seasons).size());
+        String years = episodes("Show(2023)【电视剧】from tencent", "【qq】 第3集", 31,
+                "Show(2024)【电视剧】from tencent", "【qq】 第3集", 32);
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", years, "Show", "第3集").isEmpty());
+    }
+
+    @Test
+    public void shouldRejectKnownReleaseYearConflictsEvenForOneCandidate() {
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show(2025)【电视剧】from tencent", "【qq】 第3集", 31), "Show(2024)", "第3集").isEmpty());
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show(2024)【电视剧】from tencent", "【qq】 第3集", 31), "Show(2024)", "第3集").size());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show(2025)【电视剧】from tencent", "【qq】 第3集", 31), "Show(2024)", "S01E03").isEmpty());
+    }
+
+    @Test
+    public void shouldPreserveRealBracketedTitlesAndTheirNumbers() {
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("【我推的孩子】(2024)【动漫】from bilibili", "【bilibili1】 第3集", 31), "【我推的孩子】", "第3集").size());
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show3(2024)【动漫】from bilibili", "【bilibili1】 第3集", 31), "Show2", "第3集").isEmpty());
+    }
+
+    @Test
+    public void shouldCheckEpisodeLabelsInsteadOfServerListIndices() {
+        String wrongNumber = "{\"success\":true,\"animes\":[{\"animeTitle\":\"Show(2024)【动漫】from bilibili\",\"episodes\":[{\"episodeId\":31,\"episodeNumber\":3,\"episodeTitle\":\"【bilibili1】 第2集\"}]}]}";
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", wrongNumber, "Show", "第3集").isEmpty());
+        for (String title : new String[]{"【qq】 风暴来袭", "【qq】 第3集上", "【qq】 03预告", "【qq】 特典 第3集"}) {
+            assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show(2024)【动漫】from bilibili", title, 31), "Show", "第3集").isEmpty());
+        }
+    }
+
+    @Test
+    public void shouldAcceptConfirmedMatchWithUndecoratedFirstSeasonTitle() {
+        assertEquals(1, LogvarApi.parseAutoMatch("http://host", matches("Show(2024)【电视剧】from tencent", "【qq】 第3集", 31), "Show", "S01E03").size());
+        assertTrue(LogvarApi.parseAutoMatch("http://host", matches("Show 第二季(2024)【电视剧】from tencent", "【qq】 第3集", 31), "Show", "S01E03").isEmpty());
+    }
+
+    @Test
+    public void shouldRouteUnseasonedEpisodesToSearchWithoutInventingSeasonOne() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody(episodes("Show 第二季(2024)【动漫】from bilibili", "【bilibili1】 03", 31)));
+            assertEquals(1, auto(server, "Show", "第3集", "", true).size());
+            RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+            assertEquals("GET", request.getMethod());
+            assertEquals("/api/v2/search/episodes", request.getRequestUrl().encodedPath());
+            assertEquals("Show", request.getRequestUrl().queryParameter("anime"));
+            assertEquals("3", request.getRequestUrl().queryParameter("episode"));
+            assertNull(request.getRequestUrl().queryParameter("season"));
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldPostKnownSeasonBeforePreservedReleaseMetadata() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody(matches("Show(2024)【电视剧】from tencent", "【qq】 第3集", 31)));
+            String filename = "[ANi] Show - 03 [1080p][WEB-DL].mkv";
+            assertEquals(1, auto(server, "Show 第二季(2024)", filename, "", true).size());
+            RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+            assertEquals("POST", request.getMethod());
+            assertEquals("/api/v2/match", request.getRequestUrl().encodedPath());
+            String body = request.getBody().readUtf8();
+            assertTrue(body.contains("Show S02E03 (2024)"));
+            assertTrue(body.contains(filename));
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldTryVideoUrlBeforeUnseasonedEpisodeSearch() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("<i/>"));
+            server.enqueue(new MockResponse().setBody(episodes("Show(2024)【电视剧】from tencent", "【qq】 第3集", 31)));
+            assertEquals(1, auto(server, "Show", "第3集", "https://example.invalid/video/3", true).size());
+            assertEquals("/api/v2/comment", server.takeRequest(1, TimeUnit.SECONDS).getRequestUrl().encodedPath());
+            assertEquals("/api/v2/search/episodes", server.takeRequest(1, TimeUnit.SECONDS).getRequestUrl().encodedPath());
+            assertEquals(2, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldAvoidGuessedEpisodeRequestsAfterGeneratedUrlFails() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setResponseCode(503));
+            assertTrue(auto(server, "Show", "03", "https://example.invalid/video/3", false).isEmpty());
+            assertEquals("/api/v2/comment", server.takeRequest(1, TimeUnit.SECONDS).getRequestUrl().encodedPath());
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
     public void shouldTreatXmlWithoutItemsAsEmpty() {
         assertTrue(LogvarApi.hasDanmakuXml("<i><d p=\"1,1,25,16777215,0,0,0,1\">test</d></i>"));
         assertEquals(0, LogvarApi.parseMatch("http://host", "{\"success\":true,\"matches\":[]}").size());
@@ -158,5 +267,34 @@ public class LogvarApiTest {
                     .append("\",\"episodeId\":").append(fields[i + 2]).append('}');
         }
         return json.append("]}").toString();
+    }
+
+    private String episodes(Object... fields) {
+        StringBuilder json = new StringBuilder("{\"success\":true,\"animes\":[");
+        for (int i = 0; i < fields.length; i += 3) {
+            if (i > 0) json.append(',');
+            json.append("{\"animeTitle\":\"").append(fields[i]).append("\",\"episodes\":[{\"episodeTitle\":\"").append(fields[i + 1])
+                    .append("\",\"episodeId\":").append(fields[i + 2]).append("}]}");
+        }
+        return json.append("]}").toString();
+    }
+
+    private List<Danmaku> auto(MockWebServer server, String name, String episode, String videoUrl, boolean reliable) throws Exception {
+        OkHttpClient client = new OkHttpClient();
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicReference<List<Danmaku>> items = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        try {
+            LogvarApi.searchAuto(server.url("/").toString(), name, episode, videoUrl, reliable, client::newCall, Runnable::run, new LogvarApi.Listener() {
+                @Override public void onSuccess(List<Danmaku> found) { items.set(found); done.countDown(); }
+                @Override public void onError(Exception failure) { error.set(failure); done.countDown(); }
+            });
+            assertTrue("Request did not finish", done.await(3, TimeUnit.SECONDS));
+            assertNull(error.get());
+            return items.get();
+        } finally {
+            client.dispatcher().executorService().shutdownNow();
+            client.connectionPool().evictAll();
+        }
     }
 }

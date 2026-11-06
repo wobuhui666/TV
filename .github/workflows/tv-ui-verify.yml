@@ -151,7 +151,7 @@ jobs:
           PY
             adb shell wm size 1920x1080
             adb shell wm density 320
-            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest,com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest
+            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest,com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest,com.fongmi.android.tv.api.LogvarMatchingAndroidTest
           elif [ "$TV_LIVE_HOME" = 'true' ]; then
             bash .github/scripts/verify-live-home.sh
           elif [ "$TV_COMPACT_HOME" = 'true' ]; then
