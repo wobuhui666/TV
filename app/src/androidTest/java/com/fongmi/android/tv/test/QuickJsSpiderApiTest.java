@@ -17,11 +17,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +46,8 @@ public final class QuickJsSpiderApiTest {
 
     @Test
     public void newAndLegacyInterfacesRunThroughRealQuickJs() throws Exception {
-        assertEquals("Use the isolated test application", "com.fongmi.android.tv.sourceprobe", target.getPackageName());
+        assertTrue("Use the isolated test application", target.getPackageName().equals("com.fongmi.android.tv.sourceprobe")
+                || target.getPackageName().equals("com.fongmi.android.tv.preview"));
         boolean logging = QuickLog.isEnabled();
         QuickLog.putEnabled(false);
         Fixture server = new Fixture();
@@ -73,7 +75,7 @@ public final class QuickJsSpiderApiTest {
             for (String action : List.of("http", "cache", "stale", "refresh", "session", "download", "local", "helpers")) {
                 assertTrue(json(step("action-" + action, () -> one.action(action))).getBoolean("ok"));
             }
-            assertArrayEquals(new byte[]{0, 127, -128, -1}, Files.readAllBytes(new File(target.getCacheDir(), "quickjs-fixture.bin").toPath()));
+            assertArrayEquals(new byte[]{0, 127, -128, -1}, read(new FileInputStream(new File(target.getCacheDir(), "quickjs-fixture.bin"))));
             Object[] binary = step("proxy-byte-array", () -> one.proxy(Map.of("mode", "bytes")));
             assertEquals(200, binary[0]);
             assertArrayEquals(new byte[]{0, 127, -128, -1}, read(binary[2]));
@@ -140,7 +142,11 @@ public final class QuickJsSpiderApiTest {
     private JSONObject json(String value) throws Exception { return new JSONObject(value); }
 
     private byte[] read(Object body) throws Exception {
-        try (InputStream input = (InputStream) body) { return input.readAllBytes(); }
+        try (InputStream input = (InputStream) body; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            for (int count; (count = input.read(buffer)) != -1; ) output.write(buffer, 0, count);
+            return output.toByteArray();
+        }
     }
 
     private void writeReport() throws Exception {

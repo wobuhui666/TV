@@ -4,6 +4,9 @@
 
 ## 接口行为
 
+Java `Spider.wasm()` 和 QuickJS 的全局／实例 `wasm` 提供独立的 WASM 解释器接口，
+保留原有 SDK 与 QuickJS JNI；详细调用、取消和资源范围见 [WASM 说明](spider-wasm.md)。
+
 | 类型 | 新接口 | 旧接口兼容措施 |
 | --- | --- | --- |
 | Java JAR | 在 `init` 前注入 `net`、`local`，提供分页、结果、加密、Activity 和代理辅助方法 | 保留 `Spider.client()`、`safeDns()` 和所有旧入口；旧 JAR 自带的 Result/Vod/Crypto 等辅助类优先由该 JAR 加载 |

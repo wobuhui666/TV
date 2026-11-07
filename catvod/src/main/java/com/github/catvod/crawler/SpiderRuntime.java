@@ -29,6 +29,7 @@ public final class SpiderRuntime {
     }
 
     public static void close(Spider spider) {
+        spider.closeWasm();
         spider.dialog.close();
         if (spider.net != null) spider.net.close();
     }

@@ -26,7 +26,8 @@ Media3 继续固定为 `wobuhui666/media` 的 `342f6590e02ac390e0bd6b4488b8a1bff
 
 - `04ab460f` 的 Exo/MPV 60/120 fps 补帧需要新的播放器 API、FFmpeg 渲染器和
   MPV 原生配置支持。本轮没有加入一个后端无法兑现的设置入口。
-- WASM、QuickJS 配套 JAR/AAR、python-android、Node 和动态运行时 profile 需要
+- WASM 已通过保留现有 Java／QuickJS 接口的独立解释器接入，见 [WASM 说明](spider-wasm.md)。
+  QuickJS 配套 JAR/AAR、python-android、Node 和动态运行时 profile 需要
   独立处理旧 JAR／脚本兼容与原生 ABI。本地继续内置 Chaquopy Python 3.10、QuickJS、MPV。
 - `47a41c8b` 的完整 BT 两阶段解析与任务生命周期依赖上游运行时重构；本轮没有用
   上游实现覆盖现有 XLTaskHelper。YouTube 的取消／错误传播也需与本地 Source／ViewModel

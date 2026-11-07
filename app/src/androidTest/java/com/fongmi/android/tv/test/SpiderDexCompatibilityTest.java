@@ -19,10 +19,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.UUID;
@@ -45,7 +45,8 @@ public final class SpiderDexCompatibilityTest {
 
     @Test
     public void legacyHelpersStayPrivateAndModernApiBindsBeforeInit() throws Exception {
-        assertEquals("Use the isolated test application", "com.fongmi.android.tv.sourceprobe", target.getPackageName());
+        assertTrue("Use the isolated test application", target.getPackageName().equals("com.fongmi.android.tv.sourceprobe")
+                || target.getPackageName().equals("com.fongmi.android.tv.preview"));
         JarLoader jars = new JarLoader();
         Fixture server = new Fixture();
         String prefix = "dex-api-" + UUID.randomUUID();
@@ -54,7 +55,7 @@ public final class SpiderDexCompatibilityTest {
             server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true);
             JSONObject manifest;
             try (InputStream input = assets("manifest.json")) {
-                manifest = new JSONObject(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+                manifest = new JSONObject(new String(read(input), StandardCharsets.UTF_8));
             }
             File directory = new File(target.getCacheDir(), prefix);
             assertTrue(directory.mkdirs());
@@ -111,8 +112,10 @@ public final class SpiderDexCompatibilityTest {
 
     private File copy(String name, File directory, JSONObject manifest) throws Exception {
         File file = new File(directory, name + ".jar");
-        try (InputStream input = assets(name + ".jar")) { Files.copy(input, file.toPath()); }
-        byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file.toPath()));
+        byte[] bytes;
+        try (InputStream input = assets(name + ".jar")) { bytes = read(input); }
+        try (FileOutputStream output = new FileOutputStream(file)) { output.write(bytes); }
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
         StringBuilder sha = new StringBuilder();
         for (byte value : digest) sha.append(String.format(Locale.ROOT, "%02x", value & 255));
         assertEquals("DEX fixture hash mismatch", manifest.getJSONObject("fixtures").getJSONObject(name).getString("sha256"), sha.toString());
@@ -121,6 +124,13 @@ public final class SpiderDexCompatibilityTest {
 
     private InputStream assets(String name) throws Exception {
         return InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("spider-api/" + name);
+    }
+
+    private static byte[] read(InputStream input) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        for (int count; (count = input.read(buffer)) != -1; ) output.write(buffer, 0, count);
+        return output.toByteArray();
     }
 
     private <T> T step(String name, Callable<T> callable) throws Exception {

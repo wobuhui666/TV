@@ -41,6 +41,8 @@ This list describes the current source branch, [`ui/apple-tv-redesign`](https://
 
 The development version uses FongMi **5.8.7** as its version baseline (`versionCode=587`), with upstream changes adapted to this project's architecture. Production OTA builds append a UTC timestamp to `5.8.7` and use a shared timestamp-based version code for both ARM builds. See [the upstream integration notes](docs/upstream-5.8.7-review.md) for this update's scope. Check the release notes and source revision of any earlier APK you install.
 
+Java and QuickJS sources can use the built-in WASM interpreter without installing another runtime. It supports scalar exports, synchronous host functions, linear memory, execution deadlines and cancellation. See [the WASM API guide](docs/spider-wasm.md) for examples and compatibility limits.
+
 ## A closer look
 
 <details>
@@ -331,7 +333,7 @@ The ARM node reported `redroid`; it was not physical Samsung hardware. These dat
 
 This fork builds on [FongMi/TV](https://github.com/FongMi/TV) and [CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader), with thanks to their authors and the wider open-source community.
 
-The project is distributed under [GNU GPL v3.0](LICENSE.md). Third-party components retain their own licenses and notices; see the attribution and reproducible-source information in [third_party/libass](third_party/libass), [third_party/mpv](third_party/mpv), and [third_party/libarchive](third_party/libarchive/NOTICE.md).
+The project is distributed under [GNU GPL v3.0](LICENSE.md). Third-party components retain their own licenses and notices; see [libass](third_party/libass), [MPV](third_party/mpv), [libarchive](third_party/libarchive/NOTICE.md), and [Chicory](third_party/chicory/NOTICE.md).
 
 Promotional footage includes **Sintel © Blender Foundation, CC BY 3.0**, demonstration photos from Unsplash, and a synthesized soundtrack. See [the complete media credits](docs/media/CREDITS.md).
 

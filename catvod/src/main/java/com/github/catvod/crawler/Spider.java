@@ -11,6 +11,8 @@ import com.github.catvod.utils.Local;
 import com.github.catvod.utils.Dialog;
 
 import com.github.catvod.net.OkHttp;
+import com.fongmi.quickjs.WasmRuntime;
+import com.github.catvod.utils.CallTimeout;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +27,31 @@ public abstract class Spider {
     public Net net;
     public Local local;
     public final Dialog dialog = new Dialog();
+    private volatile WasmRuntime wasmRuntime;
+    private volatile boolean wasmClosed;
+
+    /** Lazy ownership keeps ordinary crawlers free of WASM allocations. */
+    public synchronized WasmRuntime wasm() {
+        if (wasmClosed) throw new IllegalStateException("Crawler WASM runtime closed");
+        if (wasmRuntime == null) {
+            wasmRuntime = new WasmRuntime();
+            wasmRuntime.setExecutionCheck(() -> {
+                CallTimeout timeout = CallTimeout.current();
+                if (timeout != null && timeout.isExpired()) throw new java.util.concurrent.CancellationException("Source request timed out");
+            });
+        }
+        return wasmRuntime;
+    }
+
+    public void closeWasm() {
+        WasmRuntime runtime;
+        synchronized (this) {
+            wasmClosed = true;
+            runtime = wasmRuntime;
+            wasmRuntime = null;
+        }
+        if (runtime != null) runtime.close();
+    }
 
     public static Dns safeDns() {
         return OkHttp.dns();

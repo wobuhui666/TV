@@ -1,0 +1,26 @@
+plugins {
+    alias libs.plugins.android.library
+}
+
+android {
+    namespace = 'com.fongmi.android.tv.wasm'
+    compileSdk libs.versions.compileSdk.get().toInteger()
+
+    defaultConfig {
+        minSdk libs.versions.minSdk.get().toInteger()
+        targetSdk libs.versions.targetSdk.get().toInteger()
+    }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+dependencies {
+    // 1.4.1 uses ByteBufferMemory without runtime VarHandle fences on Android 7–12.
+    implementation 'com.dylibso.chicory:runtime:1.4.1'
+    coreLibraryDesugaring libs.desugar
+    testImplementation libs.junit
+}

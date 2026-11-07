@@ -32,7 +32,7 @@
 | 音频与画面 | 对白、夜间、音乐、自定义音效，五段 EQ、中置增强、响度归一化和限幅；MPV 另提供 GPU Next、Vulkan、HDR、Anime4K 等选项。 |
 | 缓存与预加载 | 当前片预缓存、符合条件的 Exo 下一集预加载；后台工作在缓冲、快进和切换媒体时让出资源。 |
 | 直播与时移 | 频道分组、节目表 EPG、频道线路、节目回看；源提供时移协议时显示时间轴和“返回直播”，TV／手机共用。 |
-| 来源扩展与登录 | Java JAR、QuickJS、Python 扩展，保留新旧源 API；来源可展示输入、密码、列表、图片／二维码等登录交互。 |
+| 来源扩展与登录 | Java JAR、QuickJS、Python 扩展，保留新旧源 API；Java／JS 来源可运行 WASM 模块，来源可展示输入、密码、列表、图片／二维码等登录交互。 |
 | 扩展播放协议 | STRM、磁力／种子／ed2k、YouTube 和部分 TVBus／Force／荐片适配，按对应来源配置、第三方运行库与服务可用性处理。 |
 | DLNA 与局域网 | TV 接收兼容 DLNA 控制端投放，手机版控制兼容渲染设备；局域网推送播放、字幕、弹幕及播放控制。 |
 | 一起看 | 兼容官方 [Syncplay](docs/syncplay.md) 服务端，同步各设备本地影片的播放、暂停与进度，支持 TLS。 |
@@ -41,6 +41,8 @@
 | 应用更新 | 按包名／ABI 校验 OTA，镜像下载与 SHA-256 校验；标准版、独立共存版和可取消的重要版本提醒。 |
 
 当前默认分支为 [`ui/apple-tv-redesign`](https://github.com/wobuhui666/TV/tree/ui/apple-tv-redesign)。开发默认版本以 FongMi **5.8.7** 为版本基线，按本项目架构适配上游更新；正式发布版本附加 UTC 构建时间，例如 `5.8.7+YYYYMMDD.HHMMSS`。本轮的适配与保留项目见 [上游同步说明](docs/upstream-5.8.7-review.md)。
+
+来源需要 WASM 时可直接使用内置解释器，无需额外安装组件。支持数值函数、同步函数导入、线性内存及超时取消；[WASM 接口与示例](docs/spider-wasm.md) 说明具体范围和旧来源兼容方式。
 
 <details>
 <summary>展开界面预览：从首页到播放与设置</summary>
@@ -279,6 +281,6 @@ TV 正式发布同时提供两种包名，按是否要与 FongMi/TV 同时安装
 
 感谢 [FongMi/TV](https://github.com/FongMi/TV)、[CatVod](https://github.com/CatVodTVOfficial/CatVodTVJarLoader) 以及相关开源项目的作者与贡献者。
 
-项目采用 [GNU GPL v3.0](LICENSE.md)。第三方组件保留各自许可证，详见 [libass 说明](third_party/libass/NOTICE.md)、[MPV 来源与重编说明](third_party/mpv/README.md)、[libarchive 字幕解包说明](third_party/libarchive/NOTICE.md) 和[宣传素材署名](docs/media/CREDITS.md)。
+项目采用 [GNU GPL v3.0](LICENSE.md)。第三方组件保留各自许可证，详见 [libass 说明](third_party/libass/NOTICE.md)、[MPV 来源与重编说明](third_party/mpv/README.md)、[libarchive 字幕解包说明](third_party/libarchive/NOTICE.md)、[Chicory WASM 说明](third_party/chicory/NOTICE.md) 和[宣传素材署名](docs/media/CREDITS.md)。
 
 应用是播放与配置工具，不提供影视资源、订阅或第三方内容的使用权。请自行添加并合法使用有权访问的来源。
