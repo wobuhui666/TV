@@ -32,7 +32,7 @@ public final class EpisodeLabelParser {
             + "|e[0-9]{1,4}(?:[ ._-]*e[0-9]{1,4})+|^\\s*(" + NUMBER + ")\\s*[-–—~_至到+、,/&]\\s*" + NUMBER + "[集话期]?[ ._-]*$|[-–—]\\s*(" + NUMBER + ")\\s*[-–—~_至到+、,/&]\\s*" + NUMBER + "[集话期]?[ ._-]*$");
     private static final Pattern DECIMAL = Pattern.compile("(?i)(?:e(?:p|pisode)?\\s*|第\\s*|[-–—]\\s*|^)[0-9]{1,4}\\.[0-9]+(?:[集话期]|[ ._-]*$)");
     private static final Pattern COLLECTION = Pattern.compile("(?i)合集|全集|合并|合輯|\\b(?:complete|batch)\\b");
-    private static final Pattern PREVIEW = Pattern.compile("(?i)预告|花絮|先导|\\b(?:trailer|preview|teaser)\\b");
+    private static final Pattern PREVIEW = Pattern.compile("(?i)预告(?:片)?|花絮|先导|\\b(?:trailer|preview|teaser)\\b");
     private static final Pattern SPECIAL = Pattern.compile("(?i)特别篇|特别集|特辑|特典|番外|(?<![a-z])(?:special|ova|oad|sp|ncop|nced|op|ed)(?![a-z])");
     private static final Pattern PART = Pattern.compile("(?i)\\bpart[ ._-]*([0-9]{1,2})(?![0-9])|第\\s*(" + NUMBER + ")\\s*部分|([上中下])(?:部分|半期|半集|半部|半|期|集|部|篇){0,2}(?=[\\s\\]）)]*(?:$|[上中下](?:半)?期))");
     private static final Pattern COMBINED_PART = Pattern.compile("(?:上下|上中下|上(?:半期|期|集|部|篇)?[\\s、,/+&~至到-]+(?:中(?:半期|期|集|部|篇)?[\\s、,/+&~至到-]+)?下)(?:半期|期|集|部|篇)?(?=[\\s\\]）)]*$)");
@@ -142,6 +142,10 @@ public final class EpisodeLabelParser {
         String working = new String(remaining);
         boolean preview = variantPreview || PREVIEW.matcher(working).find();
         boolean special = SPECIAL.matcher(working).find();
+        // Trailing preview/special markers must not hide the preceding upper/middle/lower part.
+        mask(PREVIEW, working, remaining);
+        mask(SPECIAL, working, remaining);
+        working = new String(remaining);
         boolean ambiguous = invalidDate || airDates.size() > 1 || COLLECTION.matcher(working).find()
                 || COMBINED_PART.matcher(working).find();
         Set<String> parts = new LinkedHashSet<>();
@@ -152,8 +156,6 @@ public final class EpisodeLabelParser {
             consume(remaining, partMarkers.start(), partMarkers.end());
         }
         if (parts.size() > 1) ambiguous = true;
-        mask(PREVIEW, working, remaining);
-        mask(SPECIAL, working, remaining);
         working = new String(remaining);
         if (RANGE.matcher(working).find() || DECIMAL.matcher(working).find()) ambiguous = true;
         Integer episode = null;

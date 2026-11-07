@@ -156,6 +156,27 @@ public class VarietyEpisodeNavigatorTest {
     }
 
     @Test
+    public void shouldKeepSplitPreviewNavigationOnThePreviewTrack() {
+        List<Episode> episodes = list("第3期上预告", "第3期上", "第3期下预告", "第4期上",
+                "第4期上 预告", "第4期下[预告]");
+
+        assertNext(episodes, 0, 2);
+        assertNext(episodes, 2, 4);
+        assertNext(episodes, 4, 5);
+        assertSame(episodes.get(2), EpisodeNavigator.relative(episodes, 4, -1));
+    }
+
+    @Test
+    public void shouldKeepSplitSpecialNavigationOnTheSpecialTrack() {
+        List<Episode> episodes = list("第3期上特别篇", "第3期上", "第3期下特别篇", "第4期上",
+                "第4期上 特辑", "第4期下[特别篇]");
+
+        assertNext(episodes, 0, 2);
+        assertNext(episodes, 2, 4);
+        assertNext(episodes, 4, 5);
+    }
+
+    @Test
     public void shouldPreserveReleaseAndRevisionEvidenceWithinAVarietyTrack() {
         List<Episode> episodes = list("[ANi] Show 第1期 v2 [1080p].mkv", "[Other] Show 第1期 [1080p].mkv",
                 "[ANi] Show 第2期 v1 [1080p].mkv", "[ANi] Show 第2期 v2 [1080p].mkv");
