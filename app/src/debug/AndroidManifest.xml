@@ -4,5 +4,6 @@
     <application>
         <activity android:name="com.fongmi.android.tv.test.CorePlaybackActivity" android:exported="false" android:theme="@style/Theme.App" />
         <activity android:name="com.fongmi.android.tv.test.AssrtSubtitlePreviewActivity" android:exported="false" android:theme="@style/Theme.App" />
+        <activity android:name="com.fongmi.android.tv.test.RemoteKeyPreviewActivity" android:exported="false" android:theme="@style/Theme.App" />
     </application>
 </manifest>

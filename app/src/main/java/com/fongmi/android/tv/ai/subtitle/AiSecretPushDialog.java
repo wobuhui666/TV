@@ -58,7 +58,7 @@ public final class AiSecretPushDialog extends BaseAlertDialog {
         Server.get().start();
         binding.title.setText(token ? "手机推送 MTran Token" : "手机推送 API Key");
         binding.textLayout.setHint(token ? "MTran Token" : "API Key");
-        binding.code.setImageBitmap(QRCode.getBitmap(Server.get().getAddress(4), 220, 0));
+        binding.code.setImageBitmap(QRCode.getThemedBitmap(requireContext(), Server.get().getAddress(4), 220, 4));
         binding.info.setText(ResUtil.getString(R.string.ai_secret_push_info, Server.get().getAddress()));
         binding.text.requestFocus();
     }

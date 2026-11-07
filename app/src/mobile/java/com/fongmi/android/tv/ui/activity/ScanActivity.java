@@ -42,7 +42,8 @@ public class ScanActivity extends BaseActivity implements BarcodeCallback {
     @Override
     protected void initView(Bundle savedInstanceState) {
         mCapture = new CaptureManager(this, mBinding.scanner);
-        mBinding.scanner.getBarcodeView().setDecoderFactory(new DefaultDecoderFactory(List.of(BarcodeFormat.QR_CODE)));
+        // Mixed scanning accepts dark-on-light and the TV's light-on-dark themed codes.
+        mBinding.scanner.getBarcodeView().setDecoderFactory(new DefaultDecoderFactory(List.of(BarcodeFormat.QR_CODE), null, null, 2));
     }
 
     @Override

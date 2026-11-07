@@ -207,7 +207,7 @@ public final class SpiderDialog implements LifecycleEventObserver {
 
     private void setQRCode(Object code) {
         if (!(code instanceof String value) || value.isBlank() || value.length() > 4096) throw new IllegalArgumentException("Dialog qrcode must be a nonempty string");
-        Bitmap bitmap = QRCode.getBitmap(value, 220, 4);
+        Bitmap bitmap = QRCode.getThemedBitmap(activity, value, 220, 4);
         if (bitmap == null) throw new IllegalArgumentException("Dialog qrcode cannot be encoded");
         qrcode.setImageBitmap(bitmap);
         qrcode.setContentDescription(activity.getString(R.string.spider_dialog_qrcode));
