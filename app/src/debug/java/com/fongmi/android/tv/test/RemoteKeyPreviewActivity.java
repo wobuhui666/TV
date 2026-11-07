@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.test;
 
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -30,8 +31,6 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
     public boolean consumeDirections;
     public int consumedDirectionDowns;
     public int consumedDialogBackUps;
-    public int dialogBacks;
-    public boolean consumeDialogBack;
     public int componentDialogBacks;
     public OnBackPressedCallback componentDialogBackHandler;
 
@@ -118,6 +117,7 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
 
         public Button first;
         public Button second;
+        public int dismissals;
 
         @NonNull
         @Override
@@ -132,12 +132,6 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
                 @Override
                 public boolean onKeyUp(int code, @NonNull KeyEvent event) {
                     return owner.handleDirection(event) || super.onKeyUp(code, event);
-                }
-
-                @Override
-                public void onBackPressed() {
-                    owner.dialogBacks++;
-                    if (!owner.consumeDialogBack) super.onBackPressed();
                 }
             };
             if (dialog instanceof ComponentDialog component) {
@@ -159,6 +153,12 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
             dialog.setContentView(content, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));
             return dialog;
+        }
+
+        @Override
+        public void onDismiss(@NonNull DialogInterface dialog) {
+            dismissals++;
+            super.onDismiss(dialog);
         }
     }
 }
