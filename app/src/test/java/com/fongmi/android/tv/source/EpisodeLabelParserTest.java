@@ -236,6 +236,7 @@ public class EpisodeLabelParserTest {
         assertEquals("pure", EpisodeLabelParser.parse("第三期純享版").variant());
         assertEquals("behind", EpisodeLabelParser.parse("第三期未播").variant());
         assertEquals("behind", EpisodeLabelParser.parse("第三期幕后篇").variant());
+        assertEquals("behind", EpisodeLabelParser.parse("第三期幕後版").variant());
         EpisodeLabel behind = EpisodeLabelParser.parse("第三期花絮");
         assertEquals("behind", behind.variant());
         assertTrue(behind.isPreview());
@@ -346,7 +347,7 @@ public class EpisodeLabelParserTest {
         assertEquals(Integer.valueOf(3), filename.number());
         assertEquals(Integer.valueOf(2), filename.season());
         assertEquals("", filename.edition());
-        for (String name : new String[]{"1107", "11月7日", "2026", "Movie.2026.1080p.mkv", "[20261107deadbeef]", "[deadbeef20261107]", "幕后玩家", "加更的日子", "纯享受生活", "第一集训队", "第3期王某加更", "第3期王某心中加更", "加更上瘾", "加更会员的家"}) {
+        for (String name : new String[]{"1107", "11月7日", "2026", "Movie.2026.1080p.mkv", "[20261107deadbeef]", "[deadbeef20261107]", "幕后玩家", "幕後玩家", "加更的日子", "纯享受生活", "第一集训队", "第3期王某加更", "第3期王某心中加更", "加更上瘾", "加更会员的家"}) {
             EpisodeLabel label = EpisodeLabelParser.parse(name);
             assertEquals(name, "", label.airDate());
             assertEquals(name, "", label.variant());

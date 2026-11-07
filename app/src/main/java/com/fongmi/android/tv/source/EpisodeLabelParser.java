@@ -299,7 +299,7 @@ public final class EpisodeLabelParser {
                 .replace('兩', '两').replace('話', '话').replace('預', '预')
                 .replace('別', '别').replace('輯', '辑').replace('體', '体')
                 .replace('語', '语').replace('國', '国').replace('會', '会')
-                .replace('員', '员').replace('長', '长').replace('純', '纯').replace('導', '导');
+                .replace('員', '员').replace('長', '长').replace('純', '纯').replace('導', '导').replace('後', '后');
     }
 
     private static String name(String value) {
