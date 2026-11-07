@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.Window;
 
 import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedDispatcherOwner;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
@@ -135,6 +136,14 @@ public final class RemoteKey implements Process {
             if (event.getAction() == KeyEvent.ACTION_UP) owner.getOnBackPressedDispatcher().onBackPressed();
         } else {
             boolean handled = target.dispatchKeyEvent(event);
+            if (!handled && event.getKeyCode() == KeyEvent.KEYCODE_BACK
+                    && event.getAction() == KeyEvent.ACTION_UP && target instanceof Dialog dialog
+                    && dialog.isShowing() && dialog.getWindow() != null
+                    && dialog.getWindow().getDecorView().hasWindowFocus()) {
+                // Android 13+ Dialog key-up skips legacy back when predictive back is enabled.
+                if (dialog instanceof OnBackPressedDispatcherOwner owner) owner.getOnBackPressedDispatcher().onBackPressed();
+                else dialog.onBackPressed();
+            }
             // Direct window callbacks bypass ViewRootImpl's unhandled native D-pad navigation.
             if (!handled && event.getAction() == KeyEvent.ACTION_DOWN) moveFocus(target, direction(event.getKeyCode()));
         }

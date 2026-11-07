@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
+import android.view.KeyEvent;
 import android.view.WindowManager;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -126,8 +127,47 @@ public final class RemoteKeyAndroidTest {
         accepted("ok");
         assertEquals(1, (int) read(() -> activity.dialogClicks));
         assertEquals(0, (int) read(() -> activity.clicks));
+        main(() -> sheet.requireDialog().setOnKeyListener((dialog, code, event) -> {
+            if (code != KeyEvent.KEYCODE_BACK) return false;
+            if (event.getAction() == KeyEvent.ACTION_UP) activity.consumedDialogBackUps++;
+            return true;
+        }));
+        accepted("back");
+        assertTrue("A consumed dialog back tap must keep the dialog open", read(() -> sheet.isAdded() && sheet.requireDialog().isShowing()));
+        assertEquals(1, (int) read(() -> activity.consumedDialogBackUps));
+        assertEquals("A consumed back must not call the fallback", 0, (int) read(() -> activity.dialogBacks));
+        main(() -> {
+            sheet.requireDialog().setOnKeyListener(null);
+            sheet.setCancelable(false);
+        });
+        accepted("back");
+        assertTrue("A noncancelable native dialog must remain open", read(() -> sheet.isAdded() && sheet.requireDialog().isShowing()));
+        assertEquals(1, (int) read(() -> activity.dialogBacks));
+        main(() -> {
+            sheet.setCancelable(true);
+            activity.consumeDialogBack = true;
+        });
+        accepted("back");
+        assertTrue("Custom dialog back behavior must be honored", read(() -> sheet.isAdded() && sheet.requireDialog().isShowing()));
+        assertEquals(2, (int) read(() -> activity.dialogBacks));
+        main(() -> activity.consumeDialogBack = false);
         accepted("back");
         await(() -> !sheet.isAdded() && activity.hasWindowFocus(), "back dismissed nested dialog");
+        assertEquals(3, (int) read(() -> activity.dialogBacks));
+        RemoteKeyPreviewActivity.Sheet component = read(() -> activity.showNestedDialog(true));
+        await(() -> component.getDialog() != null && component.getDialog().getWindow().getDecorView().hasWindowFocus(), "component dialog focus");
+        accepted("back");
+        assertEquals("ComponentDialog uses its registered back callback", 1, (int) read(() -> activity.componentDialogBacks));
+        assertTrue(read(() -> component.isAdded() && component.requireDialog().isShowing()));
+        main(() -> {
+            activity.componentDialogBackHandler.setEnabled(false);
+            component.setCancelable(false);
+        });
+        accepted("back");
+        assertTrue("ComponentDialog fallback keeps noncancelable dialogs open", read(() -> component.isAdded() && component.requireDialog().isShowing()));
+        main(() -> component.setCancelable(true));
+        accepted("back");
+        await(() -> !component.isAdded() && activity.hasWindowFocus(), "component back fallback dismissed only its dialog");
         assertEquals(0, (int) read(() -> activity.backs));
     }
 
