@@ -9,6 +9,7 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
+import androidx.activity.ComponentDialog;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
@@ -28,6 +29,11 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
     public int lastNumeric;
     public boolean consumeDirections;
     public int consumedDirectionDowns;
+    public int consumedDialogBackUps;
+    public int dialogBacks;
+    public boolean consumeDialogBack;
+    public int componentDialogBacks;
+    public OnBackPressedCallback componentDialogBackHandler;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -78,9 +84,16 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
     }
 
     public Sheet showNestedDialog() {
+        return showNestedDialog(false);
+    }
+
+    public Sheet showNestedDialog(boolean componentDialog) {
         Fragment host = new Fragment();
         getSupportFragmentManager().beginTransaction().add(host, "remote-host").commitNow();
         Sheet sheet = new Sheet();
+        Bundle arguments = new Bundle();
+        arguments.putBoolean("component", componentDialog);
+        sheet.setArguments(arguments);
         sheet.showNow(host.getChildFragmentManager(), "remote-sheet");
         return sheet;
     }
@@ -110,7 +123,7 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
         @Override
         public Dialog onCreateDialog(Bundle state) {
             RemoteKeyPreviewActivity owner = (RemoteKeyPreviewActivity) requireActivity();
-            Dialog dialog = new Dialog(owner) {
+            Dialog dialog = requireArguments().getBoolean("component") ? new ComponentDialog(owner) : new Dialog(owner) {
                 @Override
                 public boolean onKeyDown(int code, @NonNull KeyEvent event) {
                     return owner.handleDirection(event) || super.onKeyDown(code, event);
@@ -120,7 +133,19 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
                 public boolean onKeyUp(int code, @NonNull KeyEvent event) {
                     return owner.handleDirection(event) || super.onKeyUp(code, event);
                 }
+
+                @Override
+                public void onBackPressed() {
+                    owner.dialogBacks++;
+                    if (!owner.consumeDialogBack) super.onBackPressed();
+                }
             };
+            if (dialog instanceof ComponentDialog component) {
+                owner.componentDialogBackHandler = new OnBackPressedCallback(true) {
+                    @Override public void handleOnBackPressed() { owner.componentDialogBacks++; }
+                };
+                component.getOnBackPressedDispatcher().addCallback(owner, owner.componentDialogBackHandler);
+            }
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
             LinearLayout content = owner.content();
             first = owner.button("Dialog first");
