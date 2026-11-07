@@ -185,6 +185,8 @@ public final class QuickJsWasmApiTest {
 
     @Test
     public void javaRuntimeUsesScalarValuesAndByteBufferMemoryOnAndroid() throws Exception {
+        stage = "default-memory-api24-compatibility";
+        assertDefaultMemoryCompatibility();
         stage = "direct-java-runtime";
         try (WasmRuntime runtime = new WasmRuntime();
              WasmRuntime.Module module = runtime.compile(WasmFixture.module(true, true));
@@ -215,6 +217,28 @@ public final class QuickJsWasmApiTest {
                 assertEquals(-1, memory.grow(1));
             }
         }
+    }
+
+    private void assertDefaultMemoryCompatibility() throws Exception {
+        Class<?> limitsType = Class.forName("com.dylibso.chicory.wasm.types.MemoryLimits");
+        Object limits = limitsType.getConstructor(int.class, int.class).newInstance(1, 2);
+        Class<?> memoryType = Class.forName("com.dylibso.chicory.runtime.ByteArrayMemory");
+        Object memory = memoryType.getConstructor(limitsType).newInstance(limits);
+        byte[] bytes = new byte[]{0, 127, -128, -1};
+        memoryType.getMethod("write", int.class, byte[].class, int.class, int.class).invoke(memory, 8, bytes, 0, bytes.length);
+        assertArrayEquals(bytes, (byte[]) memoryType.getMethod("readBytes", int.class, int.class).invoke(memory, 8, 4));
+        memoryType.getMethod("writeI32", int.class, int.class).invoke(memory, 0, 0x12345678);
+        assertEquals(0x12345678, ((Number) memoryType.getMethod("readInt", int.class).invoke(memory, 0)).intValue());
+        memoryType.getMethod("writeLong", int.class, long.class).invoke(memory, 16, Long.MIN_VALUE);
+        assertEquals(Long.MIN_VALUE, ((Number) memoryType.getMethod("readLong", int.class).invoke(memory, 16)).longValue());
+        memoryType.getMethod("writeF64", int.class, double.class).invoke(memory, 24, -0d);
+        double zero = ((Number) memoryType.getMethod("readDouble", int.class).invoke(memory, 24)).doubleValue();
+        assertEquals(Double.doubleToRawLongBits(-0d), Double.doubleToRawLongBits(zero));
+        assertEquals(1, ((Number) memoryType.getMethod("grow", int.class).invoke(memory, 1)).intValue());
+        assertEquals(2, ((Number) memoryType.getMethod("pages").invoke(memory)).intValue());
+        assertArrayEquals(bytes, (byte[]) memoryType.getMethod("readBytes", int.class, int.class).invoke(memory, 8, 4));
+        assertArrayEquals(new byte[]{0}, (byte[]) memoryType.getMethod("readBytes", int.class, int.class).invoke(memory, 65536, 1));
+        assertEquals(-1, ((Number) memoryType.getMethod("grow", int.class).invoke(memory, 1)).intValue());
     }
 
     @Test

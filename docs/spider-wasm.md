@@ -3,6 +3,8 @@
 WASM 用于来源的计算、解密或签名模块。解释器已随 App 打包，无需安装新的运行时。
 现有 QuickJS Java/JNI 3.2.3、新旧网络接口和 Java Spider 入口保留。
 底层使用 Apache-2.0 的 Chicory 1.4.1 与 `ByteBufferMemory`，不增加 WASM 原生库。
+构建时把依赖中旧的默认内存类替换为同版本的 ByteBuffer 实现，以便 D8 为 API 24 打包；
+输入哈希校验和可复现步骤见 [第三方说明](../third_party/chicory/NOTICE.md)。
 
 ## JavaScript
 

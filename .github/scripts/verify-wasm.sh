@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Install only the disposable preview APKs; run each Android/JNI suite independently.
+# The Java runtime test also constructs the Android-compatible default ByteArrayMemory by reflection.
 set -euo pipefail
 api="${1:?Pass the emulator API level}"
 [[ "$api" = 24 || "$api" = 34 ]] || exit 1
@@ -34,7 +35,7 @@ import json, os, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 summary = json.loads((root / 'suite-summary.json').read_text())
 summary.update({'apiLevel': int(sys.argv[2]), 'expectedTests': 13, 'applicationId': 'com.fongmi.android.tv.preview',
-                'scope': 'Real Android QuickJS JNI and Chicory interpreter; loopback fixtures; API 24 and 34 run independently'})
+                'scope': 'Real Android QuickJS JNI and Chicory interpreter, Java spider ownership, ByteBufferMemory and default ByteArrayMemory read/write/grow; loopback fixtures; API 24 and 34 run independently'})
 assert summary['passed'] and summary['passedTests'] == 13
 wasm = json.loads((root / 'quickjs-wasm-result.json').read_text())
 assert wasm['expectedTests'] == 11 and len(wasm['tests']) == 11
