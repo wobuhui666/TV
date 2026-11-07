@@ -21,6 +21,7 @@ import com.github.catvod.utils.UriUtil;
 import com.github.catvod.utils.Util;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.whl.quickjs.wrapper.JSArray;
+import com.whl.quickjs.wrapper.JSFunction;
 import com.whl.quickjs.wrapper.JSObject;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
@@ -340,7 +341,15 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private Object[] proxy1(Map<String, String> params) throws Exception {
         JSObject obj = submit(() -> JSUtil.toObject(ctx, params)).get();
         JSArray proxy = (JSArray) call("proxy", obj);
-        String json = submit(proxy::stringify).get();
+        String json = submit(() -> {
+            JSFunction stringify = ctx.getGlobalObject().getJSFunction("__SPIDER_NET_PROXY_JSON__");
+            try {
+                return (String) stringify.call(proxy);
+            } finally {
+                if (stringify != null) stringify.release();
+                proxy.release();
+            }
+        }).get();
         JSONArray array = new JSONArray(json);
         Map<String, String> headers = array.length() > 3 ? Json.toMap(array.optString(3)) : null;
         boolean base64 = array.length() > 4 && array.optInt(4) == 1;

@@ -42,7 +42,7 @@
         });
     }
 
-    globalThis.__SPIDER_NET_DELIVER__ = (kind, id, value) => {
+    globalThis.__SPIDER_NET_DELIVER__ = (kind, id, value, bytes) => {
         if (kind === 'close') {
             closed = true;
             const error = new Error('Network bridge closed');
@@ -78,10 +78,28 @@
         pending.delete(id);
         try {
             const result = unwrap(value);
-            item.resolve(item.parseResult ? parsed(result) : result);
+            const response = item.parseResult ? parsed(result) : result;
+            if (kind === 'binary') {
+                if (!(bytes instanceof ArrayBuffer)) throw new TypeError('HTTP binary response requires an ArrayBuffer');
+                response.content = bytes;
+            }
+            item.resolve(response);
         } catch (error) {
             item.reject(error);
         }
+    };
+
+    // JSON cannot represent BufferSource bodies; normalize only the proxy body slot.
+    globalThis.__SPIDER_NET_PROXY_JSON__ = value => {
+        const body = value[2];
+        if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
+            const converted = Array.from(value);
+            const bytes = body instanceof ArrayBuffer ? new Uint8Array(body)
+                : new Uint8Array(body.buffer, body.byteOffset, body.byteLength);
+            converted[2] = Array.from(bytes);
+            return JSON.stringify(converted);
+        }
+        return JSON.stringify(value);
     };
 
     function createNet(owner) {
@@ -100,6 +118,12 @@
         const net = {
             req(url, options = {}) {
                 if (options && options.async === true) return net.http(url, options);
+                if (options && options.buffer === 1) {
+                    check();
+                    if (closed) throw new Error('Network bridge closed');
+                    const result = native.reqBinary(owner, JSON.stringify({url, options}));
+                    return typeof result === 'string' ? unwrap(result) : result;
+                }
                 return parsed(sync('req', {url, options}));
             },
             http(url, options = {}) { return async('http', {url, options}); },
