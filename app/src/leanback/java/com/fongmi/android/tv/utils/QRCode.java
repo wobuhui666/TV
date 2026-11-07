@@ -1,12 +1,16 @@
 package com.fongmi.android.tv.utils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 
+import androidx.core.graphics.ColorUtils;
+
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
+import com.google.android.material.color.MaterialColors;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.MultiFormatWriter;
@@ -19,22 +23,27 @@ public class QRCode {
 
     private static final int FINDER_MODULES = 7;
     private static final float MODULE_RADIUS_RATIO = 0.45f;
-    private static final int FOREGROUND = Color.WHITE;
-    private static final int BACKGROUND = Color.BLACK;
-    private static final int LIGHT_FOREGROUND = Color.BLACK;
-    private static final int LIGHT_BACKGROUND = Color.WHITE;
-    private static final float BACKGROUND_RADIUS_RATIO = 0.08f;
+    private static final int MIN_QUIET_ZONE = 4;
 
     public static Bitmap getBitmap(String content, int size, int margin) {
-        return getBitmap(content, size, margin, FOREGROUND, BACKGROUND);
+        return getJetStreamBitmap(content, size, margin);
     }
 
     public static Bitmap getLightBitmap(String content, int size, int margin) {
-        return getBitmap(content, size, margin, LIGHT_FOREGROUND, LIGHT_BACKGROUND);
+        return getBitmap(content, size, margin, Color.BLACK, Color.WHITE);
     }
 
     public static Bitmap getJetStreamBitmap(String content, int size, int margin) {
-        return getBitmap(content, size, margin, FOREGROUND, JetStreamPalette.surfaceInt());
+        return getBitmap(content, size, margin, JetStreamPalette.onSurfaceInt(), JetStreamPalette.surfaceInt());
+    }
+
+    public static Bitmap getThemedBitmap(Context context, String content, int size, int margin) {
+        int background = ColorUtils.setAlphaComponent(MaterialColors.getColor(context, com.google.android.material.R.attr.colorSurface, JetStreamPalette.surfaceInt()), 255);
+        int foreground = ColorUtils.setAlphaComponent(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurface, JetStreamPalette.onSurfaceInt()), 255);
+        if (ColorUtils.calculateContrast(foreground, background) < 7) {
+            foreground = ColorUtils.calculateLuminance(background) > 0.5 ? Color.BLACK : Color.WHITE;
+        }
+        return getBitmap(content, size, margin, foreground, background);
     }
 
     private static Bitmap getBitmap(String content, int size, int margin, int foreground, int background) {
@@ -51,7 +60,7 @@ public class QRCode {
     private static BitMatrix encode(String content, int size, int margin) throws Exception {
         Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
         hints.put(EncodeHintType.CHARACTER_SET, "UTF-8");
-        hints.put(EncodeHintType.MARGIN, margin);
+        hints.put(EncodeHintType.MARGIN, Math.max(MIN_QUIET_ZONE, margin));
         return new MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, ResUtil.dp2px(size), ResUtil.dp2px(size), hints);
     }
 
@@ -81,10 +90,8 @@ public class QRCode {
     }
 
     private static void drawBackground(Canvas canvas, int width, int height, int color) {
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(color);
-        float radius = Math.min(width, height) * BACKGROUND_RADIUS_RATIO;
-        canvas.drawRoundRect(new RectF(0, 0, width, height), radius, radius, paint);
+        // Keep the full quiet zone opaque; the surrounding view supplies the rounded frame.
+        canvas.drawColor(color);
     }
 
     private static void drawDataModules(Canvas canvas, BitMatrix matrix, int quietZone, float moduleSize, int numModules, int width, int height, int color) {
@@ -110,14 +117,12 @@ public class QRCode {
 
     private static void drawFinderPattern(Canvas canvas, int left, int top, int finderSize, int foreground, int background) {
         float module = finderSize / (float) FINDER_MODULES;
-        float cx = left + finderSize / 2f;
-        float cy = top + finderSize / 2f;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setColor(foreground);
-        canvas.drawCircle(cx, cy, finderSize / 2f, paint);
+        canvas.drawRoundRect(new RectF(left, top, left + finderSize, top + finderSize), module * 0.6f, module * 0.6f, paint);
         paint.setColor(background);
-        canvas.drawCircle(cx, cy, finderSize / 2f - module, paint);
+        canvas.drawRoundRect(new RectF(left + module, top + module, left + finderSize - module, top + finderSize - module), module * 0.4f, module * 0.4f, paint);
         paint.setColor(foreground);
-        canvas.drawCircle(cx, cy, finderSize / 2f - 2 * module, paint);
+        canvas.drawRoundRect(new RectF(left + 2 * module, top + 2 * module, left + finderSize - 2 * module, top + finderSize - 2 * module), module * 0.3f, module * 0.3f, paint);
     }
 }

@@ -10,6 +10,7 @@ import com.fongmi.android.tv.server.process.Local;
 import com.fongmi.android.tv.server.process.Media;
 import com.fongmi.android.tv.server.process.Parse;
 import com.fongmi.android.tv.server.process.Proxy;
+import com.fongmi.android.tv.server.process.RemoteKey;
 import com.github.catvod.utils.Asset;
 
 import java.io.InputStream;
@@ -36,6 +37,7 @@ public class Nano extends NanoHTTPD {
         process = new ArrayList<>();
         process.add(diagnostics);
         process.add(new Action());
+        process.add(new RemoteKey());
         process.add(new Cache());
         process.add(new Local());
         process.add(new Media());

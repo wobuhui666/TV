@@ -17,16 +17,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fongmi.android.tv.R
 import com.fongmi.android.tv.ui.theme.JetStreamShapes
-import com.fongmi.android.tv.ui.rex.RexTheme
 import com.fongmi.android.tv.ui.theme.JetStreamSpacing
 import com.fongmi.android.tv.ui.theme.JetStreamTheme
 
@@ -72,14 +71,14 @@ class JetStreamQrCodeView @JvmOverloads constructor(
                     if (bitmap == null) {
                         Text(
                             text = "QR",
-                            color = if (RexTheme.isLight()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     } else {
                         Image(
                             bitmap = bitmap.asImageBitmap(),
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.push_scan_title),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit
                         )

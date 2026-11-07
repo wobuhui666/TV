@@ -1,0 +1,168 @@
+name: Material web and QR verification
+
+on:
+  push:
+    branches: ['feat/material-web-control', 'integration/three-prs-20261107']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: material-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: Chromium webpage verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install pinned browser tools
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/material-web
+          python -m pip install playwright==1.64.1 2>&1 | tee artifacts/material-web/install.log
+          python -m playwright install --with-deps chromium 2>&1 | tee -a artifacts/material-web/install.log
+      - name: Verify the bundled webpage in Chromium
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/verify-material-web.py --output artifacts/material-web 2>&1 | tee artifacts/material-web/browser.log
+      - name: Upload browser screenshots, summary and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: material-web-browser-${{ github.run_id }}
+          path: artifacts/material-web/
+          if-no-files-found: warn
+          retention-days: 14
+
+  android:
+    name: Android API 34 QR and remote verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      TMDB_API_KEY: material-web-ui-fixture
+      ASSRT_API_TOKEN: material-web-ui-fixture
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install image tools
+        run: python -m pip install Pillow
+      - name: Set up Android SDK 37.0
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Checkout pinned Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Prepare SDK and composite build
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          test ! -f local.properties
+          test -d .media3/build-logic
+          test -d .media3/build-logic-settings
+          test -f .media3/libraries/ui_danmaku/build.gradle.kts
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/material-web-sdk.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x gradlew
+      - name: Build isolated preview and run application unit tests
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/material-web-sdk.init.gradle" \
+            :app:assembleLeanbackArm64_v8aPreview \
+            :app:assembleLeanbackArm64_v8aPreviewAndroidTest \
+            :app:testLeanbackArm64_v8aPreviewUnitTest \
+            -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Prepare pinned x86_64 preview libraries
+        run: python3 .github/scripts/prepare-quickjs-preview.py
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Prepare isolated emulator checks
+        run: |
+          cat > "$RUNNER_TEMP/verify-material-web-android.sh" <<'VERIFY'
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, subprocess
+          outputs = (
+              ('app/build/outputs/apk/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview'),
+              ('app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview.test'),
+          )
+          for root, package in outputs:
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1, 'Expected one isolated preview APK'
+              assert data['applicationId'] == package, 'Unexpected APK application ID'
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+          adb shell wm size 1920x1080
+          adb shell wm density 320
+          adb shell settings put secure immersive_mode_confirmations confirmed
+          UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+            'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest' \
+            artifacts/material-web-android '8,8'
+          VERIFY
+      - name: Verify QR themes and remote keys on Android API 34
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash "$RUNNER_TEMP/verify-material-web-android.sh"
+      - name: Upload Android screenshots, summaries and unit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: material-web-android-${{ github.run_id }}
+          path: |
+            artifacts/material-web-android/
+            app/build/test-results/
+            app/build/reports/tests/
+            app/schemas/
+          if-no-files-found: warn
+          retention-days: 14

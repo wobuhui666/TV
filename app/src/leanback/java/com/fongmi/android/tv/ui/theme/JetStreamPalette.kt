@@ -305,6 +305,10 @@ object JetStreamPalette {
 
     @JvmStatic
     @ColorInt
+    fun onSurfaceInt(): Int = ON_SURFACE
+
+    @JvmStatic
+    @ColorInt
     fun shadowColor(): Int = 0x40000000
 
     @JvmStatic
