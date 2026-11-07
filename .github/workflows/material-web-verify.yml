@@ -2,7 +2,7 @@ name: Material web and QR verification
 
 on:
   push:
-    branches: ['feat/material-web-control']
+    branches: ['feat/material-web-control', 'integration/three-prs-20261107']
   workflow_dispatch:
 
 permissions:

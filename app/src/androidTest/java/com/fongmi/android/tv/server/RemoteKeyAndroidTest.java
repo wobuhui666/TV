@@ -73,6 +73,21 @@ public final class RemoteKeyAndroidTest {
         assertEquals(1, (int) read(() -> activity.clicks));
         accepted("up");
         await(() -> activity.first.hasFocus(), "up key moved focus");
+        main(() -> activity.consumeDirections = true);
+        accepted("down");
+        assertTrue("A handled D-pad callback must not move focus again", read(() -> activity.first.hasFocus()));
+        assertEquals(1, (int) read(() -> activity.consumedDirectionDowns));
+        main(() -> activity.consumeDirections = false);
+        accepted("down");
+        await(() -> activity.second.hasFocus(), "unhandled D-pad uses native focus search");
+        accepted("down");
+        assertTrue("No next neighbor must keep the current focus", read(() -> activity.second.hasFocus()));
+        main(() -> activity.first.setFocusableInTouchMode(true));
+        instrumentation.setInTouchMode(true);
+        main(() -> assertTrue(activity.first.requestFocus()));
+        await(() -> activity.first.hasFocus() && activity.first.isInTouchMode(), "touch-mode focused control");
+        accepted("down");
+        await(() -> activity.second.hasFocus() && !activity.second.isInTouchMode(), "D-pad exits touch mode before navigation");
     }
 
     @Test
@@ -99,6 +114,15 @@ public final class RemoteKeyAndroidTest {
         await(() -> sheet.first.hasFocus(), "dialog first focus");
         accepted("down");
         await(() -> sheet.second.hasFocus(), "dialog down key");
+        main(() -> activity.consumeDirections = true);
+        accepted("up");
+        assertTrue("A dialog-handled D-pad must not invoke the fallback", read(() -> sheet.second.hasFocus()));
+        assertEquals(1, (int) read(() -> activity.consumedDirectionDowns));
+        main(() -> activity.consumeDirections = false);
+        accepted("up");
+        await(() -> sheet.first.hasFocus(), "dialog native up key");
+        accepted("down");
+        await(() -> sheet.second.hasFocus(), "dialog native down key before click");
         accepted("ok");
         assertEquals(1, (int) read(() -> activity.dialogClicks));
         assertEquals(0, (int) read(() -> activity.clicks));

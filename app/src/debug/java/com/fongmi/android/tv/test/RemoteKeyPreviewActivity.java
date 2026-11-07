@@ -26,6 +26,8 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
     public int numericTaps;
     public int menuTaps;
     public int lastNumeric;
+    public boolean consumeDirections;
+    public int consumedDirectionDowns;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -46,20 +48,33 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
     }
 
     @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        int code = event.getKeyCode();
+    public boolean onKeyDown(int code, KeyEvent event) {
+        if (handleDirection(event)) return true;
+        if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9 || code == KeyEvent.KEYCODE_MENU) return true;
+        return super.onKeyDown(code, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int code, KeyEvent event) {
+        if (handleDirection(event)) return true;
         if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9) {
-            if (event.getAction() == KeyEvent.ACTION_UP) {
-                numericTaps++;
-                lastNumeric = code - KeyEvent.KEYCODE_0;
-            }
+            numericTaps++;
+            lastNumeric = code - KeyEvent.KEYCODE_0;
             return true;
         }
         if (code == KeyEvent.KEYCODE_MENU) {
-            if (event.getAction() == KeyEvent.ACTION_UP) menuTaps++;
+            menuTaps++;
             return true;
         }
-        return super.dispatchKeyEvent(event);
+        return super.onKeyUp(code, event);
+    }
+
+    private boolean handleDirection(KeyEvent event) {
+        int key = event.getKeyCode();
+        if (!consumeDirections || key != KeyEvent.KEYCODE_DPAD_UP && key != KeyEvent.KEYCODE_DPAD_DOWN
+                && key != KeyEvent.KEYCODE_DPAD_LEFT && key != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+        if (event.getAction() == KeyEvent.ACTION_DOWN) consumedDirectionDowns++;
+        return true;
     }
 
     public Sheet showNestedDialog() {
@@ -95,7 +110,17 @@ public final class RemoteKeyPreviewActivity extends FragmentActivity {
         @Override
         public Dialog onCreateDialog(Bundle state) {
             RemoteKeyPreviewActivity owner = (RemoteKeyPreviewActivity) requireActivity();
-            Dialog dialog = new Dialog(owner);
+            Dialog dialog = new Dialog(owner) {
+                @Override
+                public boolean onKeyDown(int code, @NonNull KeyEvent event) {
+                    return owner.handleDirection(event) || super.onKeyDown(code, event);
+                }
+
+                @Override
+                public boolean onKeyUp(int code, @NonNull KeyEvent event) {
+                    return owner.handleDirection(event) || super.onKeyUp(code, event);
+                }
+            };
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
             LinearLayout content = owner.content();
             first = owner.button("Dialog first");

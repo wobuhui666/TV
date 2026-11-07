@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.os.SystemClock;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.Window;
 
 import androidx.activity.ComponentActivity;
@@ -133,7 +134,42 @@ public final class RemoteKey implements Process {
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && target instanceof ComponentActivity owner) {
             if (event.getAction() == KeyEvent.ACTION_UP) owner.getOnBackPressedDispatcher().onBackPressed();
         } else {
-            target.dispatchKeyEvent(event);
+            boolean handled = target.dispatchKeyEvent(event);
+            // Direct window callbacks bypass ViewRootImpl's unhandled native D-pad navigation.
+            if (!handled && event.getAction() == KeyEvent.ACTION_DOWN) moveFocus(target, direction(event.getKeyCode()));
+        }
+    }
+
+    private static int direction(int key) {
+        return switch (key) {
+            case KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP;
+            case KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN;
+            case KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT;
+            case KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT;
+            default -> 0;
+        };
+    }
+
+    private void moveFocus(Window.Callback target, int direction) {
+        if (direction == 0) return;
+        Window window = target instanceof Activity activity ? activity.getWindow()
+                : target instanceof Dialog dialog ? dialog.getWindow() : null;
+        if (window == null) return;
+        View decor = window.getDecorView();
+        if (!decor.hasWindowFocus()) return;
+        View focused = decor.findFocus();
+        if (decor.isInTouchMode()) {
+            if (focused == null) {
+                decor.requestFocusFromTouch();
+                return;
+            }
+            focused.requestFocusFromTouch();
+        }
+        View next = focused == null ? decor.focusSearch(direction) : focused.focusSearch(direction);
+        if (next != null && next != focused) {
+            if (!next.requestFocus(direction)) next.requestFocusFromTouch();
+        } else if (focused == null) {
+            if (!decor.requestFocus(direction)) decor.requestFocusFromTouch();
         }
     }
 
