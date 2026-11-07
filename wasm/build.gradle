@@ -35,7 +35,7 @@ def prepareChicory = tasks.register('prepareChicoryAndroid', Exec) {
 }
 
 dependencies {
-    chicoryRuntimeInput 'com.dylibso.chicory:runtime:1.4.1'
+    add('chicoryRuntimeInput', 'com.dylibso.chicory:runtime:1.4.1')
     implementation files(androidRuntime).builtBy(prepareChicory)
     implementation 'com.dylibso.chicory:wasm:1.4.1'
     coreLibraryDesugaring libs.desugar
