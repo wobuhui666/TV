@@ -10,7 +10,7 @@ const cache = new Map();
 const flights = new Map();
 let ownerId = 0;
 const calls = [];
-const context = {console, URL, setTimeout, clearTimeout};
+const context = {console, URL, setTimeout, clearTimeout, ArrayBuffer, Uint8Array, DataView};
 context.local = {
     get(...args) { legacyCalls.push(['get', ...args]); return 'legacy'; },
     set(...args) { legacyCalls.push(['set', ...args]); },
@@ -22,11 +22,16 @@ context.getProxy = function legacyProxy() {};
 context.js2Proxy = function legacyJsProxy() {};
 const originalGlobals = ['req', 'http', 'getProxy', 'js2Proxy'].map(key => context[key]);
 context.__SPIDER_NET_NATIVE__ = {
+    reqBinary(owner, json) {
+        const p = JSON.parse(json);
+        calls.push({method: 'reqBinary', owner, params: p});
+        return {code: 200, headers: {'Content-Type': 'application/octet-stream'}, content: new Uint8Array([0,127,128,255]).buffer};
+    },
     call(method, owner, json) {
         const p = JSON.parse(json);
         calls.push({method, owner, params: p});
         const ok = value => JSON.stringify({value});
-        const deliver = (kind, id, value) => queueMicrotask(() => context.__SPIDER_NET_DELIVER__(kind, id, value));
+        const deliver = (kind, id, value, bytes) => queueMicrotask(() => context.__SPIDER_NET_DELIVER__(kind, id, value, bytes));
         if (method === 'req') return ok(JSON.stringify({code: 200, content: 'sync'}));
         if (method === 'localGet') return ok(localData.get(p.key) ?? null);
         if (method === 'localSet') { localData.set(p.key, p.value); return ok(null); }
@@ -68,6 +73,12 @@ context.__SPIDER_NET_NATIVE__ = {
             if (p.url === 'error') deliver('result', p.id, JSON.stringify({error: 'HTTP 403'}));
             else if (p.url === 'pending') return ok(null);
             else if (p.operation === 'json') deliver('result', p.id, ok('{"items":[1,2]}'));
+            else if (p.operation === 'http' && p.options?.buffer === 1) {
+                const metadata = JSON.stringify({code: 200, headers: {'Content-Type': 'application/octet-stream', 'X-Multi': ['a','b']}});
+                if (p.url === 'binary-error') deliver('result', p.id, ok('{"code":"","error":"Canceled","content":""}'));
+                else if (p.url === 'binary-invalid') deliver('binary', p.id, ok(metadata), [0,127,128,255]);
+                else deliver('binary', p.id, ok(metadata), new Uint8Array(p.url === 'binary-empty' ? [] : [0,127,128,255]).buffer);
+            }
             else if (p.operation === 'http') deliver('result', p.id, ok('{"code":200,"content":"async"}'));
             else if (p.operation === 'ws') deliver('result', p.id, ok('{"code":101,"content":"message"}'));
             else if (p.operation === 'batch') deliver('result', p.id, ok('[{"code":200},{"code":404}]'));
@@ -102,6 +113,24 @@ const plain = value => JSON.parse(JSON.stringify(value));
     assert.throws(() => context.getProxyUrl({siteKey: 'wrong'}), /Reserved/);
     assert.equal(context.net.req('url').content, 'sync');
     assert.equal((await context.net.req('url', {async: true})).content, 'async');
+    const binary = await context.net.http('binary-buffer', {buffer: 1});
+    assert(binary.content instanceof ArrayBuffer);
+    assert.deepEqual(Array.from(new Uint8Array(binary.content)), [0,127,128,255]);
+    assert.deepEqual(plain(binary.headers), {'Content-Type':'application/octet-stream', 'X-Multi':['a','b']});
+    assert.equal(binary.code, 200);
+    assert((await context.net.http('binary-empty', {buffer:1})).content instanceof ArrayBuffer);
+    assert.equal((await context.net.http('binary-empty', {buffer:1})).content.byteLength, 0);
+    assert.deepEqual(plain(await context.net.http('binary-error', {buffer:1})), {code:'',error:'Canceled',content:''});
+    await assert.rejects(context.net.http('binary-invalid', {buffer:1}), {name:'TypeError'});
+    const synchronousBinary = context.net.req('binary-buffer', {buffer:1});
+    assert(synchronousBinary.content instanceof ArrayBuffer);
+    assert.deepEqual(Array.from(new Uint8Array(synchronousBinary.content)), [0,127,128,255]);
+    const binaryProxy = [200,'application/octet-stream',binary.content,{'X-Probe':'yes'}];
+    assert.deepEqual(JSON.parse(context.__SPIDER_NET_PROXY_JSON__(binaryProxy)), [200,'application/octet-stream',[0,127,128,255],{'X-Probe':'yes'}]);
+    assert.equal(binaryProxy[2], binary.content);
+    const paddedBody = new Uint8Array([9,0,127,128,255,8]);
+    assert.deepEqual(JSON.parse(context.__SPIDER_NET_PROXY_JSON__([200,'binary',new DataView(paddedBody.buffer,1,4)]))[2], [0,127,128,255]);
+    assert.deepEqual(JSON.parse(context.__SPIDER_NET_PROXY_JSON__([200,'binary',[0,127,-128,-1]]))[2], [0,127,-128,-1]);
     const binaryOptions = {method: 'POST', body: Array.from({length: 256}, (_, i) => i),
         headers: {'Content-Type': 'application/octet-stream'}, buffer: 3};
     context.net.req('binary', binaryOptions);
@@ -147,8 +176,10 @@ const plain = value => JSON.parse(JSON.stringify(value));
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(plain(context.net.peek('refresh')), {updated: true});
     const waiting = context.net.http('pending');
+    const waitingBinary = context.net.http('pending', {buffer:1});
     context.__SPIDER_NET_DELIVER__('close', 0, '');
     await assert.rejects(waiting, /closed/);
+    await assert.rejects(waitingBinary, /closed/);
     assert.throws(() => context.local.get('key'), /closed/);
     assert.equal(calls.some(call => call.owner === 1 && call.method === 'cookieGet'), true);
     console.log('PASS QuickJS facade protocol: legacy globals/local, values, HTTP/JSON/WS/batch/download/sleep/session, cache loaders/stale/refresh, close rejection');

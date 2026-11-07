@@ -27,6 +27,7 @@ include ':subtitle-ass'
 include ':catvod'
 include ':chaquo'
 include ':quickjs'
+include ':wasm'
 rootProject.name = "TV"
 
 def media3SourceDir = System.getenv("MEDIA3_SOURCE_DIR")

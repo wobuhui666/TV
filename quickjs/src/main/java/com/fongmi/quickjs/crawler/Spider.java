@@ -9,6 +9,7 @@ import com.fongmi.quickjs.method.Local;
 import com.fongmi.quickjs.method.NetBridge;
 import com.fongmi.quickjs.method.DialogBridge;
 import com.fongmi.quickjs.method.Invocation;
+import com.fongmi.quickjs.method.WasmBridge;
 import com.fongmi.quickjs.utils.Async;
 import com.fongmi.quickjs.utils.JSUtil;
 import com.fongmi.quickjs.utils.Module;
@@ -20,6 +21,7 @@ import com.github.catvod.utils.UriUtil;
 import com.github.catvod.utils.Util;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.whl.quickjs.wrapper.JSArray;
+import com.whl.quickjs.wrapper.JSFunction;
 import com.whl.quickjs.wrapper.JSObject;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
@@ -56,6 +58,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private Global global;
     private NetBridge network;
     private DialogBridge dialogs;
+    private volatile WasmBridge wasmBridge;
     private final Set<Invocation> invocations = ConcurrentHashMap.newKeySet();
     private boolean cat;
 
@@ -197,6 +200,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
 
     @Override
     public void destroy() {
+        if (wasmBridge != null) wasmBridge.cancel();
         for (Invocation invocation : invocations) invocation.close();
         dialog.close();
         try {
@@ -220,6 +224,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
         Uninterruptibles.getUninterruptibly(submit(() -> {
             if (dialogs != null) dialogs.close();
             if (network != null) network.close();
+            if (wasmBridge != null) wasmBridge.close();
             if (global != null) global.destroy();
             if (jsObject != null) jsObject.release();
             if (ctx != null) ctx.destroy();
@@ -233,7 +238,9 @@ public class Spider extends com.github.catvod.crawler.Spider {
             createFun();
             network = new NetBridge(ctx, executor, net, local, siteKey);
             dialogs = new DialogBridge(ctx, executor, dialog);
+            wasmBridge = new WasmBridge(ctx);
             createObj();
+            ctx.evaluate("if (!('wasm' in globalThis.__JS_SPIDER__)) globalThis.__JS_SPIDER__.wasm = globalThis.wasm;");
             return null;
         }).get();
     }
@@ -334,7 +341,15 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private Object[] proxy1(Map<String, String> params) throws Exception {
         JSObject obj = submit(() -> JSUtil.toObject(ctx, params)).get();
         JSArray proxy = (JSArray) call("proxy", obj);
-        String json = submit(proxy::stringify).get();
+        String json = submit(() -> {
+            JSFunction stringify = ctx.getGlobalObject().getJSFunction("__SPIDER_NET_PROXY_JSON__");
+            try {
+                return (String) stringify.call(proxy);
+            } finally {
+                if (stringify != null) stringify.release();
+                proxy.release();
+            }
+        }).get();
         JSONArray array = new JSONArray(json);
         Map<String, String> headers = array.length() > 3 ? Json.toMap(array.optString(3)) : null;
         boolean base64 = array.length() > 4 && array.optInt(4) == 1;

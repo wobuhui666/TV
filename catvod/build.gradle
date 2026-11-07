@@ -20,6 +20,7 @@ android {
 }
 
 dependencies {
+    api project(':wasm')
     api libs.annotation
     api libs.brotli
     api libs.bundles.okhttp

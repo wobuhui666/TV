@@ -25,6 +25,10 @@ on:
         description: Verify upstream folder, episode, playback ownership and subtitle regressions
         type: boolean
         default: false
+      wasm:
+        description: Verify real QuickJS WASM and legacy spider compatibility on Android API 24 and 34
+        type: boolean
+        default: false
       responsiveness:
         description: Measure app responsiveness with the live aiwex configuration
         type: boolean
@@ -54,26 +58,30 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.guarded_source && 'guarded-source' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
   guarded-source:
-    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source
+    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm
     uses: ./.github/workflows/guarded-source-verify.yml
     with:
       preload: ${{ inputs.preload }}
   responsiveness:
-    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source
+    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
       compare_baseline: ${{ inputs.compare_baseline }}
       polish: ${{ inputs.polish }}
   verify:
-    if: ${{ !inputs.responsiveness && !inputs.polish && !inputs.guarded_source }}
+    if: ${{ inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api: ${{ fromJSON(inputs.wasm && '[24,34]' || '[34]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -120,19 +128,22 @@ jobs:
           }
           GRADLE
           chmod +x gradlew
+      - name: Rebuild pinned legacy and modern spider DEX fixtures
+        if: inputs.wasm
+        run: python3 .github/scripts/prepare-spider-api-fixtures.py
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
           TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
           ASSRT_API_TOKEN: ${{ inputs.assrt_subtitles && 'assrt-ui-fixture' || '' }}
-        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
       - name: Upload preview APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tv-preview-apk
+          name: tv-preview-apk${{ inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: app/build/outputs/apk/leanbackArm64_v8a/preview/*.apk
       - name: Enable KVM
         run: |
@@ -146,10 +157,14 @@ jobs:
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
+          TV_WASM: ${{ inputs.wasm }}
+          TV_EMULATOR_API: ${{ matrix.api }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_UPSTREAM_STABILITY" = 'true' ]; then
+          if [ "$TV_WASM" = 'true' ]; then
+            bash .github/scripts/verify-wasm.sh "$TV_EMULATOR_API"
+          elif [ "$TV_UPSTREAM_STABILITY" = 'true' ]; then
             python3 - <<'PY'
           import json, pathlib, subprocess
           for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
@@ -288,7 +303,7 @@ jobs:
           fi
           VERIFY
       - name: Prepare runtime TMDB preview credential
-        if: inputs.live_home && !inputs.upstream_stability
+        if: inputs.live_home && !inputs.upstream_stability && !inputs.wasm
         env:
           TMDB_PREVIEW_KEY: ${{ secrets.TV94_TMDB_PREVIEW_KEY }}
         run: |
@@ -307,9 +322,11 @@ jobs:
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
+          TV_WASM: ${{ inputs.wasm }}
+          TV_EMULATOR_API: ${{ matrix.api }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           profile: pixel_2
@@ -317,7 +334,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
-        if: always() && inputs.live_home && !inputs.upstream_stability
+        if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.wasm
         run: |
           python3 - <<'PY'
           import os, pathlib
@@ -327,7 +344,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tv-ui-verification-${{ github.run_id }}
+          name: tv-ui-verification-${{ github.run_id }}${{ inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: |
             artifacts/tv-ui/
             artifacts/upstream-features/
@@ -336,8 +353,11 @@ jobs:
             artifacts/live-home/
             artifacts/assrt-subtitles/
             artifacts/fongmi-stability/
+            artifacts/wasm/
             app/build/test-results/
             app/build/reports/tests/
+            wasm/build/test-results/
+            wasm/build/reports/tests/
             app/schemas/
           if-no-files-found: warn
           retention-days: 14

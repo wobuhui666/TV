@@ -96,6 +96,7 @@ jobs:
         if: matrix.package == 'sourceprobe'
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
+            :wasm:testDebugUnitTest \
             :catvod:testDebugUnitTest \
             :quickjs:testDebugUnitTest \
             :app:assembleMobileArm64_v8aDebug \
@@ -107,6 +108,7 @@ jobs:
           python -m unittest discover -s chaquo/src/test/python -v
           node quickjs/src/test/js/net.test.cjs
           node quickjs/src/test/js/dialog.test.cjs
+          node quickjs/src/test/js/wasm.test.cjs
 
       - name: Check application regression tests
         if: matrix.package == 'sourceprobe'
@@ -244,5 +246,6 @@ jobs:
             artifacts/lint/
             catvod/build/test-results/
             quickjs/build/test-results/
+            wasm/build/test-results/
           if-no-files-found: warn
           retention-days: 7

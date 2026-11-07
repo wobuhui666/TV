@@ -14,6 +14,7 @@
 | 直播时移与回看 | [源配置、播放与控制](live-timeshift.md) |
 | 本地服务与接口 | [LOCAL](LOCAL.md) |
 | 爬虫接口 | [SPIDER](SPIDER.md) · [新旧接口兼容](spider-api-compatibility.md) |
+| WASM 来源 | [模块调用、内存、导入函数及资源生命周期](spider-wasm.md) |
 | 源登录与交互表单 | [弹窗接口与任务生命周期](spider-dialogs.md) |
 | 社区片头片尾跳过 | [三服务接口、匹配与手动优先](community-skip.md) |
 | 播放规格胶囊 | [展示内容、动效与元数据规则](playback-specs-capsule.md) |

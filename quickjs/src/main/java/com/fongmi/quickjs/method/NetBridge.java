@@ -30,7 +30,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Exchanges JSON with the facade; only the JS executor may touch QuickJS values. */
+/** Exchanges JSON metadata and binary buffers; only the JS executor may touch QuickJS values. */
 public final class NetBridge implements AutoCloseable {
 
     private static final Gson GSON = new Gson();
@@ -67,6 +67,29 @@ public final class NetBridge implements AutoCloseable {
                 return success(invoke(method, owner, params));
             } catch (Exception error) {
                 return failure(error);
+            }
+        });
+        nativeObject.setProperty("reqBinary", args -> {
+            try {
+                if (closed) throw new IllegalStateException("Network bridge closed");
+                Net owner = owners.get(((Number) args[0]).intValue());
+                if (owner == null) throw new IllegalStateException("Network session closed");
+                JsonObject params = Json.strict((String) args[1]).getAsJsonObject();
+                Object[] parts = owner.reqParts(string(params, "url"), json(params, "options"));
+                JSObject response = (JSObject) context.parse((String) parts[0]);
+                try {
+                    if (parts[1] instanceof byte[] bytes) response.setProperty("content", bytes);
+                    else response.setProperty("content", (String) parts[1]);
+                    // Returning a JSObject transfers this reference back to QuickJS.
+                    return response;
+                } catch (RuntimeException | Error error) {
+                    response.release();
+                    throw error;
+                }
+            } catch (Exception error) {
+                return failure(error);
+            } finally {
+                for (Object arg : args) if (arg instanceof JSObject object) object.release();
             }
         });
         context.getGlobalObject().setProperty("__SPIDER_NET_NATIVE__", nativeObject);
@@ -162,6 +185,10 @@ public final class NetBridge implements AutoCloseable {
             });
         } else {
             NetOptions options = NetOptions.from(optionsJson);
+            if (operation.equals("http") && options.getBuffer() == 1) {
+                startBinary(owner, id, string(params, "url"), options, invocation);
+                return;
+            }
             future = switch (operation) {
                 case "http" -> owner.requestAsync(string(params, "url"), options).thenApply(result -> result.json(options));
                 case "json" -> {
@@ -189,6 +216,29 @@ public final class NetBridge implements AutoCloseable {
         future.whenComplete((value, error) -> {
             pending.remove(id);
             emit(operation.equals("refresh") ? "refreshed" : "result", id, error == null ? success(value) : failure(error), invocation);
+        });
+    }
+
+    private void startBinary(Net owner, int id, String url, NetOptions options, Invocation invocation) {
+        CompletableFuture<Net.Result> future = owner.requestAsync(url, options);
+        pending.put(id, future);
+        future.whenComplete((result, error) -> {
+            pending.remove(id);
+            if (error != null) {
+                emit("result", id, failure(error), invocation);
+                return;
+            }
+            try {
+                Object[] parts = result.parts(options);
+                if (parts[1] instanceof byte[] bytes) {
+                    // Keep the body out of Gson: JNI converts byte[] directly into ArrayBuffer.
+                    emit("binary", id, success(parts[0]), bytes, invocation);
+                } else {
+                    emit("result", id, success(result.json(options)), invocation);
+                }
+            } catch (Exception failure) {
+                emit("result", id, failure(failure), invocation);
+            }
         });
     }
 
@@ -239,10 +289,17 @@ public final class NetBridge implements AutoCloseable {
     }
 
     private void emit(String kind, int id, String json, Invocation invocation) {
+        emit(kind, id, json, null, invocation);
+    }
+
+    private void emit(String kind, int id, String json, byte[] bytes, Invocation invocation) {
         if (closed) return;
         try {
             executor.execute(Invocation.wrap(invocation, () -> {
-                if (!closed && deliver != null) deliver.callVoid(kind, id, json);
+                if (!closed && deliver != null) {
+                    if (bytes == null) deliver.callVoid(kind, id, json);
+                    else deliver.callVoid(kind, id, json, bytes);
+                }
             }));
         } catch (RejectedExecutionException ignored) {
             // close releases the sole owned JS callback on the JS executor.
