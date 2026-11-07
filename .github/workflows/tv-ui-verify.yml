@@ -17,6 +17,10 @@ on:
         description: Verify episode identity, mixed-release controller navigation and Android Parcel
         type: boolean
         default: false
+      variety_episodes:
+        description: Verify variety dates, issue parts, content versions and API identity guards
+        type: boolean
+        default: false
       assrt_subtitles:
         description: Verify ASSRT search, file selection, download and real Exo subtitle loading
         type: boolean
@@ -58,7 +62,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
@@ -135,7 +139,7 @@ jobs:
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
           TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
-          ASSRT_API_TOKEN: ${{ inputs.assrt_subtitles && 'assrt-ui-fixture' || '' }}
+          ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
         run: python3 .github/scripts/prepare-quickjs-preview.py
@@ -155,6 +159,7 @@ jobs:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
+          TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
           TV_WASM: ${{ inputs.wasm }}
@@ -164,6 +169,38 @@ jobs:
           set -euo pipefail
           if [ "$TV_WASM" = 'true' ]; then
             bash .github/scripts/verify-wasm.sh "$TV_EMULATOR_API"
+          elif [ "$TV_VARIETY_EPISODES" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            suites=(
+              com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest=22
+              com.fongmi.android.tv.api.LogvarMatchingAndroidTest=14
+              com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest=11
+              com.fongmi.android.tv.playback.vod.ExplicitEpisodeSelectionAndroidTest=7
+              com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest=2
+              com.fongmi.android.tv.bean.VodContentRatingParcelTest=2
+              com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
+            )
+            classes=()
+            counts=()
+            for suite in "${suites[@]}"; do
+              classes+=("${suite%=*}")
+              counts+=("${suite##*=}")
+            done
+            IFS=,
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "${classes[*]}" artifacts/variety-episodes "${counts[*]}"
+            unset IFS
           elif [ "$TV_UPSTREAM_STABILITY" = 'true' ]; then
             python3 - <<'PY'
           import json, pathlib, subprocess
@@ -186,11 +223,11 @@ jobs:
               com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
               com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest=5
               com.fongmi.android.tv.player.TimeshiftExoIntegrationTest=2
-              com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest=10
-              com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest=14
+              com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest=11
+              com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest=22
               com.fongmi.android.tv.bean.VodContentRatingParcelTest=2
               com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest=2
-              com.fongmi.android.tv.api.LogvarMatchingAndroidTest=9
+              com.fongmi.android.tv.api.LogvarMatchingAndroidTest=14
             )
             classes=()
             counts=()
@@ -303,7 +340,7 @@ jobs:
           fi
           VERIFY
       - name: Prepare runtime TMDB preview credential
-        if: inputs.live_home && !inputs.upstream_stability && !inputs.wasm
+        if: inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
         env:
           TMDB_PREVIEW_KEY: ${{ secrets.TV94_TMDB_PREVIEW_KEY }}
         run: |
@@ -320,6 +357,7 @@ jobs:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
+          TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
           TV_WASM: ${{ inputs.wasm }}
@@ -334,7 +372,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
-        if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.wasm
+        if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
         run: |
           python3 - <<'PY'
           import os, pathlib
@@ -353,6 +391,7 @@ jobs:
             artifacts/live-home/
             artifacts/assrt-subtitles/
             artifacts/fongmi-stability/
+            artifacts/variety-episodes/
             artifacts/wasm/
             app/build/test-results/
             app/build/reports/tests/

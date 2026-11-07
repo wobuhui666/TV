@@ -253,6 +253,83 @@ public class LogvarApiTest {
         assertEquals(0, LogvarApi.parseEpisodes("http://host", "{\"success\":true,\"animes\":[]}").size());
     }
 
+    @Test
+    public void shouldPreserveVarietyCoordinatesInQueriesAndMatchFilenames() {
+        for (String label : new String[]{"20261005", "2026-10-05期", "2026年10月5日 第3期 上期 加更", "第3期", "第3期下", "第3期会员版"}) {
+            assertEquals(label, LogvarApi.buildSearchEpisodeQuery(label));
+            assertEquals("Show 第二季 " + label, LogvarApi.buildMatchFileName("Show 第二季", label));
+        }
+    }
+
+    @Test
+    public void shouldMatchDateAliasesWithoutTreatingThemAsEpisodeNumbers() {
+        for (String label : new String[]{"20261005", "2026-10-05期", "2026年10月5日"}) {
+            assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show 第二季(2026)【综艺】from mgtv", "【mgtv】2026.10.05期", 31), "Show", label).size());
+        }
+        for (String candidate : new String[]{"2026-10-06", "第3期", "第3集", "2026-10-05 第3期", "2026-10-05上期", "2026-10-05 加更"}) {
+            assertTrue(candidate, LogvarApi.parseAutoEpisodes("http://host", episodes("Show", candidate, 31), "Show", "20261005").isEmpty());
+        }
+    }
+
+    @Test
+    public void shouldRequireCompleteDateIssuePartAndVariantIdentity() {
+        String expected = "20261005 第3期上 加更版";
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "2026年10月5日 第三期 上期 加更", 31), "Show", expected).size());
+        for (String candidate : new String[]{"20261006 第3期上 加更", "20261005 第4期上 加更", "20261005 第3期下 加更", "20261005 第3期上 正片", "第3期上 加更", "20261005上 加更"}) {
+            assertTrue(candidate, LogvarApi.parseAutoEpisodes("http://host", episodes("Show", candidate, 31), "Show", expected).isEmpty());
+        }
+        for (String candidate : new String[]{"第3期上", "第3期 加更", "20261005 第3期", "第3集", "3"}) {
+            assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show", candidate, 31), "Show", "第3期").isEmpty());
+        }
+    }
+
+    @Test
+    public void shouldRequireUniqueVarietyCandidateAndCompatibleTitleSeasonYear() {
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "20261005", 31, "Show", "2026-10-05期", 32), "Show", "20261005").isEmpty());
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Other Show", "20261005", 31), "Show", "20261005").isEmpty());
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show 第一季", "20261005", 31), "Show 第二季", "20261005").isEmpty());
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "20261005", 31), "Show 第二季", "20261005").isEmpty());
+        assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show(2025)", "20261005", 31), "Show(2026)", "20261005").isEmpty());
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show 第二季(2026)", "20261005", 31), "Show 第二季(2026)", "20261005").size());
+    }
+
+    @Test
+    public void shouldKeepMemberPureExtraAndBehindVariantsSeparate() {
+        for (String variant : new String[]{"加更", "会员", "纯享", "幕后"}) {
+            String expected = "第3期 " + variant;
+            assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "第三期 " + variant + "版", 31), "Show", expected).size());
+            assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "第3期 正片", 31), "Show", expected).isEmpty());
+            for (String other : new String[]{"加更", "会员", "纯享", "幕后"}) {
+                if (!variant.equals(other)) assertTrue(LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "第3期 " + other, 31), "Show", expected).isEmpty());
+            }
+        }
+        assertEquals(1, LogvarApi.parseAutoEpisodes("http://host", episodes("Show", "第三期 正片", 31), "Show", "第3期").size());
+    }
+
+    @Test
+    public void shouldSearchVarietyLabelsEvenWithKnownSeasonWithoutPostingCoordinates() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody(episodes("Show 第二季", "2026-10-05 第3期 下期 会员版", 31)));
+            String label = "20261005 第3期下 会员版";
+            assertEquals(1, auto(server, "Show 第二季", label, "", true).size());
+            RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
+            assertEquals("GET", request.getMethod());
+            assertEquals("/api/v2/search/episodes", request.getRequestUrl().encodedPath());
+            assertEquals(label, request.getRequestUrl().queryParameter("episode"));
+            assertNull(request.getRequestUrl().queryParameter("season"));
+        }
+    }
+
+    @Test
+    public void shouldAllowActualVideoUrlXmlForUnreliableVarietyLabels() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("<i><d p=\"1\">fixture</d></i>"));
+            assertEquals(1, auto(server, "Show", "20261005预告", "https://example.invalid/watch/variety", false).size());
+            assertEquals("/api/v2/comment", server.takeRequest(1, TimeUnit.SECONDS).getRequestUrl().encodedPath());
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
     private String field(Danmaku danmaku, String name) throws Exception {
         Field field = Danmaku.class.getDeclaredField(name);
         field.setAccessible(true);

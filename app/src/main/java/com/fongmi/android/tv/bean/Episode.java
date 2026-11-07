@@ -117,10 +117,11 @@ public class Episode implements Parcelable, Diffable<Episode> {
     }
 
     public int getScore(String name, int number) {
-        if (getName().equalsIgnoreCase(name)) return 100;
+        if (getName().equalsIgnoreCase(name) && !getLabel().isAmbiguous()) return 100;
         EpisodeTarget target = new EpisodeTarget(null, name);
         if (target.matches(this)) return 80;
-        if (target.isUnnumbered() && !getLabel().isAmbiguous() && getLabel().number() == null) {
+        if (target.isUnnumbered() && !getLabel().isAmbiguous() && getLabel().number() == null
+                && !getLabel().isVariety() && getLabel().part().isEmpty()) {
             if (name.length() >= 2 && getName().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) return 70;
             if (getName().length() >= 2 && name.toLowerCase(Locale.ROOT).contains(getName().toLowerCase(Locale.ROOT))) return 60;
         }

@@ -44,11 +44,14 @@ import static org.junit.Assert.assertTrue;
 public class LogvarMatchingAndroidTest {
 
     private static final String PREF_KEY = "danmaku_logvar_url";
+    private static final String LEGACY_PREF_KEY = "danmaku_api_url";
     private final ConcurrentLinkedQueue<MockResponse> replies = new ConcurrentLinkedQueue<>();
     private MockWebServer server;
     private String base;
     private boolean hadOverride;
     private Object savedOverride;
+    private boolean hadLegacyOverride;
+    private Object savedLegacyOverride;
 
     @Before
     public void setup() throws Exception {
@@ -58,7 +61,9 @@ public class LogvarMatchingAndroidTest {
         Map<String, ?> preferences = Prefers.getPrefers().getAll();
         hadOverride = preferences.containsKey(PREF_KEY);
         savedOverride = preferences.get(PREF_KEY);
-        LogvarApi.cancel();
+        hadLegacyOverride = preferences.containsKey(LEGACY_PREF_KEY);
+        savedLegacyOverride = preferences.get(LEGACY_PREF_KEY);
+        DanmakuApi.cancel();
         server = new MockWebServer();
         server.setDispatcher(new Dispatcher() {
             @Override
@@ -75,11 +80,13 @@ public class LogvarMatchingAndroidTest {
     @After
     public void cleanup() throws Exception {
         try {
-            LogvarApi.cancel();
+            DanmakuApi.cancel();
             if (server != null) server.shutdown();
         } finally {
             if (hadOverride) Prefers.put(PREF_KEY, savedOverride);
             else Prefers.getPrefers().edit().remove(PREF_KEY).apply();
+            if (hadLegacyOverride) Prefers.put(LEGACY_PREF_KEY, savedLegacyOverride);
+            else Prefers.getPrefers().edit().remove(LEGACY_PREF_KEY).apply();
         }
     }
 
@@ -192,6 +199,94 @@ public class LogvarMatchingAndroidTest {
         assertTrue(search("剧名", "S02E03", null, true).isEmpty());
         assertEquals("/bridge/api/v2/match", takeRequest().getRequestUrl().encodedPath());
         assertNoMoreRequests();
+    }
+
+    @Test
+    public void varietyDatesShouldSearchTheirFullLabelAndAcceptOnlyTheMatchingPartAndVariant() throws Exception {
+        String label = "20261005 第3期上 加更版";
+        respondJson(episodes("综艺 第二季(2026)【综艺】from mgtv", "2026-10-06 第3期上 加更", "301",
+                "综艺 第二季(2026)【综艺】from mgtv", "2026-10-05 第3期下 加更", "302",
+                "综艺 第二季(2026)【综艺】from mgtv", "2026-10-05 第3期上 正片", "303",
+                "综艺 第二季(2026)【综艺】from mgtv", "2026年10月5日 第三期 上期 加更", "304"));
+        List<Danmaku> items = search("综艺 第二季(2026)", label, null, true);
+        assertEquals(1, items.size());
+        assertEquals(base + "/api/v2/comment/304?format=xml", items.get(0).getUrl());
+        RecordedRequest request = takeRequest();
+        assertEquals("GET", request.getMethod());
+        assertEquals("/bridge/api/v2/search/episodes", request.getRequestUrl().encodedPath());
+        assertEquals(label, request.getRequestUrl().queryParameter("episode"));
+        assertFalse(request.getPath().contains("S01"));
+        assertNoMoreRequests();
+    }
+
+    @Test
+    public void dateOnlyVarietyShouldAcceptAliasesButRejectOrdinalAndDuplicateMappings() throws Exception {
+        respondJson(episodes("综艺 第二季", "2026.10.05期", "301"));
+        assertEquals(1, search("综艺", "20261005", null, true).size());
+        assertEquals("20261005", takeRequest().getRequestUrl().queryParameter("episode"));
+        respondJson(episodes("综艺", "第3期", "302"));
+        assertTrue(search("综艺", "20261005", null, true).isEmpty());
+        takeRequest();
+        respondJson(episodes("综艺", "20261005", "303", "综艺", "2026-10-05期", "304"));
+        assertTrue(search("综艺", "20261005", null, true).isEmpty());
+        takeRequest();
+        assertNoMoreRequests();
+    }
+
+    @Test
+    public void complexVarietyShouldLeaveLegacyCandidatesForManualChoiceAndKeepTheRawQuery() throws Exception {
+        DanmakuSetting.putApiUrl(base + "/legacy?name={name}&episode={episode}");
+        String label = "2026-10-05 第3期上 加更";
+        respondJson(episodes("综艺", "第3期", "301"));
+        assertTrue(searchDanmaku("综艺", label, false).isEmpty());
+        assertEquals("/bridge/api/v2/search/episodes", takeRequest().getRequestUrl().encodedPath());
+        assertNoMoreRequests();
+        respondJson("{\"success\":true,\"animes\":[]}");
+        respondJson("[{\"name\":\"Manual fixture\",\"url\":\"https://example.invalid/comments.xml\"}]");
+        assertEquals(1, searchDanmaku("综艺", label, true).size());
+        assertEquals(label, takeRequest().getRequestUrl().queryParameter("episode"));
+        RecordedRequest legacy = takeRequest();
+        assertEquals("/bridge/legacy", legacy.getRequestUrl().encodedPath());
+        assertEquals(label, legacy.getRequestUrl().queryParameter("episode"));
+        assertNoMoreRequests();
+    }
+
+    @Test
+    public void legacyPostShouldKeepOriginalIssueLabelsAndSimpleIssuesShouldStillAutoLoad() throws Exception {
+        DanmakuSetting.putApiUrl(base + "/legacy");
+        respondJson("{\"success\":true,\"animes\":[]}");
+        respondJson("[{\"name\":\"Legacy issue\",\"url\":\"https://example.invalid/issue.xml\"}]");
+        assertEquals(1, searchDanmaku("综艺", "第3期", false).size());
+        assertEquals("第3期", takeRequest().getRequestUrl().queryParameter("episode"));
+        RecordedRequest legacy = takeRequest();
+        assertEquals("POST", legacy.getMethod());
+        HttpUrl body = HttpUrl.parse("http://127.0.0.1/?" + legacy.getBody().readUtf8());
+        assertEquals("第3期", body.queryParameter("episode"));
+        assertEquals("综艺", body.queryParameter("name"));
+        assertNoMoreRequests();
+    }
+
+    @Test
+    public void previewVarietyShouldNotAutomaticallyRequestLegacyCandidates() throws Exception {
+        DanmakuSetting.putApiUrl(base + "/legacy?episode={episode}");
+        assertTrue(searchDanmaku("综艺", "第3期预告", false).isEmpty());
+        assertNoMoreRequests();
+    }
+
+    private List<Danmaku> searchDanmaku(String name, String episode, boolean manual) throws Exception {
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicReference<List<Danmaku>> items = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
+        DanmakuApi.SearchCallback callback = new DanmakuApi.SearchCallback() {
+            @Override public void onSuccess(List<Danmaku> values) { items.set(values); completed.countDown(); }
+            @Override public void onError(Exception exception) { error.set(exception); completed.countDown(); }
+        };
+        if (manual) DanmakuApi.searchManual(name, episode, callback);
+        else DanmakuApi.searchAuto(name, episode, null, callback);
+        assertTrue("Local danmaku callback timed out", completed.await(12, TimeUnit.SECONDS));
+        assertNull(error.get());
+        assertNotNull(items.get());
+        return items.get();
     }
 
     private List<Danmaku> search(String name, String episode, Result result, boolean reliable) throws Exception {

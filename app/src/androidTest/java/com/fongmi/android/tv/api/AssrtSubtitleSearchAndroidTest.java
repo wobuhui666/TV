@@ -224,6 +224,24 @@ public final class AssrtSubtitleSearchAndroidTest {
     }
 
     @Test
+    public void shouldSearchTheOriginalVarietyDateIssuePartAndVariant() throws Exception {
+        launch(false);
+        String title = "综艺 第二季";
+        String label = "2026年10月5日 第3期 上期 加更";
+        main(() -> {
+            activity.manager.setMetadata(PlayerManager.buildMetadata(title, label, ""));
+            activity.openSearch(services);
+        });
+        awaitSearch();
+        main(() -> assertEquals(title + " " + label, text(R.id.keyword)));
+        startSearch();
+        awaitRow(RECORD_TITLE);
+        RecordedRequest search = requests.stream().filter(request -> request.getRequestUrl().encodedPath().equals("/v1/sub/search")).findFirst().orElseThrow();
+        assertEquals(title + " " + label, search.getRequestUrl().queryParameter("q"));
+        assertEquals(0, downloadCount());
+    }
+
+    @Test
     public void shouldKeepAnExistingSecondarySelectionWhileAddingThePrimarySubtitle() throws Exception {
         launch(true);
         await(() -> format(AssrtSubtitlePreviewActivity.EXISTING_NAME) != null, "existing subtitle track");

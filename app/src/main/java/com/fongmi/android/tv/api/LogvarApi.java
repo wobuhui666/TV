@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -136,25 +137,27 @@ public class LogvarApi {
                                         Function<Request, Call> calls, Consumer<Runnable> dispatch, Listener listener) {
         EpisodeLabel label = EpisodeLabelParser.parse(stripPlatformPrefix(episode));
         EpisodeLabel title = EpisodeLabelParser.parse(undecoratedTitle(name));
-        if (!reliableEpisodeLabel || !safeCoordinate(title, label, name)) {
+        boolean variety = label.isVariety();
+        if (!reliableEpisodeLabel || !(variety ? safeVarietyLabel(title, label, name) : safeCoordinate(title, label, name))) {
             dispatch.accept(() -> listener.onSuccess(Collections.emptyList()));
             return;
         }
         Integer season = label.season() == null ? title.season() : label.season();
-        String url = season == null ? buildSearchEpisodesUrl(base, matchTitle(name), String.valueOf(label.number())) : buildMatchUrl(base);
+        boolean searchEpisodes = variety || season == null;
+        String url = searchEpisodes ? buildSearchEpisodesUrl(base, matchTitle(name), episode) : buildMatchUrl(base);
         HttpUrl endpoint = HttpUrl.parse(url);
         if (endpoint == null) {
             dispatch.accept(() -> listener.onSuccess(Collections.emptyList()));
             return;
         }
         Request.Builder request = new Request.Builder().url(endpoint).tag(TAG);
-        if (season != null) {
+        if (!searchEpisodes) {
             JsonObject json = new JsonObject();
             json.addProperty("fileName", buildMatchFileName(name, episode));
             request.post(RequestBody.create(json.toString(), JSON));
         }
         requestAuto(request.build(), calls, dispatch,
-                text -> season == null ? parseAutoEpisodes(base, text, name, episode) : parseAutoMatch(base, text, name, episode), listener);
+                text -> searchEpisodes ? parseAutoEpisodes(base, text, name, episode) : parseAutoMatch(base, text, name, episode), listener);
     }
 
     private static void requestAuto(Request request, Function<Request, Call> calls, Consumer<Runnable> dispatch,
@@ -228,7 +231,7 @@ public class LogvarApi {
     public static String buildSearchEpisodeQuery(String episode) {
         String value = safe(episode);
         EpisodeLabel label = EpisodeLabelParser.parse(stripPlatformPrefix(value));
-        return label.isApiSafe() ? String.valueOf(label.number()) : value;
+        return !label.isVariety() && label.isApiSafe() ? String.valueOf(label.number()) : value;
     }
 
     public static String preferredVideoUrl(@Nullable Result result) {
@@ -290,7 +293,9 @@ public class LogvarApi {
                                                      String name, String episode, boolean matched) {
         EpisodeLabel expected = EpisodeLabelParser.parse(stripPlatformPrefix(episode));
         EpisodeLabel show = EpisodeLabelParser.parse(undecoratedTitle(name));
-        if (!safeCoordinate(show, expected, name) || explicitFailure(response) || candidates == null) return Collections.emptyList();
+        boolean variety = expected.isVariety();
+        if (!(variety ? safeVarietyLabel(show, expected, name) : safeCoordinate(show, expected, name))
+                || explicitFailure(response) || candidates == null) return Collections.emptyList();
         String expectedTitle = normalizedMatchTitle(name);
         if (expectedTitle.isEmpty()) return Collections.emptyList();
         Integer expectedSeason = expected.season() == null ? show.season() : expected.season();
@@ -303,14 +308,14 @@ public class LogvarApi {
             String episodeTitle = string(item, "episodeTitle");
             EpisodeLabel candidate = EpisodeLabelParser.parse(stripPlatformPrefix(episodeTitle));
             EpisodeLabel candidateShow = EpisodeLabelParser.parse(undecoratedTitle(animeTitle));
-            if (!safeCoordinate(candidateShow, candidate, animeTitle)
-                    || !expected.number().equals(candidate.number())
+            if (!(variety ? safeVarietyLabel(candidateShow, candidate, animeTitle) : safeCoordinate(candidateShow, candidate, animeTitle))
+                    || !sameEpisodeIdentity(expected, candidate)
                     || !expectedTitle.equals(normalizedMatchTitle(animeTitle))) continue;
             Integer candidateYear = sourceYear(animeTitle);
             if (expectedYear != null && candidateYear != null && !expectedYear.equals(candidateYear)) continue;
             Integer candidateSeason = candidate.season() == null ? candidateShow.season() : candidate.season();
             if (expectedSeason != null && candidateSeason != null && !expectedSeason.equals(candidateSeason)) continue;
-            if (expectedSeason != null && candidateSeason == null && !matched) continue;
+            if (expectedSeason != null && candidateSeason == null && (!matched || variety)) continue;
             boolean expectedSpecial = expected.isSpecial() || Integer.valueOf(0).equals(expectedSeason);
             boolean candidateSpecial = candidate.isSpecial() || Integer.valueOf(0).equals(candidateSeason);
             if (expectedSpecial != candidateSpecial) continue;
@@ -328,7 +333,21 @@ public class LogvarApi {
         Integer season = episode.season() == null ? title.season() : episode.season();
         boolean special = episode.isSpecial() || title.isSpecial() || SPECIAL_CATEGORY.matcher(safe(titleText)).find();
         return episode.isSingleEpisode() && episode.part().isEmpty() && !episode.isPreview() && !title.isPreview()
+                && !episode.isVariety()
                 && !conflictingSeasons(title, episode) && (!special || Integer.valueOf(0).equals(season));
+    }
+
+    private static boolean safeVarietyLabel(EpisodeLabel title, EpisodeLabel episode, String titleText) {
+        return !episode.isAmbiguous() && (episode.hasAirDate() || episode.isSingleEpisode())
+                && !episode.isPreview() && !title.isPreview() && !episode.isSpecial() && !title.isSpecial()
+                && !SPECIAL_CATEGORY.matcher(safe(titleText)).find() && !conflictingSeasons(title, episode);
+    }
+
+    private static boolean sameEpisodeIdentity(EpisodeLabel expected, EpisodeLabel candidate) {
+        return Objects.equals(expected.number(), candidate.number())
+                && expected.isIssue() == candidate.isIssue()
+                && expected.airDate().equals(candidate.airDate()) && expected.part().equals(candidate.part())
+                && expected.variant().equals(candidate.variant());
     }
 
     private static boolean confirmedMatch(JsonObject response) {
