@@ -6,10 +6,23 @@ android {
     namespace = 'com.fongmi.android.tv.quickjs'
 
     compileSdk libs.versions.compileSdk.get().toInteger()
+    ndkVersion '29.0.14206865'
 
     defaultConfig {
         minSdk libs.versions.minSdk.get().toInteger()
         targetSdk libs.versions.targetSdk.get().toInteger()
+        consumerProguardFiles 'consumer-rules.pro'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        externalNativeBuild {
+            cmake { arguments '-DANDROID_STL=c++_static' }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
     }
 
     compileOptions {
@@ -27,5 +40,8 @@ dependencies {
     testImplementation project(':catvod')
     testImplementation libs.junit
     testImplementation libs.json.test
+    androidTestImplementation libs.junit
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     coreLibraryDesugaring libs.desugar
 }

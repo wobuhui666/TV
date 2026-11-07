@@ -9,6 +9,7 @@ import com.github.catvod.Proxy;
 import com.github.catvod.net.Net;
 import com.github.catvod.utils.Local;
 import com.github.catvod.utils.Dialog;
+import com.github.catvod.utils.Js;
 
 import com.github.catvod.net.OkHttp;
 import com.fongmi.quickjs.WasmRuntime;
@@ -17,16 +18,21 @@ import com.github.catvod.utils.CallTimeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.function.Consumer;
+
+import org.json.JSONObject;
 
 import okhttp3.Dns;
 import okhttp3.OkHttpClient;
 
-public abstract class Spider {
+public abstract class Spider implements AutoCloseable {
 
     public String siteKey;
     public Net net;
     public Local local;
     public final Dialog dialog = new Dialog();
+    public final Js js = new Js();
     private volatile WasmRuntime wasmRuntime;
     private volatile boolean wasmClosed;
 
@@ -70,7 +76,24 @@ public abstract class Spider {
     }
 
     public String getProxyUrl(Map<String, String> params) {
-        Uri.Builder uri = Uri.parse(Proxy.getUrl(true)).buildUpon()
+        return buildProxyUrl(params, true);
+    }
+
+    public String proxyUrl() {
+        return proxyUrl(Collections.emptyMap());
+    }
+
+    public String proxyUrl(Map<String, String> params) {
+        return getProxyUrl(params == null ? Collections.emptyMap() : params);
+    }
+
+    public String proxyUrl(Map<String, String> params, boolean local) {
+        return local ? proxyUrl(params) : buildProxyUrl(params, false);
+    }
+
+    private String buildProxyUrl(Map<String, String> params, boolean local) {
+        if (params == null) params = Collections.emptyMap();
+        Uri.Builder uri = Uri.parse(Proxy.getUrl(local)).buildUpon()
                 .appendQueryParameter("do", "jar").appendQueryParameter("siteKey", siteKey);
         for (Map.Entry<String, String> item : params.entrySet()) {
             if ("do".equals(item.getKey()) || "siteKey".equals(item.getKey()))
@@ -78,6 +101,16 @@ public abstract class Spider {
             uri.appendQueryParameter(item.getKey(), item.getValue());
         }
         return uri.build().toString();
+    }
+
+    public String danmakuUrl(String id) {
+        return danmakuUrl(siteKey, id);
+    }
+
+    public static String danmakuUrl(String siteKey, String id) {
+        if (siteKey == null || siteKey.isEmpty() || id == null || id.isEmpty())
+            throw new IllegalArgumentException("Danmaku requires a site key and ID");
+        return new Uri.Builder().scheme("spider").authority(siteKey).appendPath(id).build().toString();
     }
 
     public void init(Context context) throws Exception {
@@ -135,6 +168,15 @@ public abstract class Spider {
         return null;
     }
 
+    public AutoCloseable danmaku(String id, Consumer<JSONObject> emit) throws Exception {
+        throw new UnsupportedOperationException("Spider does not support live danmaku");
+    }
+
     public void destroy() {
+    }
+
+    @Override
+    public void close() {
+        SpiderRuntime.close(this);
     }
 }

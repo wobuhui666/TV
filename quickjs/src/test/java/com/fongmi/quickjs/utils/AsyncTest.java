@@ -150,6 +150,20 @@ public class AsyncTest {
         return assertThrows(ExecutionException.class, result::get).getCause();
     }
 
+    @Test
+    public void throwingThenGetterReleasesThePromiseAndCompletesTheResult() {
+        AtomicInteger releases = new AtomicInteger();
+        IllegalStateException failure = new IllegalStateException("then getter failed");
+        JSObject value = fake(JSObject.class, (name, args) -> {
+            if (name.equals("getJSFunction")) throw failure;
+            if (name.equals("release")) releases.incrementAndGet();
+            return null;
+        });
+        CompletableFuture<Object> result = Async.runJson(spider(function(args -> value)), "run");
+        assertSame(failure, assertThrows(ExecutionException.class, result::get).getCause());
+        assertEquals(1, releases.get());
+    }
+
     private JSObject spider(JSFunction function) {
         return fake(JSObject.class, (name, args) -> name.equals("getJSFunction") ? function : null);
     }

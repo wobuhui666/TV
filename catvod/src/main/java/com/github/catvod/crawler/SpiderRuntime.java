@@ -29,8 +29,21 @@ public final class SpiderRuntime {
     }
 
     public static void close(Spider spider) {
-        spider.closeWasm();
-        spider.dialog.close();
-        if (spider.net != null) spider.net.close();
+        Throwable failure = close(null, spider.js::close);
+        failure = close(failure, spider::closeWasm);
+        failure = close(failure, spider.dialog::close);
+        if (spider.net != null) failure = close(failure, spider.net::close);
+        if (failure instanceof RuntimeException error) throw error;
+        if (failure instanceof Error error) throw error;
+    }
+
+    private static Throwable close(Throwable failure, Runnable release) {
+        try {
+            release.run();
+        } catch (RuntimeException | Error error) {
+            if (failure == null) return error;
+            if (failure != error) failure.addSuppressed(error);
+        }
+        return failure;
     }
 }

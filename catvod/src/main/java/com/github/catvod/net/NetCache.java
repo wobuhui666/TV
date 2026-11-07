@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -265,6 +266,15 @@ implements AutoCloseable {
             }
             values.remove();
         }
+    }
+
+    synchronized boolean invalidate(String key, String expected) {
+        String current = peek(key);
+        if (!Objects.equals(current, expected)) return false;
+        for (Flight flight : pending) if (key.equals(flight.key)) return false;
+        if (remove != null) remove.accept(key);
+        entries.remove(key);
+        return true;
     }
 
     void clear(String key) {

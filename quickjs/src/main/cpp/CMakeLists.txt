@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(tv_quickjs_budget LANGUAGES CXX)
+add_library(tv-quickjs-budget SHARED quickjs_budget.cpp)
+target_compile_features(tv-quickjs-budget PRIVATE cxx_std_17)
+target_compile_options(tv-quickjs-budget PRIVATE -Wall -Wextra -Werror)
+target_link_libraries(tv-quickjs-budget PRIVATE dl)
