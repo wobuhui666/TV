@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.AbstractComposeView
@@ -445,6 +444,7 @@ class JetStreamPushView @JvmOverloads constructor(
     @Composable
     private fun QrImageCard(compact: Boolean = false) {
         val shape = RoundedCornerShape(16.dp)
+        val colorScheme = MaterialTheme.colorScheme
         TvFocusableSurface(
             onClick = { listener?.onOpenAddress() },
             modifier = Modifier.size(if (compact) 220.dp else 288.dp),
@@ -452,7 +452,7 @@ class JetStreamPushView @JvmOverloads constructor(
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(6.dp)
-                    .clip(RoundedCornerShape(12.dp)).background(Color.White)
+                    .clip(RoundedCornerShape(12.dp)).background(colorScheme.surface)
                     .padding(if (compact) 16.dp else 20.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -460,7 +460,7 @@ class JetStreamPushView @JvmOverloads constructor(
                 if (bitmap == null) {
                     Text(
                         text = "QR",
-                        color = Color.Black,
+                        color = colorScheme.onSurface,
                         fontSize = 22.sp,
                         lineHeight = 26.sp,
                         fontWeight = FontWeight.SemiBold
@@ -468,7 +468,7 @@ class JetStreamPushView @JvmOverloads constructor(
                 } else {
                     Image(
                         bitmap = bitmap.asImageBitmap(),
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.push_scan_title),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )

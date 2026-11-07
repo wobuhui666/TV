@@ -141,8 +141,7 @@ public final class MaintenanceDialog {
         int padding = ResUtil.dp2px(20);
         content.setPadding(padding, 0, padding, 0);
         ImageView qr = new ImageView(activity);
-        qr.setBackgroundColor(android.graphics.Color.BLACK);
-        qr.setImageBitmap(QRCode.getBitmap(url, 180, 2));
+        qr.setImageBitmap(QRCode.getThemedBitmap(activity, url, 180, 4));
         qr.setContentDescription(activity.getString(R.string.maintenance_download_qr));
         content.addView(qr, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ResUtil.dp2px(180)));
         MaterialTextView hint = new MaterialTextView(activity);
