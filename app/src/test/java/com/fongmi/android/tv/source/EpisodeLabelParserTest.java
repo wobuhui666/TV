@@ -167,6 +167,225 @@ public class EpisodeLabelParserTest {
     }
 
     @Test
+    public void shouldParseCalendarDatesWithoutUsingThemAsEpisodeNumbers() {
+        for (String name : new String[]{"20261107", "20261107期", "第20261107期", "2026-11-07", "2026.11.7",
+                "2026/11/07", "2026_11_07", "2026 11 07", "2026年11月7日", "２０２６１１０７", "[2026-11-07]"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, "2026-11-07", label.airDate());
+            assertTrue(name, label.hasAirDate());
+            assertTrue(name, label.isVariety());
+            assertFalse(name, label.isAmbiguous());
+            assertFalse(name, label.isApiSafe());
+            assertNull(name, label.number());
+            assertEquals(name, "", label.edition());
+        }
+        assertEquals("2024-02-29", EpisodeLabelParser.parse("20240229").airDate());
+        assertEquals("2026-01-02", EpisodeLabelParser.parse("2026年1月2日").airDate());
+    }
+
+    @Test
+    public void shouldRejectInvalidOrConflictingDates() {
+        for (String name : new String[]{"20260229", "2026-02-30", "2026/13/07", "2026年11月31日", "20260007",
+                "20261100", "0000-11-07", "20261107 20261108", "第3期 2026-02-30"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertTrue(name, label.isAmbiguous());
+            assertFalse(name, label.isApiSafe());
+            assertNull(name, label.number());
+        }
+        assertEquals("", EpisodeLabelParser.parse("20261107 20261108").airDate());
+        assertEquals("2026-11-07", EpisodeLabelParser.parse("20261107 [2026-11-07]").airDate());
+        assertFalse(EpisodeLabelParser.parse("20261107 [2026-11-07]").isAmbiguous());
+    }
+
+    @Test
+    public void shouldKeepIssueNumbersAndDatesAsSeparateCoordinates() {
+        for (String name : new String[]{"第3期", "第三期", "3期", "第３期", "[第三期]"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertTrue(name, label.isIssue());
+            assertTrue(name, label.isVariety());
+            assertTrue(name, label.isApiSafe());
+        }
+        for (String name : new String[]{"20261107 第3期", "第3期 2026-11-07", "[2026年11月7日][第三期]"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "2026-11-07", label.airDate());
+            assertTrue(name, label.isIssue());
+            assertFalse(name, label.isApiSafe());
+            assertEquals(name, "", label.edition());
+        }
+        assertFalse(EpisodeLabelParser.parse("第3集").isIssue());
+        assertFalse(EpisodeLabelParser.parse("第3集").isVariety());
+    }
+
+    @Test
+    public void shouldNormalizeVarietyVariantsBeforeRemovingEpisodePlotBrackets() {
+        for (String name : new String[]{"第3期加更", "加更版 第3期", "[加更篇]第三期", "第三期[加更版]", "20261107加更版"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, "extra", label.variant());
+            assertTrue(name, label.isVariety());
+            assertFalse(name, label.isPreview());
+            assertFalse(name, label.isApiSafe());
+            assertEquals(name, "", label.edition());
+        }
+        for (String name : new String[]{"第3期会员版", "会员加长版第3期", "第三期（會員加長版）"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "member", label.variant());
+        }
+        assertEquals("pure", EpisodeLabelParser.parse("第三期純享版").variant());
+        assertEquals("behind", EpisodeLabelParser.parse("第三期未播").variant());
+        assertEquals("behind", EpisodeLabelParser.parse("第三期幕后篇").variant());
+        assertEquals("behind", EpisodeLabelParser.parse("第三期幕後版").variant());
+        EpisodeLabel behind = EpisodeLabelParser.parse("第三期花絮");
+        assertEquals("behind", behind.variant());
+        assertTrue(behind.isPreview());
+        assertFalse(EpisodeLabelParser.parse("第三期幕后").isPreview());
+        assertEquals("extra|member", EpisodeLabelParser.parse("第3期加更会员版").variant());
+        assertEquals("extra|member", EpisodeLabelParser.parse("会员版加更第3期").variant());
+        assertEquals(EpisodeLabelParser.parse("Show 第3期 [加更版][初遇]").edition(),
+                EpisodeLabelParser.parse("Show 第4期 [加更篇][重逢]").edition());
+    }
+
+    @Test
+    public void shouldTreatRegularContentLabelsAsTheUnmarkedVariant() {
+        for (String name : new String[]{"第3期正片", "正片 第3期", "第3期完整版", "第3期 full", "第3期 Full Episode", "第3期 regular"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "", label.variant());
+            assertEquals(name, "", label.edition());
+            assertTrue(name, label.isApiSafe());
+        }
+        assertEquals(EpisodeLabelParser.parse("Show 第3期").edition(), EpisodeLabelParser.parse("Show 第3期正片").edition());
+    }
+
+    @Test
+    public void shouldParseVarietyPartsIndependentlyFromContentVariants() {
+        for (String name : new String[]{"第3期上期", "第三期（上期）", "第3期上半期", "第3期正片上", "第3期加更版上期", "第3期上期加更版"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "upper", label.part());
+            assertFalse(name, label.isApiSafe());
+        }
+        assertEquals("middle", EpisodeLabelParser.parse("第3期中期").part());
+        assertEquals("lower", EpisodeLabelParser.parse("第3期下半期").part());
+        assertEquals("extra", EpisodeLabelParser.parse("第3期上期加更版").variant());
+        for (String name : new String[]{"第3期上下期", "第3期上中下期", "第3期上期 下期", "第3期上期+下期", "第3期上/下", "第3-4期", "第3期 第4期", "第3期第4期", "3期4期", "第3期合集"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertTrue(name, label.isAmbiguous());
+            assertNull(name, label.number());
+        }
+    }
+
+    @Test
+    public void shouldKeepIssuePartsBeforeTrailingPreviewMarkers() {
+        for (String name : new String[]{"第3期下预告", "第3期下预告片", "第3期下 预告", "第3期下[预告]", "第3期[下][预告]",
+                "第三期（下期）（预告）", "第3期下期 先导", "第3期下期 trailer"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "lower", label.part());
+            assertTrue(name, label.isIssue());
+            assertTrue(name, label.isVariety());
+            assertTrue(name, label.isPreview());
+            assertFalse(name, label.isAmbiguous());
+            assertFalse(name, label.isApiSafe());
+        }
+        assertTrue(EpisodeLabelParser.parse("第3期上下期预告").isAmbiguous());
+        assertNull(EpisodeLabelParser.parse("第3期上下期预告").number());
+    }
+
+    @Test
+    public void shouldPreserveDateAndDramaCoordinatesBeforeSplitPreviews() {
+        EpisodeLabel dated = EpisodeLabelParser.parse("20260301 第3期上预告");
+        assertEquals("2026-03-01", dated.airDate());
+        assertEquals(Integer.valueOf(3), dated.number());
+        assertEquals("upper", dated.part());
+        assertTrue(dated.isIssue());
+        assertTrue(dated.isPreview());
+        assertFalse(dated.isApiSafe());
+        EpisodeLabel drama = EpisodeLabelParser.parse("第3集下 预告");
+        assertEquals(Integer.valueOf(3), drama.number());
+        assertEquals("lower", drama.part());
+        assertTrue(drama.isPreview());
+        assertFalse(drama.isVariety());
+    }
+
+    @Test
+    public void shouldKeepIssuePartsBeforeTrailingSpecialMarkers() {
+        for (String name : new String[]{"第3期下特别篇", "第3期下 特别篇", "第3期[下][特辑]", "第3期下 SP"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, Integer.valueOf(3), label.number());
+            assertEquals(name, "lower", label.part());
+            assertTrue(name, label.isIssue());
+            assertTrue(name, label.isSpecial());
+            assertFalse(name, label.isAmbiguous());
+            assertFalse(name, label.isApiSafe());
+        }
+        assertTrue(EpisodeLabelParser.parse("第3期上下期特别篇").isAmbiguous());
+    }
+
+    @Test
+    public void shouldIgnorePreviewDirectoriesWhenReadingLeafIssueParts() {
+        EpisodeLabel regular = EpisodeLabelParser.parse("/downloads/预告/2026-03-01/第3期下.mp4");
+        assertEquals(Integer.valueOf(3), regular.number());
+        assertEquals("lower", regular.part());
+        assertEquals("", regular.airDate());
+        assertTrue(regular.isIssue());
+        assertFalse(regular.isPreview());
+        assertFalse(regular.isAmbiguous());
+        EpisodeLabel preview = EpisodeLabelParser.parse("/downloads/2026-03-01/第3期下[预告].mp4");
+        assertEquals(Integer.valueOf(3), preview.number());
+        assertEquals("lower", preview.part());
+        assertEquals("", preview.airDate());
+        assertTrue(preview.isPreview());
+    }
+
+    @Test
+    public void shouldKeepReleaseFoldersAndSimilarPlotWordsOutOfVarietyMetadata() {
+        EpisodeLabel filename = EpisodeLabelParser.parse("/downloads/2026-11-07/Show 第二季/第3期.mp4");
+        assertEquals("", filename.airDate());
+        assertEquals(Integer.valueOf(3), filename.number());
+        assertEquals(Integer.valueOf(2), filename.season());
+        assertEquals("", filename.edition());
+        for (String name : new String[]{"1107", "11月7日", "2026", "Movie.2026.1080p.mkv", "[20261107deadbeef]", "[deadbeef20261107]", "幕后玩家", "幕後玩家", "加更的日子", "纯享受生活", "第一集训队", "第3期王某加更", "第3期王某心中加更", "加更上瘾", "加更会员的家"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(name);
+            assertEquals(name, "", label.airDate());
+            assertEquals(name, "", label.variant());
+            assertFalse(name, label.isVariety());
+        }
+        // A four-digit number without a year/month/day structure retains the legacy episode interpretation.
+        assertEquals(Integer.valueOf(1107), EpisodeLabelParser.parse("1107").number());
+        assertNull(EpisodeLabelParser.parse("第3期王某加更").number());
+        EpisodeLabel leafDate = EpisodeLabelParser.parse("/downloads/2026-11-06/20261107 第3期.mp4");
+        assertEquals("2026-11-07", leafDate.airDate());
+        assertFalse(leafDate.isAmbiguous());
+        assertEquals("fullhouse", EpisodeLabelParser.parse("Full House S01E03").edition());
+        assertEquals("regularshow", EpisodeLabelParser.parse("Regular.Show.S01E03.mkv").edition());
+        assertEquals("", EpisodeLabelParser.parse("Show.S01E03.[20261107deadbeef].1080p.mkv").airDate());
+    }
+
+    @Test
+    public void shouldPreserveVarietyMetadataWhenAddingAnInheritedSeason() {
+        EpisodeLabel parsed = EpisodeLabelParser.parse("20261107 第3期会员版上期");
+        EpisodeLabel inherited = parsed.withSeason(2);
+        assertEquals(Integer.valueOf(2), inherited.season());
+        assertEquals(parsed.number(), inherited.number());
+        assertEquals(parsed.airDate(), inherited.airDate());
+        assertEquals(parsed.variant(), inherited.variant());
+        assertEquals(parsed.part(), inherited.part());
+        assertEquals(parsed.edition(), inherited.edition());
+        assertEquals(parsed.isIssue(), inherited.isIssue());
+        assertFalse(inherited.isApiSafe());
+        EpisodeLabel legacy = new EpisodeLabel("第3集", null, 3, "", "", false, false, false);
+        assertEquals("", legacy.airDate());
+        assertEquals("", legacy.variant());
+        assertFalse(legacy.isIssue());
+        assertTrue(legacy.isApiSafe());
+        assertTrue(legacy.withSeason(0).isSpecial());
+        assertTrue(legacy.withSeason(0).isApiSafe());
+    }
+
+    @Test
     public void shouldReturnAnUnknownLabelForEmptyOrExcessivelyLongInputs() {
         assertNull(EpisodeLabelParser.parse(null).number());
         assertEquals("", EpisodeLabelParser.parse(null).edition());

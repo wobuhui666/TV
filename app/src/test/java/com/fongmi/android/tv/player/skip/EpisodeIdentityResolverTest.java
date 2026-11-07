@@ -55,6 +55,19 @@ public class EpisodeIdentityResolverTest {
     }
 
     @Test
+    public void shouldNotMapVarietyDatesOrIssuesToTmdbEpisodePositions() throws Exception {
+        for (String label : new String[]{"20261005", "2026-10-05期", "2026年10月5日", "第3期", "第3期上", "第3期会员版", "S02E03 加更"}) {
+            assertNull(label, EpisodeIdentityResolver.parseEpisode("Show 第二季", label));
+        }
+        try (MockWebServer server = new MockWebServer()) {
+            EpisodeIdentityResolver resolver = resolver(server);
+            assertNull(resolver.resolve("tmdb:tv:123", "Show 第二季", "2026", "综艺", "第3期"));
+            assertNull(resolver.resolve("tmdb:tv:123", "Show", "2026", "综艺", "20261005"));
+            assertEquals(0, server.getRequestCount());
+        }
+    }
+
+    @Test
     public void shouldParseMixedReleaseFileLabelsWithoutUsingSizeOrQualityNumbers() {
         String release = "[494.7MB][ANi] 暗部共生少女 - 04 [1080P][Baha][WEB-DL][AAC AVC].mp4";
         EpisodeIdentityResolver.ParsedEpisode parsed = EpisodeIdentityResolver.parseEpisode("暗部共生少女 第二季", release);

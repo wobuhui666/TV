@@ -9,6 +9,10 @@ import androidx.annotation.Nullable;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.impl.Diffable;
+import com.fongmi.android.tv.source.EpisodeLabel;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
+import com.fongmi.android.tv.source.EpisodeTarget;
+import com.fongmi.android.tv.source.SmartSourceSelector;
 import com.fongmi.android.tv.utils.TextFilter;
 import com.fongmi.android.tv.utils.Util;
 import com.github.catvod.utils.Trans;
@@ -129,6 +133,10 @@ public class Flag implements Parcelable, Diffable<Flag> {
 
     public Episode find(String remarks, boolean strict) {
         if (getEpisodes().isEmpty()) return null;
+        EpisodeLabel requested = EpisodeLabelParser.parse(remarks);
+        if (requested.isVariety() || requested.isAmbiguous() || !requested.part().isEmpty()) {
+            return SmartSourceSelector.findEpisode(this, new EpisodeTarget(null, remarks));
+        }
         if (getEpisodes().size() == 1) return getEpisodes().get(0);
         int number = Util.getNumber(remarks);
         return getEpisodes().stream()

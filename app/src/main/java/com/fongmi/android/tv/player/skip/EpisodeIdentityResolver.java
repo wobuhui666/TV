@@ -214,6 +214,8 @@ public final class EpisodeIdentityResolver {
         if (name.isEmpty() || UNSUPPORTED.matcher(name).find()) return null;
         EpisodeLabel label = EpisodeLabelParser.parse(name);
         EpisodeLabel show = EpisodeLabelParser.parse(showTitle);
+        // A source's issue number or air date does not establish a TMDB episode position.
+        if (label.isVariety()) return null;
         if (label.isAmbiguous() || show.isAmbiguous()) return null;
         Integer season = label.season() == null ? show.season() : label.season();
         if (show.season() != null && label.season() != null && !show.season().equals(label.season())) return null;

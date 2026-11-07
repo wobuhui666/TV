@@ -1,6 +1,8 @@
 package com.fongmi.android.tv.source;
 
 import java.text.Normalizer;
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -17,10 +19,12 @@ import java.util.regex.Pattern;
 public final class EpisodeLabelParser {
 
     private static final String NUMBER = "[零〇一二两三四五六七八九十百千0-9]{1,8}";
+    private static final String EPISODE_BOUNDARY = "(?=$|[^\\p{L}\\p{Nd}]|(?:第\\s*)?" + NUMBER + "\\s*[集话期])";
+    private static final String SEMANTIC_BOUNDARY = "(?=$|[^\\p{L}\\p{Nd}]|第|会员|加更|纯享|未播|幕后|花絮|正片|完整版|[上中下](?:半期|期|半集|集|部|篇)?$)";
     private static final Pattern SE = Pattern.compile("(?i)(?<![a-z0-9])s\\s*([0-9]{1,3})[ ._-]*e\\s*([0-9]{1,4})(?![0-9])");
     private static final Pattern CROSS = Pattern.compile("(?i)(?<![a-z0-9])([0-9]{1,3})x([0-9]{1,4})(?![0-9])");
     private static final Pattern SEASON = Pattern.compile("(?i)(?<![a-z0-9])(?:season\\s*|s)([0-9]{1,3})(?![a-z0-9])|第\\s*(" + NUMBER + ")\\s*季");
-    private static final Pattern EPISODE = Pattern.compile("(?i)(?<![a-z0-9])(?:ep(?:isode)?\\s*|e)([0-9]{1,4})(?![0-9])|第\\s*(" + NUMBER + ")\\s*[集话期](?![\\p{L}\\p{Nd}])|(?<![零〇一二两三四五六七八九十百千0-9])(" + NUMBER + ")\\s*[集话期](?![\\p{L}\\p{Nd}])");
+    private static final Pattern EPISODE = Pattern.compile("(?i)(?<![a-z0-9])(?:ep(?:isode)?\\s*|e)([0-9]{1,4})(?![0-9])|第\\s*(" + NUMBER + ")\\s*[集话期]" + EPISODE_BOUNDARY + "|(?<![零〇一二两三四五六七八九十百千0-9])(" + NUMBER + ")\\s*[集话期]" + EPISODE_BOUNDARY);
     private static final Pattern BARE = Pattern.compile("^\\s*(?:第\\s*)?(" + NUMBER + ")\\s*$");
     private static final Pattern RELEASE_NUMBER = Pattern.compile("[-–—]\\s*([0-9]{1,4})(?![0-9])[ ._-]*$");
     private static final Pattern FILE_NUMBER = Pattern.compile("(?:^|[ ._-])([0-9]{1,4})(?![0-9])[ ._-]*$");
@@ -28,12 +32,16 @@ public final class EpisodeLabelParser {
             + "|e[0-9]{1,4}(?:[ ._-]*e[0-9]{1,4})+|^\\s*(" + NUMBER + ")\\s*[-–—~_至到+、,/&]\\s*" + NUMBER + "[集话期]?[ ._-]*$|[-–—]\\s*(" + NUMBER + ")\\s*[-–—~_至到+、,/&]\\s*" + NUMBER + "[集话期]?[ ._-]*$");
     private static final Pattern DECIMAL = Pattern.compile("(?i)(?:e(?:p|pisode)?\\s*|第\\s*|[-–—]\\s*|^)[0-9]{1,4}\\.[0-9]+(?:[集话期]|[ ._-]*$)");
     private static final Pattern COLLECTION = Pattern.compile("(?i)合集|全集|合并|合輯|\\b(?:complete|batch)\\b");
-    private static final Pattern PREVIEW = Pattern.compile("(?i)预告|花絮|先导|\\b(?:trailer|preview|teaser)\\b");
+    private static final Pattern PREVIEW = Pattern.compile("(?i)预告(?:片)?|花絮|先导|\\b(?:trailer|preview|teaser)\\b");
     private static final Pattern SPECIAL = Pattern.compile("(?i)特别篇|特别集|特辑|特典|番外|(?<![a-z])(?:special|ova|oad|sp|ncop|nced|op|ed)(?![a-z])");
-    private static final Pattern PART = Pattern.compile("(?i)\\bpart[ ._-]*([0-9]{1,2})(?![0-9])|第\\s*(" + NUMBER + ")\\s*部分|([上中下])(?:部分|半集|半部|半|集|部|篇){0,2}(?=[\\s\\]）)]*$)");
-    private static final Pattern COMBINED_PART = Pattern.compile("上下(?:集|部|篇)?(?=[\\s\\]）)]*$)");
+    private static final Pattern PART = Pattern.compile("(?i)\\bpart[ ._-]*([0-9]{1,2})(?![0-9])|第\\s*(" + NUMBER + ")\\s*部分|([上中下])(?:部分|半期|半集|半部|半|期|集|部|篇){0,2}(?=[\\s\\]）)]*(?:$|[上中下](?:半)?期))");
+    private static final Pattern COMBINED_PART = Pattern.compile("(?:上下|上中下|上(?:半期|期|集|部|篇)?[\\s、,/+&~至到-]+(?:中(?:半期|期|集|部|篇)?[\\s、,/+&~至到-]+)?下)(?:半期|期|集|部|篇)?(?=[\\s\\]）)]*$)");
     private static final Pattern SIZE = Pattern.compile("(?i)(?<![a-z0-9])[0-9]+(?:[.,][0-9]+)?\\s*(?:[kmgt]i?b)(?![a-z])");
-    private static final Pattern DATE = Pattern.compile("(?<![0-9])(?:19|20)[0-9]{2}[ ._-](?:0?[1-9]|1[012])[ ._-](?:0?[1-9]|[12][0-9]|3[01])(?![0-9])");
+    private static final Pattern DATE = Pattern.compile("(?<![a-zA-Z0-9])(?:([0-9]{4})([0-9]{2})([0-9]{2})|([0-9]{4})[- ./_]+([0-9]{1,2})[- ./_]+([0-9]{1,2})|([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日)(?![a-zA-Z0-9])");
+    private static final Pattern VARIANT = Pattern.compile("(?i)会员(?:加长)?(?:版|篇)?|加更(?:版|篇)?|纯享(?:版|篇)?|未播(?:版|篇)?|幕后(?:版|篇)?|花絮(?:版|篇)?|正片(?:版)?|完整版|\\b(?:full(?:[ ._-]+episode)?|regular)\\b");
+    private static final Pattern EPISODE_END = Pattern.compile("(?:第\\s*)?" + NUMBER + "\\s*[集话期]$");
+    private static final Pattern PART_END = Pattern.compile("(?i)(?:[上中下](?:部分|半期|半集|半部|半|期|集|部|篇){0,2}|\\bpart[ ._-]*[0-9]{1,2})$");
+    private static final Pattern SEMANTIC_SUFFIX = Pattern.compile("(?i)^(?:第\\s*" + NUMBER + "\\s*[集话期]|" + NUMBER + "\\s*[集话期]|(?:ep(?:isode)?|e)\\s*[0-9]{1,4}|[上中下](?:半期|期|半集|集|部|篇)?|part[ ._-]*[0-9]{1,2}|会员(?:加长)?(?:版|篇)?|加更(?:版|篇)?|纯享(?:版|篇)?|未播(?:版|篇)?|幕后(?:版|篇)?|花絮(?:版|篇)?|正片(?:版)?|完整版)" + SEMANTIC_BOUNDARY);
     private static final Pattern DIMENSIONS = Pattern.compile("(?i)(?<![0-9])[0-9]{3,4}[x×][0-9]{3,4}(?![0-9])");
     private static final Pattern HASH = Pattern.compile("(?i)(?<![a-z0-9])(?=[a-f0-9]{8,64}(?![a-z0-9]))(?=[a-f0-9]*[a-f])[a-f0-9]{8,64}(?![a-z0-9])");
     private static final Pattern AUDIO_CHANNELS = Pattern.compile("(?i)(?<![a-z0-9])(aac|flac|dts(?:[- .]?hd)?(?:[- .]?ma)?|e?ac3|ddp?|opus)[ ._-]*([1-9]\\.[0-9])(?:ch)?(?![a-z0-9])");
@@ -56,8 +64,38 @@ public final class EpisodeLabelParser {
         List<BracketTag> bracketTags = new ArrayList<>();
         Set<Integer> seasons = new LinkedHashSet<>();
         boolean file = mask(EXTENSION, value, remaining);
+        int directory = file ? lastDirectorySeparator(value) : -1;
+        Set<String> airDates = new TreeSet<>();
+        Set<String> variants = new TreeSet<>();
+        boolean invalidDate = false;
+        boolean variantPreview = false;
+        int identityStart = value.length();
         mask(SIZE, value, remaining);
-        mask(DATE, value, remaining);
+        // Folder dates describe a download/release location, not the playlist item's air date.
+        Matcher dates = DATE.matcher(new String(remaining));
+        dates.region(directory + 1, value.length());
+        while (dates.find()) {
+            String date = airDate(dates);
+            if (date.isEmpty()) invalidDate = true;
+            else airDates.add(date);
+            identityStart = Math.min(identityStart, dates.start());
+            int start = dates.start();
+            int end = dates.end();
+            if (end < value.length() && value.charAt(end) == '期') {
+                end++;
+                if (start > directory + 1 && value.charAt(start - 1) == '第') start--;
+            }
+            consume(remaining, start, end);
+        }
+        Matcher variantMarkers = VARIANT.matcher(new String(remaining));
+        while (variantMarkers.find()) {
+            if (variantMarkers.start() <= directory || !isSemanticVariant(new String(remaining), variantMarkers)) continue;
+            String marker = variantMarkers.group().toLowerCase(Locale.ROOT);
+            String tag = variant(marker);
+            if (!tag.isEmpty()) variants.add(tag);
+            variantPreview |= marker.startsWith("花絮");
+            consume(remaining, variantMarkers.start(), variantMarkers.end());
+        }
         Matcher dimensions = DIMENSIONS.matcher(value);
         while (dimensions.find()) {
             editionTags.add(name(dimensions.group()));
@@ -100,12 +138,16 @@ public final class EpisodeLabelParser {
             seasons.add(number(firstGroup(seasonMarkers)));
             consume(remaining, seasonMarkers.start(), seasonMarkers.end());
         }
-        int directory = file ? lastDirectorySeparator(value) : -1;
         if (directory >= 0) consume(remaining, 0, directory + 1);
         String working = new String(remaining);
-        boolean preview = PREVIEW.matcher(working).find();
+        boolean preview = variantPreview || PREVIEW.matcher(working).find();
         boolean special = SPECIAL.matcher(working).find();
-        boolean ambiguous = COLLECTION.matcher(working).find() || COMBINED_PART.matcher(working).find();
+        // Trailing preview/special markers must not hide the preceding upper/middle/lower part.
+        mask(PREVIEW, working, remaining);
+        mask(SPECIAL, working, remaining);
+        working = new String(remaining);
+        boolean ambiguous = invalidDate || airDates.size() > 1 || COLLECTION.matcher(working).find()
+                || COMBINED_PART.matcher(working).find();
         Set<String> parts = new LinkedHashSet<>();
         Matcher partMarkers = PART.matcher(working);
         while (partMarkers.find()) {
@@ -114,13 +156,12 @@ public final class EpisodeLabelParser {
             consume(remaining, partMarkers.start(), partMarkers.end());
         }
         if (parts.size() > 1) ambiguous = true;
-        mask(PREVIEW, working, remaining);
-        mask(SPECIAL, working, remaining);
         working = new String(remaining);
         if (RANGE.matcher(working).find() || DECIMAL.matcher(working).find()) ambiguous = true;
         Integer episode = null;
+        boolean issue = false;
         int episodeMarkers = 0;
-        int episodeStart = value.length();
+        int episodeStart = identityStart;
         for (Pattern pattern : new Pattern[]{SE, CROSS}) {
             Matcher compound = pattern.matcher(working);
             while (compound.find()) {
@@ -134,6 +175,7 @@ public final class EpisodeLabelParser {
         Matcher markers = EPISODE.matcher(new String(remaining));
         while (markers.find()) {
             episode = number(firstGroup(markers));
+            issue |= markers.group().endsWith("期");
             episodeMarkers++;
             episodeStart = Math.min(episodeStart, markers.start());
             consume(remaining, markers.start(), markers.end());
@@ -149,7 +191,7 @@ public final class EpisodeLabelParser {
                 int candidate = number(selected.group(1));
                 if (candidate < 1900 || candidate > 2099) {
                     episode = candidate;
-                    episodeStart = selected.start();
+                    episodeStart = Math.min(episodeStart, selected.start());
                     consume(remaining, selected.start(), selected.end());
                 }
             }
@@ -169,7 +211,50 @@ public final class EpisodeLabelParser {
         editionTags.remove("");
         String edition = body.isEmpty() ? String.join("|", editionTags)
                 : body + (editionTags.isEmpty() ? "" : "|" + String.join("|", editionTags));
-        return new EpisodeLabel(original, season, episode, part, edition, special, preview, ambiguous);
+        String airDate = airDates.size() == 1 ? airDates.iterator().next() : "";
+        return new EpisodeLabel(original, season, episode, part, edition, special, preview, ambiguous,
+                airDate, String.join("|", variants), issue);
+    }
+
+    private static String airDate(Matcher matcher) {
+        int offset = matcher.group(1) != null ? 1 : matcher.group(4) != null ? 4 : 7;
+        int year = integer(matcher.group(offset));
+        try {
+            if (year < 1) return "";
+            return LocalDate.of(year, integer(matcher.group(offset + 1)), integer(matcher.group(offset + 2))).toString();
+        } catch (DateTimeException ignored) {
+            return "";
+        }
+    }
+
+    private static boolean isSemanticVariant(String value, Matcher matcher) {
+        int start = matcher.start();
+        int end = matcher.end();
+        Matcher partEnd = PART_END.matcher(value.substring(0, start));
+        boolean afterPart = partEnd.find() && (partEnd.start() == 0
+                || !Character.isLetterOrDigit(value.charAt(partEnd.start() - 1))
+                || EPISODE_END.matcher(value.substring(0, partEnd.start())).find());
+        boolean left = start == 0 || !Character.isLetterOrDigit(value.charAt(start - 1))
+                || EPISODE_END.matcher(value.substring(0, start)).find()
+                || afterPart;
+        boolean right = end == value.length() || !Character.isLetterOrDigit(value.charAt(end))
+                || SEMANTIC_SUFFIX.matcher(value.substring(end)).find();
+        String marker = matcher.group().toLowerCase(Locale.ROOT);
+        if (marker.startsWith("full") || marker.equals("regular")) {
+            // Keep English title words such as "Full House" and "Regular Show" in the edition.
+            String after = value.substring(end).replaceFirst("^[\\s\\p{Punct}]+", "");
+            right &= after.isEmpty() || SEMANTIC_SUFFIX.matcher(after).find()
+                    || EPISODE_END.matcher(value.substring(0, start).trim()).find();
+        }
+        return left && right;
+    }
+
+    private static String variant(String value) {
+        if (value.startsWith("会员")) return "member";
+        if (value.startsWith("加更")) return "extra";
+        if (value.startsWith("纯享")) return "pure";
+        if (value.startsWith("未播") || value.startsWith("幕后") || value.startsWith("花絮")) return "behind";
+        return "";
     }
 
     private static boolean isSemanticBracket(String value) {
@@ -213,7 +298,8 @@ public final class EpisodeLabelParser {
         return Normalizer.normalize(value, Normalizer.Form.NFKC).trim()
                 .replace('兩', '两').replace('話', '话').replace('預', '预')
                 .replace('別', '别').replace('輯', '辑').replace('體', '体')
-                .replace('語', '语').replace('國', '国');
+                .replace('語', '语').replace('國', '国').replace('會', '会')
+                .replace('員', '员').replace('長', '长').replace('純', '纯').replace('導', '导').replace('後', '后');
     }
 
     private static String name(String value) {

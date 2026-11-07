@@ -33,8 +33,7 @@ public final class EpisodeTarget {
         if (episode == null) return new EpisodeTarget(null, "");
         EpisodeLabel label = episode.getLabel();
         if (label.season() == null && sourceSeason != null) {
-            label = new EpisodeLabel(label.original(), sourceSeason, label.number(), label.part(), label.edition(),
-                    label.isSpecial() || sourceSeason == 0, label.isPreview(), label.isAmbiguous());
+            label = label.withSeason(sourceSeason);
         }
         return new EpisodeTarget(null, episode.getName(), episode.getUrl(), episode.isGeneratedLabel(), label);
     }
@@ -52,12 +51,15 @@ public final class EpisodeTarget {
     }
 
     public boolean isUnnumbered() {
-        return number == null && !generated && !label.isAmbiguous() && !label.isPreview() && !label.isSpecial();
+        return number == null && !generated && !label.isAmbiguous() && !label.isPreview() && !label.isSpecial()
+                && !label.isVariety() && label.part().isEmpty();
     }
 
-    /** Keep season and edition when looking for a missing next episode on another source. */
+    /** Keep season and content track when searching for the next known ordinal on another source. */
     public EpisodeTarget offset(int offset) {
-        if (generated || number == null || !label.isApiSafe() || number + offset <= 0) return null;
+        if (generated || number == null || label.isAmbiguous() || label.hasAirDate() || !label.part().isEmpty()
+                || label.isPreview() || label.isSpecial() && !Integer.valueOf(0).equals(label.season())
+                || (long) number + offset <= 0 || (long) number + offset > Integer.MAX_VALUE) return null;
         return new EpisodeTarget(number + offset, "", "", false, label);
     }
 
@@ -70,9 +72,19 @@ public final class EpisodeTarget {
         if (generated || episode.isGeneratedLabel()) return !url.isEmpty() && url.equals(episode.getUrl());
         EpisodeLabel candidate = episode.getLabel();
         Integer season = candidate.season() == null ? sourceSeason : candidate.season();
-        if (label.season() != null && !label.season().equals(season)) return false;
+        if (label.season() != null && season != null && !label.season().equals(season)) return false;
         if (!label.part().equals(candidate.part()) || label.isSpecial() != candidate.isSpecial()
-                || label.isPreview() != candidate.isPreview()) return false;
+                || label.isPreview() != candidate.isPreview() || !label.variant().equals(candidate.variant())) return false;
+        if (label.hasAirDate() && candidate.hasAirDate() && !label.airDate().equals(candidate.airDate())) return false;
+        if (number != null && candidate.number() != null && !number.equals(candidate.number())) return false;
+        // URL identity may preserve a selected item whose replacement label has less evidence.
+        if (!url.isEmpty() && url.equals(episode.getUrl())) return true;
+        if (label.season() != null && !label.season().equals(season)) return false;
+        if (label.isAmbiguous() || candidate.isAmbiguous()) return false;
+        // A calendar label cannot establish the period of an undated source (or vice versa).
+        if (label.hasAirDate() || candidate.hasAirDate()) {
+            return label.hasAirDate() && candidate.hasAirDate();
+        }
         if (label.isSingleEpisode() && candidate.isSingleEpisode() && !label.isPreview()) {
             return Objects.equals(number, candidate.number());
         }
