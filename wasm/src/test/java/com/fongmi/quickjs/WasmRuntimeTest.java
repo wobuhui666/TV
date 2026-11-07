@@ -164,11 +164,11 @@ public class WasmRuntimeTest {
     @Test
     public void shouldCancelFromAnotherThreadAndAllowTheNextCall() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch entered = new CountDownLatch(1);
         try (WasmRuntime runtime = new WasmRuntime();
              WasmRuntime.Module module = runtime.compile(fixture(false, 1, 2));
-             WasmRuntime.Instance instance = runtime.instantiate(module, add(runtime))) {
-            CountDownLatch entered = new CountDownLatch(1);
-            runtime.setExecutionCheck(entered::countDown);
+             WasmRuntime.Instance instance = runtime.instantiate(module, add(runtime, entered::countDown))) {
+            assertEquals("Instantiation must not signal guest execution", 1L, entered.getCount());
             var result = executor.submit(() -> instance.call("loop"));
             assertTrue(entered.await(2, TimeUnit.SECONDS));
             instance.cancel();
@@ -183,11 +183,11 @@ public class WasmRuntimeTest {
     @Test
     public void shouldCloseRuntimeFromAnotherThreadWithoutWaitingForLoop() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch entered = new CountDownLatch(1);
         try (WasmRuntime runtime = new WasmRuntime();
              WasmRuntime.Module module = runtime.compile(fixture(false, 1, 2));
-             WasmRuntime.Instance instance = runtime.instantiate(module, add(runtime))) {
-            CountDownLatch entered = new CountDownLatch(1);
-            runtime.setExecutionCheck(entered::countDown);
+             WasmRuntime.Instance instance = runtime.instantiate(module, add(runtime, entered::countDown))) {
+            assertEquals("Instantiation must not signal guest execution", 1L, entered.getCount());
             var result = executor.submit(() -> instance.call("loop"));
             assertTrue(entered.await(2, TimeUnit.SECONDS));
             runtime.close();
@@ -339,14 +339,22 @@ public class WasmRuntimeTest {
     }
 
     private static Map<String, Map<String, Object>> add(WasmRuntime runtime) {
+        return add(runtime, () -> { });
+    }
+
+    private static Map<String, Map<String, Object>> add(WasmRuntime runtime, Runnable onCall) {
         WasmRuntime.Function function = runtime.function(new WasmRuntime.Signature(
                 List.of(WasmRuntime.Type.I32, WasmRuntime.Type.I32), List.of(WasmRuntime.Type.I32)),
-                (instance, arguments) -> new Object[]{(Integer) arguments[0] + (Integer) arguments[1]});
+                (instance, arguments) -> {
+                    onCall.run();
+                    return new Object[]{(Integer) arguments[0] + (Integer) arguments[1]};
+                });
         return Map.of("env", Map.of("add", function));
     }
 
     private static byte[] fixture(boolean startTrap, int initialMemory, int maximumMemory) {
         // Imports env.add; exports calc, loop, grow, trap, scalar identity functions and multivalue.
+        // The loop calls env.add(0, 0) first, giving host observers a real guest-execution signal.
         byte[] types = vector(bytes(0x60, 2, 0x7f, 0x7f, 1, 0x7f), bytes(0x60, 0, 0),
                 bytes(0x60, 1, 0x7f, 1, 0x7f), bytes(0x60, 1, 0x7e, 1, 0x7e),
                 bytes(0x60, 1, 0x7d, 1, 0x7d), bytes(0x60, 1, 0x7c, 1, 0x7c),
@@ -358,7 +366,8 @@ public class WasmRuntimeTest {
                         export("trap", 0, 4), export("i64", 0, 5), export("f32", 0, 6),
                         export("f64", 0, 7), export("multi", 0, 8), export("memory", 2, 0))),
                 startTrap ? section(8, u(4)) : new byte[0],
-                section(10, code(bytes(0, 0x20, 0, 0x20, 1, 0x10, 0, 0x0b), bytes(0, 3, 0x40, 0x0c, 0, 0x0b, 0x0b),
+                section(10, code(bytes(0, 0x20, 0, 0x20, 1, 0x10, 0, 0x0b),
+                        bytes(0, 0x41, 0, 0x41, 0, 0x10, 0, 0x1a, 3, 0x40, 0x0c, 0, 0x0b, 0x0b),
                         bytes(0, 0x20, 0, 0x40, 0, 0x0b), bytes(0, 0, 0x0b),
                         bytes(0, 0x20, 0, 0x0b), bytes(0, 0x20, 0, 0x0b), bytes(0, 0x20, 0, 0x0b),
                         bytes(0, 0x41, 42, 0x42, 7, 0x0b))));
