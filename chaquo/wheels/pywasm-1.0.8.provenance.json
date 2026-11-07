@@ -1,0 +1,32 @@
+{
+  "pypi_metadata_url": "https://pypi.org/pypi/pywasm/1.0.8/json",
+  "sdist_url": "https://files.pythonhosted.org/packages/40/ad/a8e9f90870697df8c91d26141317704f24844981edf2dcdfa9f6ac4e4aee/pywasm-1.0.8.tar.gz",
+  "sdist_filename": "pywasm-1.0.8.tar.gz",
+  "sdist_sha256": "bdfb0b03394c601254caee415f3982107887a04ec7f40751ed878130d2ab7e15",
+  "sdist_bytes": 29695,
+  "upload_time_iso_8601": "2023-02-14T01:57:49.204631Z",
+  "source_date_epoch": 1676339869,
+  "version": "1.0.8",
+  "license": "MIT",
+  "requires_python": ">=3.6",
+  "requires_dist": [
+    "numpy"
+  ],
+  "filename": "pywasm-1.0.8-py3-none-any.whl",
+  "wheel_sha256": "3651662d838fc0e83bbf8aa9a38185091ac96a40947b12c43355c9026196818a",
+  "wheel_bytes": 28828,
+  "repeat_build_identical": true,
+  "pure_python": true,
+  "tag": "py3-none-any",
+  "license_path": "pywasm-1.0.8.dist-info/LICENSE",
+  "package_files_identical_to_sdist": 10,
+  "all_record_hashes_verified": true,
+  "native_or_pyc_files": [],
+  "build": {
+    "python": "3.12",
+    "pip": "24.0",
+    "setuptools": "75.6.0",
+    "wheel": "0.45.1",
+    "command": "python -m pip wheel --no-deps --no-build-isolation --no-cache-dir --wheel-dir <output> pywasm-1.0.8.tar.gz"
+  }
+}

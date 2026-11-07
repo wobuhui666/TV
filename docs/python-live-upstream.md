@@ -47,6 +47,15 @@ HTTP/XML comment loading and Logvar search retain their existing paths.
 `pywasm==1.0.8` matches the bundle's older WASM memory/export API. `numpy==1.26.2` is pinned
 alongside it so Android wheel resolution does not drift. The current Chaquopy packaging and
 Python 3.10 runtime remain in use.
+The reproducible pure-Python wheel in `chaquo/wheels` is built from the verified official source
+archive, with its license and source files preserved. A local `--find-links` supplies it to
+Chaquopy's binary-only Android installer on both ARM ABIs and the test x86_64 ABI.
+
+Dependency URI resolution follows RFC 3986 while preserving empty path segments. This matters
+for the existing CDN URLs, whose paths contain the nested `https://raw.githubusercontent.com/`
+address. All three helper URLs resolved through that path were downloaded and matched the
+public source manifest; ordinary relative paths, queries, fragments and authorities are covered
+by the same resolver.
 
 ## Validation
 

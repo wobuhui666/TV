@@ -10,11 +10,80 @@ import types
 import uuid
 from importlib.machinery import ModuleSpec
 from importlib._bootstrap import _ModuleLockManager, _lock_unlock_module
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urlsplit
 
 
 class SourceNotFoundError(FileNotFoundError):
     pass
+
+
+def _remove_dot_segments(path):
+    """RFC 3986 section 5.2.4; empty segments and escaped dots stay intact."""
+    output = ''
+    while path:
+        if path.startswith('../'):
+            path = path[3:]
+        elif path.startswith('./'):
+            path = path[2:]
+        elif path.startswith('/./'):
+            path = path[2:]
+        elif path == '/.':
+            path = '/'
+        elif path.startswith('/../'):
+            path = path[3:]
+            output = output.rpartition('/')[0]
+        elif path == '/..':
+            path = '/'
+            output = output.rpartition('/')[0]
+        elif path in ('.', '..'):
+            path = ''
+        else:
+            end = path.find('/', 1 if path.startswith('/') else 0)
+            if end == -1:
+                output += path
+                path = ''
+            else:
+                output += path[:end]
+                path = path[end:]
+    return output
+
+
+def resolve_uri(base, reference):
+    """Resolve a URI reference without collapsing repeated slashes in its path."""
+    origin, relative = urlsplit(base), urlsplit(reference)
+    base_authority = base[len(origin.scheme) + 1:].startswith('//') if origin.scheme else base.startswith('//')
+    ref_authority = reference[len(relative.scheme) + 1:].startswith('//') if relative.scheme else reference.startswith('//')
+    query_defined = '?' in reference.partition('#')[0]
+    if relative.scheme:
+        scheme, authority, has_authority = relative.scheme, relative.netloc, ref_authority
+        path, query = _remove_dot_segments(relative.path), relative.query
+    else:
+        scheme = origin.scheme
+        if ref_authority:
+            authority, has_authority = relative.netloc, True
+            path, query = _remove_dot_segments(relative.path), relative.query
+        else:
+            authority, has_authority = origin.netloc, base_authority
+            if not relative.path:
+                path = origin.path
+                if query_defined:
+                    query = relative.query
+                else:
+                    query, query_defined = origin.query, '?' in base.partition('#')[0]
+            else:
+                if relative.path.startswith('/'):
+                    merged = relative.path
+                elif base_authority and not origin.path:
+                    merged = '/' + relative.path
+                else:
+                    merged = origin.path[:origin.path.rfind('/') + 1] + relative.path
+                path, query = _remove_dot_segments(merged), relative.query
+    result = (scheme + ':' if scheme else '') + ('//' + authority if has_authority else '') + path
+    if query_defined:
+        result += '?' + query
+    if '#' in reference:
+        result += '#' + relative.fragment
+    return result
 
 
 def cleanup_failure(failure, error):
@@ -129,7 +198,9 @@ class Runtime:
 
     def _resolve(self, reference):
         if urlsplit(self.source).scheme in ("http", "https", "file"):
-            return urljoin(self.source, reference)
+            return resolve_uri(self.source, reference)
+        if urlsplit(reference).scheme in ("http", "https", "file"):
+            return resolve_uri('', reference)
         return os.path.join(os.path.dirname(os.path.abspath(self.source)), reference)
 
     def _download(self, name, source=None):

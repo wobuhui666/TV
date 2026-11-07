@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 from lxml import etree as real_etree, html as real_html
 
 import test_spider_api as support
+from test_source_uri_resolution import CDN_ROOT
 
 
 class Reader:
@@ -388,6 +389,17 @@ class OriginalLiveSourceTest(SdkFixture):
         self.assertEqual(events[-1]['text'],'hello/world@')
         self.assertTrue(native.socket.canceled)
         self.assertEqual(len(native.socket.sent),3)
+
+    def test_original_game_dependencies_load_through_composite_cdn_addresses(self):
+        native = Native()
+        names = ('game_live.py','game_live_protocol.py','game_live_stream.py','game_live_yy.py')
+        for name in names:
+            native.routes[CDN_ROOT + 'vod/' + name] = (self.fixtures/'vod'/name).read_bytes()
+        spider = self.create(CDN_ROOT + 'vod/game_live.py', 'cdn-game', native)
+        downloaded = [call[1] for call in native.calls if call[0] == 'reqParts']
+        self.assertCountEqual(downloaded, [CDN_ROOT + 'vod/' + name for name in names])
+        self.assertEqual(len(json.loads(self.app.homeContent(spider,False))['class']), 3)
+        self.assertTrue(callable(spider.protocol.douyu_packet))
 
     def test_original_douyu_signing_crosses_js_globals_bridge(self):
         native=Native(); spider=self.create(self.fixtures/'vod/game_live.py','game',native)

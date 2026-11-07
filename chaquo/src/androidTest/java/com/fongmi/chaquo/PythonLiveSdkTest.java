@@ -375,6 +375,10 @@ public class PythonLiveSdkTest {
         assertEquals(2, new JSONObject(second.homeContent(false)).getInt("value"));
         Spider refreshed = load("/two/main.py", source, "native-two");
         assertNotEquals(two.getString("module"), new JSONObject(refreshed.homeContent(false)).getString("module"));
+        String composite = "/https://upstream.test/packs/vod/";
+        sources.put(composite + "helper.py", "VALUE=3");
+        Spider cdn = load(composite + "main.py", source, "native-composite-cdn");
+        assertEquals(3, new JSONObject(cdn.homeContent(false)).getInt("value"));
     }
 
     @Test public void pinnedWasmDependenciesArePackagedInTheNativeVm() {
