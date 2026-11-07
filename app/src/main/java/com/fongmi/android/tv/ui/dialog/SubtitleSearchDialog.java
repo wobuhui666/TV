@@ -351,6 +351,7 @@ public final class SubtitleSearchDialog extends BasePlaybackSelectionDialog {
 
     static String initialQuery(String title, String episode) {
         EpisodeLabel label = EpisodeLabelParser.parse(episode);
+        if (label.isVariety()) return (text(title) + " " + text(episode)).trim();
         if (!label.isApiSafe()) return title;
         Integer season = label.season() == null ? EpisodeLabelParser.parse(title).season() : label.season();
         return season == null ? title + String.format(Locale.ROOT, " %02d", label.number())

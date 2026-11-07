@@ -10,11 +10,15 @@ import com.fongmi.android.tv.bean.Danmaku;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.setting.DanmakuSetting;
+import com.fongmi.android.tv.source.EpisodeLabel;
+import com.fongmi.android.tv.source.EpisodeLabelParser;
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Trans;
 
+import java.text.Normalizer;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Response;
@@ -22,6 +26,7 @@ import okhttp3.Response;
 public class DanmakuApi {
 
     private static final String TAG = DanmakuApi.class.getSimpleName();
+    private static final Pattern DATE_LABEL = Pattern.compile("(?<![0-9])(?:[0-9]{8}|[0-9]{4}[- ./_]+[0-9]{1,2}[- ./_]+[0-9]{1,2}|[0-9]{4}年[0-9]{1,2}月[0-9]{1,2}日)(?![0-9])");
 
     public interface SearchCallback {
 
@@ -90,8 +95,15 @@ public class DanmakuApi {
     }
 
     private static void searchLegacyAuto(String name, String episode, boolean reliableEpisodeLabel, SearchCallback callback) {
-        if (reliableEpisodeLabel) searchLegacy(name, episode, callback);
+        if (reliableEpisodeLabel && canAutoSearchLegacy(episode)) searchLegacy(name, episode, callback);
         else App.post(() -> callback.onSuccess(List.of()));
+    }
+
+    static boolean canAutoSearchLegacy(String episode) {
+        EpisodeLabel label = EpisodeLabelParser.parse(episode);
+        // Invalid or conflicting dates retain ambiguity even though they have no canonical air date.
+        if (label.isAmbiguous() && DATE_LABEL.matcher(Normalizer.normalize(label.original(), Normalizer.Form.NFKC)).find()) return false;
+        return !label.isVariety() || label.isApiSafe();
     }
 
     public static void searchManual(String name, String episode, SearchCallback callback) {

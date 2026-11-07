@@ -270,6 +270,154 @@ public class EpisodeNavigationAndroidTest {
         }
     }
 
+    @Test
+    public void parcelShouldReparseVarietyDateIssuePartAndVariantEvidence() {
+        Episode member = Episode.create("第二季 [20260301] 第三期 上 会员版", "fixture-member");
+        Episode dated = Episode.create("2026-03-01", "fixture-date-only");
+        member.setSelected(true);
+        assertEquals("2026-03-01", member.getLabel().airDate());
+        assertTrue(member.getLabel().isIssue());
+        Parcel parcel = Parcel.obtain();
+        try {
+            parcel.writeTypedList(List.of(member, dated));
+            parcel.setDataPosition(0);
+            List<Episode> copied = parcel.createTypedArrayList(Episode.CREATOR);
+            Episode restored = copied.get(0);
+            assertEquals("fixture-member", restored.getUrl());
+            assertTrue(restored.isSelected());
+            assertEquals(Integer.valueOf(2), restored.getLabel().season());
+            assertEquals(3, restored.getNumber());
+            assertTrue(restored.getLabel().isIssue());
+            assertEquals("2026-03-01", restored.getLabel().airDate());
+            assertEquals("upper", restored.getLabel().part());
+            assertEquals("member", restored.getLabel().variant());
+            assertTrue(EpisodeTarget.of(restored).matches(Episode.create(
+                    "第二季 2026年3月1日 第3期 上 會員加長版", "other-member")));
+            assertFalse(restored.getLabel().isApiSafe());
+            assertEquals(-1, copied.get(1).getNumber());
+            assertNull(EpisodeTarget.of(copied.get(1)).getNumber());
+            assertNull(EpisodeTarget.of(copied.get(1)).offset(1));
+            assertFalse(EpisodeTarget.of(copied.get(1)).matches(Episode.create("第1期", "undated")));
+        } finally {
+            parcel.recycle();
+        }
+    }
+
+    @Test
+    public void datedPlaybackAndPreloadShouldFollowPartsThenTheNextActualDate() throws Exception {
+        initialize(0, "20260301 第3期 上", "20260301 第3期 上 加更", "20260301 第3期 下",
+                "20260301 第3期 下 预告", "20260322 第9期 上", "20260322 第9期 下");
+        Episode lower = flag.getEpisodes().get(2);
+        assertSame(lower, relative(1));
+        controller.playbackEnded();
+        assertRequested(lower);
+        Episode nextDate = flag.getEpisodes().get(4);
+        assertSame(nextDate, relative(1));
+        controller.nextEpisode(false);
+        assertRequested(nextDate);
+        assertEquals("2026-03-22", state.getEpisode().getLabel().airDate());
+        assertEquals(2, requests.size());
+    }
+
+    @Test
+    public void numberedVarietyPlaybackShouldSkipMemberAndPureTracksBetweenParts() throws Exception {
+        initialize(0, "第1期 上", "第1期 上 会员版", "第1期 下", "第1期 下 纯享",
+                "第2期 上", "第2期 下");
+        Episode lower = flag.getEpisodes().get(2);
+        assertSame(lower, relative(1));
+        controller.nextEpisode(true);
+        assertRequested(lower);
+        Episode nextIssue = flag.getEpisodes().get(4);
+        assertSame(nextIssue, relative(1));
+        controller.nextEpisode(true);
+        assertRequested(nextIssue);
+        controller.prevEpisode(true);
+        assertRequested(lower);
+        assertEquals(3, requests.size());
+    }
+
+    @Test
+    public void datedControllerNavigationShouldHonorDescendingAndReversedSourceOrder() throws Exception {
+        initialize(0, "20260322", "20260322 加更", "20260308", "20260301");
+        Episode newest = flag.getEpisodes().get(0);
+        Episode middle = flag.getEpisodes().get(2);
+        assertSame(middle, relative(1));
+        controller.nextEpisode(true);
+        assertRequested(middle);
+        controller.reverseEpisode(true);
+        assertSame(middle, state.getEpisode());
+        assertSame(newest, relative(1));
+        controller.nextEpisode(true);
+        assertRequested(newest);
+    }
+
+    @Test
+    public void missingDatedNextShouldStopUntilTheUserChoosesAnUndatedIssue() throws Exception {
+        initialize(0, "20260301 第3期", "第4期", "20260301 第3期 加更");
+        Episode selected = state.getEpisode();
+        assertSame(selected, relative(1));
+        controller.playbackEnded();
+        assertSame(selected, state.getEpisode());
+        assertEquals(selected.getUrl(), history.getEpisodeUrl());
+        assertTrue(requests.isEmpty());
+        assertEquals(1, noNext);
+        controller.selectEpisode(flag.getEpisodes().get(1));
+        assertRequested(flag.getEpisodes().get(1));
+    }
+
+    @Test
+    public void duplicateDatedNextShouldRequireManualSelectionBeforeContinuing() throws Exception {
+        initialize(0, "20260301", "20260308", "2026-03-08", "20260315");
+        Episode selected = state.getEpisode();
+        assertSame(selected, relative(1));
+        controller.playbackEnded();
+        assertSame(selected, state.getEpisode());
+        assertTrue(requests.isEmpty());
+        assertEquals(1, noNext);
+        controller.selectEpisode(flag.getEpisodes().get(2));
+        assertRequested(flag.getEpisodes().get(2));
+        controller.nextEpisode(true);
+        assertRequested(flag.getEpisodes().get(3));
+        assertEquals(2, requests.size());
+    }
+
+    @Test
+    public void datedFlagFindShouldRejectSingletonAndSavedPositionFallbacks() {
+        initialize(1, "20260308 第3期", "20260315 第4期");
+        String requested = "20260301 第3期";
+        Flag singleton = new Flag("singleton");
+        singleton.getEpisodes().add(Episode.create("20260308 第3期", "wrong-date"));
+        assertNull(singleton.find(requested, true));
+        assertNull(singleton.find(requested, false));
+        assertNull(flag.find(requested, true));
+        assertNull(flag.find(requested, false));
+        Episode sameDate = Episode.create("2026年3月1日 第三期", "same-date");
+        flag.getEpisodes().add(sameDate);
+        assertSame(sameDate, flag.find(requested, true));
+        assertSame(sameDate, flag.find(requested, false));
+        assertTrue(requests.isEmpty());
+    }
+
+    @Test
+    public void seamlessFlagsShouldRejectTheSameIssueOnAnotherDateAndAcceptDateAliases() {
+        initialize(0, "20260301 第3期", "20260301 第3期 加更");
+        Episode selected = state.getEpisode();
+        state.setEpisodeTarget(EpisodeTarget.of(selected));
+        Flag wrong = new Flag("wrong-date");
+        wrong.getEpisodes().add(Episode.create("20260308 第3期", "wrong-date-issue-three"));
+        Flag aliases = new Flag("same-date");
+        aliases.getEpisodes().add(Episode.create("2026年3月1日 第3期 加更", "bonus-same-date"));
+        Episode sameDate = Episode.create("2026.3.1 第三期 完整版", "regular-same-date");
+        aliases.getEpisodes().add(sameDate);
+        state.getFlags().addAll(List.of(wrong, aliases));
+        controller.selectFlag(wrong);
+        assertTrue(requests.isEmpty());
+        assertEquals(selected.getUrl(), history.getEpisodeUrl());
+        controller.selectFlag(aliases);
+        assertRequested(sameDate);
+        assertEquals(1, requests.size());
+    }
+
     private void initialize(int current, String... labels) {
         flag = new Flag("fixture");
         for (int index = 0; index < labels.length; index++) {
