@@ -214,7 +214,7 @@ public final class AssrtSubtitleSearchAndroidTest {
         assertEquals("A result selection does not silently choose another episode", 0, downloadCount());
         NativeUiEvidence.capture("assrt-subtitle-files");
         chooseRow(WANTED);
-        await(() -> searchDialog() == null && selectedText(WANTED), "chosen ASSRT track loaded and selected");
+        awaitSelectedSubtitle(WANTED, "chosen ASSRT track loaded and selected");
         assertLoadedState();
         assertAuthenticationSeparated();
         assertEquals(1, downloadCount());
@@ -263,7 +263,7 @@ public final class AssrtSubtitleSearchAndroidTest {
         assertTrue("The primary selection downloads the chosen S02E03 file", requests.stream()
                 .filter(request -> request.getRequestUrl().encodedPath().startsWith("/download/"))
                 .allMatch(request -> request.getRequestUrl().encodedPath().equals("/download/wanted.srt")));
-        await(() -> searchDialog() == null && selectedText(WANTED), "new primary subtitle selected");
+        awaitSelectedSubtitle(WANTED, "new primary subtitle selected");
         main(() -> {
             assertNotNull(format(AssrtSubtitlePreviewActivity.EXISTING_NAME));
             assertEquals("Online search must keep the same secondary subtitle even if a source prefix changes",
@@ -292,7 +292,7 @@ public final class AssrtSubtitleSearchAndroidTest {
         assertEquals(1, downloadCount());
         NativeUiEvidence.capture("assrt-extracted-files");
         chooseRow(WANTED);
-        await(() -> searchDialog() == null && selectedText(WANTED), "chosen ZIP subtitle selected");
+        awaitSelectedSubtitle(WANTED, "chosen ZIP subtitle selected");
         assertLoadedState();
         assertAuthenticationSeparated();
         assertEquals("ZIP entries do not require another network download", 1, downloadCount());
@@ -309,7 +309,7 @@ public final class AssrtSubtitleSearchAndroidTest {
         });
         NativeUiEvidence.capture("assrt-rar-files");
         chooseRow(WANTED);
-        await(() -> searchDialog() == null && selectedText(WANTED), "chosen RAR subtitle loaded");
+        awaitSelectedSubtitle(WANTED, "chosen RAR subtitle loaded");
         assertLoadedState();
         assertAuthenticationSeparated();
         assertEquals("The original RAR is downloaded once", 1, downloadCount());
@@ -556,6 +556,34 @@ public final class AssrtSubtitleSearchAndroidTest {
             }
         }
         return false;
+    }
+
+    private void awaitSelectedSubtitle(String label, String message) {
+        try {
+            // Adding a subtitle rebuilds the source; use the same bound as the initial PCM prepare.
+            await(() -> searchDialog() == null && selectedText(label), message, 30_000);
+        } catch (AssertionError failure) {
+            String diagnostics = read(() -> {
+                StringBuilder tracks = new StringBuilder();
+                for (Tracks.Group group : activity.manager.getCurrentTracks().getGroups()) {
+                    if (group.getType() != C.TRACK_TYPE_TEXT) continue;
+                    for (int index = 0; index < group.length; index++) {
+                        tracks.append('[').append(group.getTrackFormat(index).label)
+                                .append(", selected=").append(group.isTrackSelected(index)).append(']');
+                    }
+                }
+                return "expected=" + label + ", state=" + activity.manager.getPlaybackState()
+                        + ", error=" + safeMessage(activity.error) + ", position=" + activity.manager.getPosition()
+                        + ", dialog=" + (searchDialog() != null) + ", textTracks=" + tracks;
+            });
+            Log.e("AssrtSubtitleTest", message + ": " + diagnostics);
+            try {
+                NativeUiEvidence.capture("assrt-selected-subtitle-timeout");
+            } catch (AssertionError screenshotFailure) {
+                failure.addSuppressed(screenshotFailure);
+            }
+            throw new AssertionError(message + ": " + diagnostics, failure);
+        }
     }
 
     private boolean hasSecondaryCue(String text) {
