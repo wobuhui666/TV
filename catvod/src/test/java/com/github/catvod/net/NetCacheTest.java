@@ -19,6 +19,23 @@ public class NetCacheTest {
     }
 
     @Test
+    public void invalidationDoesNotRemoveNewOrInFlightValues() throws Exception {
+        try (NetCache cache = new NetCache()) {
+            cache.cached("key", CacheOptions.from("{\"ttl\":1000}"), () -> CompletableFuture.completedFuture("1")).get();
+            assertFalse(cache.invalidate("key", "0"));
+            assertEquals("1", cache.peek("key"));
+            assertTrue(cache.invalidate("key", "1"));
+            CompletableFuture<String> loading = new CompletableFuture<>();
+            CompletableFuture<String> waiting = cache.cached("key", CacheOptions.from("{\"ttl\":1000}"), () -> loading);
+            assertFalse(cache.invalidate("key", null));
+            loading.complete("2");
+            assertEquals("2", waiting.get());
+            assertFalse(cache.invalidate("key", "1"));
+            assertEquals("2", cache.peek("key"));
+        }
+    }
+
+    @Test
     public void combinesConcurrentLoadsAndWaiterCancellationDoesNotCancelOtherWaiters() throws Exception {
         NetCache cache = new NetCache();
         AtomicInteger calls = new AtomicInteger();

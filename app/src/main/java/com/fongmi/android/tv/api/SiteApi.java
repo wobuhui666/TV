@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.api;
 
 import android.text.TextUtils;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -9,6 +10,7 @@ import androidx.collection.ArrayMap;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
+import com.fongmi.android.tv.api.loader.BaseLoader;
 import com.fongmi.android.tv.bean.Class;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
@@ -36,6 +38,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.function.Consumer;
+
+import org.json.JSONObject;
 
 import okhttp3.Call;
 import okhttp3.Response;
@@ -43,6 +48,15 @@ import okhttp3.Response;
 public class SiteApi {
 
     public static final String PUSH = "push_agent";
+
+    public static AutoCloseable danmaku(@NonNull Uri uri, @NonNull Consumer<JSONObject> emit) throws Exception {
+        String key = uri.getAuthority();
+        List<String> paths = uri.getPathSegments();
+        if (!"spider".equalsIgnoreCase(uri.getScheme()) || key == null || key.isEmpty()
+                || paths.size() != 1 || paths.get(0).isEmpty() || uri.getQuery() != null || uri.getFragment() != null)
+            throw new IllegalArgumentException("Invalid live danmaku source");
+        return BaseLoader.get().getSpider(key).danmaku(paths.get(0), Objects.requireNonNull(emit));
+    }
 
     public static String call(@NonNull Site site, @NonNull ArrayMap<String, String> params) throws IOException {
         return call(site, params, null);

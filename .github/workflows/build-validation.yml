@@ -7,6 +7,10 @@ on:
         description: Compare lint errors against this existing commit; blank requires a clean full lint report
         type: string
         default: ''
+      python_live_native:
+        description: Execute real Python and QuickJS SDK tests in an x86_64 emulator and build TV ARMv7
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,6 +33,8 @@ jobs:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
       TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
+      TV_LIVE_PYTHON_FIXTURES: ${{ github.workspace }}/.live-python-fixtures/packs/live-python-20261107-a09dd575
+      PYTHONDONTWRITEBYTECODE: '1'
 
     steps:
       - name: Checkout application
@@ -42,6 +48,16 @@ jobs:
           java-version: "21"
           distribution: temurin
           cache: gradle
+
+      - name: Checkout the immutable live Python regression fixtures
+        if: matrix.package == 'sourceprobe'
+        uses: actions/checkout@v4
+        with:
+          repository: zhhshss/tv-python-sources
+          ref: 25ff7031e94b14c94ce7e8894394f04f3c1a0907
+          path: .live-python-fixtures
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -105,6 +121,9 @@ jobs:
       - name: Check Python and JavaScript source API compatibility
         if: matrix.package == 'sourceprobe'
         run: |
+          python -m pip install lxml pycryptodome pywasm==1.0.8 numpy==1.26.2
+          test -f "$TV_LIVE_PYTHON_FIXTURES/live/yangshipin.py"
+          test -f "$TV_LIVE_PYTHON_FIXTURES/vod/game_live_protocol.py"
           python -m unittest discover -s chaquo/src/test/python -v
           node quickjs/src/test/js/net.test.cjs
           node quickjs/src/test/js/dialog.test.cjs
@@ -122,6 +141,13 @@ jobs:
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :app:assembleLeanbackArm64_v8aDebug \
             :app:assembleLeanbackArm64_v8aDebugAndroidTest \
+            --no-daemon --build-cache --max-workers=2
+
+      - name: Build the TV ARMv7 package with the Python runtime dependencies
+        if: matrix.package == 'sourceprobe' && inputs.python_live_native
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
+            :app:assembleLeanbackArmeabi_v7aDebug \
             --no-daemon --build-cache --max-workers=2
 
       - name: Run TV Android lint
@@ -211,6 +237,10 @@ jobs:
                       if missing:
                           raise SystemExit('FFmpeg extension missing from APK: ' + ', '.join(missing))
                       metadata['media3FfmpegJniSha256'] = hashlib.sha256(bundle.read('lib/arm64-v8a/libffmpegJNI.so')).hexdigest()
+                      budget = 'lib/arm64-v8a/libtv-quickjs-budget.so'
+                      if budget not in names:
+                          raise SystemExit('QuickJS execution budget JNI missing from APK')
+                      metadata['quickJsBudgetJniSha256'] = hashlib.sha256(bundle.read(budget)).hexdigest()
               metadata['files'].append({'file': output.name, 'applicationId': expected,
                                         'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
           (destination / 'build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
@@ -233,6 +263,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload the TV ARMv7 debug APK
+        if: matrix.package == 'sourceprobe' && inputs.python_live_native
+        uses: actions/upload-artifact@v4
+        with:
+          name: tv-validation-sourceprobe-armv7-${{ github.run_id }}
+          path: app/build/outputs/apk/leanbackArmeabi_v7a/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Upload unit test reports
         if: always() && matrix.package == 'sourceprobe'
         uses: actions/upload-artifact@v4
@@ -249,3 +288,96 @@ jobs:
             wasm/build/test-results/
           if-no-files-found: warn
           retention-days: 7
+
+  python-live-native:
+    if: inputs.python_live_native
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Android SDK and native toolchain
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+
+      - name: Checkout the fixed Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Configure isolated library runtime tests
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/tv-python-native.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                          if (p.path == ':chaquo') {
+                              dsl.productFlavors.create('x86_64') {
+                                  dimension = 'abi'
+                                  ndk.abiFilters.add('x86_64')
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x gradlew
+
+      - name: Enable KVM for the disposable test device
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run actual CPython and QuickJS SDK instrumentation
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: ./gradlew -I "$RUNNER_TEMP/tv-python-native.init.gradle" :quickjs:connectedDebugAndroidTest :chaquo:connectedX86_64DebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
+
+      - name: Upload native runtime test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-live-native-tests-${{ github.run_id }}
+          path: |
+            quickjs/build/reports/androidTests/
+            quickjs/build/outputs/androidTest-results/
+            chaquo/build/reports/androidTests/
+            chaquo/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 14

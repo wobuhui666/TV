@@ -104,21 +104,21 @@ public class Async {
     }
 
     private void then(JSObject promise) {
-        JSFunction then = promise.getJSFunction("then");
-        if (then == null) {
-            complete(promise);
-        } else {
-            try {
+        JSFunction then = null;
+        boolean completedObject = false;
+        try {
+            then = promise.getJSFunction("then");
+            if (then == null) {
+                completedObject = true;
+                complete(promise);
+            } else {
                 // Separate then(success) and catch(error) leave the first child unhandled.
                 // QuickJS callVoid releases the child Promise returned by then.
                 then.callVoid(success, error);
-            } finally {
-                try {
-                    then.release();
-                } finally {
-                    if (json) promise.release();
-                }
             }
+        } finally {
+            try { if (then != null) then.release(); }
+            finally { if (json && !completedObject) promise.release(); }
         }
     }
 

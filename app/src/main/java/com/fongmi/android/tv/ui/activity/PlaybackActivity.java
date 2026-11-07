@@ -16,6 +16,7 @@ import android.view.accessibility.CaptioningManager;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Lifecycle;
@@ -35,9 +36,11 @@ import androidx.media3.ui.TimeBar;
 import androidx.media3.ui.danmaku.DanmakuConfig;
 
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.ai.subtitle.AiSubtitleRuntime;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.LiveDanmaku;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.player.util.PlayerHelper;
 import com.fongmi.android.tv.service.PlaybackService;
@@ -79,6 +82,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
     private boolean playbackEndHandled;
     private long replacedPositionMs = C.TIME_UNSET;
     private PlaybackResume pendingResume;
+    private LiveDanmaku liveDanmaku;
 
     protected MediaController controller() {
         return mController;
@@ -266,6 +270,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     protected void onTimeshiftChanged() {
         if (returnLive != null) returnLive.setVisibility(isTimeshiftPlayback() ? View.VISIBLE : View.GONE);
+        if (mService != null && isOwner() && LiveDanmaku.isLive(player().getSelectedDanmaku().getUri())) applyDanmaku();
     }
 
     public boolean isTimeshiftPlayback() {
@@ -575,6 +580,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     private void detachSurface(String reason) {
         MpvLogCollector.log("PlaybackActivity", "detachSurface: reason=" + reason + ", viewHasPlayer=" + (getPlayerView().getPlayer() != null));
+        if (liveDanmaku != null) liveDanmaku.setAttached(false);
         if (isOwner()) player().bindPlayerView(null);
         getPlayerView().setPlayer(null);
     }
@@ -595,6 +601,15 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
         playerView.setDanmakuOkHttpClient(OkHttp.player());
         playerView.setDanmakuEnabled(DanmakuSetting.isShow());
         playerView.setDanmakuConfig(DanmakuSetting.getConfig());
+        if (liveDanmaku == null) {
+            liveDanmaku = new LiveDanmaku(item -> {
+                if (isNativePlaybackCurrent() && getPlayerView().getPlayer() != null
+                        && LiveDanmaku.isLive(player().getSelectedDanmakuUri()))
+                    getPlayerView().getDanmakuController().sendNow(item);
+            }, (state, message) -> MpvLogCollector.log("LiveDanmaku", "state=" + state), App::post);
+            liveDanmaku.setAttached(false);
+            liveDanmaku.setEnabled(DanmakuSetting.isShow());
+        }
         playerView.getSubtitleView().setStyle(getCaptionStyle());
         playerView.getSubtitleView().setApplyEmbeddedStyles(true);
         playerView.getSubtitleView().setApplyEmbeddedFontSizes(false);
@@ -610,7 +625,15 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     private void applyDanmaku() {
         if (mService == null || !isOwner()) return;
-        getPlayerView().setDanmakuSource(player().getSelectedDanmakuUri());
+        setDanmakuSource(player().getSelectedDanmakuUri());
+    }
+
+    private void setDanmakuSource(@Nullable Uri uri) {
+        boolean realtime = LiveDanmaku.isLive(uri);
+        boolean attached = isNativePlaybackCurrent() && getPlayerView().getPlayer() == player().getPlayer()
+                && (getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED) || isInPictureInPictureMode());
+        if (liveDanmaku != null) liveDanmaku.setDataSource(realtime ? uri : null, attached);
+        getPlayerView().setDanmakuSource(realtime ? null : uri);
     }
 
     private void releasePlaybackService() {
@@ -715,7 +738,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
         @Override
         public void onDanmakuSourceChanged(Uri uri) {
-            if (isOwner()) getPlayerView().setDanmakuSource(uri);
+            if (isOwner()) setDanmakuSource(uri);
         }
 
         @Override
@@ -725,7 +748,10 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
         @Override
         public void onDanmakuEnabledChanged(boolean enabled) {
-            if (isOwner()) getPlayerView().setDanmakuEnabled(enabled);
+            if (isOwner()) {
+                if (liveDanmaku != null) liveDanmaku.setEnabled(enabled);
+                getPlayerView().setDanmakuEnabled(enabled);
+            }
         }
 
         @Override
@@ -834,6 +860,7 @@ public abstract class PlaybackActivity extends BaseActivity implements MediaCont
 
     @Override
     protected void onDestroy() {
+        if (liveDanmaku != null) liveDanmaku.close();
         clearForeverObservers();
         super.onDestroy();
         releasePlaybackService();

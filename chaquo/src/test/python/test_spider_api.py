@@ -130,6 +130,18 @@ class NativeLocal:
         self.values.clear()
 
 
+class JavaThrowable(Exception):
+    pass
+
+
+class CacheException(RuntimeError):
+    def __init__(self, error):
+        self.original = error
+
+    def error(self):
+        return self.original
+
+
 class SpiderApiTest(unittest.TestCase):
     def setUp(self):
         self.activity = object()
@@ -142,6 +154,12 @@ class SpiderApiTest(unittest.TestCase):
             "java.io.File": File,
             "com.github.catvod.Init": init,
             "com.github.catvod.net.NetOptions": options,
+            "com.fongmi.chaquo.CacheException": CacheException,
+            "java.lang.Throwable": JavaThrowable,
+            "com.github.catvod.net.NetSocket$Listener": object,
+            "com.github.catvod.net.Net$Mapper": object,
+            "java.util.Collections": types.SimpleNamespace(nCopies=lambda count, _: [None] * count),
+            "com.github.catvod.crawler.Spider": types.SimpleNamespace(danmakuUrl=lambda site, room: 'spider://' + site + '/' + room),
             "com.github.catvod.utils.Util": types.SimpleNamespace(CHROME="host-test-UA"),
             "com.google.gson.JsonParser": types.SimpleNamespace(parseString=lambda value: Element(json.loads(value))),
             "com.github.catvod.utils.Json": types.SimpleNamespace(link=lambda name, target: "[a=cr:" + json.dumps(target, ensure_ascii=False, separators=(",", ":")) + "/]" + name + "[/a]"),
@@ -149,6 +167,8 @@ class SpiderApiTest(unittest.TestCase):
         modules = {name: types.ModuleType(name) for name in ["java", "requests", "lxml", "com", "com.github", "com.github.catvod", "com.chaquo", "com.chaquo.python", "base"]}
         modules["java"].jclass = lambda name: classes[name]
         modules["java"].dynamic_proxy = lambda *_: object
+        modules["java"].jarray = lambda _: lambda value: [n if n < 128 else n - 256 for n in value]
+        modules["java"].jbyte = object
         modules["requests"].get = Mock(return_value=types.SimpleNamespace(encoding=None, text="legacy", headers={}))
         modules["requests"].post = Mock(return_value=types.SimpleNamespace(encoding=None, text="legacy", headers={}))
         modules["lxml"].etree = types.SimpleNamespace(HTML=lambda text: text)
@@ -163,6 +183,7 @@ class SpiderApiTest(unittest.TestCase):
         self.net_module = self.load("base.net", ROOT / "base" / "net.py")
         self.spider_module = self.load("base.spider", ROOT / "base" / "spider.py")
         self.load("_tv_dialog", ROOT / "_tv_dialog.py")
+        self.load("_tv_loader", ROOT / "_tv_loader.py")
         self.app = self.load("test_python_app", ROOT / "app.py")
         self.native = Native()
         self.net = self.net_module.Net(self.native)
