@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 import com.github.catvod.Init;
 import com.github.catvod.crawler.SpiderDebug;
 import com.github.catvod.utils.CompletableFutures;
+import com.github.catvod.utils.CallTimeout;
 import com.github.catvod.utils.Json;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -15,6 +16,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.SocketTimeoutException;
@@ -68,7 +70,7 @@ implements AutoCloseable {
     private static final int TEXT_TIMEOUT = 15000;
     private static final Set<String> METHODS = Set.of("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
     private static final Set<String> POST_TYPES = Set.of("json", "form", "form-data");
-    private static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(runnable -> {
+    static final ScheduledExecutorService DEADLINES = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "Spider WebSocket timeout");
         thread.setDaemon(true);
         return thread;
@@ -76,9 +78,13 @@ implements AutoCloseable {
     private final Cookies cookies;
     private final OkHttpClient client;
     private final Net parent;
+    private final NetTrace trace;
     private final Object lock = new Object();
     private final Set<Call> calls = new HashSet<>();
     private final Set<Exchange> sockets = new HashSet<>();
+    private final Set<StreamResult> streams = new HashSet<>();
+    private final Set<NetSocket> connections = new HashSet<>();
+    private final Set<NetMap<?, ?>> maps = new HashSet<>();
     private final Set<Net> children = new HashSet<>();
     private final NetCache cache;
     private boolean closed;
@@ -92,17 +98,22 @@ implements AutoCloseable {
     }
 
     public Net(Cookies cookies, String siteKey) {
-        this(OkHttp.client(), cookies, null, new NetStore(siteKey));
+        this(OkHttp.client(), cookies, null, new NetStore(siteKey), NetTrace.find(siteKey));
     }
 
     Net(OkHttpClient client, Cookies cookies) {
-        this(client, cookies, null, null);
+        this(client, cookies, null, null, null);
     }
 
-    private Net(OkHttpClient client, Cookies cookies, Net parent, NetStore store) {
+    Net(OkHttpClient client, Cookies cookies, NetTrace trace) {
+        this(client, cookies, null, null, trace);
+    }
+
+    private Net(OkHttpClient client, Cookies cookies, Net parent, NetStore store, NetTrace trace) {
         this.client = client;
         this.cookies = cookies;
         this.parent = parent;
+        this.trace = trace;
         this.cache = store == null ? new NetCache() : new NetCache(store);
     }
 
@@ -110,7 +121,7 @@ implements AutoCloseable {
         Object object = this.lock;
         synchronized (object) {
             this.checkOpen();
-            Net child = new Net(this.client, new SessionCookies(), this, null);
+            Net child = new Net(this.client, new SessionCookies(), this, null, trace);
             this.children.add(child);
             return child;
         }
@@ -209,7 +220,9 @@ implements AutoCloseable {
 
     private CompletableFuture<String> load(Callable<String> loader) {
         CompletableFuture<String> loading = new CompletableFuture<>();
+        CallTimeout scope = CallTimeout.current();
         FutureTask<Void> task = new FutureTask<Void>(() -> {
+            Runnable restore = scope == null ? () -> {} : scope.enter();
             try {
                 loading.complete((String)loader.call());
             }
@@ -218,6 +231,8 @@ implements AutoCloseable {
                     Thread.currentThread().interrupt();
                 }
                 loading.completeExceptionally(error);
+            } finally {
+                restore.run();
             }
             return null;
         });
@@ -237,7 +252,9 @@ implements AutoCloseable {
                 return CompletableFutures.failedFuture(new InterruptedIOException("Network owner closed"));
             }
         }
-        return this.cache.cached(key, CacheOptions.from((String)options), loader);
+        CompletableFuture<String> result = this.cache.cached(key, CacheOptions.from(options), loader);
+        CallTimeout.trackCurrent(result);
+        return result;
     }
 
     public String peek(String key) {
@@ -271,6 +288,10 @@ implements AutoCloseable {
 
     public void clearCache(String key) {
         this.cache.clear(key);
+    }
+
+    public boolean invalidateCache(String key, String expected) {
+        return cache.invalidate(key, expected);
     }
 
     public void clearCache() {
@@ -399,6 +420,44 @@ implements AutoCloseable {
         }
     }
 
+    public <T, R> List<R> map(List<T> items, Mapper<T, R> mapper) throws Exception {
+        return map(items, mapper, 4);
+    }
+
+    public <T, R> List<R> map(List<T> items, Mapper<T, R> mapper, int limit) throws Exception {
+        if (items == null || mapper == null || limit < 1) throw new IllegalArgumentException("Invalid map options");
+        if (items.isEmpty()) {
+            checkOpen();
+            return new ArrayList<>();
+        }
+        NetMap<T, R> mapping = createMap(items, mapper, limit);
+        try {
+            return mapping.start().get();
+        } catch (InterruptedException error) {
+            mapping.cancel();
+            throw interrupted(error);
+        } catch (ExecutionException error) {
+            if (error.getCause() instanceof Exception cause) throw cause;
+            if (error.getCause() instanceof Error cause) throw cause;
+            throw new IllegalStateException(error.getCause());
+        }
+    }
+
+    private <T, R> NetMap<T, R> createMap(List<T> items, Mapper<T, R> mapper, int limit) {
+        synchronized (lock) {
+            checkOpen();
+            NetMap<T, R> mapping = new NetMap<>(items, mapper, limit, this::removeMap);
+            maps.add(mapping);
+            return mapping;
+        }
+    }
+
+    private void removeMap(NetMap<?, ?> mapping) {
+        synchronized (lock) {
+            maps.remove(mapping);
+        }
+    }
+
     public Result[] batch(String requests) throws IOException {
         return this.batch(requests, 4);
     }
@@ -484,51 +543,104 @@ implements AutoCloseable {
     }
 
     public CompletableFuture<String> downloadAsync(String url, String json, File file) {
+        File target = file.isAbsolute() ? file : new File(Init.context().getCacheDir(), file.getPath());
+        NetOptions options;
+        Download download;
         Call call;
-        final File target = file.isAbsolute() ? file : new File(Init.context().getCacheDir(), file.getPath());
-        final CompletableFuture<String> future = new CompletableFuture<>();
         try {
-            call = this.newCall(url, NetOptions.from(json));
-        }
-        catch (Exception e) {
+            options = NetOptions.from(json);
+            download = createDownload(url, target, options);
+        } catch (Exception e) {
             return CompletableFutures.failedFuture(e);
         }
+        try {
+            call = newDownloadCall(download, options);
+        } catch (Exception e) {
+            closeDownload(download, e);
+            return CompletableFutures.failedFuture(e);
+        }
+        CompletableFuture<String> future = new CompletableFuture<>();
         future.whenComplete((result, error) -> {
-            if (future.isCancelled()) {
-                call.cancel();
-            }
+            if (future.isCancelled()) cancelDownload(call, download);
         });
-        call.enqueue(new Callback(){
-
+        CallTimeout.trackCurrent(future);
+        call.enqueue(new Callback() {
+            @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                Net.this.remove(call);
-                future.completeExceptionally(e);
+                failDownload(call, e, download, future);
             }
 
+            @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try (Response response2 = response;){
-                    if (!response.isSuccessful()) {
-                        throw new IOException("HTTP " + response.code());
-                    }
-                    try (InputStream input = response.body().byteStream();
-                         FileOutputStream output = new FileOutputStream(target);){
-                        int size;
-                        byte[] buffer = new byte[16384];
-                        while ((size = input.read(buffer)) != -1) {
-                            output.write(buffer, 0, size);
-                        }
-                    }
-                    future.complete(target.getAbsolutePath());
-                }
-                catch (Exception e) {
-                    future.completeExceptionally(e);
-                }
-                finally {
-                    Net.this.remove(call);
-                }
+                finishDownload(call, response, download, target, future);
             }
         });
         return future;
+    }
+
+    private Download createDownload(String url, File target, NetOptions options) {
+        Download download = new Download(buildRequest(url, options, false), target)
+                .maxBytes(options.getMaxBytes())
+                .threads(options.getThreads())
+                .resume(!usesCookies(options))
+                .strictStatus(false)
+                .allowEmpty(true);
+        if (options.getSize() > 0) download.size(options.getSize());
+        return download;
+    }
+
+    private Call newDownloadCall(Download download, NetOptions options) throws IOException {
+        return newCall(download.request(request -> {
+            try {
+                return newCall(request, options);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }), options);
+    }
+
+    private void failDownload(Call call, IOException e, Download download, CompletableFuture<String> future) {
+        closeDownload(download, e);
+        remove(call);
+        future.completeExceptionally(e);
+    }
+
+    private void closeDownload(Download download, Throwable failure) {
+        try {
+            download.close();
+        } catch (IOException cleanup) {
+            failure.addSuppressed(cleanup);
+        }
+    }
+
+    private void finishDownload(Call call, Response response, Download download, File target, CompletableFuture<String> future) {
+        try (download) {
+            download.write(call, response, null);
+        } catch (Exception e) {
+            future.completeExceptionally(response.isSuccessful() ? e : new IOException("HTTP " + response.code(), e));
+            return;
+        } finally {
+            download.releaseCalls(this::remove);
+            remove(call);
+        }
+        future.complete(target.getAbsolutePath());
+    }
+
+    private void cancelDownload(Call call, Download download) {
+        Throwable failure = null;
+        try {
+            call.cancel();
+        } catch (RuntimeException | Error closing) {
+            failure = closing;
+        }
+        try {
+            download.cancel();
+        } catch (RuntimeException | Error closing) {
+            if (failure == null) failure = closing;
+            else if (failure != closing) failure.addSuppressed(closing);
+        }
+        if (failure instanceof RuntimeException closing) throw closing;
+        if (failure instanceof Error closing) throw closing;
     }
 
     public void enqueue(String url, NetOptions options, Consumer<Result> complete) {
@@ -549,6 +661,7 @@ implements AutoCloseable {
                 call.cancel();
             }
         });
+        CallTimeout.trackCurrent(future);
         call.enqueue(new Callback(){
 
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
@@ -573,6 +686,83 @@ implements AutoCloseable {
         return future;
     }
 
+    public StreamResult openStream(String url, String json) throws IOException {
+        CompletableFuture<StreamResult> future = requestStreamAsync(url, NetOptions.from(json));
+        try {
+            return future.get();
+        } catch (InterruptedException error) {
+            future.cancel(true);
+            throw interrupted(error);
+        } catch (ExecutionException error) {
+            if (error.getCause() instanceof IOException cause) throw cause;
+            throw new IOException(error.getCause());
+        }
+    }
+
+    public Object[] stream(String url, String json) throws IOException {
+        StreamResult stream = openStream(url, json);
+        Map<String, String> headers = new LinkedHashMap<>();
+        stream.headers.forEach((key, value) -> headers.put(key, value instanceof List<?> values
+                ? String.join(", ", values.stream().map(Object::toString).toList()) : value.toString()));
+        return new Object[]{stream.code, stream.contentType, stream, headers};
+    }
+
+    public CompletableFuture<StreamResult> requestStreamAsync(String url, NetOptions options) {
+        Call call;
+        try {
+            call = newCall(url, options);
+        } catch (Exception error) {
+            return CompletableFutures.failedFuture(error);
+        }
+        CompletableFuture<StreamResult> future = new CompletableFuture<>();
+        future.whenComplete((result, error) -> {
+            if (future.isCancelled()) call.cancel();
+        });
+        CallTimeout.trackCurrent(future);
+        call.enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException error) {
+                remove(call);
+                future.completeExceptionally(error);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                acceptStream(call, response, future);
+            }
+        });
+        return future;
+    }
+
+    private void acceptStream(Call call, Response response, CompletableFuture<StreamResult> future) {
+        StreamResult result;
+        try {
+            result = new StreamResult(call, response);
+        } catch (RuntimeException | Error error) {
+            try { response.close(); }
+            catch (RuntimeException | Error closing) { if (closing != error) error.addSuppressed(closing); }
+            remove(call);
+            future.completeExceptionally(error);
+            return;
+        }
+        boolean accepted;
+        synchronized (lock) {
+            accepted = !closed && !call.isCanceled();
+            if (accepted) streams.add(result);
+        }
+        if (!accepted) {
+            InterruptedIOException error = new InterruptedIOException("Network request canceled");
+            try {
+                result.close();
+            } catch (RuntimeException | Error closing) {
+                error.addSuppressed(closing);
+            }
+            future.completeExceptionally(error);
+        } else if (!future.complete(result)) {
+            result.close();
+        }
+    }
+
     public void webSocket(String url, NetOptions options, Consumer<Result> complete) {
         this.openSocket(url, options, complete);
     }
@@ -585,13 +775,17 @@ implements AutoCloseable {
                 exchange.cancel();
             }
         });
+        CallTimeout.trackCurrent(future);
         return future;
     }
 
     private Call newCall(String url, NetOptions options) throws IOException {
-        Request request = this.buildRequest(url, options, false);
+        return newCall(buildRequest(url, options, false), options);
+    }
+
+    private Call newCall(Request request, NetOptions options) throws IOException {
         OkHttpClient http = this.builder(options).addNetworkInterceptor(chain -> this.interceptCookies(chain, request, options)).build();
-        Call call = http.newCall(request);
+        Call call = http.newCall(request.newBuilder().tag(NetOptions.class, options).build());
         Object object = this.lock;
         synchronized (object) {
             if (this.closed) {
@@ -626,10 +820,12 @@ implements AutoCloseable {
         // would bypass that interceptor and retain the previous host's proxy policy.
         boolean routedRedirects = builder.interceptors().stream().anyMatch(item -> item instanceof ProxyRedirectInterceptor);
         if (!options.isRedirect()) builder.interceptors().removeIf(item -> item instanceof ProxyRedirectInterceptor);
+        if (trace != null) builder.eventListenerFactory(trace::listener);
         return builder.followRedirects(options.isRedirect() && !routedRedirects);
     }
 
     private Request buildRequest(String url, NetOptions options, boolean socket) {
+        options.getBuffer();
         Headers headers = Headers.of(options.getHeader());
         Request.Builder request = new Request.Builder().url(url).headers(headers);
         if (options.getData() != null && options.getRawBody() != null) {
@@ -782,7 +978,7 @@ implements AutoCloseable {
         return builder.build();
     }
 
-    private void saveCookies(Response response, NetOptions options) throws IOException {
+    void saveCookies(Response response, NetOptions options) throws IOException {
         if (!this.usesCookies(options)) {
             return;
         }
@@ -844,6 +1040,37 @@ implements AutoCloseable {
         }
     }
 
+    public NetSocket connect(String url, String json, NetSocket.Listener listener) throws IOException {
+        NetOptions options = NetOptions.from(json);
+        if (listener == null) throw new IllegalArgumentException("WebSocket requires a listener");
+        if (options.getTimeout() <= 0) throw new IllegalArgumentException("WebSocket requires a connect deadline");
+        Request request = socketRequest(url, options);
+        OkHttpClient client = socketClient(options).newBuilder().pingInterval(options.getPing(), TimeUnit.MILLISECONDS).build();
+        NetSocket socket = new NetSocket(this, url, options, listener);
+        synchronized (lock) {
+            checkOpen();
+            connections.add(socket);
+        }
+        try {
+            socket.start(client, request);
+            return socket;
+        } catch (RuntimeException e) {
+            socket.cancel();
+            throw e;
+        }
+    }
+
+    Request socketRequest(String url, NetOptions options) throws IOException {
+        Request request = buildRequest(url, options, true);
+        return withCookies(request, request.url(), request.header("Cookie"), options);
+    }
+
+    void remove(NetSocket socket) {
+        synchronized (lock) {
+            connections.remove(socket);
+        }
+    }
+
     private OkHttpClient socketClient(NetOptions options) {
         // Keep the application's DNS, ECH socket factory and proxy authentication.
         OkHttpClient.Builder builder = builder(options).followRedirects(false)
@@ -862,42 +1089,106 @@ implements AutoCloseable {
 
     @Override
     public void close() {
-        ArrayList<Net> sessions;
-        ArrayList<Exchange> active;
-        ArrayList<Call> pending;
-        Object object = this.lock;
-        synchronized (object) {
-            if (this.closed) {
-                return;
+        List<Call> pending;
+        List<StreamResult> streaming;
+        List<Exchange> active;
+        List<NetSocket> connected;
+        List<Net> sessions;
+        List<NetMap<?, ?>> mappings;
+        synchronized (lock) {
+            if (closed) return;
+            closed = true;
+            lock.notifyAll();
+            pending = new ArrayList<>(calls);
+            streaming = new ArrayList<>(streams);
+            active = new ArrayList<>(sockets);
+            connected = new ArrayList<>(connections);
+            sessions = new ArrayList<>(children);
+            mappings = new ArrayList<>(maps);
+            maps.clear();
+            children.clear();
+        }
+        cache.close();
+        for (NetMap<?, ?> mapping : mappings) mapping.cancel();
+        if (cookies instanceof SessionCookies local) local.close();
+        Throwable failure = null;
+        failure = cancelCalls(pending, failure);
+        failure = closeStreams(streaming, failure);
+        failure = cancelExchanges(active, failure);
+        failure = cancelSockets(connected, failure);
+        failure = closeSessions(sessions, failure);
+        if (parent != null) {
+            synchronized (parent.lock) {
+                parent.children.remove(this);
             }
-            this.closed = true;
-            this.lock.notifyAll();
-            pending = new ArrayList<>(this.calls);
-            active = new ArrayList<>(this.sockets);
-            sessions = new ArrayList<>(this.children);
-            this.children.clear();
         }
-        this.cache.close();
-        Cookies cookies = this.cookies;
-        if (cookies instanceof SessionCookies) {
-            SessionCookies local = (SessionCookies)cookies;
-            local.close();
-        }
+        if (failure instanceof RuntimeException error) throw error;
+        if (failure instanceof Error error) throw error;
+    }
+
+    private Throwable cancelCalls(List<Call> pending, Throwable failure) {
         for (Call call : pending) {
-            call.cancel();
-        }
-        for (Exchange exchange : active) {
-            exchange.cancel();
-        }
-        for (Net session : sessions) {
-            session.close();
-        }
-        if (this.parent != null) {
-            object = this.parent.lock;
-            synchronized (object) {
-                this.parent.children.remove(this);
+            try {
+                call.cancel();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
             }
         }
+        return failure;
+    }
+
+    private Throwable closeStreams(List<StreamResult> streaming, Throwable failure) {
+        for (StreamResult stream : streaming) {
+            try {
+                stream.close();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
+            }
+        }
+        return failure;
+    }
+
+    private Throwable cancelExchanges(List<Exchange> active, Throwable failure) {
+        for (Exchange exchange : active) {
+            try {
+                exchange.cancel();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
+            }
+        }
+        return failure;
+    }
+
+    private Throwable cancelSockets(List<NetSocket> connected, Throwable failure) {
+        for (NetSocket socket : connected) {
+            try {
+                socket.cancel();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
+            }
+        }
+        return failure;
+    }
+
+    private Throwable closeSessions(List<Net> sessions, Throwable failure) {
+        for (Net session : sessions) {
+            try {
+                session.close();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
+            }
+        }
+        return failure;
+    }
+
+    @Keep
+    public interface Mapper<T, R> {
+        R apply(T item, int index) throws Exception;
     }
 
     @Keep
@@ -968,6 +1259,155 @@ implements AutoCloseable {
         }
     }
 
+    @Keep
+    public final class StreamResult extends InputStream {
+        public final int code;
+        public final Map<String, Object> headers;
+        public final String contentType;
+        private final Call call;
+        private final Response response;
+        private final InputStream input;
+        private final AtomicBoolean finished = new AtomicBoolean();
+        private final AtomicBoolean reading = new AtomicBoolean();
+        private final AtomicBoolean bodyClosed = new AtomicBoolean();
+
+        private StreamResult(Call call, Response response) {
+            this.call = call;
+            this.response = response;
+            this.input = response.body().byteStream();
+            this.code = response.code();
+            this.headers = Result.headers(response.headers());
+            this.contentType = response.header("Content-Type", "application/octet-stream");
+        }
+
+        @Override
+        public int read() throws IOException {
+            beginRead();
+            try {
+                return finishRead(input.read());
+            } catch (IOException | RuntimeException | Error error) {
+                failRead(error);
+                throw error;
+            }
+        }
+
+        @Override
+        public int read(byte[] bytes, int offset, int length) throws IOException {
+            int capacity = bytes.length;
+            if (offset < 0 || length < 0 || length > capacity - offset) throw new IndexOutOfBoundsException();
+            if (finished.get()) throw new IOException("Response stream closed");
+            if (length == 0) return 0;
+            beginRead();
+            try {
+                return finishRead(input.read(bytes, offset, length));
+            } catch (IOException | RuntimeException | Error error) {
+                failRead(error);
+                throw error;
+            }
+        }
+
+        @Override
+        public void close() {
+            finish(true);
+        }
+
+        public CompletableFuture<Integer> readAsync(ByteBuffer bytes) {
+            if (bytes == null || bytes.isReadOnly() || !bytes.hasRemaining() || bytes.remaining() > 1024 * 1024) throw new IllegalArgumentException("Read requires a writable range of 1..1048576 bytes");
+            if (!reading.compareAndSet(false, true)) return CompletableFutures.failedFuture(new IllegalStateException("Stream read already pending"));
+            if (finished.get()) {
+                endRead();
+                return CompletableFutures.failedFuture(new IOException("Response stream closed"));
+            }
+            CompletableFuture<Integer> result = new CompletableFuture<>();
+            result.whenComplete((value, error) -> {
+                if (result.isCancelled()) close();
+            });
+            CallTimeout.trackCurrent(result);
+            try {
+                client.dispatcher().executorService().execute(() -> readInto(bytes, result));
+            } catch (RuntimeException error) {
+                failRead(error);
+                result.completeExceptionally(error);
+            }
+            return result;
+        }
+
+        private void readInto(ByteBuffer bytes, CompletableFuture<Integer> result) {
+            try {
+                if (finished.get()) throw new IOException("Response stream closed");
+                int size = response.body().source().read(bytes);
+                if (finished.get()) throw new IOException("Response stream closed");
+                result.complete(finishRead(size));
+            } catch (Throwable error) {
+                failRead(error);
+                result.completeExceptionally(error);
+            }
+        }
+
+        private void beginRead() throws IOException {
+            if (!reading.compareAndSet(false, true)) throw new IOException("Stream read already pending");
+            if (finished.get()) {
+                endRead();
+                throw new IOException("Response stream closed");
+            }
+        }
+
+        private void endRead() {
+            reading.set(false);
+            closeBody();
+        }
+
+        private int finishRead(int size) {
+            if (size == -1) finish(false);
+            endRead();
+            return size;
+        }
+
+        private void failRead(Throwable error) {
+            try {
+                close();
+            } catch (Throwable closing) {
+                if (closing != error) error.addSuppressed(closing);
+            } finally {
+                endFailedRead(error);
+            }
+        }
+
+        private void endFailedRead(Throwable error) {
+            try {
+                endRead();
+            } catch (Throwable closing) {
+                if (closing != error) error.addSuppressed(closing);
+            }
+        }
+
+        private void closeBody() {
+            if (finished.get() && !reading.get() && bodyClosed.compareAndSet(false, true)) response.close();
+        }
+
+        private void finish(boolean cancel) {
+            if (!finished.compareAndSet(false, true)) return;
+            Throwable failure = null;
+            try {
+                if (cancel) call.cancel();
+            } catch (RuntimeException | Error error) {
+                failure = error;
+            }
+            synchronized (lock) {
+                streams.remove(this);
+                calls.remove(call);
+            }
+            try {
+                closeBody();
+            } catch (RuntimeException | Error error) {
+                if (failure == null) failure = error;
+                else if (failure != error) failure.addSuppressed(error);
+            }
+            if (failure instanceof RuntimeException error) throw error;
+            if (failure instanceof Error error) throw error;
+        }
+    }
+
     public static final class Result {
         private static final Gson GSON = new Gson();
         public final Object code;
@@ -1017,11 +1457,15 @@ implements AutoCloseable {
         }
 
         private static Result success(int code, Headers headers, byte[] body, boolean http) {
-            LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+            return new Result(code, headers(headers), body, null, http);
+        }
+
+        private static Map<String, Object> headers(Headers headers) {
+            Map<String, Object> values = new LinkedHashMap<>();
             for (Map.Entry<String, List<String>> entry : headers.toMultimap().entrySet()) {
-                values.put((String)entry.getKey(), ((List)entry.getValue()).size() == 1 ? ((List)entry.getValue()).get(0) : entry.getValue());
+                values.put(entry.getKey(), entry.getValue().size() == 1 ? entry.getValue().get(0) : entry.getValue());
             }
-            return new Result(code, values, body, null, http);
+            return values;
         }
 
         private static Result handshakeFailure(Response response) {

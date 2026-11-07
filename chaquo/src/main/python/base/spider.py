@@ -9,65 +9,67 @@ from urllib.parse import urlencode
 
 _PROXY_DEFAULT = object()
 from com.chaquo.python import Python
-from abc import abstractmethod, ABCMeta
 from importlib.machinery import SourceFileLoader
 
 
-class Spider(metaclass=ABCMeta):
+class Spider:
     _instance = None
 
     def __init__(self):
-            self.extend = ''
+        self.extend = ''
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance:
-            return cls._instance
-        else:
+        if cls.__dict__.get('_instance') is None:
             cls._instance = super().__new__(cls)
-            return cls._instance
+        return cls._instance
 
-    @abstractmethod
     def init(self, extend=""):
         pass
 
     def homeContent(self, filter):
-        pass
+        return {"class": []}
 
     def homeVideoContent(self):
-        pass
+        return {"list": []}
 
     def categoryContent(self, tid, pg, filter, extend):
-        pass
+        return {"list": []}
 
     def detailContent(self, ids):
-        pass
+        return {"list": []}
 
     def searchContent(self, key, quick, pg="1"):
-        pass
+        return {"list": []}
 
     def playerContent(self, flag, id, vipFlags):
-        pass
+        return {}
 
     def liveContent(self, url):
-        pass
+        return ""
 
     def localProxy(self, param):
-        pass
+        return [404, "text/plain", ""]
+
+    def proxy(self, params):
+        return [404, "text/plain", ""]
+
+    def danmaku(self, id, emit):
+        raise NotImplementedError("Spider does not support live danmaku")
 
     def isVideoFormat(self, url):
-        pass
+        return False
 
     def manualVideoCheck(self):
-        pass
+        return False
 
     def action(self, action):
-        pass
+        return {}
 
     def destroy(self):
         pass
 
     def getName(self):
-        pass
+        return self.__class__.__name__
 
     def dialog(self, options, onAction=None):
         bridge = getattr(self, '_tv_dialog', None)
@@ -79,12 +81,19 @@ class Spider(metaclass=ABCMeta):
         return []
 
     def loadSpider(self, name):
-        spider = self.loadModule(name).Spider()
+        runtime = getattr(self, 'runtime', None)
+        spider = runtime.spider(name) if runtime is not None else self.loadModule(name).Spider()
+        for attribute in ('net', 'local', 'js', 'siteKey'):
+            if hasattr(self, attribute):
+                setattr(spider, attribute, getattr(self, attribute))
         if hasattr(self, '_tv_dialog'):
             spider._tv_dialog = self._tv_dialog
         return spider
 
     def loadModule(self, name):
+        runtime = getattr(self, 'runtime', None)
+        if runtime is not None:
+            return runtime.load_reference(name)
         cache_dir = Python.getPlatform().getApplication().getCacheDir().getAbsolutePath()
         path = os.path.join(os.path.join(cache_dir, 'py'),  f'{name}.py')
         return SourceFileLoader(name, path).load_module()
@@ -134,17 +143,36 @@ class Spider(metaclass=ABCMeta):
         query.update(params)
         return str(Proxy.getUrl(True)) + "?" + urlencode(query)
 
+    def proxyUrl(self, params=None, local=True):
+        params = {} if params is None else params
+        if not isinstance(params, dict) or any(not isinstance(key, str) or not isinstance(value, str)
+                                              for key, value in params.items()):
+            raise TypeError("Proxy parameters require string keys and values")
+        if not isinstance(local, bool):
+            raise TypeError("Proxy local flag requires a boolean")
+        if 'do' in params or 'siteKey' in params:
+            raise ValueError("Reserved proxy parameter")
+        return str(Proxy.getUrl(local)) + '?' + urlencode({'do': 'py', 'siteKey': getattr(self, 'siteKey', ''), **params})
+
+    def danmakuUrl(self, id):
+        from java import jclass
+        return str(jclass('com.github.catvod.crawler.Spider').danmakuUrl(getattr(self, 'siteKey', ''), id))
+
     def getActivity(self):
         return Init.activity()
 
-    def page(self, items, pg, limit):
+    def page(self, items, pg, limit, total=None):
         pg, limit = int(pg), int(limit)
         if pg < 1 or limit < 1:
             raise ValueError("Page and page size must be positive")
-        start = (pg - 1) * limit
-        return {"list": items[start:start + limit], "page": pg,
-                "pagecount": (len(items) + limit - 1) // limit,
-                "limit": limit, "total": len(items)}
+        if total is None:
+            total = len(items)
+            start = (pg - 1) * limit
+            items = items[start:start + limit]
+        if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+            raise ValueError("Total must be a nonnegative integer")
+        return {"list": items, "page": pg, "pagecount": (total + limit - 1) // limit,
+                "limit": limit, "total": total}
 
     @staticmethod
     def link(name, target):

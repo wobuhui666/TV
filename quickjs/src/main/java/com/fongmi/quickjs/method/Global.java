@@ -7,6 +7,7 @@ import com.fongmi.quickjs.bean.Req;
 import com.fongmi.quickjs.utils.Connect;
 import com.fongmi.quickjs.utils.Crypto;
 import com.github.catvod.Proxy;
+import com.github.catvod.utils.CallTimeout;
 import com.github.catvod.utils.Trans;
 import com.github.catvod.utils.UriUtil;
 import com.orhanobut.logger.Logger;
@@ -17,12 +18,15 @@ import com.whl.quickjs.wrapper.QuickJSContext;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URLEncoder;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import okhttp3.Call;
@@ -36,27 +40,40 @@ public class Global {
     private final AtomicInteger timerId;
     private final QuickJSContext ctx;
     private final Timer timer;
+    private final boolean strict;
+    private final Set<Call> calls = ConcurrentHashMap.newKeySet();
+    private final Set<JSFunction> callbacks = ConcurrentHashMap.newKeySet();
 
     private volatile boolean destroyed;
 
-    private Global(QuickJSContext ctx, ExecutorService executor) {
+    private Global(QuickJSContext ctx, ExecutorService executor, boolean strict) {
         this.executor = executor;
         this.timerId = new AtomicInteger();
         this.timers = new ConcurrentHashMap<>();
         this.timer = new Timer("quickjs-timer", true);
         this.ctx = ctx;
-        setProperty();
+        this.strict = strict;
+        try { setProperty(); }
+        catch (RuntimeException | Error error) { timer.cancel(); throw error; }
     }
 
     public static Global create(QuickJSContext ctx, ExecutorService executor) {
-        return new Global(ctx, executor);
+        return new Global(ctx, executor, false);
+    }
+
+    /** Evaluation errors must reach the caller; legacy crawlers retain their null fallback. */
+    public static Global createStrict(QuickJSContext ctx, ExecutorService executor) {
+        return new Global(ctx, executor, true);
     }
 
     public void destroy() {
         destroyed = true;
+        timer.cancel();
+        for (Call call : calls) call.cancel();
+        calls.clear();
+        for (JSFunction callback : callbacks) releaseCallback(callback);
         for (Timeout timeout : timers.values()) timeout.cancelAndRelease();
         timers.clear();
-        timer.cancel();
     }
 
     private void setProperty() {
@@ -66,6 +83,12 @@ public class Global {
                 try {
                     return method.invoke(this, args);
                 } catch (Exception e) {
+                    if (strict) {
+                        Throwable cause = e instanceof InvocationTargetException ? e.getCause() : e;
+                        if (cause instanceof RuntimeException error) throw error;
+                        if (cause instanceof Error error) throw error;
+                        throw new IllegalStateException("JavaScript helper failed: " + method.getName(), cause);
+                    }
                     return null;
                 }
             });
@@ -140,12 +163,19 @@ public class Global {
     @Keep
     @JSMethod
     public JSObject req(String url, JSObject options) {
+        CompletableFuture<Void> done = null;
+        Call call = null;
         try {
             Req req = Req.objectFrom(options.stringify());
-            Response res = Connect.to(url, req).execute();
+            call = Connect.to(url, req);
+            done = track(call);
+            Response res = call.execute();
             return Connect.success(ctx, req, res);
         } catch (Exception e) {
             return Connect.error(ctx);
+        } finally {
+            if (call != null) calls.remove(call);
+            if (done != null) done.complete(null);
         }
     }
 
@@ -183,7 +213,7 @@ public class Global {
     @JSMethod
     public String md5X(String text) {
         String result = Crypto.md5(text);
-        Logger.t("md5X").d("text:%s\nresult:\n%s", text, result);
+        if (!strict) Logger.t("md5X").d("text:%s\nresult:\n%s", text, result);
         return result;
     }
 
@@ -191,7 +221,7 @@ public class Global {
     @JSMethod
     public String aesX(String mode, boolean encrypt, String input, boolean inBase64, String key, String iv, boolean outBase64) {
         String result = Crypto.aes(mode, encrypt, input, inBase64, key, iv, outBase64);
-        Logger.t("aesX").d("mode:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:%s\niv:%s\ninput:\n%s\nresult:\n%s", mode, encrypt, inBase64, outBase64, key, iv, input, result);
+        if (!strict) Logger.t("aesX").d("mode:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:%s\niv:%s\ninput:\n%s\nresult:\n%s", mode, encrypt, inBase64, outBase64, key, iv, input, result);
         return result;
     }
 
@@ -199,47 +229,63 @@ public class Global {
     @JSMethod
     public String rsaX(String mode, boolean pub, boolean encrypt, String input, boolean inBase64, String key, boolean outBase64) {
         String result = Crypto.rsa(mode, pub, encrypt, input, inBase64, key, outBase64);
-        Logger.t("rsaX").d("mode:%s\npub:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:\n%s\ninput:\n%s\nresult:\n%s", mode, pub, encrypt, inBase64, outBase64, key, input, result);
+        if (!strict) Logger.t("rsaX").d("mode:%s\npub:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:\n%s\ninput:\n%s\nresult:\n%s", mode, pub, encrypt, inBase64, outBase64, key, input, result);
         return result;
     }
 
     private void requestAsync(String url, JSObject options, JSFunction complete) {
         complete.hold();
+        callbacks.add(complete);
         try {
             Req req = Req.objectFrom(options.stringify());
-            Connect.to(url, req).enqueue(getCallback(complete, req));
+            Call call = Connect.to(url, req);
+            call.enqueue(getCallback(complete, req, track(call)));
         } catch (Throwable e) {
             completeError(complete);
         }
     }
 
-    private Callback getCallback(JSFunction complete, Req req) {
+    private CompletableFuture<Void> track(Call call) {
+        calls.add(call);
+        CompletableFuture<Void> done = new CompletableFuture<>();
+        done.whenComplete((value, error) -> {
+            if (done.isCancelled()) call.cancel();
+            calls.remove(call);
+        });
+        CallTimeout.trackCurrent(done);
+        if (destroyed) done.cancel(true);
+        return done;
+    }
+
+    private Callback getCallback(JSFunction complete, Req req, CompletableFuture<Void> done) {
         Invocation invocation = Invocation.current();
         return new Callback() {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response res) {
-                completeSuccess(complete, req, res, invocation);
+                completeSuccess(complete, req, res, invocation, done);
             }
 
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                completeError(complete, invocation);
+                try { completeError(complete, invocation); }
+                finally { done.complete(null); }
             }
         };
     }
 
-    private void completeSuccess(JSFunction complete, Req req, Response res, Invocation invocation) {
+    private void completeSuccess(JSFunction complete, Req req, Response res, Invocation invocation, CompletableFuture<Void> done) {
         boolean posted = submit(Invocation.wrap(invocation, () -> {
             try {
                 if (!destroyed) complete.call(Connect.success(ctx, req, res));
                 else res.close();
             } finally {
-                complete.release();
+                releaseCallback(complete);
+                done.complete(null);
             }
         }));
         if (posted) return;
         res.close();
-        complete.release();
+        done.complete(null);
     }
 
     private void completeError(JSFunction complete) {
@@ -252,7 +298,7 @@ public class Global {
 
     private boolean postCallback(JSFunction callback, Runnable runnable) {
         boolean posted = submit(() -> callAndRelease(callback, runnable));
-        if (!posted) callback.release();
+        // Rejected/late callbacks remain owned by destroy(), which runs on the JS thread.
         return posted;
     }
 
@@ -260,8 +306,12 @@ public class Global {
         try {
             if (!destroyed) runnable.run();
         } finally {
-            callback.release();
+            releaseCallback(callback);
         }
+    }
+
+    private void releaseCallback(JSFunction callback) {
+        if (callbacks.remove(callback)) callback.release();
     }
 
     private Timeout createTimeout(JSFunction func) {
@@ -307,8 +357,8 @@ public class Global {
 
         @Override
         public void run() {
-            if (submit(Invocation.wrap(invocation, this::fire))) return;
-            Global.this.cancel(id);
+            // A timer thread cannot release native values; destroy() owns rejected callbacks.
+            submit(Invocation.wrap(invocation, this::fire));
         }
 
         private void fire() {

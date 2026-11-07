@@ -44,7 +44,7 @@ public class PyLoader {
         Spider created = spiders.computeIfAbsent(key, k -> {
             Spider spider = null;
             try {
-                spider = loadSpider(api);
+                spider = loadSpider(api, key);
                 spider.siteKey = key;
                 spider.init(App.get(), ext);
                 return spider;
@@ -60,6 +60,10 @@ public class PyLoader {
 
     Spider loadSpider(String api) {
         return loader().spider(api);
+    }
+
+    Spider loadSpider(String api, String siteKey) {
+        return loader().spider(api, siteKey);
     }
 
     private void destroySpider(Spider spider, Throwable failure) {

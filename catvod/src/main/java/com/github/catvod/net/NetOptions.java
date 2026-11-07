@@ -6,13 +6,16 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class NetOptions {
+
     private static final Gson GSON = new Gson();
+
     @SerializedName("buffer")
-    private Integer buffer;
+    private JsonElement buffer;
     @SerializedName("redirect")
     private Integer redirect;
     @SerializedName("timeout")
@@ -33,19 +36,43 @@ public class NetOptions {
     private JsonElement params;
     @SerializedName("cookie")
     private Boolean cookie;
+    @SerializedName("ping")
+    private Integer ping;
+    @SerializedName("idle")
+    private Integer idle;
+    @SerializedName("reconnect")
+    private Boolean reconnect;
+    @SerializedName("maxBytes")
+    private Long maxBytes;
+    @SerializedName("size")
+    private Long size;
+    @SerializedName("threads")
+    private Integer threads;
+
+    public long getMaxBytes() {
+        if (maxBytes != null && maxBytes <= 0) throw new IllegalArgumentException("Invalid download size limit");
+        return maxBytes == null ? Long.MAX_VALUE : maxBytes;
+    }
+
+    public long getSize() {
+        if (size != null && size <= 0) throw new IllegalArgumentException("Invalid download size");
+        return size == null ? -1 : size;
+    }
+
+    public int getThreads() {
+        if (threads != null && (threads < 0 || threads > 4)) throw new IllegalArgumentException("Invalid download threads");
+        return threads == null ? 0 : threads;
+    }
 
     public static NetOptions from(String json) {
-        NetOptions options = json == null || json.isEmpty() ? null : (NetOptions)GSON.fromJson(json, NetOptions.class);
+        NetOptions options = json == null || json.isEmpty() ? null : GSON.fromJson(json, NetOptions.class);
         return options == null ? new NetOptions() : options;
     }
 
     static NetOptions text(String method, String body, Map<String, String> headers, int timeout) {
-        JsonObject values;
         NetOptions options = new NetOptions();
-        values = headers == null ? new JsonObject() : GSON.toJsonTree(headers).getAsJsonObject();
-        if (method.equals("POST") && values.keySet().stream().noneMatch(key -> key.equalsIgnoreCase("Content-Type"))) {
-            values.addProperty("Content-Type", "application/json; charset=utf-8");
-        }
+        JsonObject values = headers == null ? new JsonObject() : GSON.toJsonTree(headers).getAsJsonObject();
+        if (method.equals("POST") && values.keySet().stream().noneMatch(key -> key.equalsIgnoreCase("Content-Type"))) values.addProperty("Content-Type", "application/json; charset=utf-8");
         options.method = method;
         options.body = body == null ? null : new JsonPrimitive(body);
         options.headers = values;
@@ -54,37 +81,56 @@ public class NetOptions {
     }
 
     public int getBuffer() {
-        return this.buffer == null ? 0 : this.buffer;
+        if (buffer == null || buffer.isJsonNull()) return 0;
+        if (!buffer.isJsonPrimitive() || !buffer.getAsJsonPrimitive().isNumber()) throw new IllegalArgumentException("Buffer must be an integer from 0 to 3");
+        int value;
+        try {
+            value = buffer.getAsBigDecimal().intValueExact();
+        } catch (ArithmeticException | NumberFormatException error) {
+            throw new IllegalArgumentException("Buffer must be an integer from 0 to 3", error);
+        }
+        if (value < 0 || value > 3) throw new IllegalArgumentException("Buffer must be an integer from 0 to 3");
+        return value;
     }
 
     public int getRedirect() {
-        return this.redirect == null ? 1 : this.redirect;
+        return redirect == null ? 1 : redirect;
     }
 
     public int getTimeout() {
-        return this.timeout == null ? 10000 : this.timeout;
+        return timeout == null ? 10000 : timeout;
     }
 
     public int getCallTimeout() {
-        if (this.callTimeout != null && this.callTimeout < 0) {
-            throw new IllegalArgumentException("callTimeout must not be negative");
-        }
-        return this.callTimeout == null ? 0 : this.callTimeout;
+        if (callTimeout != null && callTimeout < 0) throw new IllegalArgumentException("callTimeout must not be negative");
+        return callTimeout == null ? 0 : callTimeout;
+    }
+
+    public int getPing() {
+        if (ping != null && ping < 0) throw new IllegalArgumentException("ping must not be negative");
+        return ping == null ? 0 : ping;
+    }
+
+    public int getIdle() {
+        if (idle != null && idle < 0) throw new IllegalArgumentException("idle must not be negative");
+        return idle == null ? 0 : idle;
+    }
+
+    public boolean isReconnect() {
+        return Boolean.TRUE.equals(reconnect);
     }
 
     public String getPostType() {
-        return this.postType == null || this.postType.isEmpty() ? "json" : this.postType;
+        return postType == null || postType.isEmpty() ? "json" : postType;
     }
 
     public String getMethod() {
-        return this.method == null || this.method.isEmpty() ? "get" : this.method;
+        return method == null || method.isEmpty() ? "get" : method;
     }
 
     public String getBody() {
         JsonElement raw = getRawBody();
-        if (raw != null && !raw.isJsonPrimitive()) {
-            throw new IllegalArgumentException("Body must be text");
-        }
+        if (raw != null && (!raw.isJsonPrimitive() || !raw.getAsJsonPrimitive().isString())) throw new IllegalArgumentException("Body must be text");
         return raw == null ? null : raw.getAsString();
     }
 
@@ -93,57 +139,66 @@ public class NetOptions {
     }
 
     public JsonElement getData() {
-        return this.data;
+        return data;
+    }
+
+    String message() {
+        if (data == null) return getBody();
+        if (data.isJsonPrimitive() && data.getAsJsonPrimitive().isString()) return data.getAsString();
+        return data.toString();
     }
 
     public JsonElement getParams() {
-        return this.params;
+        return params;
     }
 
     public boolean isRedirect() {
-        return this.getRedirect() == 1;
+        return getRedirect() == 1;
     }
 
     public boolean isCookie() {
-        return Boolean.TRUE.equals(this.cookie);
+        return Boolean.TRUE.equals(cookie);
     }
 
     public Map<String, String> getHeader() {
-        return NetOptions.toMap(this.headers);
+        return toMap(headers);
     }
 
     static Map<String, String> toMap(JsonElement element) {
+        Map<String, String> values = new HashMap<>();
         JsonObject object;
-        HashMap<String, String> values = new HashMap<>();
         try {
-            if (element != null && element.isJsonPrimitive()) {
-                element = JsonParser.parseString((String)element.getAsString());
-            }
+            if (element != null && element.isJsonPrimitive()) element = JsonParser.parseString(element.getAsString());
             object = element.getAsJsonObject();
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             return values;
         }
-        for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-            try {
-                values.put((String)entry.getKey(), ((JsonElement)entry.getValue()).getAsJsonPrimitive().getAsString().trim());
-            }
-            catch (RuntimeException e) {
-                values.put((String)entry.getKey(), "");
-            }
-        }
+        for (Map.Entry<String, JsonElement> entry : object.entrySet()) values.put(entry.getKey(), textValue(entry.getValue()));
         return values;
     }
 
+    private static String textValue(JsonElement value) {
+        try {
+            return value.getAsJsonPrimitive().getAsString().trim();
+        } catch (RuntimeException e) {
+            return "";
+        }
+    }
+
     public String getCharset() {
-        for (Map.Entry<String, String> entry : this.getHeader().entrySet()) {
+        for (Map.Entry<String, String> entry : getHeader().entrySet()) {
             if (!entry.getKey().equalsIgnoreCase("Content-Type")) continue;
-            for (String part : entry.getValue().split(";")) {
-                String text = part.trim();
-                if (!text.startsWith("charset=")) continue;
-                return text.substring(8).replace("\"", "");
-            }
+            String charset = findCharset(entry.getValue());
+            if (charset != null) return charset;
         }
         return "UTF-8";
+    }
+
+    private String findCharset(String contentType) {
+        for (String part : contentType.split(";")) {
+            String text = part.trim();
+            if (text.startsWith("charset=")) return text.substring(8).replace("\"", "");
+        }
+        return null;
     }
 }

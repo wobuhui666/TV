@@ -5,3 +5,5 @@ requests
 cachetools
 pycryptodome
 beautifulsoup4
+pywasm==1.0.8
+numpy==1.26.2

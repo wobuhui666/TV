@@ -15,6 +15,8 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 /** Real host ownership/cache behavior with failing source objects; no Python VM is started. */
@@ -52,6 +54,7 @@ public class PyLoaderLifecycleTest {
         FakeLoader loader = new FakeLoader(first, second);
         assertSame(first, loader.getSpider("first", "first.py", ""));
         assertSame(second, loader.getSpider("second", "second.py", ""));
+        assertEquals(List.of("first", "second"), loader.siteKeys);
         loader.setRecent("first");
 
         loader.clear();
@@ -128,10 +131,13 @@ public class PyLoaderLifecycleTest {
         }
 
         @Override
-        Spider loadSpider(String api) {
+        Spider loadSpider(String api, String siteKey) {
             loads++;
+            siteKeys.add(siteKey);
             return sources.remove();
         }
+
+        private final List<String> siteKeys = new ArrayList<>();
     }
 
     private static final class FakeSpider extends Spider {
