@@ -45,6 +45,10 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
+      home_background:
+        description: Verify native home artwork blending with wallpaper on and off
+        type: boolean
+        default: false
       live_home:
         description: Capture real TMDB homepage with a runtime Actions credential
         type: boolean
@@ -62,7 +66,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
@@ -138,7 +142,7 @@ jobs:
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
+          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || (inputs.compact_home || inputs.home_background) && 'compact-ui-fixture' || '' }}
           ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
@@ -157,6 +161,7 @@ jobs:
       - name: Prepare emulator checks
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
@@ -290,6 +295,28 @@ jobs:
             adb shell wm size 1920x1080
             adb shell wm density 320
             bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest,com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest,com.fongmi.android.tv.api.LogvarMatchingAndroidTest
+          elif [ "$TV_HOME_BACKGROUND" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          outputs = (
+              ('app/build/outputs/apk/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview'),
+              ('app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview.test'),
+          )
+          for root, package in outputs:
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1, 'Expected one isolated preview APK'
+              assert data['applicationId'] == package, 'Unexpected APK application ID'
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            # Clear only the disposable emulator's launcher, which can steal native app focus.
+            adb shell am force-stop com.google.android.apps.nexuslauncher
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+              com.fongmi.android.tv.ui.HomeBackgroundBlendAndroidTest,com.fongmi.android.tv.test.HomeBackgroundHomePreviewTest \
+              artifacts/home-background '6,1'
           elif [ "$TV_LIVE_HOME" = 'true' ]; then
             bash .github/scripts/verify-live-home.sh
           elif [ "$TV_COMPACT_HOME" = 'true' ]; then
@@ -355,6 +382,7 @@ jobs:
       - name: Verify themes and touch on emulator
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
@@ -388,6 +416,7 @@ jobs:
             artifacts/upstream-features/
             artifacts/playback-specs/
             artifacts/compact-home/
+            artifacts/home-background/
             artifacts/live-home/
             artifacts/assrt-subtitles/
             artifacts/fongmi-stability/
