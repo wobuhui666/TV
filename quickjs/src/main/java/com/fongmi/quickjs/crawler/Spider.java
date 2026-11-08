@@ -69,6 +69,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private final Map<Invocation, CompletableFuture<?>> pendingCalls = new ConcurrentHashMap<>();
     private boolean cat;
     private boolean standard;
+    private String sourceContent;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final AtomicInteger danmakuId = new AtomicInteger();
     private final Map<Integer, Subscription> danmakus = new ConcurrentHashMap<>();
@@ -345,7 +346,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
 
             @Override
             public byte[] getModuleBytecode(String moduleName) {
-                return ctx.compileModule(Module.get().fetch(moduleName), moduleName);
+                return ctx.compileModule(api.equals(moduleName) && sourceContent != null ? sourceContent : Module.get().fetch(moduleName), moduleName);
             }
         });
     }
@@ -385,7 +386,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
         }
         cat = content.contains("__jsEvalReturn");
         QuickLog.d(TAG, "createObj module fetched site=%s api=%s length=%s cat=%s", siteKey, api, content.length(), cat);
-        ctx.evaluateModule(content.replace(spider, global), api);
+        sourceContent = content.replace(spider, global);
         ctx.evaluateModule(String.format(Asset.read("js/lib/spider.js"), JSONObject.quote(api)));
         standard = Boolean.TRUE.equals(ctx.getProperty(ctx.getGlobalObject(), "__SPIDER_STANDARD__"));
         jsObject = (JSObject) ctx.getProperty(ctx.getGlobalObject(), spider);

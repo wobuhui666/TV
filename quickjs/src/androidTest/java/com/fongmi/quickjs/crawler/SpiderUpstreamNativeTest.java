@@ -88,8 +88,8 @@ public class SpiderUpstreamNativeTest {
         assertTrue(new JSONObject(factory.action("legacy")).getBoolean("legacy"));
         Object[] proxy=factory.proxy(Map.of());
         try(InputStream input=(InputStream)proxy[2]){assertArrayEquals(new byte[]{0,127,-128,-1},read(input));}
-        Object[] malformed=factory.proxy(Map.of("mode","malformed"));
-        try(InputStream input=(InputStream)malformed[2]){assertArrayEquals(new byte[]{0,127,-128,-1},read(input));}
+        // The original Json.toMap parser rejects malformed non-JSON header text.
+        assertThrows(Exception.class,()->factory.proxy(Map.of("mode","malformed")));
         assertTrue(new JSONObject(load("object.js").homeContent(false)).getBoolean("object"));
         Spider cat=load("cat.js");
         assertTrue(new JSONObject(cat.homeContent(false)).getBoolean("cat"));

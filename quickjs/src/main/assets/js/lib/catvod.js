@@ -49,7 +49,7 @@ function bindMethods(spider) {
         }
     }
 }
-export class Spider {
+class SourceSpider {
     constructor() {
         this.siteKey = globalThis.__SPIDER_SITE__.key;
         this.net = net; this.local = local; this.js = js; this.dialog = dialog; this.wasm = wasm;
@@ -75,3 +75,8 @@ export class Spider {
     page(items, pg, limit, total) {return page(items, pg, limit, total);}
     log(message) {console.log(message);}
 }
+
+// The bytecode loader may evaluate the facade for more than one importing module.
+// Keep its constructor identity within this context so standard subclasses are recognized.
+if (!globalThis.__SPIDER_CLASS__) globalThis.__SPIDER_CLASS__ = SourceSpider;
+export const Spider = globalThis.__SPIDER_CLASS__;

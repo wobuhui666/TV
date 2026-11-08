@@ -31,6 +31,8 @@ function context(entry) {
         danmaku(id,emit){this.emit=emit;emit({text:id});return ()=>{this.stops=(this.stops||0)+1;emit({text:'late'});};}
         action(name){if(name==='nested')return {bad:Promise.resolve(1)};return {stops:this.stops||0};}
     };`,ctx);
+    // Loading the facade again must not create a different base-class identity.
+    vm.runInContext('(() => {'+facade+'})()',ctx);
     vm.runInContext(loader,ctx);
     assert.equal(ctx.__SPIDER_STANDARD__,true);
     assert.deepEqual(JSON.parse(await ctx.__JS_SPIDER__.home()),{class:[],list:[7,'source-A']});
