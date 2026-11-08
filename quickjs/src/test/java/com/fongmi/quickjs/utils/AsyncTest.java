@@ -51,6 +51,27 @@ public class AsyncTest {
     }
 
     @Test
+    public void releasesRawPromiseWrapperWhileTransferringItsResolvedProxyObject() throws Exception {
+        AtomicReference<JSCallFunction> success = new AtomicReference<>();
+        AtomicInteger promiseReleases = new AtomicInteger();
+        JSObject promise = fake(JSObject.class, (name, args) -> {
+            if (name.equals("release")) promiseReleases.incrementAndGet();
+            if (name.equals("getJSFunction") && args[0].equals("then")) return function(values -> {
+                success.set((JSCallFunction) values[0]);
+                return null;
+            });
+            return null;
+        });
+        CompletableFuture<Object> result = Async.run(spider(function(args -> promise)), "proxy");
+        assertEquals(1, promiseReleases.get());
+        AtomicInteger proxyReleases = new AtomicInteger();
+        JSObject proxy = object("[200,\"text/plain\",\"body\"]", proxyReleases);
+        success.get().call(proxy);
+        assertSame(proxy, result.get());
+        assertEquals(0, proxyReleases.get());
+    }
+
+    @Test
     public void exposesPromiseRejectionInsteadOfReturningEmptyData() {
         AtomicReference<JSCallFunction> success = new AtomicReference<>();
         AtomicReference<JSCallFunction> failure = new AtomicReference<>();

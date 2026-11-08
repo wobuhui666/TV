@@ -8,7 +8,7 @@ on:
         type: string
         default: ''
       python_live_native:
-        description: Execute real Python and QuickJS SDK tests in an x86_64 emulator and build TV ARMv7
+        description: Execute actual Java, Python and new/legacy QuickJS SDK tests in an x86_64 emulator and build TV ARMv7
         type: boolean
         default: false
 
@@ -126,6 +126,7 @@ jobs:
           test -f "$TV_LIVE_PYTHON_FIXTURES/vod/game_live_protocol.py"
           python -m unittest discover -s chaquo/src/test/python -v
           node quickjs/src/test/js/net.test.cjs
+          node quickjs/src/test/js/spider.test.cjs
           node quickjs/src/test/js/dialog.test.cjs
           node quickjs/src/test/js/wasm.test.cjs
 
@@ -357,7 +358,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run actual CPython and QuickJS SDK instrumentation
+      - name: Run actual Java, CPython and new/legacy QuickJS SDK instrumentation
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29

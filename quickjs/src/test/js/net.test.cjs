@@ -9,6 +9,10 @@ const localData = new Map();
 const cache = new Map();
 const flights = new Map();
 let ownerId = 0;
+let token = 10;
+const streamReads = new Map();
+const generatorChunks = new Map();
+const socketSends = [];
 const calls = [];
 const context = {console, URL, setTimeout, clearTimeout, ArrayBuffer, Uint8Array, DataView};
 context.local = {
@@ -22,6 +26,8 @@ context.getProxy = function legacyProxy() {};
 context.js2Proxy = function legacyJsProxy() {};
 const originalGlobals = ['req', 'http', 'getProxy', 'js2Proxy'].map(key => context[key]);
 context.__SPIDER_NET_NATIVE__ = {
+    chunk(id, bytes, error) { generatorChunks.set(id, {bytes, error}); },
+    socketSend(id, text, bytes) { socketSends.push({id, text, bytes}); return true; },
     reqBinary(owner, json) {
         const p = JSON.parse(json);
         calls.push({method: 'reqBinary', owner, params: p});
@@ -39,6 +45,13 @@ context.__SPIDER_NET_NATIVE__ = {
         if (method === 'localClear') { localData.clear(); return ok(null); }
         if (method === 'session') return ok(++ownerId);
         if (method === 'close') return ok(null);
+        if (method === 'streamBody') return ok(++token);
+        if (method === 'streamClose') { streamReads.delete(p.token); deliver('releaseStream', p.token, ''); return ok(true); }
+        if (method === 'connect') return ok(++token);
+        if (method === 'socketClose') return ok(null);
+        if (method === 'danmakuUrl') return ok('spider://test/' + encodeURIComponent(p.id));
+        if (method === 'proxyUrl') return ok((p.local ? 'http://127.0.0.1' : 'http://lan') + '/proxy?' + new URLSearchParams(p.params));
+        if (method === 'invalidateCache') { const found = cache.get(p.key) === p.expected; if (found) cache.delete(p.key); return ok(found); }
         if (method === 'cookieGet') return ok('sid=one');
         if (method === 'cookieSet') return ok(true);
         if (method === 'userAgent') return ok('test-UA');
@@ -70,7 +83,15 @@ context.__SPIDER_NET_NATIVE__ = {
                 }
                 return ok(null);
             }
-            if (p.url === 'error') deliver('result', p.id, JSON.stringify({error: 'HTTP 403'}));
+            if (p.operation === 'openStream' || p.operation === 'stream') {
+                const id = ++token;
+                streamReads.set(id, [new Uint8Array([0,127,128,255]).buffer, null]);
+                deliver('result', p.id, ok(JSON.stringify({token:id, code:206, headers:{'X-Probe':'yes'}, contentType:'video/x-flv'})));
+            } else if (p.operation === 'streamRead') {
+                const bytes = streamReads.get(p.token)?.shift();
+                if (bytes instanceof ArrayBuffer) deliver('streamBytes', p.id, ok(null), bytes);
+                else deliver('result', p.id, ok(null));
+            } else if (p.url === 'error') deliver('result', p.id, JSON.stringify({error: 'HTTP 403'}));
             else if (p.url === 'pending') return ok(null);
             else if (p.operation === 'json') deliver('result', p.id, ok('{"items":[1,2]}'));
             else if (p.operation === 'http' && p.options?.buffer === 1) {
@@ -175,6 +196,92 @@ const plain = value => JSON.parse(JSON.stringify(value));
     assert.equal(context.net.refresh('refresh', {ttl: 1}, async () => ({updated: true})), undefined);
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(plain(context.net.peek('refresh')), {updated: true});
+    assert.equal(context.proxyUrl({q:'x'}, false), 'http://lan/proxy?q=x');
+    assert.throws(() => context.proxyUrl({q:1}), /strings/);
+    assert.throws(() => context.proxyUrl({siteKey:'x'}), /Reserved/);
+    assert.equal(context.danmakuUrl('a/b'), 'spider://test/a%2Fb');
+    let active = 0, peak = 0;
+    const mapped = await context.net.map([3,2,1], async (value, index) => {
+        active++; peak = Math.max(peak, active);
+        await new Promise(resolve => setTimeout(resolve, value));
+        active--; return {value, index};
+    }, 2);
+    assert.deepEqual(plain(mapped), [{value:3,index:0},{value:2,index:1},{value:1,index:2}]);
+    assert.equal(peak, 2);
+    assert.deepEqual(plain(await context.net.map([], () => assert.fail())), []);
+    await assert.rejects(context.net.map([1], null), /map/);
+    await assert.rejects(context.net.map([1], () => { throw new Error('mapper failure'); }), /mapper failure/);
+    const reader = await context.net.openStream('stream');
+    assert.equal(reader.code, 206);
+    assert.equal(reader.contentType, 'video/x-flv');
+    await assert.rejects(reader.read(0), /size/);
+    const chunkRead = reader.read(4);
+    await assert.rejects(reader.read(4), /pending/);
+    assert.deepEqual(Array.from(new Uint8Array(await chunkRead)), [0,127,128,255]);
+    assert.equal(await reader.read(), null);
+    assert.equal(await reader.read(), null);
+    assert.equal(reader.close(), false);
+    const closedReader = await context.net.openStream('stream');
+    assert.equal(closedReader.close(), true);
+    await assert.rejects(closedReader.read(), /closed/);
+    const response = await context.net.stream('stream');
+    assert.deepEqual(JSON.parse(context.__SPIDER_NET_PROXY_JSON__([response.code,response.contentType,response.stream]))[2], {$tvStream:response.stream.$tvStream});
+    let produced = 0, stopped = 0;
+    async function* generated() {
+        try { produced++; yield new Uint8Array([9,0,127,128,255,8]).subarray(1,5); produced++; yield new Uint8Array([]); produced++; yield new Uint8Array([4]); }
+        finally { stopped++; }
+    }
+    const body = await context.net.stream(generated());
+    assert.equal(produced, 0);
+    context.__SPIDER_NET_DELIVER__('pull', 1001, JSON.stringify({value:{token:body.stream.$tvStream,size:2}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(Array.from(new Uint8Array(generatorChunks.get(1001).bytes)), [0,127]);
+    assert.equal(produced, 1);
+    context.__SPIDER_NET_DELIVER__('pull', 1002, JSON.stringify({value:{token:body.stream.$tvStream,size:2}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(Array.from(new Uint8Array(generatorChunks.get(1002).bytes)), [128,255]);
+    body.stream.close();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(stopped, 1);
+    const badBody = await context.net.stream((async function*(){yield 'not bytes';})());
+    context.__SPIDER_NET_DELIVER__('pull', 1003, JSON.stringify({value:{token:badBody.stream.$tvStream,size:2}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(generatorChunks.get(1003).error, /bytes/);
+    const events = [];
+    const socket = context.net.connect('ws', {}, (value,event) => { assert.equal(value,socket); events.push(event); });
+    const socketToken = calls.at(-1).method === 'connect' ? token : null;
+    assert.equal(socket.send('hello'), true);
+    assert.equal(socket.send(new Uint8Array([9,0,255,8]).subarray(1,3)), true);
+    assert.deepEqual(Array.from(new Uint8Array(socketSends.at(-1).bytes)), [0,255]);
+    context.__SPIDER_NET_DELIVER__('socket', socketToken, JSON.stringify({value:{type:'message',binary:true}}),new Uint8Array([0,255]).buffer);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(Array.from(events[0].content), [0,255]);
+    socket.cancel();
+    context.__SPIDER_NET_DELIVER__('socket', socketToken, JSON.stringify({value:{type:'message',content:'late'}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(events.length, 1);
+    assert.equal(socket.send('later'), false);
+    const late = context.net.connect('ws', {}, () => events.push('late'));
+    const lateToken = token;
+    context.__SPIDER_NET_DELIVER__('socket', lateToken, JSON.stringify({value:{type:'message',content:'queued'}}));
+    late.cancel();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(events.length, 1);
+    const parent = context.net.session(), child = parent.session();
+    const nested = child.connect('ws', {}, () => events.push('nested'));
+    parent.close();
+    assert.throws(() => nested.send('late'), /closed/);
+    const mappedSession = context.net.session();
+    let runs = 0, unlock;
+    const sessionMap = mappedSession.map([1,2,3], async () => {runs++; await new Promise(resolve => {unlock=resolve;});return runs;}, 1);
+    mappedSession.close(); unlock();
+    await assert.rejects(sessionMap, /closed/);
+    assert.equal(runs, 1);
+    await assert.rejects(context.net.stream('stream', []), /options/);
+    assert.equal(await context.net.cachedText('text', {ttl:1}, () => 'hello'), 'hello');
+    await assert.rejects(context.net.cachedText('not-text', {ttl:1}, () => 42), /text/);
+    assert.equal(context.net.invalidateCache('text', 'stale'), false);
+    assert.equal(context.net.invalidateCache('text', 'hello'), true);
     const waiting = context.net.http('pending');
     const waitingBinary = context.net.http('pending', {buffer:1});
     context.__SPIDER_NET_DELIVER__('close', 0, '');
@@ -182,5 +289,5 @@ const plain = value => JSON.parse(JSON.stringify(value));
     await assert.rejects(waitingBinary, /closed/);
     assert.throws(() => context.local.get('key'), /closed/);
     assert.equal(calls.some(call => call.owner === 1 && call.method === 'cookieGet'), true);
-    console.log('PASS QuickJS facade protocol: legacy globals/local, values, HTTP/JSON/WS/batch/download/sleep/session, cache loaders/stale/refresh, close rejection');
+    console.log('PASS QuickJS facade protocol: legacy globals/local/requests, ordered map, incremental readers, generator bytes/stop, persistent binary sockets, proxy handles, text cache, session/owner close');
 })().catch(error => { console.error(error); process.exitCode = 1; });

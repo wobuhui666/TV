@@ -1,0 +1,1 @@
+export function __jsEvalReturn(){return {init(ext){this.ext=ext;},home(){return {class:[],cat:true};},action(){return {skey:this.ext.skey,ext:this.ext.ext};},destroy(){}};}

@@ -36,6 +36,18 @@ public abstract class Spider implements AutoCloseable {
     private volatile WasmRuntime wasmRuntime;
     private volatile boolean wasmClosed;
 
+    public JSONObject dialog(JSONObject options) throws Exception {
+        return dialog(options, null);
+    }
+
+    public JSONObject dialog(JSONObject options, Dialog.Callback callback) throws Exception {
+        return dialog.show(options, callback);
+    }
+
+    public final void closeDialog() {
+        dialog.close();
+    }
+
     /** Lazy ownership keeps ordinary crawlers free of WASM allocations. */
     public synchronized WasmRuntime wasm() {
         if (wasmClosed) throw new IllegalStateException("Crawler WASM runtime closed");

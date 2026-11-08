@@ -15,6 +15,7 @@ import com.fongmi.quickjs.utils.JSUtil;
 import com.fongmi.quickjs.utils.Module;
 import com.fongmi.quickjs.utils.QuickLog;
 import com.github.catvod.utils.Asset;
+import com.github.catvod.utils.CallTimeout;
 import com.github.catvod.crawler.SpiderRuntime;
 import com.github.catvod.utils.Json;
 import com.github.catvod.utils.UriUtil;
@@ -29,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +42,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import dalvik.system.DexClassLoader;
 
@@ -60,7 +66,17 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private DialogBridge dialogs;
     private volatile WasmBridge wasmBridge;
     private final Set<Invocation> invocations = ConcurrentHashMap.newKeySet();
+    private final Map<Invocation, CompletableFuture<?>> pendingCalls = new ConcurrentHashMap<>();
     private boolean cat;
+    private boolean standard;
+    private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicInteger danmakuId = new AtomicInteger();
+    private final Map<Integer, Subscription> danmakus = new ConcurrentHashMap<>();
+    private static final class Subscription {
+        final Consumer<JSONObject> emit;
+        final CallTimeout scope = CallTimeout.resourceScope();
+        Subscription(Consumer<JSONObject> emit) { this.emit = emit; }
+    }
 
     public Spider(String api, DexClassLoader dex) {
         this(api, dex, "");
@@ -87,6 +103,8 @@ public class Spider extends com.github.catvod.crawler.Spider {
 
     private Object callResult(String func, boolean json, Object... args) throws Exception {
         long start = System.currentTimeMillis();
+        boolean cleanup = "destroy".equals(func);
+        if (closed.get() && !cleanup) throw new IllegalStateException("Spider is closed");
         Invocation invocation = new Invocation();
         invocations.add(invocation);
         Future<CompletableFuture<Object>> started = null;
@@ -94,8 +112,11 @@ public class Spider extends com.github.catvod.crawler.Spider {
         try {
             started = submit(() -> invocation.call(() -> json ? Async.runJson(jsObject, func, args) : Async.run(jsObject, func, args)));
             pending = started.get();
+            pendingCalls.put(invocation, pending);
+            CallTimeout.trackCurrent(pending);
+            if (closed.get() && !cleanup) pending.cancel(false);
             invocation.bind(pending);
-            Object result = pending.get();
+            Object result = cleanup ? pending.get(5, TimeUnit.SECONDS) : pending.get();
             QuickLog.d(TAG, "call success site=%s func=%s elapsed=%sms result=%s", siteKey, func, System.currentTimeMillis() - start, invocation.hadDialog() ? "[dialog result omitted]" : describe(result));
             return result;
         } catch (InterruptedException error) {
@@ -111,6 +132,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
         } finally {
             invocation.close();
             invocations.remove(invocation);
+            pendingCalls.remove(invocation);
             if (pending != null && !pending.isDone()) pending.cancel(false);
             if (started != null && !started.isDone()) started.cancel(false);
         }
@@ -123,7 +145,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
         SpiderRuntime.bind(this, siteKey);
         try {
             initializeJS();
-            call("init", submit(() -> getExt(extend)).get());
+            call("init", standard ? extend : submit(() -> getExt(extend)).get());
         } catch (Exception | LinkageError error) {
             try {
                 releaseJS();
@@ -154,7 +176,10 @@ public class Spider extends com.github.catvod.crawler.Spider {
 
     @Override
     public String detailContent(List<String> ids) throws Exception {
-        return callJson("detail", ids.get(0));
+        if (!standard) return callJson("detail", ids.get(0));
+        JSArray array = submit(() -> JSUtil.toArray(ctx, ids)).get();
+        try { return callJson("detail", array); }
+        finally { submit(() -> { array.release(); return null; }).get(); }
     }
 
     @Override
@@ -199,9 +224,58 @@ public class Spider extends com.github.catvod.crawler.Spider {
     }
 
     @Override
+    public AutoCloseable danmaku(String id, Consumer<JSONObject> emit) throws Exception {
+        if (closed.get()) throw new IllegalStateException("Spider is closed");
+        if (emit == null) throw new NullPointerException("Danmaku emitter is required");
+        int token = danmakuId.incrementAndGet();
+        Subscription subscription = new Subscription(emit);
+        danmakus.put(token, subscription);
+        try {
+            Runnable restore = subscription.scope.enter();
+            try { call("startDanmaku", id, token); }
+            finally { restore.run(); }
+            if (closed.get()) throw new IllegalStateException("Spider is closed");
+        } catch (Exception | Error failure) {
+            danmakus.remove(token);
+            subscription.scope.close();
+            stopDanmaku(token);
+            throw failure;
+        }
+        AtomicBoolean stopped = new AtomicBoolean();
+        return () -> {
+            if (!stopped.compareAndSet(false, true)) return;
+            danmakus.remove(token);
+            subscription.scope.close();
+            stopDanmaku(token);
+        };
+    }
+
+    private void stopDanmaku(int token) {
+        if (closed.get() || executor.isShutdown()) return;
+        // Remove the Java emitter before queuing source cleanup, so already-queued events are ignored.
+        try {
+            executor.execute(() -> {
+                if (closed.get() || jsObject == null) return;
+                Async.run(jsObject, "stopDanmaku", token).whenComplete((value, error) -> {
+                    if (error != null) QuickLog.e(TAG, "danmaku stop failed site=" + siteKey, error);
+                });
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) { }
+    }
+
+    @Override
+    public void close() {
+        destroy();
+    }
+
+    @Override
     public void destroy() {
+        if (!closed.compareAndSet(false, true)) return;
+        for (Subscription subscription : danmakus.values()) subscription.scope.close();
+        danmakus.clear();
         if (wasmBridge != null) wasmBridge.cancel();
         for (Invocation invocation : invocations) invocation.close();
+        for (CompletableFuture<?> pending : pendingCalls.values()) pending.cancel(false);
         dialog.close();
         try {
             call("destroy");
@@ -222,14 +296,26 @@ public class Spider extends com.github.catvod.crawler.Spider {
         // Caller cancellation must not skip the queued JS-thread cleanup before shutdownNow.
         // Guava waits for cleanup and then restores the caller's interrupt flag.
         Uninterruptibles.getUninterruptibly(submit(() -> {
-            if (dialogs != null) dialogs.close();
-            if (network != null) network.close();
-            if (wasmBridge != null) wasmBridge.close();
-            if (global != null) global.destroy();
-            if (jsObject != null) jsObject.release();
-            if (ctx != null) ctx.destroy();
+            Throwable failure = null;
+            if (dialogs != null) failure = release(failure, dialogs::close);
+            if (network != null) failure = release(failure, network::close);
+            if (wasmBridge != null) failure = release(failure, wasmBridge::close);
+            if (global != null) failure = release(failure, global::destroy);
+            if (jsObject != null) failure = release(failure, jsObject::release);
+            if (ctx != null) failure = release(failure, ctx::destroy);
+            if (failure instanceof RuntimeException error) throw error;
+            if (failure instanceof Error error) throw error;
             return null;
         }));
+    }
+
+    private static Throwable release(Throwable failure, Runnable close) {
+        try { close.run(); }
+        catch (RuntimeException | Error error) {
+            if (failure == null) return error;
+            if (failure != error) failure.addSuppressed(error);
+        }
+        return failure;
     }
 
     private void initializeJS() throws Exception {
@@ -254,7 +340,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
         ctx.setModuleLoader(new QuickJSContext.BytecodeModuleLoader() {
             @Override
             public String moduleNormalizeName(String baseModuleName, String moduleName) {
-                return UriUtil.resolve(baseModuleName, moduleName);
+                return Module.normalize(baseModuleName, moduleName);
             }
 
             @Override
@@ -267,6 +353,15 @@ public class Spider extends com.github.catvod.crawler.Spider {
     private void createFun() {
         try {
             global = Global.create(ctx, executor);
+            ctx.getGlobalObject().setProperty("__SPIDER_DANMAKU_EMIT__", args -> {
+                if (closed.get()) return null;
+                Subscription subscription = danmakus.get(((Number) args[0]).intValue());
+                if (subscription != null) {
+                    try { subscription.emit.accept(new JSONObject((String) args[1])); }
+                    catch (Exception error) { throw new IllegalArgumentException("Invalid danmaku event", error); }
+                }
+                return null;
+            });
             QuickLog.d(TAG, "createFun global ready site=%s", siteKey);
             if (dex == null) {
                 QuickLog.d(TAG, "createFun skip jar function site=%s dex=null", siteKey);
@@ -291,7 +386,8 @@ public class Spider extends com.github.catvod.crawler.Spider {
         cat = content.contains("__jsEvalReturn");
         QuickLog.d(TAG, "createObj module fetched site=%s api=%s length=%s cat=%s", siteKey, api, content.length(), cat);
         ctx.evaluateModule(content.replace(spider, global), api);
-        ctx.evaluateModule(String.format(Asset.read("js/lib/spider.js"), api));
+        ctx.evaluateModule(String.format(Asset.read("js/lib/spider.js"), JSONObject.quote(api)));
+        standard = Boolean.TRUE.equals(ctx.getProperty(ctx.getGlobalObject(), "__SPIDER_STANDARD__"));
         jsObject = (JSObject) ctx.getProperty(ctx.getGlobalObject(), spider);
         if (jsObject == null) throw new IllegalStateException("JS spider object missing: " + api);
         QuickLog.d(TAG, "createObj ready site=%s api=%s", siteKey, api);
@@ -345,20 +441,66 @@ public class Spider extends com.github.catvod.crawler.Spider {
             JSFunction stringify = ctx.getGlobalObject().getJSFunction("__SPIDER_NET_PROXY_JSON__");
             try {
                 return (String) stringify.call(proxy);
+            } catch (Exception | Error failure) {
+                closeProxyHandle(proxy);
+                throw failure;
             } finally {
                 if (stringify != null) stringify.release();
                 proxy.release();
             }
         }).get();
-        JSONArray array = new JSONArray(json);
-        Map<String, String> headers = array.length() > 3 ? Json.toMap(array.optString(3)) : null;
-        boolean base64 = array.length() > 4 && array.optInt(4) == 1;
-        Object[] result = new Object[4];
-        result[0] = array.optInt(0);
-        result[1] = array.optString(1);
-        result[2] = getStream(array.opt(2), base64);
-        result[3] = headers;
-        return result;
+        JSONArray array = null;
+        InputStream body = null;
+        try {
+            array = new JSONArray(json);
+            if (array.length() < 3) throw new IllegalArgumentException("Proxy requires status, content type and body");
+            if (standard && (!(array.get(0) instanceof Number value)
+                    || !Double.isFinite(value.doubleValue()) || value.doubleValue() != value.intValue())) {
+                throw new IllegalArgumentException("Proxy status requires an integer");
+            }
+            int status = standard ? array.getInt(0) : array.optInt(0);
+            if (standard && (status < 100 || status > 599)) throw new IllegalArgumentException("Invalid proxy status");
+            if (standard && !(array.get(1) instanceof String)) throw new IllegalArgumentException("Proxy content type requires text");
+            String contentType = standard ? array.getString(1) : array.optString(1);
+            Map<String, String> headers = !standard && array.length() > 3 ? Json.toMap(array.optString(3)) : null;
+            if (standard && array.length() > 3 && !array.isNull(3) && !"".equals(array.opt(3))) {
+                Object value = array.get(3);
+                JSONObject object = value instanceof JSONObject existing ? existing : new JSONObject((String) value);
+                headers = new HashMap<>();
+                java.util.Iterator<String> keys = object.keys();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+                    Object header = object.get(key);
+                    if (standard && !(header instanceof String)) throw new IllegalArgumentException("Proxy headers require strings");
+                    headers.put(key, String.valueOf(header));
+                }
+            }
+            boolean base64 = array.length() > 4 && array.optInt(4) == 1;
+            body = getStream(array.get(2), base64);
+            return new Object[]{status, contentType, body, headers};
+        } catch (Exception | Error failure) {
+            if (body != null) try { body.close(); } catch (Exception close) { failure.addSuppressed(close); }
+            if (array != null && array.opt(2) instanceof JSONObject handle && handle.has("$tvStream")) {
+                network.closeStream(handle.optInt("$tvStream"));
+            }
+            throw failure;
+        }
+    }
+
+    /** Runs on the JS executor before releasing a response which could not be serialized. */
+    private void closeProxyHandle(JSArray proxy) {
+        Object value = null;
+        try {
+            value = proxy.get(2);
+            if (value instanceof JSObject object) {
+                Object token = object.getProperty("$tvStream");
+                if (token instanceof Number number) network.closeStream(number.intValue());
+            }
+        } catch (RuntimeException ignored) {
+            // Source-wide close remains the final owner if a malformed response hides its handle.
+        } finally {
+            if (value instanceof JSObject object) object.release();
+        }
     }
 
     private Object[] proxy2(Map<String, String> params) throws Exception {
@@ -375,7 +517,8 @@ public class Spider extends com.github.catvod.crawler.Spider {
         return result;
     }
 
-    private ByteArrayInputStream getStream(Object o, boolean base64) {
+    private InputStream getStream(Object o, boolean base64) throws Exception {
+        if (o instanceof JSONObject handle && handle.has("$tvStream")) return network.takeStream(handle.getInt("$tvStream"));
         if (o instanceof byte[]) {
             return new ByteArrayInputStream((byte[]) o);
         } else if (o instanceof JSONArray array) {
@@ -390,7 +533,7 @@ public class Spider extends com.github.catvod.crawler.Spider {
             }
             return new ByteArrayInputStream(bytes);
         } else {
-            String content = o.toString();
+            String content = o == null || o == JSONObject.NULL ? "" : o.toString();
             if (base64 && content.contains("base64,")) content = content.split("base64,")[1];
             return new ByteArrayInputStream(base64 ? Util.decode(content) : content.getBytes());
         }

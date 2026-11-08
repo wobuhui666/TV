@@ -118,7 +118,7 @@ public class Async {
             }
         } finally {
             try { if (then != null) then.release(); }
-            finally { if (json && !completedObject) promise.release(); }
+            finally { if (!completedObject) promise.release(); }
         }
     }
 
