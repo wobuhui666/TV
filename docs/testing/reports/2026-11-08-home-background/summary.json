@@ -1,0 +1,45 @@
+{
+  "realHomeActivity": true,
+  "decodedArtwork": true,
+  "scenarios": [
+    {
+      "theme": "light",
+      "wallpaper": true,
+      "heroBottom": 784,
+      "maximumChannelJump": 1,
+      "minimumWallpaperDifference": 33,
+      "passed": true
+    },
+    {
+      "theme": "light",
+      "wallpaper": false,
+      "heroBottom": 784,
+      "maximumChannelJump": 0,
+      "minimumWallpaperDifference": 0,
+      "passed": true
+    },
+    {
+      "theme": "dark",
+      "wallpaper": true,
+      "heroBottom": 784,
+      "maximumChannelJump": 1,
+      "minimumWallpaperDifference": 47,
+      "passed": true
+    },
+    {
+      "theme": "dark",
+      "wallpaper": false,
+      "heroBottom": 784,
+      "maximumChannelJump": 0,
+      "minimumWallpaperDifference": 0,
+      "passed": true
+    }
+  ],
+  "headSha": "9c11dfd8abdf21b87c0bbaaf4db947cbcd35c9a0",
+  "runId": 42464534319,
+  "runAttempt": 2,
+  "baselineRunId": 42461954833,
+  "baselineMaximumChannelJump": 33,
+  "instrumentationPassed": 7,
+  "catalog": "Controlled offline catalog with decoded PNGs in the real HomeActivity"
+}
