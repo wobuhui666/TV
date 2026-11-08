@@ -30,10 +30,15 @@ subprocess.run(['adb', 'shell', 'run-as', package, 'chmod', '700', 'files/live-c
 for name in ('source-url.txt', 'tmdb-key.txt'):
     content = (directory / name).read_bytes()
     assert content, 'A required private input is missing'
-    subprocess.run(['adb', 'exec-in', 'run-as', package, 'tee', 'files/live-community-skip/' + name],
-                   input=content, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20, check=True)
-    subprocess.run(['adb', 'shell', 'run-as', package, 'chmod', '600', 'files/live-community-skip/' + name],
+    # shell v2 waits for the remote writer; exec-in can return before tee closes its file.
+    destination = 'files/live-community-skip/' + name
+    command = "run-as " + package + " sh -c 'umask 077; cat > " + destination + \
+              " && chmod 600 " + destination + " && test -s " + destination + "'"
+    subprocess.run(['adb', 'shell', '-T', command], input=content,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20, check=True)
+    size = subprocess.check_output(['adb', 'shell', '-T', 'run-as', package, 'wc', '-c', destination],
+                                   stderr=subprocess.DEVNULL, timeout=20).split()[0]
+    assert int(size) == len(content), 'A private input transfer was incomplete'
 PY
 
 timeout --kill-after=5s 20s adb logcat -c >/dev/null 2>&1 || true
