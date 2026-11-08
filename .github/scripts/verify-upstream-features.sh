@@ -16,29 +16,43 @@ PY
 }
 pkg=$(read_package app/build/outputs/apk/leanbackArm64_v8a/preview/output-metadata.json)
 test_pkg=$(read_package app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview/output-metadata.json)
+live_logcat_pid=''
+stop_live_logcat() {
+    if [ -n "$live_logcat_pid" ]; then
+        kill "$live_logcat_pid" >/dev/null 2>&1 || true
+        live_logcat_pid=''
+    fi
+}
 collect() {
-    for directory in upstream-verification spider-dialog-verification folder-filter-verification native-usability-evidence; do
-        adb pull "/sdcard/Android/data/$pkg/files/$directory" "$out/" >/dev/null 2>&1 || true
+    stop_live_logcat
+    for directory in upstream-verification spider-dialog-verification folder-filter-verification native-usability-evidence community-skip-verification; do
+        timeout --kill-after=5s 30s adb pull "/sdcard/Android/data/$pkg/files/$directory" "$out/" >/dev/null 2>&1 || true
     done
-    adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
-    adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
-    adb shell dumpsys activity exit-info "$pkg" > "$out/exit-info.txt" 2>&1 || true
+    timeout --kill-after=5s 20s adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
+    timeout --kill-after=5s 20s adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
+    timeout --kill-after=5s 20s adb shell dumpsys activity exit-info "$pkg" > "$out/exit-info.txt" 2>&1 || true
 }
 trap collect EXIT
 IFS=',' read -r -a suites <<< "$classes"
 for suite in "${suites[@]}"; do
     [[ "$suite" =~ ^[a-zA-Z_][a-zA-Z0-9_.]*$ ]] || exit 1
-    adb logcat -c
+    printf '%s: Starting %s\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$suite" | tee -a "$out/progress.txt"
+    timeout --kill-after=5s 20s adb logcat -c || true
+    # Preserve logs written before a device disconnect; a final dump may no longer be available.
+    timeout --kill-after=5s 390s adb logcat -b all -v threadtime > "$out/$suite-live-logcat.txt" 2>&1 &
+    live_logcat_pid=$!
     # A crash in one feature must not prevent the other features from producing evidence.
     # The final summary still fails the job unless every instrumentation invocation passes.
-    if timeout 360s adb shell am instrument -w -r -e native_ui_evidence "$native_ui_evidence" -e class "$suite" \
+    if timeout --kill-after=10s 360s adb shell am instrument -w -r -e native_ui_evidence "$native_ui_evidence" -e class "$suite" \
         "$test_pkg/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "$out/$suite.txt"; then
         printf '0' > "$out/$suite.status"
     else
-        printf '1' > "$out/$suite.status"
+        printf '%s' "$?" > "$out/$suite.status"
     fi
-    adb logcat -b all -d -v threadtime > "$out/$suite-logcat.txt" 2>&1 || true
-    adb exec-out screencap -p > "$out/$suite-screen.png" 2>/dev/null || true
+    stop_live_logcat
+    printf '%s: Completed %s (status=%s)\n' "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" "$suite" "$(cat "$out/$suite.status")" | tee -a "$out/progress.txt"
+    timeout --kill-after=5s 20s adb logcat -b all -d -v threadtime > "$out/$suite-logcat.txt" 2>&1 || true
+    timeout --kill-after=5s 20s adb exec-out screencap -p > "$out/$suite-screen.png" 2>/dev/null || true
 done
 python3 - "$out" "$classes" "$expected_counts" <<'PY'
 from pathlib import Path

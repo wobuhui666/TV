@@ -44,6 +44,36 @@ public class SegmentSkipPolicyTest {
     }
 
     @Test
+    public void shouldPreserveConsumedIntroWhenCreditsArriveLater() {
+        SegmentSkipPolicy policy = new SegmentSkipPolicy(List.of(intro()), DURATION);
+        assertEquals(170_000, policy.target(100_000, DURATION, false, false));
+        SkipSegment credits = new SkipSegment(SkipSegment.Type.CREDITS, 1_600_000, 1_750_000, "introdb");
+        policy.updateSegments(List.of(intro(), credits));
+        assertEquals(C.TIME_UNSET, policy.target(100_000, DURATION, false, false));
+        assertEquals(1_750_000, policy.target(1_610_000, DURATION, false, false));
+        assertEquals(C.TIME_UNSET, policy.target(1_610_000, DURATION, false, false));
+    }
+
+    @Test
+    public void shouldApplyALateResultOnlyWhileStillInsideItsRange() {
+        SegmentSkipPolicy policy = new SegmentSkipPolicy(List.of(), DURATION);
+        assertEquals(C.TIME_UNSET, policy.target(100_000, DURATION, false, false));
+        policy.updateSegments(List.of(intro()));
+        assertEquals(C.TIME_UNSET, policy.target(170_000, DURATION, false, false));
+        assertEquals(170_000, policy.target(110_000, DURATION, false, false));
+    }
+
+    @Test
+    public void shouldNotConsumeTheIntroAgainWhenDurationIsRevalidated() {
+        SegmentSkipPolicy policy = new SegmentSkipPolicy(List.of(intro()), DURATION);
+        assertEquals(170_000, policy.target(100_000, DURATION, false, false));
+        policy.updateSegments(List.of(), DURATION + 5_000);
+        assertEquals(C.TIME_UNSET, policy.target(100_000, DURATION + 5_000, false, false));
+        policy.updateSegments(List.of(intro()), DURATION + 5_000);
+        assertEquals(C.TIME_UNSET, policy.target(100_000, DURATION + 5_000, false, false));
+    }
+
+    @Test
     public void shouldIgnoreRangeEndAndResumeAfterTheIntro() {
         SegmentSkipPolicy policy = new SegmentSkipPolicy(List.of(intro()), DURATION);
         assertEquals(C.TIME_UNSET, policy.target(170_000, DURATION, false, false));
