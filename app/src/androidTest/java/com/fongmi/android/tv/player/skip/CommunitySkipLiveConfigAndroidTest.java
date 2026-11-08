@@ -25,15 +25,18 @@ import com.fongmi.android.tv.bean.Config;
 import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
+import com.fongmi.android.tv.bean.Parse;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.impl.Callback;
+import com.fongmi.android.tv.impl.ParseCallback;
 import com.fongmi.android.tv.playback.vod.VodPlaybackController;
 import com.fongmi.android.tv.playback.vod.VodPlaybackHost;
 import com.fongmi.android.tv.playback.vod.VodPlaybackState;
 import com.fongmi.android.tv.player.PlayerManager;
 import com.fongmi.android.tv.player.media.PlaySpec;
+import com.fongmi.android.tv.player.parse.ParseJob;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
@@ -167,7 +170,8 @@ public final class CommunitySkipLiveConfigAndroidTest {
             for (Site site : selected) {
                 if (tested++ >= 3) break;
                 List<String> queries = site.getName().contains("非凡")
-                        ? List.of("莲花楼", "绝命毒师") : List.of("绝命毒师");
+                        ? List.of("莲花楼", "绝命毒师") : site.getName().contains("人人")
+                        ? List.of("白莲花度假村") : List.of("绝命毒师");
                 for (String query : queries) {
                     JSONObject stage = new JSONObject().put("siteIndex", sites.indexOf(site))
                             .put("caseIndex", caseIndex++)
@@ -198,7 +202,11 @@ public final class CommunitySkipLiveConfigAndroidTest {
                         if (play.getUrl().v().isEmpty()) { stage.put("status", "EMPTY_PLAYER_URL"); continue; }
                         resolved++;
                         report.put("sourcePlayResolved", true);
-                        if (play.needParse() || play.isUseParse()) { stage.put("status", "PARSER_REQUIRED"); continue; }
+                        if (play.needParse() || play.isUseParse()) {
+                            if (play.getKey().isEmpty()) play.setKey(site.getKey());
+                            stage.put("phase", "PARSE").put("parseRequired", true);
+                            if (!resolveConfiguredParser(play, stage)) { stage.put("status", "PARSER_REQUIRED"); continue; }
+                        }
                         stage.put("phase", "PLAYBACK");
                         int initialLookupTasks = lookupTasks.get();
                         preparePlayback(site, media, line, episode, play);
@@ -516,6 +524,50 @@ public final class CommunitySkipLiveConfigAndroidTest {
         });
     }
 
+    private boolean resolveConfiguredParser(Result play, JSONObject stage) throws Exception {
+        List<Parse> jsonParsers = VodConfig.get().getParses().stream().filter(parse -> parse.getType() == 1).toList();
+        if (jsonParsers.size() != 1) {
+            stage.put("parseStatus", "NO_UNIQUE_JSON_PARSER");
+            return false;
+        }
+        Parse original = VodConfig.get().getParse();
+        AtomicReference<ParseJob> job = new AtomicReference<>();
+        AtomicReference<String> resolvedUrl = new AtomicReference<>();
+        AtomicReference<Map<String, String>> resolvedHeaders = new AtomicReference<>();
+        CountDownLatch completed = new CountDownLatch(1);
+        try {
+            main(() -> {
+                setField(VodConfig.get(), "parse", jsonParsers.get(0));
+                job.set(ParseJob.create(new ParseCallback() {
+                    @Override public void onParseSuccess(Map<String, String> headers, String url, String from) {
+                        resolvedHeaders.set(headers == null ? Map.of() : new HashMap<>(headers));
+                        resolvedUrl.set(url);
+                        completed.countDown();
+                    }
+
+                    @Override public void onParseError() { completed.countDown(); }
+                }).start(play, true));
+            });
+            boolean callback = completed.await(20, TimeUnit.SECONDS);
+            boolean resolved = callback && resolvedUrl.get() != null && !resolvedUrl.get().isEmpty();
+            stage.put("parseStatus", resolved ? "RESOLVED" : callback ? "ERROR" : "TIMEOUT")
+                    .put("parserResolved", resolved);
+            if (!resolved) return false;
+            play.setUrl(resolvedUrl.get());
+            play.setPlayUrl("");
+            // Result.setHeader only accepts an empty previous header; use the parser's actual map.
+            setField(play, "header", new HashMap<>(resolvedHeaders.get()));
+            play.setParse(0);
+            report.put("sourceParseResolved", true);
+            return true;
+        } finally {
+            main(() -> {
+                try { if (job.get() != null) job.get().stop(); }
+                finally { setField(VodConfig.get(), "parse", original); }
+            });
+        }
+    }
+
     private boolean verifyAutomaticSeek(SkipSegment range, long duration) {
         if (read(() -> automaticSeeks.contains(range.endMs()) && manager.getPosition() >= range.endMs()
                 && manager.getPosition() < range.endMs() + 5_000)) return true;
@@ -561,7 +613,11 @@ public final class CommunitySkipLiveConfigAndroidTest {
     }
 
     private static Vod matchingDrama(List<Vod> items, String query) {
-        String expected = query.equals("绝命毒师") ? "绝命毒师第一季" : query;
+        String expected = switch (query) {
+            case "绝命毒师" -> "绝命毒师第一季";
+            case "白莲花度假村" -> "白莲花度假村第一季";
+            default -> query;
+        };
         for (Vod item : items) if (item.getName().replaceAll("\\s", "").equals(expected)
                 && EpisodeIdentityResolver.parseEpisode(item.getName(), "第01集") != null) return item;
         return null;
