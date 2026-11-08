@@ -12,6 +12,11 @@ on:
         type: boolean
         default: false
 
+      cctv_h5e:
+        description: Execute synthetic CCTV H5E HTTP and Exo video decoding tests and build TV ARMv7
+        type: boolean
+        default: false
+
 permissions:
   contents: read
 
@@ -145,7 +150,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2
 
       - name: Build the TV ARMv7 package with the Python runtime dependencies
-        if: matrix.package == 'sourceprobe' && inputs.python_live_native
+        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.cctv_h5e)
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :app:assembleLeanbackArmeabi_v7aDebug \
@@ -265,7 +270,7 @@ jobs:
           retention-days: 7
 
       - name: Upload the TV ARMv7 debug APK
-        if: matrix.package == 'sourceprobe' && inputs.python_live_native
+        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.cctv_h5e)
         uses: actions/upload-artifact@v4
         with:
           name: tv-validation-sourceprobe-armv7-${{ github.run_id }}
@@ -380,5 +385,100 @@ jobs:
             quickjs/build/outputs/androidTest-results/
             chaquo/build/reports/androidTests/
             chaquo/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+  cctv-h5e-native:
+    if: inputs.cctv_h5e
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Android SDK and native toolchain
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+
+      - name: Checkout the fixed Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Configure isolated library runtime tests
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/tv-cctv-native.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x gradlew
+
+      - name: Generate and verify synthetic encrypted HLS media
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          python3 tools/testing/generate_cctv_h5e_fixture.py --output-dir tools/testing/cctv-verification/build/generated/cctv-fixtures
+
+      - name: Enable KVM for the disposable test device
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Decode H5E and ordinary HLS through actual Android ExoPlayer
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: ./gradlew -I "$RUNNER_TEMP/tv-cctv-native.init.gradle" -PcctvVerification=true :cctv-verification:connectedDebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
+
+      - name: Upload native runtime test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cctv-h5e-native-tests-${{ github.run_id }}
+          path: |
+            tools/testing/cctv-verification/build/reports/androidTests/
+            tools/testing/cctv-verification/build/outputs/androidTest-results/
+            tools/testing/cctv-verification/build/generated/cctv-fixtures/manifest.json
+            tools/testing/cctv-verification/build/generated/cctv-fixtures/*.framemd5
           if-no-files-found: warn
           retention-days: 14

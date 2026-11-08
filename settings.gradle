@@ -28,6 +28,11 @@ include ':catvod'
 include ':chaquo'
 include ':quickjs'
 include ':wasm'
+// Isolated instrumentation compiles the production CCTV adapter with the fixed Media3 build.
+if (providers.gradleProperty('cctvVerification').orNull == 'true') {
+    include ':cctv-verification'
+    project(':cctv-verification').projectDir = file('tools/testing/cctv-verification')
+}
 rootProject.name = "TV"
 
 def media3SourceDir = System.getenv("MEDIA3_SOURCE_DIR")
