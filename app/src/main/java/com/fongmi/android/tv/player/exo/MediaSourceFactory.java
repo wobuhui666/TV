@@ -166,7 +166,7 @@ public class MediaSourceFactory implements MediaSource.Factory {
     private DataSource.Factory getCacheDataSource(DataSource.Factory upstreamFactory) {
         // Cached resources retain their original bytes and offsets. Transform after cache
         // reads as well as network reads, then expose offsets in the decoded TS segment.
-        return new CctvH5eDataSource.Factory(new CacheDataSource.Factory().setCache(getCache()).setUpstreamDataSourceFactory(upstreamFactory).setCacheWriteDataSinkFactory(null).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR));
+        return new H5eDataSource.Factory(new CacheDataSource.Factory().setCache(getCache()).setUpstreamDataSourceFactory(upstreamFactory).setCacheWriteDataSinkFactory(null).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR));
     }
 
     private HttpDataSource.Factory getHttpDataSourceFactory() {

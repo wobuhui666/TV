@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Transforms CCTV H5E transport streams before the HLS extractor sees their bytes. */
-final class CctvH5eDataSource implements DataSource {
+/** Transforms H5E transport streams before the HLS extractor sees their bytes. */
+final class H5eDataSource implements DataSource {
 
     static final int MAX_SEGMENT_BYTES = 16 * 1024 * 1024;
 
@@ -35,7 +35,7 @@ final class CctvH5eDataSource implements DataSource {
         @NonNull
         @Override
         public DataSource createDataSource() {
-            return new CctvH5eDataSource(upstream.createDataSource());
+            return new H5eDataSource(upstream.createDataSource());
         }
     }
 
@@ -43,7 +43,7 @@ final class CctvH5eDataSource implements DataSource {
     private final Object lock = new Object();
     private Session session;
 
-    CctvH5eDataSource(DataSource upstream) {
+    H5eDataSource(DataSource upstream) {
         this.upstream = upstream;
     }
 
@@ -76,7 +76,7 @@ final class CctvH5eDataSource implements DataSource {
             DataSpec fullSegment = dataSpec.buildUpon().setPosition(0).setLength(C.LENGTH_UNSET).build();
             long length = upstream.open(fullSegment);
             checkCanceled(current);
-            byte[] data = CctvH5eTransform.transform(readSegment(current, length));
+            byte[] data = H5eTransform.transform(readSegment(current, length));
             checkCanceled(current);
             if (dataSpec.position > data.length) {
                 throw new DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE);
@@ -111,7 +111,7 @@ final class CctvH5eDataSource implements DataSource {
     }
 
     private byte[] readSegment(Session current, long length) throws IOException {
-        if (length > MAX_SEGMENT_BYTES) throw new IOException("CCTV H5E segment exceeds size limit");
+        if (length > MAX_SEGMENT_BYTES) throw new IOException("H5E segment exceeds size limit");
         ByteArrayOutputStream output = new ByteArrayOutputStream(32 * 1024);
         byte[] buffer = new byte[32 * 1024];
         while (true) {
@@ -119,7 +119,7 @@ final class CctvH5eDataSource implements DataSource {
             int count = upstream.read(buffer, 0, buffer.length);
             if (count == C.RESULT_END_OF_INPUT) break;
             if (count > MAX_SEGMENT_BYTES - output.size()) {
-                throw new IOException("CCTV H5E segment exceeds size limit");
+                throw new IOException("H5E segment exceeds size limit");
             }
             if (count > 0) output.write(buffer, 0, count);
         }
@@ -128,7 +128,7 @@ final class CctvH5eDataSource implements DataSource {
 
     private static void checkCanceled(Session current) throws InterruptedIOException {
         if (current.closed || Thread.currentThread().isInterrupted()) {
-            throw new InterruptedIOException("CCTV H5E segment load canceled");
+            throw new InterruptedIOException("H5E segment load canceled");
         }
     }
 
@@ -138,7 +138,7 @@ final class CctvH5eDataSource implements DataSource {
         synchronized (lock) {
             if (session == null || session.closed) throw new IOException("Data source is closed");
             if (session.transform) {
-                if (session.data == null) throw new IOException("CCTV H5E segment is not ready");
+                if (session.data == null) throw new IOException("H5E segment is not ready");
                 if (session.remaining == 0) return C.RESULT_END_OF_INPUT;
                 int count = Math.min(length, session.remaining);
                 System.arraycopy(session.data, session.position, buffer, offset, count);

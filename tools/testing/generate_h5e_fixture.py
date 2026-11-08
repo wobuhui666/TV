@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate synthetic CCTV H5E HLS fixtures and verify production Java decoding.
+"""Generate synthetic H5E HLS fixtures and verify production Java decoding.
 
 Requires FFmpeg (libx264/AAC), ffprobe and a JDK. All media comes from FFmpeg's
 testsrc2 and sine generators; this script never fetches broadcast media.
@@ -195,16 +195,16 @@ def encrypt_ts(clear):
 
 
 def run_java_transform(root, encrypted, repaired, javac, java):
-    source = root / "app/src/main/java/com/fongmi/android/tv/player/exo/CctvH5eTransform.java"
-    with tempfile.TemporaryDirectory(prefix="cctv-h5e-fixture-") as directory:
+    source = root / "app/src/main/java/com/fongmi/android/tv/player/exo/H5eTransform.java"
+    with tempfile.TemporaryDirectory(prefix="h5e-fixture-") as directory:
         directory = Path(directory)
         harness = directory / "TransformFixture.java"
         harness.write_text("""import java.nio.file.*;
-import com.fongmi.android.tv.player.exo.CctvH5eTransform;
+import com.fongmi.android.tv.player.exo.H5eTransform;
 public final class TransformFixture {
     public static void main(String[] args) throws Exception {
         byte[] input = Files.readAllBytes(Paths.get(args[0]));
-        Files.write(Paths.get(args[1]), CctvH5eTransform.transform(input));
+        Files.write(Paths.get(args[1]), H5eTransform.transform(input));
     }
 }
 """, encoding="utf-8")

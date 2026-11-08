@@ -2,6 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application android:usesCleartextTraffic="true">
-        <activity android:name="com.fongmi.android.tv.player.exo.CctvPlaybackActivity" android:exported="false" />
+        <activity android:name="com.fongmi.android.tv.player.exo.H5ePlaybackActivity" android:exported="false" />
     </application>
 </manifest>

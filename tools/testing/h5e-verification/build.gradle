@@ -2,20 +2,25 @@ plugins {
     alias libs.plugins.android.library
 }
 
+def adapterSources = layout.buildDirectory.dir('generated/adapter-source')
+def syncAdapterSources = tasks.register('syncAdapterSources', Sync) {
+    from(rootProject.file('app/src/main/java')) {
+        include 'com/fongmi/android/tv/player/exo/H5eTransform.java'
+        include 'com/fongmi/android/tv/player/exo/H5eDataSource.java'
+    }
+    into(adapterSources)
+}
+
 android {
-    namespace = 'com.fongmi.android.tv.cctvverification'
+    namespace = 'com.fongmi.android.tv.h5everification'
     compileSdk libs.versions.compileSdk.get().toInteger()
     defaultConfig {
         minSdk 26
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     sourceSets {
-        main.java {
-            srcDirs = [rootProject.file('app/src/main/java')]
-            include 'com/fongmi/android/tv/player/exo/CctvH5eTransform.java'
-            include 'com/fongmi/android/tv/player/exo/CctvH5eDataSource.java'
-        }
-        androidTest.assets.srcDirs += [layout.buildDirectory.dir('generated/cctv-fixtures').get().asFile]
+        main.java.srcDirs = [adapterSources.get().asFile]
+        androidTest.assets.srcDirs += [layout.buildDirectory.dir('generated/h5e-fixtures').get().asFile]
     }
     compileOptions {
         coreLibraryDesugaringEnabled = true
@@ -23,6 +28,8 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 }
+
+tasks.named('preBuild').configure { dependsOn syncAdapterSources }
 
 dependencies {
     implementation libs.annotation

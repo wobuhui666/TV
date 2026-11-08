@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.SurfaceView;
 
 /** A real display surface for MediaCodec output in the isolated native test APK. */
-public final class CctvPlaybackActivity extends Activity {
+public final class H5ePlaybackActivity extends Activity {
     SurfaceView video;
 
     @Override

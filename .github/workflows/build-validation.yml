@@ -12,8 +12,8 @@ on:
         type: boolean
         default: false
 
-      cctv_h5e:
-        description: Execute synthetic CCTV H5E HTTP and Exo video decoding tests and build TV ARMv7
+      h5e_playback:
+        description: Execute synthetic H5E HTTP and Exo video decoding tests and build TV ARMv7
         type: boolean
         default: false
 
@@ -150,7 +150,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2
 
       - name: Build the TV ARMv7 package with the Python runtime dependencies
-        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.cctv_h5e)
+        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.h5e_playback)
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :app:assembleLeanbackArmeabi_v7aDebug \
@@ -270,7 +270,7 @@ jobs:
           retention-days: 7
 
       - name: Upload the TV ARMv7 debug APK
-        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.cctv_h5e)
+        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.h5e_playback)
         uses: actions/upload-artifact@v4
         with:
           name: tv-validation-sourceprobe-armv7-${{ github.run_id }}
@@ -388,8 +388,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  cctv-h5e-native:
-    if: inputs.cctv_h5e
+  h5e-native:
+    if: inputs.h5e_playback
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -431,7 +431,7 @@ jobs:
         run: |
           printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
           cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
-          cat > "$RUNNER_TEMP/tv-cctv-native.init.gradle" <<'GRADLE'
+          cat > "$RUNNER_TEMP/tv-h5e-native.init.gradle" <<'GRADLE'
           gradle.beforeProject { p ->
               ['com.android.application', 'com.android.library'].each { pluginId ->
                   p.pluginManager.withPlugin(pluginId) {
@@ -450,7 +450,7 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          python3 tools/testing/generate_cctv_h5e_fixture.py --output-dir tools/testing/cctv-verification/build/generated/cctv-fixtures
+          python3 tools/testing/generate_h5e_fixture.py --output-dir tools/testing/h5e-verification/build/generated/h5e-fixtures
 
       - name: Enable KVM for the disposable test device
         run: |
@@ -468,17 +468,17 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: ./gradlew -I "$RUNNER_TEMP/tv-cctv-native.init.gradle" -PcctvVerification=true :cctv-verification:connectedDebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
+          script: ./gradlew -I "$RUNNER_TEMP/tv-h5e-native.init.gradle" -Ph5eVerification=true :h5e-verification:connectedDebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
 
       - name: Upload native runtime test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cctv-h5e-native-tests-${{ github.run_id }}
+          name: h5e-native-tests-${{ github.run_id }}
           path: |
-            tools/testing/cctv-verification/build/reports/androidTests/
-            tools/testing/cctv-verification/build/outputs/androidTest-results/
-            tools/testing/cctv-verification/build/generated/cctv-fixtures/manifest.json
-            tools/testing/cctv-verification/build/generated/cctv-fixtures/*.framemd5
+            tools/testing/h5e-verification/build/reports/androidTests/
+            tools/testing/h5e-verification/build/outputs/androidTest-results/
+            tools/testing/h5e-verification/build/generated/h5e-fixtures/manifest.json
+            tools/testing/h5e-verification/build/generated/h5e-fixtures/*.framemd5
           if-no-files-found: warn
           retention-days: 14

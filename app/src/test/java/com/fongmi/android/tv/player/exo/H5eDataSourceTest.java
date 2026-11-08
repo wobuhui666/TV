@@ -34,16 +34,16 @@ import okhttp3.mockwebserver.SocketPolicy;
 
 import static org.junit.Assert.*;
 
-public class CctvH5eDataSourceTest {
+public class H5eDataSourceTest {
 
     private static final Uri SEGMENT = TestUri.of("https://example.invalid/live/cdrmldcctv1/segment.ts?token=secret");
     private static final byte[] ORDINARY = "ordinary transport data".getBytes(StandardCharsets.UTF_8);
 
     @Test
-    public void shouldMatchOnlyDecodedCctvTransportStreamPaths() {
-        assertTrue(CctvH5eDataSource.handles(SEGMENT));
-        assertTrue(CctvH5eDataSource.handles(TestUri.of("https://example.invalid/CDRMLDCCTV1/SEGMENT.TS?token=x")));
-        assertTrue(CctvH5eDataSource.handles(TestUri.of("https://example.invalid/%63drmldcctv1/segment%2ets")));
+    public void shouldMatchOnlyDecodedProtectedTransportStreamPaths() {
+        assertTrue(H5eDataSource.handles(SEGMENT));
+        assertTrue(H5eDataSource.handles(TestUri.of("https://example.invalid/CDRMLDCCTV1/SEGMENT.TS?token=x")));
+        assertTrue(H5eDataSource.handles(TestUri.of("https://example.invalid/%63drmldcctv1/segment%2ets")));
         for (String url : new String[]{
                 "https://cdrmldcctv.invalid/live/segment.ts",
                 "https://example.invalid/live/segment.ts?source=cdrmldcctv",
@@ -52,14 +52,14 @@ public class CctvH5eDataSourceTest {
                 "https://example.invalid/cdrmldcctv1/segment.tsx",
                 "https://example.invalid/cdrmldcctv1/key.bin",
                 "data:video/mp2t,cdrmldcctv.ts"}) {
-            assertFalse(url, CctvH5eDataSource.handles(TestUri.of(url)));
+            assertFalse(url, H5eDataSource.handles(TestUri.of(url)));
         }
     }
 
     @Test
     public void shouldDelegateOrdinaryRequestAndStreamingReadsUnchanged() throws Exception {
         RecordingSource upstream = new RecordingSource(ORDINARY);
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        H5eDataSource source = new H5eDataSource(upstream);
         DataSpec spec = new DataSpec.Builder().setUri(TestUri.of("https://example.invalid/video.ts"))
                 .setPosition(4).setLength(8).setKey("cache-key").setUriPositionOffset(17)
                 .setHttpRequestHeaders(Collections.singletonMap("Cookie", "item-cookie"))
@@ -75,11 +75,11 @@ public class CctvH5eDataSourceTest {
 
     @Test
     public void shouldTransformBeforeExposingBytesAndPreserveResponseMetadata() throws Exception {
-        byte[] encrypted = CctvH5eTransformTest.encryptedFixture();
-        byte[] plaintext = CctvH5eTransformTest.plaintextFixture();
+        byte[] encrypted = H5eTransformTest.encryptedFixture();
+        byte[] plaintext = H5eTransformTest.plaintextFixture();
         RecordingSource upstream = new RecordingSource(encrypted);
         upstream.finalUri = TestUri.of("https://cdn.invalid/cdrmldcctv1/segment.ts");
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertEquals(plaintext.length, source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         assertTrue(upstream.readCalls > 0);
@@ -94,9 +94,9 @@ public class CctvH5eDataSourceTest {
 
     @Test
     public void shouldApplyRetryRangeToTransformedBytesAfterFullFetch() throws Exception {
-        byte[] plaintext = CctvH5eTransformTest.plaintextFixture();
-        RecordingSource upstream = new RecordingSource(CctvH5eTransformTest.encryptedFixture());
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        byte[] plaintext = H5eTransformTest.plaintextFixture();
+        RecordingSource upstream = new RecordingSource(H5eTransformTest.encryptedFixture());
+        H5eDataSource source = new H5eDataSource(upstream);
         DataSpec spec = new DataSpec.Builder().setUri(SEGMENT).setPosition(31).setLength(211)
                 .setKey("segment-key").setUriPositionOffset(23).setFlags(DataSpec.FLAG_ALLOW_GZIP)
                 .setHttpRequestHeaders(Collections.singletonMap("Authorization", "item-token"))
@@ -120,7 +120,7 @@ public class CctvH5eDataSourceTest {
     public void shouldResolveUnknownLengthAndPassThroughOrdinarySegmentBytes() throws Exception {
         RecordingSource upstream = new RecordingSource(ORDINARY);
         upstream.announcedLength = C.LENGTH_UNSET;
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertEquals(ORDINARY.length, source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         assertArrayEquals(ORDINARY, readAll(source));
@@ -131,7 +131,7 @@ public class CctvH5eDataSourceTest {
     public void shouldUseActualBytesWhenResourceEndsBeforeItsAnnouncedLength() throws Exception {
         RecordingSource upstream = new RecordingSource(ORDINARY);
         upstream.announcedLength = ORDINARY.length + 100;
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertEquals(ORDINARY.length, source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         assertArrayEquals(ORDINARY, readAll(source));
@@ -140,7 +140,7 @@ public class CctvH5eDataSourceTest {
 
     @Test
     public void shouldAllowPositionAtEndAndRequestsExtendingPastEnd() throws Exception {
-        CctvH5eDataSource source = new CctvH5eDataSource(new RecordingSource(ORDINARY));
+        H5eDataSource source = new H5eDataSource(new RecordingSource(ORDINARY));
         assertEquals(0, source.open(new DataSpec.Builder().setUri(SEGMENT).setPosition(ORDINARY.length).build()));
         assertEquals(C.RESULT_END_OF_INPUT, source.read(new byte[1], 0, 1));
         source.close();
@@ -155,7 +155,7 @@ public class CctvH5eDataSourceTest {
     public void shouldRejectPositionsPastEndWithoutTruncatingLongOffsets() throws Exception {
         for (long position : new long[]{ORDINARY.length + 1, (long) Integer.MAX_VALUE + 1}) {
             RecordingSource upstream = new RecordingSource(ORDINARY);
-            CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+            H5eDataSource source = new H5eDataSource(upstream);
             IOException failure = assertThrows(IOException.class,
                     () -> source.open(new DataSpec.Builder().setUri(SEGMENT).setPosition(position).build()));
             assertTrue(DataSourceException.isCausedByPositionOutOfRange(failure));
@@ -168,8 +168,8 @@ public class CctvH5eDataSourceTest {
     @Test
     public void shouldRejectAnnouncedOversizeBeforeReadingAndReleaseUpstream() throws Exception {
         RecordingSource upstream = new RecordingSource(ORDINARY);
-        upstream.announcedLength = CctvH5eDataSource.MAX_SEGMENT_BYTES + 1L;
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        upstream.announcedLength = H5eDataSource.MAX_SEGMENT_BYTES + 1L;
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertThrows(IOException.class, () -> source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         assertEquals(0, upstream.readCalls);
@@ -178,8 +178,8 @@ public class CctvH5eDataSourceTest {
 
     @Test
     public void shouldEnforceSizeLimitForUnknownLengthResources() throws Exception {
-        RepeatingSource upstream = new RepeatingSource(CctvH5eDataSource.MAX_SEGMENT_BYTES + 1);
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        RepeatingSource upstream = new RepeatingSource(H5eDataSource.MAX_SEGMENT_BYTES + 1);
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertThrows(IOException.class, () -> source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         assertEquals(1, upstream.closeCalls);
@@ -187,16 +187,16 @@ public class CctvH5eDataSourceTest {
 
     @Test
     public void shouldAcceptSegmentExactlyAtSizeLimit() throws Exception {
-        RepeatingSource upstream = new RepeatingSource(CctvH5eDataSource.MAX_SEGMENT_BYTES);
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        RepeatingSource upstream = new RepeatingSource(H5eDataSource.MAX_SEGMENT_BYTES);
+        H5eDataSource source = new H5eDataSource(upstream);
 
-        assertEquals(CctvH5eDataSource.MAX_SEGMENT_BYTES,
+        assertEquals(H5eDataSource.MAX_SEGMENT_BYTES,
                 source.open(new DataSpec.Builder().setUri(SEGMENT).build()));
         byte[] buffer = new byte[32 * 1024];
         int total = 0;
         int count;
         while ((count = source.read(buffer, 0, buffer.length)) != C.RESULT_END_OF_INPUT) total += count;
-        assertEquals(CctvH5eDataSource.MAX_SEGMENT_BYTES, total);
+        assertEquals(H5eDataSource.MAX_SEGMENT_BYTES, total);
         source.close();
     }
 
@@ -213,7 +213,7 @@ public class CctvH5eDataSourceTest {
                     throw failure;
                 }
             };
-            CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+            H5eDataSource source = new H5eDataSource(upstream);
             assertSame(failure, assertThrows(IOException.class,
                     () -> source.open(new DataSpec.Builder().setUri(SEGMENT).build())));
             assertEquals(1, upstream.closeCalls);
@@ -229,7 +229,7 @@ public class CctvH5eDataSourceTest {
             @Override public int read(byte[] buffer, int offset, int length) throws IOException { throw failure; }
             @Override public void close() throws IOException { super.close(); throw closeFailure; }
         };
-        CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+        H5eDataSource source = new H5eDataSource(upstream);
 
         assertSame(failure, assertThrows(IOException.class,
                 () -> source.open(new DataSpec.Builder().setUri(SEGMENT).build())));
@@ -240,7 +240,7 @@ public class CctvH5eDataSourceTest {
     public void shouldCancelBlockedOpenAndReadWithoutWaitingForStateLock() throws Exception {
         for (boolean blockOpen : new boolean[]{true, false}) {
             BlockingSource upstream = new BlockingSource(blockOpen);
-            CctvH5eDataSource source = new CctvH5eDataSource(upstream);
+            H5eDataSource source = new H5eDataSource(upstream);
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
                 Future<IOException> load = executor.submit(() -> {
@@ -267,7 +267,7 @@ public class CctvH5eDataSourceTest {
     public void shouldCancelRealHttpOpenBeforeResponseHeadersArrive() throws Exception {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         OkHttpClient client = new OkHttpClient.Builder().readTimeout(30, TimeUnit.SECONDS).build();
-        CctvH5eDataSource source = new CctvH5eDataSource(new OkHttpDataSource.Factory(client).createDataSource());
+        H5eDataSource source = new H5eDataSource(new OkHttpDataSource.Factory(client).createDataSource());
         try (MockWebServer server = new MockWebServer()) {
             server.enqueue(new MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE));
             Uri uri = TestUri.of(server.url("/cdrmldcctv1/segment.ts").toString());

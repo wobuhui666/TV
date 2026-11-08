@@ -28,10 +28,10 @@ include ':catvod'
 include ':chaquo'
 include ':quickjs'
 include ':wasm'
-// Isolated instrumentation compiles the production CCTV adapter with the fixed Media3 build.
-if (providers.gradleProperty('cctvVerification').orNull == 'true') {
-    include ':cctv-verification'
-    project(':cctv-verification').projectDir = file('tools/testing/cctv-verification')
+// Isolated instrumentation compiles the production H5E adapter with the fixed Media3 build.
+if (providers.gradleProperty('h5eVerification').orNull == 'true') {
+    include ':h5e-verification'
+    project(':h5e-verification').projectDir = file('tools/testing/h5e-verification')
 }
 rootProject.name = "TV"
 

@@ -12,28 +12,28 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class CctvH5eTransformTest {
+public class H5eTransformTest {
 
     @Test
     public void shouldLeaveOrdinaryTransportStreamByteIdentical() throws Exception {
         byte[] clear = plaintextFixture();
-        assertSame(clear, CctvH5eTransform.transform(clear));
+        assertSame(clear, H5eTransform.transform(clear));
     }
 
     @Test
     public void shouldDecryptAcrossPacketsAndPesWithoutMutatingInput() throws Exception {
         byte[] encrypted = encryptedFixture();
         byte[] original = encrypted.clone();
-        byte[] actual = CctvH5eTransform.transform(encrypted);
+        byte[] actual = H5eTransform.transform(encrypted);
         assertArrayEquals(plaintextFixture(), actual);
         assertArrayEquals(original, encrypted);
-        assertSame(actual, CctvH5eTransform.transform(actual));
+        assertSame(actual, H5eTransform.transform(actual));
     }
 
     @Test
     public void shouldPreservePcrAudioAndContinuityWhileRemovingEscapeBytes() throws Exception {
         byte[] encrypted = encryptedFixture();
-        byte[] actual = CctvH5eTransform.transform(encrypted);
+        byte[] actual = H5eTransform.transform(encrypted);
         for (int offset = 0; offset < encrypted.length; offset += 188) {
             assertArrayEquals(Arrays.copyOfRange(encrypted, offset, offset + 4),
                     Arrays.copyOfRange(actual, offset, offset + 4));
@@ -60,7 +60,7 @@ public class CctvH5eTransformTest {
         byte[] encodedPayload = join(sps(true), filler, new byte[]{0, 0, 0, 1}, escape(encryptedSlice()));
         byte[] clearPayload = join(sps(false), filler, new byte[]{0, 0, 0, 1}, clearSlice());
         assertArrayEquals(transport(clearPayload, false),
-                CctvH5eTransform.transform(transport(encodedPayload, false)));
+                H5eTransform.transform(transport(encodedPayload, false)));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class CctvH5eTransformTest {
         byte[] nal = Arrays.copyOf(encryptedSlice(), 2400);
         for (int i = 300; i < nal.length; i++) nal[i] = (byte) (i % 3 == 2 ? 2 : 0);
         byte[] encrypted = transport(join(sps(true), new byte[]{0, 0, 1}, escape(nal)), false);
-        byte[] actual = CctvH5eTransform.transform(encrypted);
+        byte[] actual = H5eTransform.transform(encrypted);
         assertEquals(encrypted.length, actual.length);
         int payloadBytes = 0;
         for (int offset = 0; offset < actual.length; offset += 188) {
@@ -88,7 +88,7 @@ public class CctvH5eTransformTest {
         byte[] ordinary = transport(join(new byte[]{0, 0, 1}, clearSlice()), false);
         for (int offset = 0; offset < ordinary.length; offset += 188) ordinary[offset + 2] = 2;
         byte[] input = join(encryptedFixture(), ordinary);
-        assertArrayEquals(join(plaintextFixture(), ordinary), CctvH5eTransform.transform(input));
+        assertArrayEquals(join(plaintextFixture(), ordinary), H5eTransform.transform(input));
     }
 
     @Test
@@ -96,7 +96,7 @@ public class CctvH5eTransformTest {
         byte[] payload = join(sps(true), new byte[]{0, 0, 1, 0x19, 0, 1, 9},
                 new byte[]{0, 0, 1}, escape(encryptedSlice()));
         byte[] input = transport(payload, false);
-        assertSame(input, CctvH5eTransform.transform(input));
+        assertSame(input, H5eTransform.transform(input));
     }
 
     @Test
@@ -107,7 +107,7 @@ public class CctvH5eTransformTest {
         inputs[3][0] = 0;
         inputs[4][1] |= (byte) 0x80;
         inputs[5][188 + 4] = (byte) 255;
-        for (byte[] input : inputs) assertSame(input, CctvH5eTransform.transform(input));
+        for (byte[] input : inputs) assertSame(input, H5eTransform.transform(input));
     }
 
     @Test
@@ -117,7 +117,7 @@ public class CctvH5eTransformTest {
         input[start + 4] = input[start + 5] = (byte) 0xff;
         byte[] original = input.clone();
         try {
-            CctvH5eTransform.transform(input);
+            H5eTransform.transform(input);
             fail("An incomplete marked video PID must not be partially converted");
         } catch (IOException expected) {
             assertTrue(expected.getMessage().contains("Incomplete"));

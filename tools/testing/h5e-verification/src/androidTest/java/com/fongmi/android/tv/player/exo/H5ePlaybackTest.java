@@ -43,7 +43,7 @@ import static org.junit.Assert.*;
 
 /** Runs the exact production adapter and Media3 decoder against synthetic H5E media. */
 @RunWith(AndroidJUnit4.class)
-public final class CctvPlaybackTest {
+public final class H5ePlaybackTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
     @Test(timeout = 15000)
@@ -73,9 +73,9 @@ public final class CctvPlaybackTest {
                 "/clear.m3u8", asset("clear.m3u8"),
                 "/cdrmldcctv-synthetic.ts", asset("cdrmldcctv-synthetic.ts"),
                 "/clear.ts", asset("clear.ts"));
-        Intent intent = new Intent(instrumentation.getContext(), CctvPlaybackActivity.class)
+        Intent intent = new Intent(instrumentation.getContext(), H5ePlaybackActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        CctvPlaybackActivity activity = (CctvPlaybackActivity) instrumentation.startActivitySync(intent);
+        H5ePlaybackActivity activity = (H5ePlaybackActivity) instrumentation.startActivitySync(intent);
         AtomicReference<ExoPlayer> player = new AtomicReference<>();
         AtomicReference<PlaybackException> error = new AtomicReference<>();
         AtomicBoolean ready = new AtomicBoolean();
@@ -139,7 +139,7 @@ public final class CctvPlaybackTest {
     }
 
     private DataSource.Factory factory() {
-        return new CctvH5eDataSource.Factory(new OkHttpDataSource.Factory(new OkHttpClient()));
+        return new H5eDataSource.Factory(new OkHttpDataSource.Factory(new OkHttpClient()));
     }
 
     private byte[] asset(String name) throws IOException {
@@ -167,7 +167,7 @@ public final class CctvPlaybackTest {
 
         FixtureServer(Map<String, byte[]> routes) throws IOException {
             this.routes = routes;
-            worker = new Thread(this::serve, "CCTV synthetic HTTP");
+            worker = new Thread(this::serve, "H5E synthetic HTTP");
             worker.setDaemon(true);
             worker.start();
         }

@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Converts the H264 H5E payload used by CCTV's cdrmldcctv TS segments. */
-public final class CctvH5eTransform {
+/** Converts the H264 H5E payload used by the matched H5E TS segments. */
+public final class H5eTransform {
 
     private static final int TS_PACKET_SIZE = 188;
     private static final int MAX_SEGMENT_SIZE = 16 * 1024 * 1024;
 
-    private CctvH5eTransform() {
+    private H5eTransform() {
     }
 
     /**
@@ -25,7 +25,7 @@ public final class CctvH5eTransform {
      */
     public static byte[] transform(byte[] segment) throws IOException {
         if (segment.length > MAX_SEGMENT_SIZE) {
-            throw new IOException("CCTV H5E segment exceeds size limit");
+            throw new IOException("H5E segment exceeds size limit");
         }
         List<Pes> packets = readPesPackets(segment);
         Set<Integer> markedPids = new HashSet<>();
@@ -45,7 +45,7 @@ public final class CctvH5eTransform {
         for (Pes pes : packets) {
             if (!markedPids.contains(pes.pid)) continue;
             byte[] payload = pes.payload(segment);
-            if (payload == null) throw new IOException("Incomplete CCTV H5E PES payload");
+            if (payload == null) throw new IOException("Incomplete H5E PES payload");
             byte[] converted = convertPayload(payload);
             if (converted != payload) pes.write(segment, result, converted);
         }
@@ -259,7 +259,7 @@ public final class CctvH5eTransform {
             int length = headerLength + payload.length;
             if (length > capacity || (packetLength != 0 && length - 6 > 0xffff)
                     || length < headerLength + spans.size() - 1) {
-                throw new IOException("Invalid CCTV H5E PES size");
+                throw new IOException("Invalid H5E PES size");
             }
             byte[] pes = new byte[length];
             System.arraycopy(source, spans.get(0).payloadOffset, pes, 0, headerLength);
