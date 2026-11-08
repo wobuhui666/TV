@@ -13,6 +13,10 @@ on:
         description: Verify the private runtime configuration and real community skip lookups
         type: boolean
         default: false
+      playlist_fixture:
+        description: Verify extracted real playlist labels with a controlled H264 video
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -140,6 +144,13 @@ jobs:
           python-version: '3.10.21'
       - name: Install image tools
         run: python -m pip install Pillow
+      - name: Install the controlled video generator
+        if: inputs.playlist_fixture
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
       - name: Set up Android SDK 37.0
         uses: android-actions/setup-android@v3
         with:
@@ -203,6 +214,7 @@ jobs:
       - name: Prepare isolated emulator checks
         env:
           COMMUNITY_SKIP_LIVE_CONFIG: ${{ inputs.live_config }}
+          COMMUNITY_SKIP_REAL_PLAYLIST: ${{ inputs.playlist_fixture }}
         run: |
           cat > "$RUNNER_TEMP/verify-community-skip-android.sh" <<'VERIFY'
           set -euo pipefail
@@ -225,7 +237,9 @@ jobs:
           adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS
           # The disposable Pixel launcher can retain a boot-time ANR dialog and steal app focus.
           adb shell am force-stop com.google.android.apps.nexuslauncher
-          if [ "$COMMUNITY_SKIP_LIVE_CONFIG" = 'true' ]; then
+          if [ "$COMMUNITY_SKIP_REAL_PLAYLIST" = 'true' ]; then
+            bash .github/scripts/verify-community-skip-playlists.sh
+          elif [ "$COMMUNITY_SKIP_LIVE_CONFIG" = 'true' ]; then
             bash .github/scripts/verify-community-skip-live.sh
           else
             UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
@@ -234,7 +248,7 @@ jobs:
           fi
           VERIFY
       - name: Stage private live verification inputs
-        if: inputs.live_config
+        if: inputs.live_config && !inputs.playlist_fixture
         env:
           LIVE_CONFIG_URL: ${{ secrets.COMMUNITY_SKIP_LIVE_CONFIG_URL }}
           LIVE_TMDB_KEY: ${{ secrets.TMDB_API_KEY }}
@@ -254,10 +268,38 @@ jobs:
               target.write_text(content)
               target.chmod(0o600)
           PY
+      - name: Stage real playlist metadata and controlled video
+        if: inputs.playlist_fixture
+        env:
+          LIVE_TMDB_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re, shutil
+          key = os.environ.get('LIVE_TMDB_KEY', '').strip()
+          assert re.fullmatch(r'[a-fA-F0-9]{32}', key), 'A runtime TMDB credential is required'
+          source = pathlib.Path('app/src/androidTest/fixtures/community-skip/playlists.json')
+          fixture = json.loads(source.read_text())
+          assert fixture.get('schema') == 'tv.community-skip-playlist-fixture.v1'
+          assert fixture.get('cases'), 'Extracted real playlist cases are required'
+          assert key not in source.read_text(), 'A credential cannot enter a fixture'
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'community-skip-playlist-input'
+          directory.mkdir(mode=0o700, exist_ok=True)
+          directory.chmod(0o700)
+          shutil.copyfile(source, directory / 'fixtures.json')
+          (directory / 'fixtures.json').chmod(0o600)
+          (directory / 'tmdb-key.txt').write_text(key)
+          (directory / 'tmdb-key.txt').chmod(0o600)
+          PY
+          ffmpeg -hide_banner -loglevel error -f lavfi -i 'testsrc2=size=320x180:rate=10' \
+            -t 90 -an -c:v libx264 -profile:v baseline -level:v 3.0 -pix_fmt yuv420p \
+            -preset ultrafast -g 10 -bf 0 -threads 2 -movflags +faststart \
+            "$RUNNER_TEMP/community-skip-playlist-input/video.mp4"
+          chmod 600 "$RUNNER_TEMP/community-skip-playlist-input/video.mp4"
       - name: Verify delayed metadata and actual Exo skipping on Android API 34
         timeout-minutes: 20
         env:
           COMMUNITY_SKIP_LIVE_CONFIG: ${{ inputs.live_config }}
+          COMMUNITY_SKIP_REAL_PLAYLIST: ${{ inputs.playlist_fixture }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -271,11 +313,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 2048
           script: bash "$RUNNER_TEMP/verify-community-skip-android.sh"
       - name: Remove private live verification inputs
-        if: always() && inputs.live_config
+        if: always() && (inputs.live_config || inputs.playlist_fixture)
         run: |
           python3 - <<'PY'
           import os, pathlib, shutil
           shutil.rmtree(pathlib.Path(os.environ['RUNNER_TEMP']) / 'community-skip-live-input', ignore_errors=True)
+          shutil.rmtree(pathlib.Path(os.environ['RUNNER_TEMP']) / 'community-skip-playlist-input', ignore_errors=True)
           PY
       - name: Upload Android screenshots, summaries and unit reports
         if: always()
@@ -285,6 +328,7 @@ jobs:
           path: |
             artifacts/community-skip-android/
             artifacts/community-skip-live/
+            artifacts/community-skip-playlists/
             app/build/test-results/
             app/build/reports/tests/
             app/schemas/
