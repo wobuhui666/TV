@@ -1,13 +1,7 @@
 package com.fongmi.android.tv.ui.custom
 
 import android.content.Context
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
-import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
-import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.View
@@ -20,6 +14,7 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class JetStreamDiscoverDetailScrimView @JvmOverloads constructor(
     context: Context,
@@ -46,20 +41,17 @@ class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
-    private val fadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
-    }
     private var blendWallpaper = JetStreamWallpaper.isVisible()
 
     init {
+        isVerticalFadingEdgeEnabled = blendWallpaper
         bindJetStreamTheme { invalidate() }
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (!isInEditMode) EventBus.getDefault().register(this)
-        blendWallpaper = JetStreamWallpaper.isVisible()
-        invalidate()
+        refreshWallpaperFade()
     }
 
     override fun onDetachedFromWindow() {
@@ -69,35 +61,24 @@ class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onWallpaperVisibility(event: JetStreamWallpaper.VisibilityEvent) {
+        refreshWallpaperFade()
+    }
+
+    private fun refreshWallpaperFade() {
         blendWallpaper = JetStreamWallpaper.isVisible()
+        isVerticalFadingEdgeEnabled = blendWallpaper
         invalidate()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        fadePaint.shader = if (h > 1) {
-            val fadeHeight = min(jetStreamDp(128), h * 0.32f).coerceAtLeast(2f)
-            LinearGradient(
-                0f, h - fadeHeight, 0f, h - 1f,
-                intArrayOf(0, 11, 40, 81, 127, 174, 215, 244, 255)
-                    .map { Color.argb(it, 255, 255, 255) }.toIntArray(),
-                null, Shader.TileMode.CLAMP
-            )
-        } else null
+        setFadingEdgeLength(min(jetStreamDp(128), h * 0.32f).roundToInt())
     }
 
-    override fun dispatchDraw(canvas: Canvas) {
-        if (!blendWallpaper || fadePaint.shader == null) {
-            super.dispatchDraw(canvas)
-            return
-        }
-        // A translucent color scrim would expose the hero image, not the wallpaper below it.
-        // Mask the image and both scrims together, revealing the actual shared page canvas.
-        val checkpoint = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-        super.dispatchDraw(canvas)
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), fadePaint)
-        canvas.restoreToCount(checkpoint)
-    }
+    // The platform fades the image and both scrims together into the real shared page canvas.
+    override fun getTopFadingEdgeStrength(): Float = 0f
+
+    override fun getBottomFadingEdgeStrength(): Float = if (blendWallpaper) 1f else 0f
 }
 
 class JetStreamDiscoverLeftScrimView @JvmOverloads constructor(
