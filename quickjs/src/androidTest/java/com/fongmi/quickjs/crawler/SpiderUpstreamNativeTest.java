@@ -37,10 +37,16 @@ public class SpiderUpstreamNativeTest {
         Init.set(previous);
     }
     private Spider load(String name) throws Exception {
+        return load(name, fixture(name));
+    }
+    private String fixture(String name) throws java.io.IOException {
         String content;
         try(InputStream input=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("js/upstream/"+name)) {
             content=new String(read(input), java.nio.charset.StandardCharsets.UTF_8);
         }
+        return content;
+    }
+    private Spider load(String name, String content) throws Exception {
         java.lang.reflect.Field cache=Module.class.getDeclaredField("cache");cache.setAccessible(true);
         @SuppressWarnings("unchecked") android.util.LruCache<String,String> values=(android.util.LruCache<String,String>)cache.get(Module.get());
         String api="https://example.invalid/upstream/"+name;
@@ -51,6 +57,34 @@ public class SpiderUpstreamNativeTest {
         spider.net=new Net(null,spider.siteKey);
         spider.init(target,"{\"fixture\":true}");
         return spider;
+    }
+    /** A .fwd hub loads its widget over HTTP rather than through the ES-module cache. */
+    private static final class WidgetServer implements AutoCloseable {
+        private final java.net.ServerSocket server;
+        private final Thread worker;
+        private final byte[] body;
+        WidgetServer(String script) throws java.io.IOException {
+            body=script.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            server=new java.net.ServerSocket(0,4,java.net.InetAddress.getByName("127.0.0.1"));
+            worker=new Thread(this::serve,"native-forward-widget");
+            worker.setDaemon(true);
+            worker.start();
+        }
+        String url(){return "http://127.0.0.1:"+server.getLocalPort()+"/widget.js";}
+        private void serve() {
+            while(!server.isClosed()) {
+                try(java.net.Socket socket=server.accept()) {
+                    socket.setSoTimeout(3000);
+                    java.io.BufferedReader reader=new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream(),java.nio.charset.StandardCharsets.US_ASCII));
+                    for(String line;(line=reader.readLine())!=null&&!line.isEmpty();){}
+                    byte[] header=("HTTP/1.1 200 OK\r\nContent-Type: application/javascript; charset=utf-8\r\nContent-Length: "+body.length+"\r\nConnection: close\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+                    socket.getOutputStream().write(header);
+                    socket.getOutputStream().write(body);
+                    socket.getOutputStream().flush();
+                } catch(java.io.IOException error) {if(server.isClosed())return;}
+            }
+        }
+        @Override public void close() throws Exception {server.close();worker.join(3000);}
     }
     private static byte[] read(InputStream input) throws java.io.IOException {
         java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
@@ -94,11 +128,13 @@ public class SpiderUpstreamNativeTest {
         Spider cat=load("cat.js");
         assertTrue(new JSONObject(cat.homeContent(false)).getBoolean("cat"));
         assertEquals("native-cat.js",new JSONObject(cat.action("state")).getString("skey"));
-        Spider forward=load("widget.fwd");
-        JSONObject home=new JSONObject(forward.homeContent(false));
-        assertEquals(1,home.getJSONArray("class").length());
-        String tid=home.getJSONArray("class").getJSONObject(0).getString("type_id");
-        assertEquals(1,new JSONObject(forward.categoryContent(tid,"1",false,new HashMap<>())).getJSONArray("list").length());
+        try (WidgetServer server=new WidgetServer(fixture("widget.js"))) {
+            Spider forward=load("widget.fwd",fixture("widget.fwd").replace("__WIDGET_URL__",server.url()));
+            JSONObject home=new JSONObject(forward.homeContent(false));
+            assertEquals(1,home.getJSONArray("class").length());
+            String tid=home.getJSONArray("class").getJSONObject(0).getString("type_id");
+            assertEquals(1,new JSONObject(forward.categoryContent(tid,"1",false,new HashMap<>())).getJSONArray("list").length());
+        }
     }
     @Test(timeout=20000) public void proxyStreamTransfersBytesAndMalformedMetadataReleasesItsHandle() throws Exception {
         Spider spider=load("modern.js");

@@ -1,2 +1,1 @@
-var WidgetMetadata={id:'fixture',title:'Fixture',modules:[{id:'list',title:'List',functionName:'fixtureList'}]};
-function fixtureList(){return [{id:'fixture-1',title:'Forward item',videoUrl:'https://example.invalid/fixture.mp4'}];}
+{"widgets":[{"id":"fixture","title":"Fixture","url":"__WIDGET_URL__"}]}
