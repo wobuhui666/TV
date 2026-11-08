@@ -63,7 +63,9 @@ public final class HomeBackgroundHomePreviewTest {
         try {
             main(() -> {
                 fixture.set(HomePreviewFixtures.openCompact(instrumentation.getTargetContext()));
-                Setting.putWall(3);
+                // The built-in blue/purple wallpaper is constant vertically. Any
+                // discontinuity across the hero edge therefore comes from composition.
+                Setting.putWall(2);
                 Setting.putWallType(0);
                 Setting.putThemeColor(Setting.THEME_DEFAULT);
                 BrowseExperienceSettings.putHeroRotationMode(BrowseExperienceSettings.HERO_ROTATION_MANUAL);
