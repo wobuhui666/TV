@@ -85,7 +85,8 @@ def read(name):
 # Deny arbitrary strings and retain only named counters, identities and static status labels.
 fields = {
     'schema', 'passed', 'configStatus', 'configLoadMs', 'configHttpStatus', 'configNetworkFailure',
-    'configRequestCount', 'configErrorStatus', 'configObserverRestored', 'configSha256', 'siteCount', 'sourceCount',
+    'configRequestCount', 'configErrorStatus', 'configObserverRestored', 'configMode',
+    'defaultConfigLoaded', 'networkPreferencesRestored', 'configSha256', 'siteCount', 'sourceCount',
     'testedSourceCount', 'sourceContentVerified', 'pluginInitializationVerified', 'sourceAvailability',
     'searchProbeCount', 'searchCount', 'detailCount', 'resolvedEpisodeCount', 'playbackCount',
     'playbackVerified', 'communitySkipVerified', 'communityRecordFound', 'automaticSkipVerified',
@@ -106,7 +107,8 @@ case_fields = {
     'tmdbId', 'season', 'episode', 'durationMs', 'introCount', 'creditsCount', 'segmentCount',
     'lookupMs', 'lookupOffMainThread', 'playbackAdvancedWhileLookup', 'actualSeekCount',
     'sourceAvailability', 'identityStatus', 'metadataStatus', 'playbackStatus', 'skipStatus',
-    'failureTypes', 'failureCategory', 'observerRestored', 'guardStatus', 'guardFailureTypes', 'dialogRequired',
+    'failureTypes', 'failureCategory', 'networkFailureTypes', 'tlsFailureCategory', 'mode', 'echReason',
+    'observerRestored', 'guardStatus', 'guardFailureTypes', 'dialogRequired',
     'parseRequired', 'parseStatus', 'parserResolved',
     'seekable', 'playable', 'resolved', 'matched', 'verified', 'provider', 'httpStatus',
     'sourceType', 'sourceKind', 'errorTypes', 'flagCount', 'requestCount', 'seekCount',

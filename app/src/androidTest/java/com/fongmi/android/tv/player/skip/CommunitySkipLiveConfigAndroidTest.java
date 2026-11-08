@@ -40,7 +40,9 @@ import com.fongmi.android.tv.player.parse.ParseJob;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
+import com.github.catvod.bean.Doh;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.net.ech.EchSettings;
 import com.github.catvod.utils.CallTimeout;
 import com.github.catvod.utils.Prefers;
 
@@ -59,6 +61,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.cert.CertificateException;
+import java.security.cert.CertPathValidatorException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -80,7 +84,11 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLProtocolException;
 
+import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
 
@@ -129,6 +137,10 @@ public final class CommunitySkipLiveConfigAndroidTest {
     private CommunitySkipRuntime runtime;
     private History history;
     private String tmdbKey;
+    private Doh originalDoh;
+    private Object originalEch;
+    private boolean hadOriginalEch;
+    private boolean networkSelectionSaved;
 
     @Test(timeout = 420_000)
     public void shouldMeasureTheAuthorizedConfigurationAndActualPlaybackMetadata() throws Exception {
@@ -313,6 +325,7 @@ public final class CommunitySkipLiveConfigAndroidTest {
                     && metadata.awaitTermination(3, TimeUnit.SECONDS));
             BaseLoader.get().clear();
             VodConfig.get().clear();
+            restoreNetworkSelection();
             main(() -> {
                 for (String key : SETTINGS.keySet()) {
                     if (saved.containsKey(key)) Prefers.put(key, saved.get(key)); else Prefers.remove(key);
@@ -324,9 +337,41 @@ public final class CommunitySkipLiveConfigAndroidTest {
     }
 
     private void loadConfiguration(String sourceUrl) throws Exception {
-        JSONObject stage = new JSONObject().put("phase", "CONFIG").put("status", "STARTED");
-        stages.put(stage);
-        report.put("configStatus", "STARTED");
+        Map<String, ?> preferences = Prefers.getPrefers().getAll();
+        hadOriginalEch = preferences.containsKey("ech_enabled");
+        originalEch = preferences.get("ech_enabled");
+        originalDoh = OkHttp.dns().getDoh();
+        networkSelectionSaved = true;
+        long start = SystemClock.elapsedRealtime();
+        report.put("defaultConfigLoaded", false).put("configObserverRestored", true);
+        for (String mode : List.of("DEFAULT", "ECH_OFF", "SYSTEM_DNS")) {
+            JSONObject stage = new JSONObject().put("phase", "CONFIG").put("mode", mode).put("status", "STARTED");
+            stages.put(stage);
+            report.put("configMode", mode);
+            boolean loaded = false;
+            try {
+                OkHttp.get().clear();
+                EchSettings.setEnabled(mode.equals("DEFAULT"));
+                OkHttp.dns().setDoh(mode.equals("SYSTEM_DNS") ? new Doh().url("") : originalDoh);
+                OkHttp.client().connectionPool().evictAll();
+                loaded = loadConfigurationAttempt(sourceUrl, stage);
+            } catch (Throwable failure) {
+                if (stage.getString("status").equals("STARTED")) setConfigStatus(stage, "MODE_SETUP_FAILURE");
+                if (!stage.has("failureTypes")) stage.put("failureTypes", errorTypes(failure));
+                if (!stage.has("failureCategory")) stage.put("failureCategory", configFailureCategory(failure));
+            } finally {
+                if (mode.equals("DEFAULT")) report.put("defaultConfigLoaded", loaded);
+                report.put("configLoadMs", SystemClock.elapsedRealtime() - start);
+                writeReport();
+            }
+            if (loaded) return;
+        }
+        report.put("configStatus", "ALL_MODES_FAILED");
+        fail("Authorized configuration failed in all three real network modes");
+    }
+
+    private boolean loadConfigurationAttempt(String sourceUrl, JSONObject stage) throws Exception {
+        setConfigStatus(stage, "STARTED");
         writeReport();
         long start = SystemClock.elapsedRealtime();
         CountDownLatch loaded = new CountDownLatch(1);
@@ -334,13 +379,15 @@ public final class CommunitySkipLiveConfigAndroidTest {
         AtomicInteger requests = new AtomicInteger();
         AtomicInteger httpStatus = new AtomicInteger();
         AtomicReference<String> networkFailure = new AtomicReference<>();
+        AtomicReference<String> tlsFailure = new AtomicReference<>();
+        AtomicReference<JSONArray> networkTypes = new AtomicReference<>();
         AtomicReference<String> callbackFailure = new AtomicReference<>();
         OkHttpClient original;
         OkHttpClient observer;
         try {
             synchronized (OkHttp.class) {
                 original = OkHttp.client();
-                observer = original.newBuilder().addInterceptor(chain -> {
+                observer = original.newBuilder().connectionPool(new ConnectionPool()).addInterceptor(chain -> {
                     if (!"VodConfig".equals(chain.request().tag())) return chain.proceed(chain.request());
                     requests.incrementAndGet();
                     try {
@@ -349,6 +396,8 @@ public final class CommunitySkipLiveConfigAndroidTest {
                         return response;
                     } catch (Exception failure) {
                         networkFailure.set(configFailureCategory(failure));
+                        tlsFailure.set(tlsFailureCategory(failure));
+                        networkTypes.set(errorTypes(failure));
                         throw failure;
                     }
                 }).build();
@@ -382,7 +431,7 @@ public final class CommunitySkipLiveConfigAndroidTest {
             if (!loaded.await(90, TimeUnit.SECONDS)) {
                 setConfigStatus(stage, "CALLBACK_TIMEOUT");
                 stage.put("failureCategory", "CALLBACK_TIMEOUT");
-                fail("Authorized configuration callback timed out");
+                return false;
             }
             if (!succeeded.get()) {
                 setConfigStatus(stage, "CALLBACK_ERROR");
@@ -390,7 +439,7 @@ public final class CommunitySkipLiveConfigAndroidTest {
                 if (category == null) category = networkFailure.get();
                 if (category == null) category = callbackFailure.get();
                 stage.put("failureCategory", category == null ? "CALLBACK_ERROR" : category);
-                fail("Authorized configuration callback reported an error");
+                return false;
             }
             int count = VodConfig.get().getSites().size();
             stage.put("itemCount", count);
@@ -398,10 +447,11 @@ public final class CommunitySkipLiveConfigAndroidTest {
             if (count == 0) {
                 setConfigStatus(stage, "EMPTY_SITES");
                 stage.put("failureCategory", "EMPTY_SITES");
-                fail("Authorized configuration contains no sites");
+                return false;
             }
             setConfigStatus(stage, "LOADED");
             report.put("configLoaded", true).put("configFetchedByApp", true);
+            return true;
         } finally {
             try {
                 if (!succeeded.get()) {
@@ -413,16 +463,59 @@ public final class CommunitySkipLiveConfigAndroidTest {
                 }
             } finally {
                 synchronized (OkHttp.class) { setField(OkHttp.get(), "client", original); }
+                observer.connectionPool().evictAll();
                 boolean restored = field(OkHttp.get(), "client") == original;
                 long elapsed = SystemClock.elapsedRealtime() - start;
-                report.put("configLoadMs", elapsed).put("configObserverRestored", restored);
+                report.put("configObserverRestored", report.optBoolean("configObserverRestored") && restored);
                 stage.put("elapsedMs", elapsed).put("requestCount", requests.get()).put("observerRestored", restored);
                 if (httpStatus.get() > 0) stage.put("httpStatus", httpStatus.get());
+                if (tlsFailure.get() != null) stage.put("tlsFailureCategory", tlsFailure.get());
+                if (networkTypes.get() != null) stage.put("networkFailureTypes", networkTypes.get());
+                if (networkTypes.get() != null && !stage.has("failureTypes")) stage.put("failureTypes", networkTypes.get());
                 if (networkFailure.get() != null && !stage.has("failureCategory"))
                     stage.put("failureCategory", networkFailure.get());
                 writeReport();
             }
         }
+    }
+
+    private void restoreNetworkSelection() throws Exception {
+        if (!networkSelectionSaved) return;
+        if (hadOriginalEch) Prefers.put("ech_enabled", originalEch); else Prefers.remove("ech_enabled");
+        OkHttp.dns().setDoh(originalDoh);
+        OkHttp.client().connectionPool().evictAll();
+        Map<String, ?> preferences = Prefers.getPrefers().getAll();
+        boolean restored = preferences.containsKey("ech_enabled") == hadOriginalEch
+                && java.util.Objects.equals(originalEch, preferences.get("ech_enabled"))
+                && originalDoh.toString().equals(OkHttp.dns().getDoh().toString());
+        report.put("networkPreferencesRestored", restored);
+        assertTrue("Restore the original ECH preference and DoH selection", restored);
+    }
+
+    private static String tlsFailureCategory(Throwable failure) {
+        boolean handshake = false, protocol = false, certificate = false, ech = false, peerClosed = false, tls = false;
+        for (int count = 0; failure != null && count < 8; count++, failure = failure.getCause()) {
+            handshake |= failure instanceof SSLHandshakeException;
+            protocol |= failure instanceof SSLProtocolException;
+            certificate |= failure instanceof CertificateException || failure instanceof CertPathValidatorException
+                    || failure instanceof SSLPeerUnverifiedException;
+            tls |= failure instanceof SSLException;
+            String name = failure.getClass().getSimpleName();
+            String message = failure.getMessage();
+            ech |= name.equals("EchRejectedException") || message != null && message.contains("ECH_REJECTED");
+            if (message != null) {
+                String lower = message.toLowerCase(java.util.Locale.ROOT);
+                peerClosed |= lower.contains("peer closed") || lower.contains("closed by peer")
+                        || lower.contains("connection closed") || lower.contains("connection reset")
+                        || lower.contains("peer shut down") || lower.contains("unexpected end");
+            }
+        }
+        if (ech) return "ECH";
+        if (certificate) return "CERTIFICATE";
+        if (peerClosed && tls) return "PEER_CLOSED";
+        if (protocol) return "PROTOCOL";
+        if (handshake) return "HANDSHAKE";
+        return tls ? "OTHER" : null;
     }
 
     private void setConfigStatus(JSONObject stage, String status) throws Exception {
