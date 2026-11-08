@@ -79,12 +79,13 @@ def read(name):
 
 # Deny arbitrary strings and retain only named counters, identities and static status labels.
 fields = {
-    'schema', 'passed', 'configStatus', 'configLoadMs', 'configSha256', 'siteCount', 'sourceCount',
+    'schema', 'passed', 'configStatus', 'configLoadMs', 'configHttpStatus', 'configNetworkFailure',
+    'configRequestCount', 'configErrorStatus', 'configObserverRestored', 'configSha256', 'siteCount', 'sourceCount',
     'testedSourceCount', 'sourceContentVerified', 'pluginInitializationVerified', 'sourceAvailability',
     'searchProbeCount', 'searchCount', 'detailCount', 'resolvedEpisodeCount', 'playbackCount',
     'playbackVerified', 'communitySkipVerified', 'communityRecordFound', 'automaticSkipVerified',
     'introCount', 'creditsCount', 'segmentCount', 'matchedCaseCount', 'actualSeekCount',
-    'lookupCount', 'lookupOffMainThread', 'playbackAdvancedWhileLookup', 'failureTypes',
+    'lookupCount', 'lookupOffMainThread', 'playbackAdvancedWhileLookup', 'failureTypes', 'uiFailureTypes',
     'workerCleanupComplete', 'nativeArmPlaybackVerified', 'deviceAbis', 'process64Bit',
     'providerRequests', 'configFetchedByApp', 'episodeIdentityVerified', 'directPlaybackVerified',
     'configLoaded', 'configuredSiteCount', 'credentialFilesRemoved', 'sourceSearchVerified',
@@ -100,7 +101,7 @@ case_fields = {
     'tmdbId', 'season', 'episode', 'durationMs', 'introCount', 'creditsCount', 'segmentCount',
     'lookupMs', 'lookupOffMainThread', 'playbackAdvancedWhileLookup', 'actualSeekCount',
     'sourceAvailability', 'identityStatus', 'metadataStatus', 'playbackStatus', 'skipStatus',
-    'failureTypes', 'guardStatus', 'guardFailureTypes', 'dialogRequired', 'parseRequired',
+    'failureTypes', 'failureCategory', 'observerRestored', 'guardStatus', 'guardFailureTypes', 'dialogRequired', 'parseRequired',
     'seekable', 'playable', 'resolved', 'matched', 'verified', 'provider', 'httpStatus',
     'sourceType', 'sourceKind', 'errorTypes', 'flagCount', 'requestCount', 'seekCount',
     'sourceSeasonExplicit', 'sourceEpisodeGenerated', 'uiTurnMs', 'videoTrackSelected', 'videoDecoded',
@@ -151,6 +152,10 @@ summary = {'headSha': os.environ.get('GITHUB_SHA'), 'exitCode': status,
            'reportValid': report_valid,
            'failureTypes': sorted(set(re.findall(
                r'\b((?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:Exception|Error))\b', instrumentation))),
+           # Only repository class/method names and line numbers; never Throwable messages.
+           'appFailureFrames': sorted(set(re.findall(
+               r'\bat ((?:com\.fongmi\.android\.tv|com\.github\.catvod)\.[A-Za-z0-9_.$]+)'
+               r'\([A-Za-z0-9_$]+\.java:([0-9]{1,6})\)', app_logs)))[:32],
            'health': health}
 write('summary.json', summary)
 print(json.dumps(summary, indent=2))

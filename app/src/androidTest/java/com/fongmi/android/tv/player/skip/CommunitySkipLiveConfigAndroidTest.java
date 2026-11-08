@@ -48,6 +48,10 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InterruptedIOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
@@ -65,11 +69,17 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+
+import javax.net.ssl.SSLException;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Response;
 
 import static org.junit.Assert.*;
 
@@ -130,7 +140,17 @@ public final class CommunitySkipLiveConfigAndroidTest {
                 .put("automaticSkipVerified", false).put("communityRecordFound", false)
                 .put("episodeIdentityVerified", false).put("directPlaybackVerified", false);
         try {
-            main(() -> SETTINGS.forEach(Prefers::put));
+            report.put("configStatus", "PREPARING_SETTINGS");
+            JSONObject uiSetup = new JSONObject().put("phase", "UI_SETUP").put("status", "STARTED");
+            stages.put(uiSetup);
+            try {
+                main(() -> SETTINGS.forEach(Prefers::put));
+                uiSetup.put("status", "COMPLETED");
+            } catch (AssertionError failure) {
+                uiSetup.put("status", "FAILED").put("failureTypes", report.optJSONArray("uiFailureTypes"));
+                report.put("configStatus", "SETTINGS_FAILURE");
+                throw failure;
+            }
             loadConfiguration(sourceUrl);
             sourceUrl = null;
             activity = (CorePlaybackActivity) instrumentation.startActivitySync(new Intent(target,
@@ -296,20 +316,147 @@ public final class CommunitySkipLiveConfigAndroidTest {
     }
 
     private void loadConfiguration(String sourceUrl) throws Exception {
+        JSONObject stage = new JSONObject().put("phase", "CONFIG").put("status", "STARTED");
+        stages.put(stage);
+        report.put("configStatus", "STARTED");
+        writeReport();
+        long start = SystemClock.elapsedRealtime();
         CountDownLatch loaded = new CountDownLatch(1);
         AtomicBoolean succeeded = new AtomicBoolean();
-        call(() -> {
-            VodConfig.load(Config.find(sourceUrl, 0), new Callback() {
-                @Override public void success() { succeeded.set(true); loaded.countDown(); }
-                @Override public void error(String message) { loaded.countDown(); }
-            });
-            return null;
-        }, 5_000);
-        assertTrue("Authorized configuration load completed", loaded.await(90, TimeUnit.SECONDS));
-        assertTrue("Authorized configuration is usable by the app", succeeded.get());
-        int count = VodConfig.get().getSites().size();
-        report.put("configLoaded", true).put("configFetchedByApp", true).put("configuredSiteCount", count);
-        assertTrue("Authorized configuration contains sites", count > 0);
+        AtomicInteger requests = new AtomicInteger();
+        AtomicInteger httpStatus = new AtomicInteger();
+        AtomicReference<String> networkFailure = new AtomicReference<>();
+        AtomicReference<String> callbackFailure = new AtomicReference<>();
+        OkHttpClient original;
+        OkHttpClient observer;
+        try {
+            synchronized (OkHttp.class) {
+                original = OkHttp.client();
+                observer = original.newBuilder().addInterceptor(chain -> {
+                    if (!"VodConfig".equals(chain.request().tag())) return chain.proceed(chain.request());
+                    requests.incrementAndGet();
+                    try {
+                        Response response = chain.proceed(chain.request());
+                        httpStatus.set(response.code());
+                        return response;
+                    } catch (Exception failure) {
+                        networkFailure.set(configFailureCategory(failure));
+                        throw failure;
+                    }
+                }).build();
+                setField(OkHttp.get(), "client", observer);
+            }
+        } catch (Exception | LinkageError failure) {
+            setConfigStatus(stage, "OBSERVER_INSTALL_FAILED");
+            stage.put("failureTypes", errorTypes(failure)).put("failureCategory", configFailureCategory(failure));
+            writeReport();
+            throw failure;
+        }
+        try {
+            setConfigStatus(stage, "LOAD_REQUESTED");
+            try {
+                call(() -> {
+                    VodConfig.load(Config.find(sourceUrl, 0), new Callback() {
+                        @Override public void success() { succeeded.set(true); loaded.countDown(); }
+                        @Override public void error(String message) {
+                            callbackFailure.set(configMessageCategory(message));
+                            loaded.countDown();
+                        }
+                    });
+                    return null;
+                }, 5_000);
+            } catch (Exception | LinkageError failure) {
+                setConfigStatus(stage, "SYNC_FAILURE");
+                stage.put("failureTypes", errorTypes(failure)).put("failureCategory", configFailureCategory(failure));
+                throw failure;
+            }
+            setConfigStatus(stage, "LOAD_DISPATCHED");
+            if (!loaded.await(90, TimeUnit.SECONDS)) {
+                setConfigStatus(stage, "CALLBACK_TIMEOUT");
+                stage.put("failureCategory", "CALLBACK_TIMEOUT");
+                fail("Authorized configuration callback timed out");
+            }
+            if (!succeeded.get()) {
+                setConfigStatus(stage, "CALLBACK_ERROR");
+                String category = httpFailureCategory(httpStatus.get());
+                if (category == null) category = networkFailure.get();
+                if (category == null) category = callbackFailure.get();
+                stage.put("failureCategory", category == null ? "CALLBACK_ERROR" : category);
+                fail("Authorized configuration callback reported an error");
+            }
+            int count = VodConfig.get().getSites().size();
+            stage.put("itemCount", count);
+            report.put("configuredSiteCount", count);
+            if (count == 0) {
+                setConfigStatus(stage, "EMPTY_SITES");
+                stage.put("failureCategory", "EMPTY_SITES");
+                fail("Authorized configuration contains no sites");
+            }
+            setConfigStatus(stage, "LOADED");
+            report.put("configLoaded", true).put("configFetchedByApp", true);
+        } finally {
+            try {
+                if (!succeeded.get()) {
+                    OkHttp.cancel("VodConfig");
+                    Field futureField = VodConfig.class.getSuperclass().getDeclaredField("future");
+                    futureField.setAccessible(true);
+                    Future<?> future = (Future<?>) futureField.get(VodConfig.get());
+                    if (future != null) future.cancel(true);
+                }
+            } finally {
+                synchronized (OkHttp.class) { setField(OkHttp.get(), "client", original); }
+                boolean restored = field(OkHttp.get(), "client") == original;
+                long elapsed = SystemClock.elapsedRealtime() - start;
+                report.put("configLoadMs", elapsed).put("configObserverRestored", restored);
+                stage.put("elapsedMs", elapsed).put("requestCount", requests.get()).put("observerRestored", restored);
+                if (httpStatus.get() > 0) stage.put("httpStatus", httpStatus.get());
+                if (networkFailure.get() != null && !stage.has("failureCategory"))
+                    stage.put("failureCategory", networkFailure.get());
+                writeReport();
+            }
+        }
+    }
+
+    private void setConfigStatus(JSONObject stage, String status) throws Exception {
+        stage.put("status", status);
+        report.put("configStatus", status);
+    }
+
+    private static String httpFailureCategory(int status) {
+        if (status == 401) return "HTTP_AUTHENTICATION_FAILED";
+        if (status == 403) return "HTTP_FORBIDDEN";
+        if (status == 404) return "HTTP_NOT_FOUND";
+        return status >= 400 ? "HTTP_ERROR" : null;
+    }
+
+    private static String configFailureCategory(Throwable failure) {
+        for (int count = 0; failure != null && count < 8; count++, failure = failure.getCause()) {
+            if (failure instanceof UnknownHostException) return "DNS_FAILURE";
+            if (failure instanceof SocketTimeoutException) return "NETWORK_TIMEOUT";
+            if (failure instanceof TimeoutException) return "DISPATCH_TIMEOUT";
+            if (failure instanceof SSLException) return "TLS_FAILURE";
+            if (failure instanceof ConnectException) return "CONNECTION_FAILURE";
+            if (failure instanceof InterruptedException || failure instanceof InterruptedIOException)
+                return "INTERRUPTED";
+            if (failure instanceof LinkageError) return "PLUGIN_LINKAGE_FAILURE";
+        }
+        return "UNCLASSIFIED_EXCEPTION";
+    }
+
+    private static String configMessageCategory(String message) {
+        // Inspect locally and emit only this finite set; source error text can contain credentials.
+        if (message == null) return "CALLBACK_ERROR";
+        if (message.contains("Unable to resolve host") || message.contains("UnknownHostException")) return "DNS_FAILURE";
+        if (message.contains("timeout") || message.contains("timed out")) return "NETWORK_TIMEOUT";
+        if (message.contains("SSL") || message.contains("certificate")) return "TLS_FAILURE";
+        if (message.contains("Failed to connect") || message.contains("ConnectException")) return "CONNECTION_FAILURE";
+        if (message.contains("dlopen") || message.contains("UnsatisfiedLinkError") || message.contains("ELF"))
+            return "PLUGIN_LINKAGE_FAILURE";
+        if (message.contains("ClassNotFoundException") || message.contains("NoClassDefFoundError"))
+            return "PLUGIN_CLASS_FAILURE";
+        if (message.contains("Expected BEGIN_OBJECT") || message.contains("JsonSyntaxException")
+                || message.contains("MalformedJsonException")) return "JSON_PARSE_FAILURE";
+        return "CALLBACK_ERROR";
     }
 
     private void preparePlayback(Site site, Vod media, Flag line, Episode episode, Result play) {
@@ -488,7 +635,11 @@ public final class CommunitySkipLiveConfigAndroidTest {
         instrumentation.runOnMainSync(() -> {
             try { value.set(task.get()); } catch (Throwable error) { failure.set(error); }
         });
-        if (failure.get() != null) throw new AssertionError("Private live UI check failed");
+        if (failure.get() != null) {
+            try { report.put("uiFailureTypes", errorTypes(failure.get())); }
+            catch (Exception ignored) { }
+            throw new AssertionError("Private live UI check failed");
+        }
         return value.get();
     }
     private static Object field(Object target, String name) {
