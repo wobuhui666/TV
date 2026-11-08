@@ -9,6 +9,10 @@ on:
         description: Also verify navigation with the live aiwex configuration
         type: boolean
         default: false
+      live_config:
+        description: Verify the private runtime configuration and real community skip lookups
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -197,6 +201,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Prepare isolated emulator checks
+        env:
+          COMMUNITY_SKIP_LIVE_CONFIG: ${{ inputs.live_config }}
         run: |
           cat > "$RUNNER_TEMP/verify-community-skip-android.sh" <<'VERIFY'
           set -euo pipefail
@@ -216,14 +222,42 @@ jobs:
           adb shell wm size 1920x1080
           adb shell wm density 320
           adb shell settings put secure immersive_mode_confirmations confirmed
+          adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS
           # The disposable Pixel launcher can retain a boot-time ANR dialog and steal app focus.
           adb shell am force-stop com.google.android.apps.nexuslauncher
-          UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
-            'com.fongmi.android.tv.player.skip.CommunitySkipPlaybackAndroidTest,com.fongmi.android.tv.player.skip.CommunitySkipRuntimeAndroidTest' \
-            artifacts/community-skip-android '2,8'
+          if [ "$COMMUNITY_SKIP_LIVE_CONFIG" = 'true' ]; then
+            bash .github/scripts/verify-community-skip-live.sh
+          else
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+              'com.fongmi.android.tv.player.skip.CommunitySkipPlaybackAndroidTest,com.fongmi.android.tv.player.skip.CommunitySkipRuntimeAndroidTest' \
+              artifacts/community-skip-android '2,8'
+          fi
           VERIFY
+      - name: Stage private live verification inputs
+        if: inputs.live_config
+        env:
+          LIVE_CONFIG_URL: ${{ secrets.COMMUNITY_SKIP_LIVE_CONFIG_URL }}
+          LIVE_TMDB_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, re, urllib.parse
+          url = os.environ.get('LIVE_CONFIG_URL', '').strip()
+          parsed = urllib.parse.urlsplit(url)
+          assert parsed.scheme == 'https' and parsed.hostname, 'A private HTTPS configuration is required'
+          key = os.environ.get('LIVE_TMDB_KEY', '').strip()
+          assert re.fullmatch(r'[a-fA-F0-9]{32}', key), 'A runtime TMDB credential is required'
+          directory = pathlib.Path(os.environ['RUNNER_TEMP']) / 'community-skip-live-input'
+          directory.mkdir(mode=0o700, exist_ok=True)
+          directory.chmod(0o700)
+          for name, content in (('source-url.txt', url), ('tmdb-key.txt', key)):
+              target = directory / name
+              target.write_text(content)
+              target.chmod(0o600)
+          PY
       - name: Verify delayed metadata and actual Exo skipping on Android API 34
         timeout-minutes: 20
+        env:
+          COMMUNITY_SKIP_LIVE_CONFIG: ${{ inputs.live_config }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -236,6 +270,13 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot -memory 2048
           script: bash "$RUNNER_TEMP/verify-community-skip-android.sh"
+      - name: Remove private live verification inputs
+        if: always() && inputs.live_config
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, shutil
+          shutil.rmtree(pathlib.Path(os.environ['RUNNER_TEMP']) / 'community-skip-live-input', ignore_errors=True)
+          PY
       - name: Upload Android screenshots, summaries and unit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -243,6 +284,7 @@ jobs:
           name: community-skip-android-${{ github.run_id }}
           path: |
             artifacts/community-skip-android/
+            artifacts/community-skip-live/
             app/build/test-results/
             app/build/reports/tests/
             app/schemas/
