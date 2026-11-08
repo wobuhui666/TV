@@ -139,6 +139,9 @@ public final class JavaSpiderDexCompatNativeTest {
         assertTrue(opened.await(3, TimeUnit.SECONDS));
         invoke(fixture, "closeOwnDialog");
         invoke(fixture, "closeOwnDialog");
+        // The host may return its future after the close; Dialog.open cancels it on publication.
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+        while (!pending.isCancelled() && System.nanoTime() < deadline) Thread.sleep(10);
         assertTrue("New bytecode closeDialog() must reach the actual owner", pending.isCancelled());
         assertThrows(ExecutionException.class, () -> waiting.get(3, TimeUnit.SECONDS));
         invoke(fixture, "closeOwner");

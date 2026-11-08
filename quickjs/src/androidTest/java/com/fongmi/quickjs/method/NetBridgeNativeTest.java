@@ -76,7 +76,7 @@ public class NetBridgeNativeTest {
                     release.await(4, TimeUnit.SECONDS);
                 } catch (Exception ignored) {}
             });
-            assertEquals("[206,\"video/x-flv\",\"incremental\",[65,66]]", evaluate("(async()=>{globalThis.reader=await net.openStream('http://127.0.0.1:" + server.getLocalPort() + "/stream'); return [reader.code,reader.contentType,reader.headers['X-Probe'],Array.from(new Uint8Array(await reader.read(2)))];})()"));
+            assertEquals("[206,\"video/x-flv\",\"incremental\",[65,66]]", evaluate("(async()=>{globalThis.reader=await net.openStream('http://127.0.0.1:" + server.getLocalPort() + "/stream'); return [reader.code,reader.contentType,reader.headers['x-probe'],Array.from(new Uint8Array(await reader.read(2)))];})()"));
             CompletableFuture<String> blocked = begin("reader.read(2)");
             Thread.sleep(100);
             assertFalse(blocked.isDone());

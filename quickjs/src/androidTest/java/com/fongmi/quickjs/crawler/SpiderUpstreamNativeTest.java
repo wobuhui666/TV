@@ -39,7 +39,7 @@ public class SpiderUpstreamNativeTest {
     private Spider load(String name) throws Exception {
         String content;
         try(InputStream input=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("js/upstream/"+name)) {
-            content=new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            content=new String(read(input), java.nio.charset.StandardCharsets.UTF_8);
         }
         java.lang.reflect.Field cache=Module.class.getDeclaredField("cache");cache.setAccessible(true);
         @SuppressWarnings("unchecked") android.util.LruCache<String,String> values=(android.util.LruCache<String,String>)cache.get(Module.get());
@@ -51,6 +51,12 @@ public class SpiderUpstreamNativeTest {
         spider.net=new Net(null,spider.siteKey);
         spider.init(target,"{\"fixture\":true}");
         return spider;
+    }
+    private static byte[] read(InputStream input) throws java.io.IOException {
+        java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+        byte[] bytes=new byte[4096];
+        for(int count;(count=input.read(bytes))!=-1;)output.write(bytes,0,count);
+        return output.toByteArray();
     }
     @Test(timeout=20000) public void standardClassUsesItsOwnThisAndFullDetailIds() throws Exception {
         Spider spider=load("modern.js");
@@ -81,9 +87,9 @@ public class SpiderUpstreamNativeTest {
         assertEquals(3,new JSONObject(factory.searchContent("k",true,"3")).getJSONArray("args").length());
         assertTrue(new JSONObject(factory.action("legacy")).getBoolean("legacy"));
         Object[] proxy=factory.proxy(Map.of());
-        try(InputStream input=(InputStream)proxy[2]){assertArrayEquals(new byte[]{0,127,-128,-1},input.readAllBytes());}
+        try(InputStream input=(InputStream)proxy[2]){assertArrayEquals(new byte[]{0,127,-128,-1},read(input));}
         Object[] malformed=factory.proxy(Map.of("mode","malformed"));
-        try(InputStream input=(InputStream)malformed[2]){assertArrayEquals(new byte[]{0,127,-128,-1},input.readAllBytes());}
+        try(InputStream input=(InputStream)malformed[2]){assertArrayEquals(new byte[]{0,127,-128,-1},read(input));}
         assertTrue(new JSONObject(load("object.js").homeContent(false)).getBoolean("object"));
         Spider cat=load("cat.js");
         assertTrue(new JSONObject(cat.homeContent(false)).getBoolean("cat"));
@@ -98,7 +104,7 @@ public class SpiderUpstreamNativeTest {
         Spider spider=load("modern.js");
         Object[] response=spider.proxy(Map.of("mode","stream"));
         assertEquals("stream",((Map<?,?>)response[3]).get("X-Probe"));
-        try(InputStream input=(InputStream)response[2]){assertArrayEquals(new byte[]{0,127,-128,-1},input.readAllBytes());}
+        try(InputStream input=(InputStream)response[2]){assertArrayEquals(new byte[]{0,127,-128,-1},read(input));}
         assertEquals(1,new JSONObject(spider.action("proxy-state")).getInt("stops"));
         assertThrows(Exception.class,()->spider.proxy(Map.of("mode","bad-header")));
         spider.action("proxy-state");

@@ -5,6 +5,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -32,10 +33,16 @@ public class JsProxyBodyTest {
     }
 
     @Test public void closeCancelsBlockedPullWithoutTakingReadLock() throws Exception {
-        CompletableFuture<byte[]> pending = new CompletableFuture<>();
-        CountDownLatch entered = new CountDownLatch(1), ended = new CountDownLatch(1);
+        CountDownLatch waiting = new CountDownLatch(1), ended = new CountDownLatch(1);
+        CompletableFuture<byte[]> pending = new CompletableFuture<>() {
+            @Override public byte[] get() throws InterruptedException, ExecutionException {
+                // JsProxyBody publishes its pending future before calling get().
+                waiting.countDown();
+                return super.get();
+            }
+        };
         JsProxyBody body = new JsProxyBody(new JsProxyBody.Source() {
-            public CompletableFuture<byte[]> pull(int size) { entered.countDown(); return pending; }
+            public CompletableFuture<byte[]> pull(int size) { return pending; }
             public void close() {}
         });
         Thread reader = new Thread(() -> {
@@ -44,7 +51,7 @@ public class JsProxyBodyTest {
             finally { ended.countDown(); }
         });
         reader.start();
-        assertTrue(entered.await(2, TimeUnit.SECONDS));
+        assertTrue(waiting.await(2, TimeUnit.SECONDS));
         body.close();
         assertTrue(pending.isCancelled());
         assertTrue(ended.await(2, TimeUnit.SECONDS));
