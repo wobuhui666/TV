@@ -380,6 +380,7 @@ jobs:
           target.chmod(0o600)
           PY
       - name: Verify themes and touch on emulator
+        timeout-minutes: ${{ inputs.home_background && 20 || 40 }}
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
@@ -397,7 +398,8 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-boot-timeout: ${{ inputs.home_background && 300 || 600 }}
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot' || '' }}
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
         if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
@@ -405,6 +407,17 @@ jobs:
           python3 - <<'PY'
           import os, pathlib
           (pathlib.Path(os.environ['RUNNER_TEMP']) / 'tv-tmdb-preview.key').unlink(missing_ok=True)
+          PY
+      - name: Preserve emulator host crash reports
+        if: always() && inputs.home_background
+        run: |
+          python3 - <<'PY'
+          import pathlib, shutil
+          output = pathlib.Path('artifacts/home-background/emulator-host')
+          output.mkdir(parents=True, exist_ok=True)
+          for source in pathlib.Path('/tmp/android-runner').glob('emu-crash-*'):
+              if source.is_file():
+                  shutil.copy2(source, output / source.name)
           PY
       - name: Upload screenshots and diagnostics
         if: always()

@@ -262,7 +262,14 @@ public final class HomeBackgroundBlendAndroidTest {
                 distance(expected, actual) <= tolerance);
         assertEquals(Color.alpha(expected), Color.alpha(actual));
     }
-    private void main(Runnable operation) { instrumentation.runOnMainSync(operation); }
+    private void main(Runnable operation) {
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        instrumentation.runOnMainSync(() -> {
+            try { operation.run(); }
+            catch (Throwable error) { failure.set(error); }
+        });
+        if (failure.get() != null) throw new AssertionError("UI operation failed", failure.get());
+    }
     private <T> T value(Supplier<T> operation) {
         AtomicReference<T> value = new AtomicReference<>();
         main(() -> value.set(operation.get()));
