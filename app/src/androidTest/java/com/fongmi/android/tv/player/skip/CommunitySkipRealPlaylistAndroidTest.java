@@ -121,6 +121,7 @@ public final class CommunitySkipRealPlaylistAndroidTest {
     private int publicRequestCount;
     private boolean nonBlocking;
     private boolean advancedDuringLookup;
+    private JSONObject currentStage;
 
     @Test(timeout = 420_000)
     public void shouldVerifyRealPlaylistsWithSubstitutedVideoAndExplicitControlledMarkers() throws Exception {
@@ -237,8 +238,9 @@ public final class CommunitySkipRealPlaylistAndroidTest {
                 .put("parsedSeason", parsed == null || parsed.season() == null ? JSONObject.NULL : parsed.season())
                 .put("parsedEpisode", parsed == null ? JSONObject.NULL : parsed.episode())
                 .put("generatedLabel", episode.isGeneratedLabel()).put("labelKind", labelKind(episode))
-                .put("expectedIdentityStatus", expectation).put("status", "STARTED");
+                .put("expectedIdentityStatus", expectation).put("status", "STARTED").put("phase", "IDENTITY");
         cases.put(stage);
+        currentStage = stage;
         probeCount++;
         writeReport();
         try {
@@ -264,25 +266,33 @@ public final class CommunitySkipRealPlaylistAndroidTest {
                 identityMatchedCount++;
                 stage.put("tmdbId", identity.tmdbId()).put("season", identity.season()).put("episode", identity.episode());
             }
+            stage.put("phase", "VIDEO_PREPARING");
             prepareVideo(media, flag, episode, identity);
             await(() -> manager.getPlaybackState() == Player.STATE_READY && manager.canSeek() && manager.getDuration() > 0,
                     "Substituted MP4 has a decoded seekable timeline", 15_000);
             long duration = read(manager::getDuration);
             assertEquals("Actual generated video duration", 90_000, duration, 100);
             markers.durationMs = duration;
-            stage.put("durationMs", duration);
+            stage.put("durationMs", duration).put("phase", "VIDEO_PREPARED");
+            recordPlaybackState(stage);
+            writeReport();
             main(manager::play);
+            stage.put("phase", "FIRST_FRAME");
             await(() -> manager.isPlaying() && firstFrame.get(), "Actual H264 first frame rendered", 8_000);
+            recordPlaybackState(stage);
+            stage.put("videoDecoded", true);
+            decodedCount++;
+            stage.put("phase", "PROGRESS");
             long before = read(manager::getPosition);
             // Do not start the controlled provider timer before the separate public-service probe.
             await(() -> manager.getPosition() - before > 200, "Actual Exo playback advances", 3_000);
             boolean progress = read(manager::getPosition) - before > 200;
             assertTrue("Actual Exo playback clock advances", progress);
-            if (decodedCount == 0) saveVideoScreenshot();
-            decodedCount++;
+            if (decodedCount == 1) saveVideoScreenshot();
             progressCount++;
             stage.put("videoDecoded", true).put("playbackProgressVerified", progress);
             main(manager::pause);
+            stage.put("phase", "PUBLIC_PROVIDERS");
             measurePublicProviders(identity, duration, stage);
             if (identity == null) {
                 main(manager::play);
@@ -293,16 +303,19 @@ public final class CommunitySkipRealPlaylistAndroidTest {
                 blockedCount++;
                 stage.put("noSeekForRejectedIdentity", true).put("actualSeekCount", 0);
             } else {
+                stage.put("phase", "CONTROLLED_SKIP");
                 verifyControlledFlow(duration, stage);
             }
-            stage.put("lookupOffMainThread", lookupsOffMain.get()).put("status", "VERIFIED");
+            stage.put("lookupOffMainThread", lookupsOffMain.get()).put("status", "VERIFIED").put("phase", "VERIFIED");
         } catch (Throwable failure) {
+            recordPlaybackState(stage);
             stage.put("status", "FAILED").put("failureTypes", errorTypes(failure));
             throw failure;
         } finally {
             releasePlayback();
             counts();
             writeReport();
+            currentStage = null;
         }
     }
 
@@ -358,6 +371,8 @@ public final class CommunitySkipRealPlaylistAndroidTest {
             attachPlayer(manager.getPlayer());
             assertTrue("Shipping Exo engine selected", manager.getPlayer() instanceof ExoPlayer);
             manager.bindPlayerView(activity.view);
+            // Exo's engine-level bind hook is empty; the product UI binds its PlayerView directly.
+            activity.view.setPlayer(manager.getPlayer());
             History history = new History();
             history.setKey("real-playlist-" + probeCount);
             history.setVodFlag(selected.getFlag());
@@ -462,6 +477,7 @@ public final class CommunitySkipRealPlaylistAndroidTest {
     }
 
     private void attachPlayer(Player player) {
+        if (activity != null && player instanceof ExoPlayer) activity.view.setPlayer(player);
         if (!observedPlayers.add(player)) return;
         int generation = probeCount;
         player.addListener(new Player.Listener() {
@@ -508,6 +524,7 @@ public final class CommunitySkipRealPlaylistAndroidTest {
     private void releasePlayback() throws Exception {
         if (markers != null) { markers.releaseIntro.countDown(); markers.releaseCredits.countDown(); }
         main(() -> {
+            if (activity != null) activity.view.setPlayer(null);
             if (runtime != null) runtime.stop();
             if (controller != null) controller.stopCommunitySkip();
             if (manager != null) manager.release();
@@ -525,6 +542,12 @@ public final class CommunitySkipRealPlaylistAndroidTest {
                 .put("consumedRangePreservedCount", consumedCount).put("blockedIdentityNoSeekCount", blockedCount)
                 .put("publicProviderRangeCountWithTestDuration", publicRangeCount).put("publicProviderRequestCount", publicRequestCount)
                 .put("backgroundQueryNonBlocking", nonBlocking && lookupsOffMain.get()).put("playbackAdvancedWhileLookup", advancedDuringLookup);
+    }
+    private void recordPlaybackState(JSONObject stage) throws Exception {
+        if (manager == null) return;
+        stage.put("playbackState", read(manager::getPlaybackState)).put("playWhenReady", read(() -> manager.getPlayer().getPlayWhenReady()))
+                .put("playing", read(manager::isPlaying)).put("firstFrameRendered", firstFrame.get())
+                .put("surfaceBound", read(() -> activity != null && activity.view.getPlayer() == manager.getPlayer()));
     }
 
     private void writeReport() throws Exception {
@@ -578,7 +601,13 @@ public final class CommunitySkipRealPlaylistAndroidTest {
         instrumentation.runOnMainSync(() -> {
             try { value.set(action.get()); } catch (Throwable error) { failure.set(error); }
         });
-        if (failure.get() != null) throw new AssertionError("Real playlist UI assertion failed");
+        if (failure.get() != null) {
+            if (currentStage != null) {
+                try { currentStage.put("uiFailureTypes", errorTypes(failure.get())); }
+                catch (Exception ignored) { }
+            }
+            throw new AssertionError("Real playlist UI assertion failed");
+        }
         return value.get();
     }
     private static Object field(Object target, String name) {

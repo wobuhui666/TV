@@ -118,7 +118,7 @@ fields = {
     'consumedRangePreservedCount', 'blockedIdentityNoSeekCount', 'backgroundQueryNonBlocking',
     'playbackAdvancedWhileLookup', 'publicProviderRangeCountWithTestDuration', 'workerCleanupComplete',
     'networkPreferencesRestored', 'credentialFilesRemoved', 'videoSubstituted', 'markersControlled',
-    'publicCoverageVerified', 'failureTypes', 'networkMode', 'publicProviderRequestCount',
+    'publicCoverageVerified', 'failureTypes', 'uiFailureTypes', 'networkMode', 'publicProviderRequestCount',
 }
 case_fields = {
     'caseId', 'title', 'flagName', 'episodeLabel', 'flagIndex', 'episodeIndex', 'episodeCount',
@@ -127,8 +127,9 @@ case_fields = {
     'videoDecoded', 'playbackProgressVerified', 'lookupOffMainThread', 'uiTurnMs',
     'playbackAdvancedWhileLookup', 'controlledIntroSeekVerified', 'controlledCreditsSeekVerified',
     'consumedRangePreserved', 'noSeekForRejectedIdentity', 'actualSeekCount', 'workerCleanupComplete',
-    'status', 'failureTypes', 'publicProviderRequestCount', 'publicProviderHttpStatuses',
+    'status', 'phase', 'failureTypes', 'publicProviderRequestCount', 'publicProviderHttpStatuses',
     'parsedSeasonKnown', 'parsedSeason', 'parsedEpisode', 'expectedIdentityStatus',
+    'playbackState', 'playWhenReady', 'playing', 'firstFrameRendered', 'surfaceBound', 'uiFailureTypes',
 }
 # A report may name only fixed states or an exact metadata string from the supplied fixture.
 fixed_strings = {
@@ -140,12 +141,14 @@ fixed_strings = {
                              'RANGES_FOR_TEST_DURATION', 'LOOKUP_FAILED'},
     'expectedIdentityStatus': {'MATCHED', 'REJECT', 'MEASURE'},
     'status': {'STARTED', 'VERIFIED', 'FAILED'},
+    'phase': {'IDENTITY', 'VIDEO_PREPARING', 'VIDEO_PREPARED', 'FIRST_FRAME', 'PROGRESS',
+              'PUBLIC_PROVIDERS', 'CONTROLLED_SKIP', 'VERIFIED'},
 }
 
 def safe(name, value):
     if isinstance(value, bool) or value is None: return value
     if isinstance(value, (int, float)) and math.isfinite(value): return value
-    if isinstance(value, list) and name == 'failureTypes' and len(value) <= 8:
+    if isinstance(value, list) and name in {'failureTypes', 'uiFailureTypes'} and len(value) <= 8:
         return [safe(name, item) for item in value]
     if isinstance(value, list) and name == 'publicProviderHttpStatuses' and len(value) <= 16 \
             and all(isinstance(item, int) and not isinstance(item, bool) and 0 <= item <= 999 for item in value):
@@ -153,7 +156,7 @@ def safe(name, value):
     if isinstance(value, str):
         if name in fixture_strings and value in fixture_strings[name]: return value
         if value in fixed_strings.get(name, set()): return value
-        if name == 'failureTypes' and (value == 'UnknownFailure' or re.fullmatch(
+        if name in {'failureTypes', 'uiFailureTypes'} and (value == 'UnknownFailure' or re.fullmatch(
                 r'(?:[A-Za-z_$][A-Za-z0-9_$]*\.)*[A-Za-z_$][A-Za-z0-9_$]*(?:Exception|Error)', value)):
             return value
     raise ValueError('Unexpected report value')
