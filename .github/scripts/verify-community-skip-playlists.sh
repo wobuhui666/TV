@@ -50,7 +50,7 @@ subprocess.run(['adb', 'shell', 'run-as', package, 'chmod', '700', 'files/real-p
                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20, check=True)
 subprocess.run(['adb', 'shell', 'run-as', package, 'rm', '-rf',
                 '/sdcard/Android/data/' + package + '/files/community-skip-playlist-verification'],
-               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20, check=True)
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20, check=False)
 for name in ('fixtures.json', 'video.mp4', 'tmdb-key.txt'):
     content = (directory / name).read_bytes()
     assert content and len(content) <= 32 * 1024 * 1024, 'Invalid private input size'
