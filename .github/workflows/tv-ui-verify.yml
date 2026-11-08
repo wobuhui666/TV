@@ -379,6 +379,45 @@ jobs:
           target.write_text(secret)
           target.chmod(0o600)
           PY
+      - name: Prepare host memory diagnostics for background verification
+        if: inputs.home_background
+        run: |
+          mkdir -p artifacts/home-background/emulator-host
+          free -m > artifacts/home-background/emulator-host/memory-before.txt
+          ps -eo pid,ppid,rss,args --sort=-rss > artifacts/home-background/emulator-host/processes-before.txt
+          jps -lv > artifacts/home-background/emulator-host/java-processes-before.txt
+          python3 - <<'PY'
+          import os, pathlib, signal, subprocess
+          # Compilation is complete. Release only Kotlin daemons left by this disposable build.
+          lines = subprocess.check_output(['jps', '-l'], text=True).splitlines()
+          released = []
+          for line in lines:
+              fields = line.split()
+              if len(fields) == 2 and fields[1] == 'org.jetbrains.kotlin.daemon.KotlinCompileDaemon':
+                  pid = int(fields[0])
+                  try:
+                      os.kill(pid, signal.SIGTERM)
+                      released.append(pid)
+                  except ProcessLookupError:
+                      pass
+          pathlib.Path('artifacts/home-background/emulator-host/released-kotlin-daemons.txt').write_text(
+              '\n'.join(map(str, released)) + '\n')
+          PY
+          free -m > artifacts/home-background/emulator-host/memory-after.txt
+          cat > "$RUNNER_TEMP/watch-home-emulator-host.sh" <<'WATCH'
+          set -u
+          output=artifacts/home-background/emulator-host
+          for iteration in $(seq 1 120); do
+            date -u +'%Y-%m-%dT%H:%M:%SZ'
+            free -m
+            ps -eo pid,ppid,rss,args --sort=-rss | head -n 16
+            for counter in memory.current memory.peak memory.events; do
+              path="/sys/fs/cgroup/$counter"
+              if [ -f "$path" ]; then printf '%s\n' "$path"; cat "$path"; fi
+            done
+            sleep 10
+          done >> "$output/memory-timeline.txt" 2>&1
+          WATCH
       - name: Verify themes and touch on emulator
         timeout-minutes: ${{ inputs.home_background && 20 || 40 }}
         env:
@@ -394,12 +433,16 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          target: google_apis
+          # A normal AOSP image keeps real HWUI rendering without Google startup services.
+          target: ${{ inputs.home_background && 'default' || 'google_apis' }}
           arch: x86_64
           profile: pixel_2
+          ram-size: ${{ inputs.home_background && '2048M' || '' }}
+          heap-size: ${{ inputs.home_background && '256M' || '' }}
           disable-animations: true
           emulator-boot-timeout: ${{ inputs.home_background && 300 || 600 }}
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot' || '' }}
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot -memory 2048' || '' }}
+          pre-emulator-launch-script: ${{ inputs.home_background && 'nohup timeout --kill-after=5s 1200s bash "$RUNNER_TEMP/watch-home-emulator-host.sh" </dev/null >/dev/null 2>&1 & echo $! > "$RUNNER_TEMP/home-emulator-host-watcher.pid"' || '' }}
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
         if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
@@ -412,12 +455,30 @@ jobs:
         if: always() && inputs.home_background
         run: |
           python3 - <<'PY'
-          import pathlib, shutil
+          import os, pathlib, signal, shutil, subprocess
           output = pathlib.Path('artifacts/home-background/emulator-host')
           output.mkdir(parents=True, exist_ok=True)
+          watcher = pathlib.Path(os.environ['RUNNER_TEMP']) / 'home-emulator-host-watcher.pid'
+          if watcher.is_file():
+              try:
+                  os.kill(int(watcher.read_text().strip()), signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
           for source in pathlib.Path('/tmp/android-runner').glob('emu-crash-*'):
               if source.is_file():
                   shutil.copy2(source, output / source.name)
+              elif source.is_dir():
+                  shutil.copytree(source, output / source.name, dirs_exist_ok=True)
+          for name, command in (
+              ('memory-final.txt', ['free', '-m']),
+              ('processes-final.txt', ['ps', '-eo', 'pid,ppid,rss,args', '--sort=-rss']),
+              ('kernel-log.txt', ['sudo', '-n', 'dmesg', '--ctime']),
+          ):
+              with (output / name).open('w') as report:
+                  try:
+                      subprocess.run(command, stdout=report, stderr=subprocess.STDOUT, timeout=15, check=False)
+                  except subprocess.TimeoutExpired:
+                      report.write('\nDiagnostic command timed out.\n')
           PY
       - name: Upload screenshots and diagnostics
         if: always()
