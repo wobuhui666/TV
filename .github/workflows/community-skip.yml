@@ -35,9 +35,10 @@ jobs:
         with:
           java-version: '21'
           distribution: temurin
+          cache: gradle
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.10.21'
       - name: Probe public segment metadata contracts
         run: python3 .github/scripts/check-community-skip.py
       - uses: android-actions/setup-android@v3
@@ -69,6 +70,15 @@ jobs:
               }
           }
           GRADLE
+          python3 - <<'PY'
+          import pathlib, re
+          wrapper = pathlib.Path('gradle/wrapper/gradle-wrapper.properties')
+          properties = wrapper.read_text()
+          assert 'gradle-9.1.0-bin.zip' in properties, 'Unexpected Gradle version'
+          properties = re.sub(r'^distributionUrl=.*$', 'distributionUrl=https\\://github.com/gradle/gradle-distributions/releases/download/v9.1.0/gradle-9.1.0-bin.zip?download=1', properties, flags=re.M)
+          properties = re.sub(r'^(distributionSha256Sum|networkTimeout)=.*\n?', '', properties, flags=re.M)
+          wrapper.write_text(properties.rstrip() + '\ndistributionSha256Sum=a17ddd85a26b6a7f5ddb71ff8b05fc5104c0202c6e64782429790c933686c806\nnetworkTimeout=60000\n')
+          PY
           chmod +x gradlew
       - name: Run application regression tests and compile mobile settings
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:testLeanbackArm64_v8aDebugUnitTest :app:compileMobileArm64_v8aDebugJavaWithJavac --no-daemon --build-cache --max-workers=2 --console=plain
@@ -119,10 +129,11 @@ jobs:
         with:
           java-version: '21'
           distribution: temurin
+          cache: gradle
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.10.21'
       - name: Install image tools
         run: python -m pip install Pillow
       - name: Set up Android SDK 37.0
@@ -161,6 +172,15 @@ jobs:
               }
           }
           GRADLE
+          python3 - <<'PY'
+          import pathlib, re
+          wrapper = pathlib.Path('gradle/wrapper/gradle-wrapper.properties')
+          properties = wrapper.read_text()
+          assert 'gradle-9.1.0-bin.zip' in properties, 'Unexpected Gradle version'
+          properties = re.sub(r'^distributionUrl=.*$', 'distributionUrl=https\\://github.com/gradle/gradle-distributions/releases/download/v9.1.0/gradle-9.1.0-bin.zip?download=1', properties, flags=re.M)
+          properties = re.sub(r'^(distributionSha256Sum|networkTimeout)=.*\n?', '', properties, flags=re.M)
+          wrapper.write_text(properties.rstrip() + '\ndistributionSha256Sum=a17ddd85a26b6a7f5ddb71ff8b05fc5104c0202c6e64782429790c933686c806\nnetworkTimeout=60000\n')
+          PY
           chmod +x gradlew
       - name: Build isolated preview and run application unit tests
         run: |
