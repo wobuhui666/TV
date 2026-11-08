@@ -47,7 +47,7 @@ class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     private val fadePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
     }
     private var blendWallpaper = JetStreamWallpaper.isVisible()
 
@@ -79,7 +79,7 @@ class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
             val fadeHeight = min(jetStreamDp(128), h * 0.32f).coerceAtLeast(2f)
             LinearGradient(
                 0f, h - fadeHeight, 0f, h - 1f,
-                intArrayOf(255, 244, 215, 174, 128, 81, 40, 11, 0)
+                intArrayOf(0, 11, 40, 81, 127, 174, 215, 244, 255)
                     .map { Color.argb(it, 255, 255, 255) }.toIntArray(),
                 null, Shader.TileMode.CLAMP
             )
