@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
+import android.util.Log;
 import android.os.SystemClock;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
@@ -52,6 +52,7 @@ public final class HomeBackgroundBlendAndroidTest {
     private Context themedContext;
     private ThemeMode originalTheme;
     private boolean originalWallpaper;
+    private Bitmap fixtureArtwork;
 
     @Before public void setUp() {
         String app = instrumentation.getTargetContext().getPackageName();
@@ -59,6 +60,8 @@ public final class HomeBackgroundBlendAndroidTest {
                 || app.equals("com.fongmi.android.tv.sourceprobe"));
         originalTheme = Setting.getThemeMode();
         originalWallpaper = JetStreamWallpaper.isVisible();
+        fixtureArtwork = Bitmap.createBitmap(640, 360, Bitmap.Config.ARGB_8888);
+        fixtureArtwork.eraseColor(ARTWORK);
         activity = (CorePlaybackActivity) instrumentation.startActivitySync(new Intent(
                 instrumentation.getTargetContext(), CorePlaybackActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         await(activity::hasWindowFocus, "test Activity has focus");
@@ -72,6 +75,7 @@ public final class HomeBackgroundBlendAndroidTest {
             JetStreamThemeController.refresh();
         });
         instrumentation.waitForIdleSync();
+        if (fixtureArtwork != null) fixtureArtwork.recycle();
     }
 
     @Test public void lightWallpaperShowsTheSameCanvasAcrossBothHeroEdges() {
@@ -181,6 +185,7 @@ public final class HomeBackgroundBlendAndroidTest {
     }
 
     private void mount(int layout, ThemeMode mode, boolean wallpaper) {
+        Log.i("HomeBackgroundBlend", "Mount " + layout + " theme=" + mode + " wallpaper=" + wallpaper);
         main(() -> {
             Setting.putThemeMode(mode);
             JetStreamThemeController.refresh();
@@ -193,7 +198,7 @@ public final class HomeBackgroundBlendAndroidTest {
             hero = (ViewGroup) LayoutInflater.from(themedContext).inflate(layout, root, false);
             for (int id : new int[]{R.id.imageA, R.id.imageB}) {
                 ImageView image = hero.findViewById(id);
-                image.setImageDrawable(new ColorDrawable(ARTWORK));
+                image.setImageBitmap(fixtureArtwork);
                 image.setVisibility(id == R.id.imageA ? View.VISIBLE : View.GONE);
                 image.setAlpha(1f);
             }
@@ -208,10 +213,13 @@ public final class HomeBackgroundBlendAndroidTest {
             }
             root.addView(hero, new FrameLayout.LayoutParams(-1, dp(layout == R.layout.adapter_discover_hero ? 392 : 320)));
             activity.setContentView(root);
+            Log.i("HomeBackgroundBlend", "Content attached");
         });
         await(() -> root.getWidth() > 0 && hero.getHeight() > 0 && root.getHeight() > hero.getBottom() + 8,
                 "hero and adjacent canvas are laid out");
         instrumentation.waitForIdleSync();
+        Log.i("HomeBackgroundBlend", "Mounted root=" + root.getWidth() + "x" + root.getHeight()
+                + " hero=" + hero.getWidth() + "x" + hero.getHeight());
     }
 
     private void assertContinuousEdge() {
@@ -232,8 +240,10 @@ public final class HomeBackgroundBlendAndroidTest {
     private Bitmap render() {
         instrumentation.waitForIdleSync();
         return value(() -> {
+            Log.i("HomeBackgroundBlend", "Software draw start");
             Bitmap frame = Bitmap.createBitmap(root.getWidth(), root.getHeight(), Bitmap.Config.ARGB_8888);
             root.draw(new Canvas(frame));
+            Log.i("HomeBackgroundBlend", "Software draw complete");
             return frame;
         });
     }

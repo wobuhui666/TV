@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
@@ -71,6 +72,7 @@ public final class HomeBackgroundHomePreviewTest {
                 BrowseExperienceSettings.putHeroRotationMode(BrowseExperienceSettings.HERO_ROTATION_MANUAL);
             });
             for (ThemeMode mode : new ThemeMode[]{ThemeMode.LIGHT, ThemeMode.DARK}) {
+                Log.i("HomeBackgroundBlend", "Launch actual home " + mode);
                 main(() -> {
                     Setting.putThemeMode(mode);
                     JetStreamThemeController.refresh();
@@ -86,6 +88,7 @@ public final class HomeBackgroundHomePreviewTest {
                 await("The complete hero and following canvas are in view", this::completeHeroVisible);
                 View retainedHero = read(this::hero);
                 await("The shipping wallpaper is decoded beneath the home", this::wallpaperReady);
+                Log.i("HomeBackgroundBlend", "Actual home decoded, screenshot " + mode + " wallpaper on");
                 scenarios.put(verifySeam(mode, true));
 
                 main(() -> JetStreamWallpaper.setVisible(false));

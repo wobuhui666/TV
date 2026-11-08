@@ -315,8 +315,8 @@ jobs:
             # Clear only the disposable emulator's launcher, which can steal native app focus.
             adb shell am force-stop com.google.android.apps.nexuslauncher
             UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
-              com.fongmi.android.tv.ui.HomeBackgroundBlendAndroidTest,com.fongmi.android.tv.test.HomeBackgroundHomePreviewTest \
-              artifacts/home-background '6,1'
+              com.fongmi.android.tv.test.HomeBackgroundHomePreviewTest,com.fongmi.android.tv.ui.HomeBackgroundBlendAndroidTest \
+              artifacts/home-background '1,6'
           elif [ "$TV_LIVE_HOME" = 'true' ]; then
             bash .github/scripts/verify-live-home.sh
           elif [ "$TV_COMPACT_HOME" = 'true' ]; then
@@ -441,7 +441,7 @@ jobs:
           heap-size: ${{ inputs.home_background && '256M' || '' }}
           disable-animations: true
           emulator-boot-timeout: ${{ inputs.home_background && 300 || 600 }}
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot -memory 2048' || '' }}
+          emulator-options: -no-window -gpu ${{ inputs.home_background && 'swiftshader' || 'swiftshader_indirect' }} -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot -memory 2048' || '' }}
           pre-emulator-launch-script: ${{ inputs.home_background && 'nohup timeout --kill-after=5s 1200s bash "$RUNNER_TEMP/watch-home-emulator-host.sh" </dev/null >/dev/null 2>&1 & echo $! > "$RUNNER_TEMP/home-emulator-host-watcher.pid"' || '' }}
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
