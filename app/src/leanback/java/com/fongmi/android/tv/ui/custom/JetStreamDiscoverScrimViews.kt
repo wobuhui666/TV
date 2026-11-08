@@ -44,6 +44,8 @@ class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
     private var blendWallpaper = JetStreamWallpaper.isVisible()
 
     init {
+        // Plain ViewGroups otherwise skip View.draw(), which owns the platform fading edge.
+        setWillNotDraw(false)
         isVerticalFadingEdgeEnabled = blendWallpaper
         bindJetStreamTheme { invalidate() }
     }
