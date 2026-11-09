@@ -45,6 +45,10 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
+      home_background:
+        description: Verify native home artwork blending with wallpaper on and off
+        type: boolean
+        default: false
       live_home:
         description: Capture real TMDB homepage with a runtime Actions credential
         type: boolean
@@ -62,7 +66,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
@@ -138,7 +142,7 @@ jobs:
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || inputs.compact_home && 'compact-ui-fixture' || '' }}
+          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || (inputs.compact_home || inputs.home_background) && 'compact-ui-fixture' || '' }}
           ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
@@ -157,6 +161,7 @@ jobs:
       - name: Prepare emulator checks
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
@@ -290,6 +295,29 @@ jobs:
             adb shell wm size 1920x1080
             adb shell wm density 320
             bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest,com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest,com.fongmi.android.tv.api.LogvarMatchingAndroidTest
+          elif [ "$TV_HOME_BACKGROUND" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          outputs = (
+              ('app/build/outputs/apk/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview'),
+              ('app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview', 'com.fongmi.android.tv.preview.test'),
+          )
+          for root, package in outputs:
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1, 'Expected one isolated preview APK'
+              assert data['applicationId'] == package, 'Unexpected APK application ID'
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS
+            # Clear only the disposable emulator's launcher, which can steal native app focus.
+            adb shell am force-stop com.google.android.apps.nexuslauncher
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+              com.fongmi.android.tv.test.HomeBackgroundHomePreviewTest,com.fongmi.android.tv.ui.HomeBackgroundBlendAndroidTest \
+              artifacts/home-background '1,6'
           elif [ "$TV_LIVE_HOME" = 'true' ]; then
             bash .github/scripts/verify-live-home.sh
           elif [ "$TV_COMPACT_HOME" = 'true' ]; then
@@ -352,9 +380,50 @@ jobs:
           target.write_text(secret)
           target.chmod(0o600)
           PY
+      - name: Prepare host memory diagnostics for background verification
+        if: inputs.home_background
+        run: |
+          mkdir -p artifacts/home-background/emulator-host
+          free -m > artifacts/home-background/emulator-host/memory-before.txt
+          ps -eo pid,ppid,rss,args --sort=-rss > artifacts/home-background/emulator-host/processes-before.txt
+          jps -lv > artifacts/home-background/emulator-host/java-processes-before.txt
+          python3 - <<'PY'
+          import os, pathlib, signal, subprocess
+          # Compilation is complete. Release only Kotlin daemons left by this disposable build.
+          lines = subprocess.check_output(['jps', '-l'], text=True).splitlines()
+          released = []
+          for line in lines:
+              fields = line.split()
+              if len(fields) == 2 and fields[1] == 'org.jetbrains.kotlin.daemon.KotlinCompileDaemon':
+                  pid = int(fields[0])
+                  try:
+                      os.kill(pid, signal.SIGTERM)
+                      released.append(pid)
+                  except ProcessLookupError:
+                      pass
+          pathlib.Path('artifacts/home-background/emulator-host/released-kotlin-daemons.txt').write_text(
+              '\n'.join(map(str, released)) + '\n')
+          PY
+          free -m > artifacts/home-background/emulator-host/memory-after.txt
+          cat > "$RUNNER_TEMP/watch-home-emulator-host.sh" <<'WATCH'
+          set -u
+          output=artifacts/home-background/emulator-host
+          for iteration in $(seq 1 120); do
+            date -u +'%Y-%m-%dT%H:%M:%SZ'
+            free -m
+            ps -eo pid,ppid,rss,args --sort=-rss | head -n 16
+            for counter in memory.current memory.peak memory.events; do
+              path="/sys/fs/cgroup/$counter"
+              if [ -f "$path" ]; then printf '%s\n' "$path"; cat "$path"; fi
+            done
+            sleep 10
+          done >> "$output/memory-timeline.txt" 2>&1
+          WATCH
       - name: Verify themes and touch on emulator
+        timeout-minutes: ${{ inputs.home_background && 20 || 40 }}
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
           TV_VARIETY_EPISODES: ${{ inputs.variety_episodes }}
@@ -365,11 +434,18 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
-          target: google_apis
+          # A normal AOSP image keeps real HWUI rendering without Google startup services.
+          target: ${{ inputs.home_background && 'default' || 'google_apis' }}
           arch: x86_64
           profile: pixel_2
+          # Official Android Emulator 36.3.10 stable archive.
+          emulator-build: ${{ inputs.home_background && '14472402' || '' }}
+          ram-size: ${{ inputs.home_background && '2048M' || '' }}
+          heap-size: ${{ inputs.home_background && '256M' || '' }}
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-boot-timeout: ${{ inputs.home_background && 300 || 600 }}
+          emulator-options: -no-window -gpu ${{ inputs.home_background && 'swiftshader' || 'swiftshader_indirect' }} -noaudio -no-boot-anim -camera-back none -camera-front none ${{ inputs.home_background && '-feature -Vulkan -no-snapshot -memory 2048' || '' }}
+          pre-emulator-launch-script: ${{ inputs.home_background && 'nohup timeout --kill-after=5s 1200s bash "$RUNNER_TEMP/watch-home-emulator-host.sh" </dev/null >/dev/null 2>&1 & echo $! > "$RUNNER_TEMP/home-emulator-host-watcher.pid"' || '' }}
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
         if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
@@ -377,6 +453,35 @@ jobs:
           python3 - <<'PY'
           import os, pathlib
           (pathlib.Path(os.environ['RUNNER_TEMP']) / 'tv-tmdb-preview.key').unlink(missing_ok=True)
+          PY
+      - name: Preserve emulator host crash reports
+        if: always() && inputs.home_background
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, signal, shutil, subprocess
+          output = pathlib.Path('artifacts/home-background/emulator-host')
+          output.mkdir(parents=True, exist_ok=True)
+          watcher = pathlib.Path(os.environ['RUNNER_TEMP']) / 'home-emulator-host-watcher.pid'
+          if watcher.is_file():
+              try:
+                  os.kill(int(watcher.read_text().strip()), signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
+          for source in pathlib.Path('/tmp/android-runner').glob('emu-crash-*'):
+              if source.is_file():
+                  shutil.copy2(source, output / source.name)
+              elif source.is_dir():
+                  shutil.copytree(source, output / source.name, dirs_exist_ok=True)
+          for name, command in (
+              ('memory-final.txt', ['free', '-m']),
+              ('processes-final.txt', ['ps', '-eo', 'pid,ppid,rss,args', '--sort=-rss']),
+              ('kernel-log.txt', ['sudo', '-n', 'dmesg', '--ctime']),
+          ):
+              with (output / name).open('w') as report:
+                  try:
+                      subprocess.run(command, stdout=report, stderr=subprocess.STDOUT, timeout=15, check=False)
+                  except subprocess.TimeoutExpired:
+                      report.write('\nDiagnostic command timed out.\n')
           PY
       - name: Upload screenshots and diagnostics
         if: always()
@@ -388,6 +493,7 @@ jobs:
             artifacts/upstream-features/
             artifacts/playback-specs/
             artifacts/compact-home/
+            artifacts/home-background/
             artifacts/live-home/
             artifacts/assrt-subtitles/
             artifacts/fongmi-stability/

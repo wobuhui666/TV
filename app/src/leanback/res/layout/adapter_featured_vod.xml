@@ -5,24 +5,30 @@
     android:focusable="true"
     android:focusableInTouchMode="true">
 
-    <com.fongmi.android.tv.ui.custom.HomeArtworkView
-        android:id="@+id/imageA"
+    <com.fongmi.android.tv.ui.custom.JetStreamDiscoverArtworkLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <com.fongmi.android.tv.ui.custom.HomeArtworkView
-        android:id="@+id/imageB"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="invisible" />
+        <com.fongmi.android.tv.ui.custom.HomeArtworkView
+            android:id="@+id/imageA"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamFeaturedLeftScrimView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <com.fongmi.android.tv.ui.custom.HomeArtworkView
+            android:id="@+id/imageB"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="invisible" />
 
-    <com.fongmi.android.tv.ui.custom.JetStreamFeaturedBottomScrimView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        <com.fongmi.android.tv.ui.custom.JetStreamFeaturedLeftScrimView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.fongmi.android.tv.ui.custom.JetStreamFeaturedBottomScrimView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </com.fongmi.android.tv.ui.custom.JetStreamDiscoverArtworkLayout>
 
     <com.fongmi.android.tv.ui.custom.JetStreamListItemContentLayout
         android:id="@+id/copy"
