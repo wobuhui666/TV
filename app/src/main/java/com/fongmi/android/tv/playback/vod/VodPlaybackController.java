@@ -141,7 +141,7 @@ public class VodPlaybackController {
         communitySkipEnabled = Setting.isCommunitySkipEnabled();
         boolean live = result.getTimeshift() != null && result.getTimeshift().isValid(System.currentTimeMillis());
         if (live) stopCommunitySkip();
-        else communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
+        else communitySkip.prepare(state.getMedia(), state.getHistory(), state.getEpisode());
         host.startPlayback(result, state.isUseParse(), startPositionMs, state.getHistory(), state.getEpisode());
     }
 
@@ -507,6 +507,9 @@ public class VodPlaybackController {
 
     private void requestPlayer(Flag flag, Episode episode) {
         historyPolicy.updateEpisode(state.getHistory(), flag, episode);
+        communitySkipEnabled = Setting.isCommunitySkipEnabled();
+        if (host.getVodPlayId().isEmpty()) communitySkip.prepare(state.getMedia(), state.getHistory(), episode);
+        else stopCommunitySkip();
         VodPlayRequest request = VodPlayRequest.create(host.getVodKey(), flag, episode);
         state.setPendingRequest(request);
         Result cached = preloader.consume(request);

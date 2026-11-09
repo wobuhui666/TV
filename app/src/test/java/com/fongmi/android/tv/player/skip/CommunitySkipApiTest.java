@@ -3,6 +3,8 @@ package com.fongmi.android.tv.player.skip;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -12,12 +14,14 @@ import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okhttp3.mockwebserver.Dispatcher;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CommunitySkipApiTest {
 
@@ -42,6 +46,152 @@ public class CommunitySkipApiTest {
             assertEquals("false", first.getRequestUrl().queryParameter("merge_unknown"));
             assertNull(first.getHeader("Authorization"));
             assertEquals("tt0903747", server.takeRequest().getRequestUrl().queryParameter("imdb_id"));
+        }
+    }
+
+    @Test
+    public void shouldPublishUsableIntroBeforeTheSlowCreditsProviderFinishes() throws Exception {
+        ExecutorService worker = Executors.newSingleThreadExecutor();
+        CountDownLatch releaseFallback = new CountDownLatch(1);
+        CountDownLatch fallbackStarted = new CountDownLatch(1);
+        CountDownLatch firstPublished = new CountDownLatch(1);
+        List<List<SkipSegment>> updates = new CopyOnWriteArrayList<>();
+        try (MockWebServer server = new MockWebServer()) {
+            server.setDispatcher(new Dispatcher() {
+                @Override public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+                    if (request.getPath().startsWith("/theintrodb")) return introResponse();
+                    fallbackStarted.countDown();
+                    releaseFallback.await(2, TimeUnit.SECONDS);
+                    return creditsResponse();
+                }
+            });
+            Future<List<SkipSegment>> result = worker.submit(() -> api(server).fetch(TV, DURATION, ranges -> {
+                updates.add(ranges);
+                firstPublished.countDown();
+            }));
+            assertTrue("An available intro is delivered immediately", firstPublished.await(1, TimeUnit.SECONDS));
+            assertTrue("Credits lookup has begun", fallbackStarted.await(1, TimeUnit.SECONDS));
+            assertFalse("The full lookup is still waiting for credits", result.isDone());
+            assertEquals(List.of(new SkipSegment(SkipSegment.Type.INTRO, 20_000, 70_000, "theintrodb")), updates.get(0));
+            assertImmutable(updates.get(0));
+            releaseFallback.countDown();
+            List<SkipSegment> completed = result.get(2, TimeUnit.SECONDS);
+            assertEquals(2, updates.size());
+            assertEquals(completed, updates.get(1));
+            assertEquals(2, completed.size());
+            assertEquals("Preferred intro is not replaced", "theintrodb", completed.get(0).source());
+            assertImmutable(updates.get(1));
+        } finally {
+            releaseFallback.countDown();
+            worker.shutdownNow();
+        }
+    }
+
+    @Test
+    public void shouldKeepAvailableIntroWhenFallbackHasNoUsableRanges() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(introResponse());
+            server.enqueue(new MockResponse().setResponseCode(503));
+            server.enqueue(new MockResponse().setBody("{\"items\":[]}"));
+            List<List<SkipSegment>> updates = new CopyOnWriteArrayList<>();
+            List<SkipSegment> result = api(server).fetch(TV, DURATION, updates::add);
+            assertEquals(1, updates.size());
+            assertEquals(result, updates.get(0));
+            assertEquals(3, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldNotPublishLateCreditsAfterTheSessionIsCancelled() throws Exception {
+        ExecutorService worker = Executors.newSingleThreadExecutor();
+        CountDownLatch fallbackStarted = new CountDownLatch(1);
+        CountDownLatch releaseFallback = new CountDownLatch(1);
+        CountDownLatch firstPublished = new CountDownLatch(1);
+        List<List<SkipSegment>> updates = new CopyOnWriteArrayList<>();
+        try (MockWebServer server = new MockWebServer()) {
+            server.setDispatcher(new Dispatcher() {
+                @Override public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
+                    if (request.getPath().startsWith("/theintrodb")) return introResponse();
+                    fallbackStarted.countDown();
+                    releaseFallback.await(2, TimeUnit.SECONDS);
+                    return creditsResponse();
+                }
+            });
+            CommunitySkipApi api = api(server);
+            Future<List<SkipSegment>> result = worker.submit(() -> api.fetch(TV, DURATION, ranges -> {
+                updates.add(ranges);
+                firstPublished.countDown();
+            }));
+            assertTrue(firstPublished.await(1, TimeUnit.SECONDS));
+            assertTrue(fallbackStarted.await(1, TimeUnit.SECONDS));
+            api.cancel();
+            releaseFallback.countDown();
+            assertTrue(result.get(2, TimeUnit.SECONDS).isEmpty());
+            assertEquals("Cancelled response cannot add credits", 1, updates.size());
+            assertEquals("Cancellation cannot start another provider", 2, server.getRequestCount());
+        } finally {
+            releaseFallback.countDown();
+            worker.shutdownNow();
+        }
+    }
+
+    @Test
+    public void shouldDeliverCachedRangesWithoutRepeatingNetworkLookup() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            EpisodeIdentity identity = new EpisodeIdentity(908761234, "tt0903747", 1, 1);
+            server.enqueue(new MockResponse().setBody("{\"tvdb_id\":81189,\"type\":\"tv\",\"season\":1,\"episode\":1,"
+                    + "\"intro\":[{\"start_ms\":20000,\"end_ms\":70000}],"
+                    + "\"credits\":[{\"start_ms\":3431000,\"end_ms\":3470000}]}"));
+            CommunitySkipApi first = cachedApi(server);
+            List<SkipSegment> expected = first.fetch(identity, DURATION);
+            assertEquals(2, expected.size());
+            List<List<SkipSegment>> updates = new CopyOnWriteArrayList<>();
+            assertEquals(expected, cachedApi(server).fetch(identity, DURATION, updates::add));
+            assertEquals(List.of(expected), updates);
+            assertImmutable(updates.get(0));
+            assertEquals(1, server.getRequestCount());
+            CommunitySkipApi cancelled = cachedApi(server);
+            cancelled.cancel();
+            assertTrue(cancelled.fetch(identity, DURATION, ignored -> fail("Cancelled cache hit must not publish")).isEmpty());
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldContinueProviderFallbackWhenTheObserverThrows() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(introResponse());
+            server.enqueue(creditsResponse());
+            List<SkipSegment> result = api(server).fetch(TV, DURATION, ignored -> {
+                throw new IllegalStateException("Test observer failed");
+            });
+            assertEquals(2, result.size());
+            assertEquals(2, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldCancelWithoutWaitingForAnObserverOnTheWorker() throws Exception {
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        CountDownLatch observerStarted = new CountDownLatch(1);
+        CountDownLatch releaseObserver = new CountDownLatch(1);
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(introResponse());
+            CommunitySkipApi api = api(server);
+            Future<List<SkipSegment>> result = workers.submit(() -> api.fetch(TV, DURATION, ignored -> {
+                observerStarted.countDown();
+                try { releaseObserver.await(2, TimeUnit.SECONDS); }
+                catch (InterruptedException error) { Thread.currentThread().interrupt(); }
+            }));
+            assertTrue(observerStarted.await(1, TimeUnit.SECONDS));
+            // Cancellation is also called from the UI thread; an observer must not own its lock.
+            workers.submit(api::cancel).get(500, TimeUnit.MILLISECONDS);
+            releaseObserver.countDown();
+            assertTrue(result.get(1, TimeUnit.SECONDS).isEmpty());
+            assertEquals("No fallback is started after cancellation", 1, server.getRequestCount());
+        } finally {
+            releaseObserver.countDown();
+            workers.shutdownNow();
         }
     }
 
@@ -113,5 +263,27 @@ public class CommunitySkipApiTest {
     private static CommunitySkipApi api(MockWebServer server) {
         return new CommunitySkipApi(new OkHttpClient(), server.url("/theintrodb").toString(),
                 server.url("/introdb").toString(), server.url("/theotherdb").toString());
+    }
+
+    private static CommunitySkipApi cachedApi(MockWebServer server) {
+        return new CommunitySkipApi(new OkHttpClient(), server.url("/theintrodb").toString(),
+                server.url("/introdb").toString(), server.url("/theotherdb").toString(), true);
+    }
+
+    private static MockResponse introResponse() {
+        return new MockResponse().setBody("{\"tvdb_id\":81189,\"type\":\"tv\",\"season\":1,\"episode\":1,"
+                + "\"intro\":[{\"start_ms\":20000,\"end_ms\":70000}]}");
+    }
+
+    private static MockResponse creditsResponse() {
+        return new MockResponse().setBody("{\"imdb_id\":\"tt0903747\",\"season\":1,\"episode\":1,"
+                + "\"outro\":{\"start_ms\":3431000,\"end_ms\":3470000}}");
+    }
+
+    private static void assertImmutable(List<SkipSegment> segments) {
+        try {
+            segments.clear();
+            fail("Published ranges must be immutable snapshots");
+        } catch (UnsupportedOperationException expected) { }
     }
 }

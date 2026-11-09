@@ -25,7 +25,7 @@ stop_live_logcat() {
 }
 collect() {
     stop_live_logcat
-    for directory in upstream-verification spider-dialog-verification folder-filter-verification native-usability-evidence; do
+    for directory in upstream-verification spider-dialog-verification folder-filter-verification native-usability-evidence community-skip-verification; do
         timeout --kill-after=5s 30s adb pull "/sdcard/Android/data/$pkg/files/$directory" "$out/" >/dev/null 2>&1 || true
     done
     timeout --kill-after=5s 20s adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true

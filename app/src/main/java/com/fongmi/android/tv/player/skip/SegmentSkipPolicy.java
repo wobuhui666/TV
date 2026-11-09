@@ -11,12 +11,23 @@ import java.util.Set;
 /** Keeps community time ranges separate from the user's start/end offsets. */
 public final class SegmentSkipPolicy {
 
-    private final List<SkipSegment> segments;
+    private List<SkipSegment> segments;
     private final Set<SkipSegment> skipped = new HashSet<>();
-    private final long matchedDurationMs;
+    private long matchedDurationMs;
 
     public SegmentSkipPolicy(List<SkipSegment> segments, long matchedDurationMs) {
         this.segments = List.copyOf(segments);
+        this.matchedDurationMs = matchedDurationMs;
+    }
+
+    /** Provider supplements must not make an already skipped range skip again after a rewind. */
+    public void updateSegments(List<SkipSegment> segments) {
+        this.segments = List.copyOf(segments);
+    }
+
+    /** Revalidated duration replaces the ranges without resetting already consumed markers. */
+    public void updateSegments(List<SkipSegment> segments, long matchedDurationMs) {
+        updateSegments(segments);
         this.matchedDurationMs = matchedDurationMs;
     }
 

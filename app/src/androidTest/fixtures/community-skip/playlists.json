@@ -1,0 +1,1260 @@
+{
+  "schema": "tv.community-skip-playlist-fixture.v1",
+  "cases": [
+    {
+      "caseId": "lianhua",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "莲花楼",
+      "searchTitle": "莲花楼",
+      "year": "2023",
+      "typeName": "国产剧",
+      "scope": "full",
+      "originalEpisodeCounts": [
+        40,
+        40
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            },
+            {
+              "name": "第08集",
+              "generated": false
+            },
+            {
+              "name": "第09集",
+              "generated": false
+            },
+            {
+              "name": "第10集",
+              "generated": false
+            },
+            {
+              "name": "第11集",
+              "generated": false
+            },
+            {
+              "name": "第12集",
+              "generated": false
+            },
+            {
+              "name": "第13集",
+              "generated": false
+            },
+            {
+              "name": "第14集",
+              "generated": false
+            },
+            {
+              "name": "第15集",
+              "generated": false
+            },
+            {
+              "name": "第16集",
+              "generated": false
+            },
+            {
+              "name": "第17集",
+              "generated": false
+            },
+            {
+              "name": "第18集",
+              "generated": false
+            },
+            {
+              "name": "第19集",
+              "generated": false
+            },
+            {
+              "name": "第20集",
+              "generated": false
+            },
+            {
+              "name": "第21集",
+              "generated": false
+            },
+            {
+              "name": "第22集",
+              "generated": false
+            },
+            {
+              "name": "第23集",
+              "generated": false
+            },
+            {
+              "name": "第24集",
+              "generated": false
+            },
+            {
+              "name": "第25集",
+              "generated": false
+            },
+            {
+              "name": "第26集",
+              "generated": false
+            },
+            {
+              "name": "第27集",
+              "generated": false
+            },
+            {
+              "name": "第28集",
+              "generated": false
+            },
+            {
+              "name": "第29集",
+              "generated": false
+            },
+            {
+              "name": "第30集",
+              "generated": false
+            },
+            {
+              "name": "第31集",
+              "generated": false
+            },
+            {
+              "name": "第32集",
+              "generated": false
+            },
+            {
+              "name": "第33集",
+              "generated": false
+            },
+            {
+              "name": "第34集",
+              "generated": false
+            },
+            {
+              "name": "第35集",
+              "generated": false
+            },
+            {
+              "name": "第36集",
+              "generated": false
+            },
+            {
+              "name": "第37集",
+              "generated": false
+            },
+            {
+              "name": "第38集",
+              "generated": false
+            },
+            {
+              "name": "第39集",
+              "generated": false
+            },
+            {
+              "name": "第40集",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            },
+            {
+              "name": "第08集",
+              "generated": false
+            },
+            {
+              "name": "第09集",
+              "generated": false
+            },
+            {
+              "name": "第10集",
+              "generated": false
+            },
+            {
+              "name": "第11集",
+              "generated": false
+            },
+            {
+              "name": "第12集",
+              "generated": false
+            },
+            {
+              "name": "第13集",
+              "generated": false
+            },
+            {
+              "name": "第14集",
+              "generated": false
+            },
+            {
+              "name": "第15集",
+              "generated": false
+            },
+            {
+              "name": "第16集",
+              "generated": false
+            },
+            {
+              "name": "第17集",
+              "generated": false
+            },
+            {
+              "name": "第18集",
+              "generated": false
+            },
+            {
+              "name": "第19集",
+              "generated": false
+            },
+            {
+              "name": "第20集",
+              "generated": false
+            },
+            {
+              "name": "第21集",
+              "generated": false
+            },
+            {
+              "name": "第22集",
+              "generated": false
+            },
+            {
+              "name": "第23集",
+              "generated": false
+            },
+            {
+              "name": "第24集",
+              "generated": false
+            },
+            {
+              "name": "第25集",
+              "generated": false
+            },
+            {
+              "name": "第26集",
+              "generated": false
+            },
+            {
+              "name": "第27集",
+              "generated": false
+            },
+            {
+              "name": "第28集",
+              "generated": false
+            },
+            {
+              "name": "第29集",
+              "generated": false
+            },
+            {
+              "name": "第30集",
+              "generated": false
+            },
+            {
+              "name": "第31集",
+              "generated": false
+            },
+            {
+              "name": "第32集",
+              "generated": false
+            },
+            {
+              "name": "第33集",
+              "generated": false
+            },
+            {
+              "name": "第34集",
+              "generated": false
+            },
+            {
+              "name": "第35集",
+              "generated": false
+            },
+            {
+              "name": "第36集",
+              "generated": false
+            },
+            {
+              "name": "第37集",
+              "generated": false
+            },
+            {
+              "name": "第38集",
+              "generated": false
+            },
+            {
+              "name": "第39集",
+              "generated": false
+            },
+            {
+              "name": "第40集",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 230835,
+          "expectedSeason": 1,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": null
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 39,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 230835,
+          "expectedSeason": 1,
+          "expectedEpisode": 40,
+          "expectedParsedSeason": null
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 230835,
+          "expectedSeason": 1,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": null
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 39,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 230835,
+          "expectedSeason": 1,
+          "expectedEpisode": 40,
+          "expectedParsedSeason": null
+        }
+      ]
+    },
+    {
+      "caseId": "breaking-bad-s1",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "绝命毒师第一季",
+      "searchTitle": "绝命毒师第一季",
+      "year": "2008",
+      "typeName": "欧美剧",
+      "scope": "full",
+      "originalEpisodeCounts": [
+        7,
+        7
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 1,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": 1
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 6,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 1,
+          "expectedEpisode": 7,
+          "expectedParsedSeason": 1
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 1,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": 1
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 6,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 1,
+          "expectedEpisode": 7,
+          "expectedParsedSeason": 1
+        }
+      ]
+    },
+    {
+      "caseId": "breaking-bad-s2",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "绝命毒师第二季",
+      "searchTitle": "绝命毒师第二季",
+      "year": "2009",
+      "typeName": "欧美剧",
+      "scope": "full",
+      "originalEpisodeCounts": [
+        13,
+        13
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            },
+            {
+              "name": "第08集",
+              "generated": false
+            },
+            {
+              "name": "第09集",
+              "generated": false
+            },
+            {
+              "name": "第10集",
+              "generated": false
+            },
+            {
+              "name": "第11集",
+              "generated": false
+            },
+            {
+              "name": "第12集",
+              "generated": false
+            },
+            {
+              "name": "第13集",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "第01集",
+              "generated": false
+            },
+            {
+              "name": "第02集",
+              "generated": false
+            },
+            {
+              "name": "第03集",
+              "generated": false
+            },
+            {
+              "name": "第04集",
+              "generated": false
+            },
+            {
+              "name": "第05集",
+              "generated": false
+            },
+            {
+              "name": "第06集",
+              "generated": false
+            },
+            {
+              "name": "第07集",
+              "generated": false
+            },
+            {
+              "name": "第08集",
+              "generated": false
+            },
+            {
+              "name": "第09集",
+              "generated": false
+            },
+            {
+              "name": "第10集",
+              "generated": false
+            },
+            {
+              "name": "第11集",
+              "generated": false
+            },
+            {
+              "name": "第12集",
+              "generated": false
+            },
+            {
+              "name": "第13集",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 2,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": 2
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 12,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 2,
+          "expectedEpisode": 13,
+          "expectedParsedSeason": 2
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 0,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 2,
+          "expectedEpisode": 1,
+          "expectedParsedSeason": 2
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 12,
+          "expectIdentity": "MATCHED",
+          "expectedTmdbId": 1396,
+          "expectedSeason": 2,
+          "expectedEpisode": 13,
+          "expectedParsedSeason": 2
+        }
+      ]
+    },
+    {
+      "caseId": "white-lotus-s1",
+      "sourceIndex": 6,
+      "sourceName": "人人｜4K(JX)",
+      "title": "白莲花度假村 第一季",
+      "searchTitle": "白莲花度假村 第一季",
+      "year": "2021",
+      "typeName": "",
+      "scope": "full",
+      "originalEpisodeCounts": [
+        6
+      ],
+      "flags": [
+        {
+          "name": "人人",
+          "episodes": [
+            {
+              "name": "1",
+              "generated": false
+            },
+            {
+              "name": "2",
+              "generated": false
+            },
+            {
+              "name": "3",
+              "generated": false
+            },
+            {
+              "name": "4",
+              "generated": false
+            },
+            {
+              "name": "5",
+              "generated": false
+            },
+            {
+              "name": "6",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "MEASURE"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 5,
+          "expectIdentity": "MEASURE"
+        }
+      ],
+      "detailTitleMissing": true,
+      "titleOrigin": "search result retained by Vod.checkName"
+    },
+    {
+      "caseId": "variety-date",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "你好星期六",
+      "searchTitle": "你好星期六",
+      "year": "2022",
+      "typeName": "大陆综艺",
+      "scope": "subset",
+      "subsetRule": "First 12 entries plus actual variants sharing an included air date; original ordering retained",
+      "originalEpisodeCounts": [
+        497,
+        497
+      ],
+      "originalEpisodeIndices": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "第20221001期",
+              "generated": false
+            },
+            {
+              "name": "第20221008期",
+              "generated": false
+            },
+            {
+              "name": "第20221105期",
+              "generated": false
+            },
+            {
+              "name": "第20221112期",
+              "generated": false
+            },
+            {
+              "name": "第20221113期",
+              "generated": false
+            },
+            {
+              "name": "第20221119期",
+              "generated": false
+            },
+            {
+              "name": "第20221120期",
+              "generated": false
+            },
+            {
+              "name": "第20221126期",
+              "generated": false
+            },
+            {
+              "name": "第20221210期",
+              "generated": false
+            },
+            {
+              "name": "第20221211期",
+              "generated": false
+            },
+            {
+              "name": "第20221217期",
+              "generated": false
+            },
+            {
+              "name": "第20221224期",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "第20221001期",
+              "generated": false
+            },
+            {
+              "name": "第20221008期",
+              "generated": false
+            },
+            {
+              "name": "第20221105期",
+              "generated": false
+            },
+            {
+              "name": "第20221112期",
+              "generated": false
+            },
+            {
+              "name": "第20221113期",
+              "generated": false
+            },
+            {
+              "name": "第20221119期",
+              "generated": false
+            },
+            {
+              "name": "第20221120期",
+              "generated": false
+            },
+            {
+              "name": "第20221126期",
+              "generated": false
+            },
+            {
+              "name": "第20221210期",
+              "generated": false
+            },
+            {
+              "name": "第20221211期",
+              "generated": false
+            },
+            {
+              "name": "第20221217期",
+              "generated": false
+            },
+            {
+              "name": "第20221224期",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 1,
+          "episodeIndex": 0,
+          "expectIdentity": "REJECT"
+        }
+      ]
+    },
+    {
+      "caseId": "variety-date-parts",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "种地吧3",
+      "searchTitle": "种地吧3",
+      "year": "2025",
+      "typeName": "大陆综艺",
+      "scope": "subset",
+      "subsetRule": "First 12 entries plus actual variants sharing an included air date; original ordering retained",
+      "originalEpisodeCounts": [
+        94,
+        94
+      ],
+      "originalEpisodeIndices": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "第20250228期上",
+              "generated": false
+            },
+            {
+              "name": "第20250228期下",
+              "generated": false
+            },
+            {
+              "name": "第20250301期上",
+              "generated": false
+            },
+            {
+              "name": "第20250301期下",
+              "generated": false
+            },
+            {
+              "name": "第20250307期上",
+              "generated": false
+            },
+            {
+              "name": "第20250307期下",
+              "generated": false
+            },
+            {
+              "name": "第20250308期上",
+              "generated": false
+            },
+            {
+              "name": "第20250308期下",
+              "generated": false
+            },
+            {
+              "name": "第20250309期",
+              "generated": false
+            },
+            {
+              "name": "第20250314期上",
+              "generated": false
+            },
+            {
+              "name": "第20250314期下",
+              "generated": false
+            },
+            {
+              "name": "第20250315期上",
+              "generated": false
+            },
+            {
+              "name": "第20250315期下",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "第20250228期上",
+              "generated": false
+            },
+            {
+              "name": "第20250228期下",
+              "generated": false
+            },
+            {
+              "name": "第20250301期上",
+              "generated": false
+            },
+            {
+              "name": "第20250301期下",
+              "generated": false
+            },
+            {
+              "name": "第20250307期上",
+              "generated": false
+            },
+            {
+              "name": "第20250307期下",
+              "generated": false
+            },
+            {
+              "name": "第20250308期上",
+              "generated": false
+            },
+            {
+              "name": "第20250308期下",
+              "generated": false
+            },
+            {
+              "name": "第20250309期",
+              "generated": false
+            },
+            {
+              "name": "第20250314期上",
+              "generated": false
+            },
+            {
+              "name": "第20250314期下",
+              "generated": false
+            },
+            {
+              "name": "第20250315期上",
+              "generated": false
+            },
+            {
+              "name": "第20250315期下",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 1,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 11,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 12,
+          "expectIdentity": "REJECT"
+        }
+      ]
+    },
+    {
+      "caseId": "variety-mixed-release",
+      "sourceIndex": 15,
+      "sourceName": "非凡｜无广(JX)",
+      "title": "声生不息·家年华",
+      "searchTitle": "声生不息·家年华",
+      "year": "2023",
+      "typeName": "大陆综艺",
+      "scope": "subset",
+      "subsetRule": "First 12 entries plus actual variants sharing an included air date; original ordering retained",
+      "originalEpisodeCounts": [
+        48,
+        48
+      ],
+      "originalEpisodeIndices": [
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ]
+      ],
+      "flags": [
+        {
+          "name": "feifan",
+          "episodes": [
+            {
+              "name": "先导篇",
+              "generated": false
+            },
+            {
+              "name": "第20231202期",
+              "generated": false
+            },
+            {
+              "name": "第20231202期纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231203期",
+              "generated": false
+            },
+            {
+              "name": "第20231208期超前营业",
+              "generated": false
+            },
+            {
+              "name": "第20231209期",
+              "generated": false
+            },
+            {
+              "name": "第20231209期舞台纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231210期",
+              "generated": false
+            },
+            {
+              "name": "第20231216期",
+              "generated": false
+            },
+            {
+              "name": "第20231216期舞台纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231217期",
+              "generated": false
+            },
+            {
+              "name": "第20231222期",
+              "generated": false
+            }
+          ]
+        },
+        {
+          "name": "ffm3u8",
+          "episodes": [
+            {
+              "name": "先导篇",
+              "generated": false
+            },
+            {
+              "name": "第20231202期",
+              "generated": false
+            },
+            {
+              "name": "第20231202期纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231203期",
+              "generated": false
+            },
+            {
+              "name": "第20231208期超前营业",
+              "generated": false
+            },
+            {
+              "name": "第20231209期",
+              "generated": false
+            },
+            {
+              "name": "第20231209期舞台纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231210期",
+              "generated": false
+            },
+            {
+              "name": "第20231216期",
+              "generated": false
+            },
+            {
+              "name": "第20231216期舞台纯享版",
+              "generated": false
+            },
+            {
+              "name": "第20231217期",
+              "generated": false
+            },
+            {
+              "name": "第20231222期",
+              "generated": false
+            }
+          ]
+        }
+      ],
+      "probes": [
+        {
+          "flagIndex": 0,
+          "episodeIndex": 0,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 1,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 2,
+          "expectIdentity": "REJECT"
+        },
+        {
+          "flagIndex": 0,
+          "episodeIndex": 4,
+          "expectIdentity": "REJECT"
+        }
+      ]
+    }
+  ]
+}
