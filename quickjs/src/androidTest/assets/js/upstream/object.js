@@ -1,0 +1,1 @@
+export default Object.freeze({init(){},home(){return {class:[],object:true};},detail(id){return {list:[{vod_id:id}]};},search(key,quick){return {key,quick};},destroy(){}});

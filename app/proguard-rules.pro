@@ -88,10 +88,13 @@
 
 # Public SDK types used by separately compiled source JARs and language bridges.
 -keep class com.github.catvod.Init { *; }
+-keep class com.github.catvod.Runtime { *; }
 -keep class com.github.catvod.net.Net { *; }
 -keep class com.github.catvod.net.Net$* { *; }
 -keep class com.github.catvod.net.NetOptions { *; }
 -keep class com.github.catvod.utils.Local { *; }
+-keep class com.github.catvod.utils.Dialog { *; }
+-keep class com.github.catvod.utils.Dialog$* { *; }
 -keep class com.github.catvod.utils.Json { *; }
 -keep class com.github.catvod.utils.Crypto { *; }
 -keep class com.github.catvod.bean.Result { *; }

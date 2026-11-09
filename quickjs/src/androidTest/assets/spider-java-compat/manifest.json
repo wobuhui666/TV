@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "upstreamReference": "FongMi/TV@4512b4c9f82534ff66acfde06ccdd68f35b074f0",
+  "apiMode": "independent compile-only ABI declarations; no host API jar",
+  "androidJarSha256": "bf1b4387cc7ca94fc6ef684f040d9d16fbf16248e181819f020736ea2053f177",
+  "javacVersion": "javac 21.0.12.1",
+  "d8Version": "D8 9.2.4-dev (build 084a89126ae0596c599143df57a654646af28313 from go/r8bot (luci-r8-custom-ci-archive-0-4u1w))",
+  "generatorSha256": "d28c5bb499eb381b6d879939cd26488072abc86b902650c78130268ae22a0df9",
+  "minApi": 24,
+  "fixtures": {
+    "legacy": {
+      "file": "legacy.jar",
+      "className": "com.github.catvod.fixtures.LegacyAbiFixture",
+      "sha256": "3d1837c0f66df4f1e4f874e12c12211e4813ea65bb8f2a71e855d0c88c572730",
+      "bytes": 1863,
+      "definedClasses": [
+        "Lcom/github/catvod/fixtures/LegacyAbiFixture;"
+      ],
+      "sources": {
+        "quickjs/src/androidTest/fixtures/spider-java-compat/abi/com/github/catvod/utils/Dialog.java": "624bc1827628919da750eaf2592b917ef7f39b5ca6cf725f330451384c9311b5",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/abi/okhttp3/OkHttpClient.java": "f6922855ace002e99e661fd8f66f79dd507983823cc2d2b38aa9c30467692a47",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/legacy-api/com/github/catvod/Init.java": "858ccb4ed874b6b4dda399a11fe1d44ea50e3b8935fd09b58b1e1c8f7422fd64",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/legacy-api/com/github/catvod/crawler/Spider.java": "4c2a9af4c82d3281483f60d8c925f05cd250fdf4381fd487abde4e5c31d35939",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/legacy/com/github/catvod/fixtures/LegacyAbiFixture.java": "e6f15d9db3b93f62615191d6bd1bbfb9871e77b0f41800646a82c04e7ec3efd0"
+      }
+    },
+    "modern": {
+      "file": "modern.jar",
+      "className": "com.github.catvod.fixtures.ModernAbiFixture",
+      "sha256": "eeabe29b1d9feca831e366abe882dca295b1128ceb06f4df07ec4f1f1448135b",
+      "bytes": 2276,
+      "definedClasses": [
+        "Lcom/github/catvod/fixtures/ModernAbiFixture;"
+      ],
+      "sources": {
+        "quickjs/src/androidTest/fixtures/spider-java-compat/abi/com/github/catvod/utils/Dialog.java": "624bc1827628919da750eaf2592b917ef7f39b5ca6cf725f330451384c9311b5",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/abi/okhttp3/OkHttpClient.java": "f6922855ace002e99e661fd8f66f79dd507983823cc2d2b38aa9c30467692a47",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/modern-api/com/github/catvod/Runtime.java": "00523cb7d4ac2a323f7edfeb4b2b237269fb4b6df589de07593e42ba35c7f562",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/modern-api/com/github/catvod/crawler/Spider.java": "953b6d4cfa92f218fc670326431b4abb7f1b7fd4456084322a6ed677f93af6f8",
+        "quickjs/src/androidTest/fixtures/spider-java-compat/modern/com/github/catvod/fixtures/ModernAbiFixture.java": "eb88bd4d2c31f435ecafbd5f00297c77dd37b706af148c21f088e4bbe5231fb3"
+      }
+    }
+  }
+}

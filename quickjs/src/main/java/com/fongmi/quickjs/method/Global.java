@@ -7,6 +7,11 @@ import com.fongmi.quickjs.bean.Req;
 import com.fongmi.quickjs.utils.Connect;
 import com.fongmi.quickjs.utils.Crypto;
 import com.github.catvod.Proxy;
+import com.github.catvod.utils.Js;
+import com.fongmi.quickjs.utils.HtmlQuery;
+import android.content.Intent;
+import android.net.Uri;
+import org.json.JSONObject;
 import com.github.catvod.utils.CallTimeout;
 import com.github.catvod.utils.Trans;
 import com.github.catvod.utils.UriUtil;
@@ -45,6 +50,7 @@ public class Global {
     private final Set<JSFunction> callbacks = ConcurrentHashMap.newKeySet();
 
     private volatile boolean destroyed;
+    private final Js scripts = new Js();
 
     private Global(QuickJSContext ctx, ExecutorService executor, boolean strict) {
         this.executor = executor;
@@ -53,7 +59,7 @@ public class Global {
         this.timer = new Timer("quickjs-timer", true);
         this.ctx = ctx;
         this.strict = strict;
-        try { setProperty(); }
+        try { setProperty(); setModernHelpers(); }
         catch (RuntimeException | Error error) { timer.cancel(); throw error; }
     }
 
@@ -68,6 +74,7 @@ public class Global {
 
     public void destroy() {
         destroyed = true;
+        scripts.close();
         timer.cancel();
         for (Call call : calls) call.cancel();
         calls.clear();
@@ -93,6 +100,51 @@ public class Global {
                 }
             });
         }
+    }
+
+    private void setModernHelpers() {
+        ctx.getGlobalObject().setProperty("__SPIDER_JS_START__", args -> {
+            JSFunction callback = (JSFunction) args[2];
+            callback.hold();
+            callbacks.add(callback);
+            try {
+                if (destroyed) throw new IllegalStateException("Spider is closed");
+                CompletableFuture<String> future = scripts.evalAsync((String) args[0], (String) args[1]);
+                Invocation invocation = Invocation.current();
+                future.whenComplete((value, error) -> postCallback(callback, Invocation.wrap(invocation,
+                        () -> callback.callVoid(value, error == null ? null : "JavaScript evaluation failed"))));
+            } catch (Throwable error) {
+                postCallback(callback, () -> callback.callVoid(null, "JavaScript evaluation failed"));
+            }
+            return null;
+        });
+        ctx.getGlobalObject().setProperty("__SPIDER_OPEN_WEB__", args -> {
+            if (args.length != 1 || !(args[0] instanceof JSObject options)) throw new IllegalArgumentException("openWeb requires options");
+            try {
+                JSONObject value = new JSONObject(options.stringify());
+                String url = value.optString("url");
+                Uri uri = Uri.parse(url);
+                if (!("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))) throw new IllegalArgumentException("openWeb requires an HTTP URL");
+                android.content.Context context = com.github.catvod.Runtime.activity();
+                if (context == null) context = com.github.catvod.Runtime.context();
+                if (context == null) return false;
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                if (!(context instanceof android.app.Activity)) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+                return true;
+            } catch (org.json.JSONException error) { throw new IllegalArgumentException("Invalid browser options", error); }
+            finally { options.release(); }
+        });
+        ctx.getGlobalObject().setProperty("__SPIDER_HTML_QUERY__", args -> {
+            JSObject plan = args.length > 1 && args[1] instanceof JSObject object ? object : null;
+            try { return ctx.parse(HtmlQuery.query((String) args[0], plan == null ? null : plan.stringify())); }
+            catch (IOException error) { throw new IllegalArgumentException("HTML query failed", error); }
+            finally { if (plan != null) plan.release(); }
+        });
+        ctx.evaluate("globalThis.__SPIDER_JS_EVAL__ = (source, options = {}) => {"
+                + "if (typeof source !== 'string' || !options || typeof options !== 'object' || Array.isArray(options)) return Promise.reject(new TypeError('Script requires source and options'));"
+                + "return new Promise((resolve,reject) => __SPIDER_JS_START__(source,JSON.stringify(options),(value,error) => {"
+                + "if(error) reject(new Error(error)); else {try {resolve(JSON.parse(value));} catch(e) {reject(e);}}}));};");
     }
 
     private boolean submit(Runnable runnable) {
@@ -219,6 +271,24 @@ public class Global {
 
     @Keep
     @JSMethod
+    public String sha256X(String text) {
+        return com.github.catvod.utils.Crypto.sha256(text);
+    }
+
+    @Keep
+    @JSMethod
+    public String randomX(Integer size) {
+        return com.github.catvod.utils.Crypto.randomUrlSafe(size);
+    }
+
+    @Keep
+    @JSMethod
+    public String desX(String mode, boolean encrypt, String input, boolean inBase64, String key, String iv, boolean outBase64) {
+        return com.github.catvod.utils.Crypto.des(mode, encrypt, input, inBase64, key, iv, outBase64);
+    }
+
+    @Keep
+    @JSMethod
     public String aesX(String mode, boolean encrypt, String input, boolean inBase64, String key, String iv, boolean outBase64) {
         String result = Crypto.aes(mode, encrypt, input, inBase64, key, iv, outBase64);
         if (!strict) Logger.t("aesX").d("mode:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:%s\niv:%s\ninput:\n%s\nresult:\n%s", mode, encrypt, inBase64, outBase64, key, iv, input, result);
@@ -319,6 +389,10 @@ public class Global {
         Timeout timeout = new Timeout(timerId.incrementAndGet(), func);
         timers.put(timeout.id, timeout);
         func.hold();
+        if (timeout.scope != null) CallTimeout.trackCurrent(timeout.lifetime);
+        timeout.lifetime.whenComplete((value, error) -> {
+            if (timeout.lifetime.isCancelled()) submit(() -> cancel(timeout.id));
+        });
         return timeout;
     }
 
@@ -346,6 +420,8 @@ public class Global {
 
         private final JSFunction func;
         private final Invocation invocation = Invocation.current();
+        private final CallTimeout scope = CallTimeout.current() != null && CallTimeout.current().isResourceScope() ? CallTimeout.current() : null;
+        private final CompletableFuture<Void> lifetime = new CompletableFuture<>();
         private final int id;
         private volatile boolean canceled;
         private boolean released;
@@ -358,11 +434,15 @@ public class Global {
         @Override
         public void run() {
             // A timer thread cannot release native values; destroy() owns rejected callbacks.
-            submit(Invocation.wrap(invocation, this::fire));
+            submit(() -> {
+                Runnable restore = scope == null ? () -> {} : scope.enter();
+                try { Invocation.wrap(invocation, this::fire).run(); }
+                finally { restore.run(); }
+            });
         }
 
         private void fire() {
-            if (canceled) return;
+            if (canceled || lifetime.isCancelled()) return;
             try {
                 func.call();
             } finally {
@@ -379,6 +459,7 @@ public class Global {
         private synchronized void release() {
             if (released) return;
             released = true;
+            lifetime.complete(null);
             func.release();
         }
     }

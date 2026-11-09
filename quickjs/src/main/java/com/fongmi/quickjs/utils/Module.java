@@ -5,6 +5,7 @@ import android.util.LruCache;
 
 import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.Asset;
+import com.github.catvod.utils.UriUtil;
 
 public class Module {
 
@@ -18,6 +19,12 @@ public class Module {
 
     public static Module get() {
         return Loader.INSTANCE;
+    }
+
+    public static String normalize(String base, String name) {
+        if ("catvod".equals(name)) return "assets://js/lib/catvod.js";
+        if (name.startsWith("catvod:")) throw new IllegalArgumentException("Unknown catvod module: " + name);
+        return UriUtil.resolve(base, name);
     }
 
     public String fetch(String name) {
