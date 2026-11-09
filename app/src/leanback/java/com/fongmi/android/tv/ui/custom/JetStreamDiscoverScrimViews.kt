@@ -8,7 +8,13 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.core.graphics.ColorUtils
 import com.fongmi.android.tv.R
+import com.fongmi.android.tv.ui.theme.JetStreamWallpaper
 import com.fongmi.android.tv.ui.theme.RexTheme
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 class JetStreamDiscoverDetailScrimView @JvmOverloads constructor(
     context: Context,
@@ -28,11 +34,54 @@ class JetStreamDiscoverDetailScrimView @JvmOverloads constructor(
     }
 }
 
+/** Blend the complete artwork into the page canvas, retaining independent text and controls. */
 class JetStreamDiscoverArtworkLayout @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr)
+) : FrameLayout(context, attrs, defStyleAttr) {
+
+    private var blendWallpaper = JetStreamWallpaper.isVisible()
+
+    init {
+        // Plain ViewGroups otherwise skip View.draw(), which owns the platform fading edge.
+        setWillNotDraw(false)
+        isVerticalFadingEdgeEnabled = blendWallpaper
+        bindJetStreamTheme { invalidate() }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!isInEditMode) EventBus.getDefault().register(this)
+        refreshWallpaperFade()
+    }
+
+    override fun onDetachedFromWindow() {
+        if (!isInEditMode) EventBus.getDefault().unregister(this)
+        super.onDetachedFromWindow()
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onWallpaperVisibility(event: JetStreamWallpaper.VisibilityEvent) {
+        refreshWallpaperFade()
+    }
+
+    private fun refreshWallpaperFade() {
+        blendWallpaper = JetStreamWallpaper.isVisible()
+        isVerticalFadingEdgeEnabled = blendWallpaper
+        invalidate()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        setFadingEdgeLength(min(jetStreamDp(128), h * 0.32f).roundToInt())
+    }
+
+    // The platform fades the image and both scrims together into the real shared page canvas.
+    override fun getTopFadingEdgeStrength(): Float = 0f
+
+    override fun getBottomFadingEdgeStrength(): Float = if (blendWallpaper) 1f else 0f
+}
 
 class JetStreamDiscoverLeftScrimView @JvmOverloads constructor(
     context: Context,

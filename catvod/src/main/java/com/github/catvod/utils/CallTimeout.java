@@ -25,6 +25,7 @@ public final class CallTimeout implements AutoCloseable {
     private final CallTimeout parent;
     private final boolean allowDialogs;
     private final boolean enabled;
+    private final boolean resourceScope;
     private final long budget;
     private long remaining;
     private long resumed = System.nanoTime();
@@ -46,11 +47,25 @@ public final class CallTimeout implements AutoCloseable {
 
     /** Explicit parent is used when queued work starts on an unrelated worker thread. */
     public CallTimeout(long timeoutMillis, CallTimeout parent, boolean allowDialogs) {
+        this(timeoutMillis, parent, allowDialogs, false);
+    }
+
+    private CallTimeout(long timeoutMillis, CallTimeout parent, boolean allowDialogs, boolean resourceScope) {
         if (timeoutMillis < 0) throw new IllegalArgumentException("Timeout must be nonnegative");
         this.parent = parent;
         this.allowDialogs = allowDialogs && (parent == null || parent.allowDialogs);
         enabled = timeoutMillis > 0;
+        this.resourceScope = resourceScope;
         budget = remaining = TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+    }
+
+    /** Long-lived source resources outlive the request which created them. */
+    public static CallTimeout resourceScope() {
+        return new CallTimeout(0, null, false, true);
+    }
+
+    public boolean isResourceScope() {
+        return resourceScope;
     }
 
     public static void markDialogUse() {

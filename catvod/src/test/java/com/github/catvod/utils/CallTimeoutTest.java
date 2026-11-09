@@ -7,6 +7,26 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class CallTimeoutTest {
+    @Test public void longLivedResourceScopeIsExplicitAndIndependentOfCaller() {
+        try (CallTimeout request = new CallTimeout(1000)) {
+            Runnable restore = request.enter();
+            CallTimeout resources;
+            try { resources = CallTimeout.resourceScope(); }
+            finally { restore.run(); }
+            try {
+                assertFalse(request.isResourceScope());
+                assertTrue(resources.isResourceScope());
+                CompletableFuture<Void> pending = new CompletableFuture<>();
+                Runnable restoreResource = resources.enter();
+                try { CallTimeout.trackCurrent(pending); }
+                finally { restoreResource.run(); }
+                request.close();
+                assertFalse(pending.isDone());
+                resources.close();
+                assertTrue(pending.isCancelled());
+            } finally { resources.close(); }
+        }
+    }
     @Test public void dialogWaitPausesAndThenResumesDeadline() throws Exception {
         CountDownLatch expired = new CountDownLatch(1);
         try (CallTimeout timeout = new CallTimeout(150)) {

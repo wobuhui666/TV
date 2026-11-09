@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import okhttp3.Call;
 import okhttp3.HttpUrl;
@@ -57,7 +58,7 @@ public final class CommunitySkipApi {
         this(client, theIntroDbUrl, introDbUrl, theOtherDbUrl, false);
     }
 
-    private CommunitySkipApi(OkHttpClient client, String theIntroDbUrl, String introDbUrl, String theOtherDbUrl, boolean useCache) {
+    CommunitySkipApi(OkHttpClient client, String theIntroDbUrl, String introDbUrl, String theOtherDbUrl, boolean useCache) {
         this.client = client;
         this.theIntroDbUrl = theIntroDbUrl;
         this.introDbUrl = introDbUrl;
@@ -67,21 +68,36 @@ public final class CommunitySkipApi {
 
     /** Must be called on a worker. An unavailable provider never delays or fails playback. */
     public List<SkipSegment> fetch(EpisodeIdentity identity, long durationMs) {
+        return fetch(identity, durationMs, null);
+    }
+
+    /** Publishes usable cumulative ranges on this worker as each provider responds. */
+    public List<SkipSegment> fetch(EpisodeIdentity identity, long durationMs, Consumer<List<SkipSegment>> onSegments) {
         if (cancelled || identity == null || durationMs <= 0) return List.of();
         String key = identity.key() + ":" + identity.imdbId() + ":" + durationMs;
+        List<SkipSegment> cachedSegments = null;
         if (useCache) synchronized (CACHE) {
             CacheEntry cached = CACHE.get(key);
-            if (cached != null && cached.expiresMs > System.currentTimeMillis()) return cancelled ? List.of() : cached.segments;
+            if (cached != null && cached.expiresMs > System.currentTimeMillis()) cachedSegments = cached.segments;
         }
+        if (cachedSegments != null) {
+            publish(cachedSegments, onSegments, List.of());
+            return cancelled ? List.of() : cachedSegments;
+        }
+        successfulResponse = false;
         long deadlineNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(LOOKUP_BUDGET_MS);
         List<SkipSegment> result = new ArrayList<>();
+        List<SkipSegment> published = List.of();
         try {
             mergeMissingTypes(result, CommunitySkipParser.theIntroDb(read(theIntroRequest(identity, durationMs), deadlineNs), identity, durationMs));
+            published = publish(result, onSegments, published);
             if (!complete(result) && !cancelled && !identity.imdbId().isEmpty()) {
                 mergeMissingTypes(result, CommunitySkipParser.introDb(read(introRequest(identity), deadlineNs), identity, durationMs));
+                published = publish(result, onSegments, published);
             }
             if (!complete(result) && !cancelled) {
                 mergeMissingTypes(result, CommunitySkipParser.theOtherDb(read(theOtherRequest(identity), deadlineNs), identity, durationMs));
+                publish(result, onSegments, published);
             }
         } catch (RuntimeException ignored) {
             // Malformed metadata is equivalent to a provider without coverage.
@@ -94,6 +110,21 @@ public final class CommunitySkipApi {
             while (CACHE.size() > 48) CACHE.remove(CACHE.keySet().iterator().next());
         }
         return safe;
+    }
+
+    private List<SkipSegment> publish(List<SkipSegment> segments, Consumer<List<SkipSegment>> onSegments,
+                                     List<SkipSegment> previous) {
+        List<SkipSegment> snapshot = CommunitySkipParser.normalize(segments);
+        if (snapshot.isEmpty() || snapshot.equals(previous)) return previous;
+        if (cancelled) return previous;
+        if (onSegments != null) {
+            try {
+                onSegments.accept(snapshot);
+            } catch (RuntimeException ignored) {
+                // An observer must not prevent fallback providers from completing the lookup.
+            }
+        }
+        return snapshot;
     }
 
     public void cancel() {

@@ -237,6 +237,8 @@ public final class CommunitySkipPlaybackAndroidTest {
             constructor.setAccessible(true);
             Object session = constructor.newInstance(history);
             setField(session, "fetchStarted", true);
+            setField(session, "durationMs", DURATION);
+            setField(session, "fetchDurationMs", DURATION);
             setField(session, "policy", new SegmentSkipPolicy(List.of(
                     new SkipSegment(SkipSegment.Type.INTRO, 5_000, 9_000, "fixture"),
                     new SkipSegment(SkipSegment.Type.CREDITS, 73_000, 87_000, "fixture")), DURATION));
