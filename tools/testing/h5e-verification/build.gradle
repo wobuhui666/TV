@@ -1,0 +1,46 @@
+plugins {
+    alias libs.plugins.android.library
+}
+
+def adapterSources = layout.buildDirectory.dir('generated/adapter-source')
+def syncAdapterSources = tasks.register('syncAdapterSources', Sync) {
+    from(rootProject.file('app/src/main/java')) {
+        include 'com/fongmi/android/tv/player/exo/H5eTransform.java'
+        include 'com/fongmi/android/tv/player/exo/H5eDataSource.java'
+    }
+    into(adapterSources)
+}
+
+android {
+    namespace = 'com.fongmi.android.tv.h5everification'
+    compileSdk libs.versions.compileSdk.get().toInteger()
+    defaultConfig {
+        minSdk 26
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    sourceSets {
+        main.java.srcDirs = [adapterSources.get().asFile]
+        androidTest.assets.srcDirs += [layout.buildDirectory.dir('generated/h5e-fixtures').get().asFile]
+    }
+    compileOptions {
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+tasks.named('preBuild').configure { dependsOn syncAdapterSources }
+
+dependencies {
+    implementation libs.annotation
+    implementation libs.media3.common
+    implementation "androidx.media3:media3-datasource:${libs.versions.media3.get()}"
+    implementation libs.media3.datasource.okhttp
+    implementation libs.media3.exoplayer
+    implementation libs.media3.exoplayer.hls
+    implementation libs.okhttp
+    androidTestImplementation libs.junit
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    coreLibraryDesugaring libs.desugar
+}
