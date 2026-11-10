@@ -513,6 +513,7 @@ jobs:
             artifacts/tv-ui/
             artifacts/upstream-features/
             artifacts/playback-specs/
+            artifacts/playback-clock/
             artifacts/compact-home/
             artifacts/home-background/
             artifacts/live-home/
