@@ -50,6 +50,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <include
+            android:id="@+id/playbackClock"
+            layout="@layout/view_playback_clock" />
+
     </FrameLayout>
 
     <com.fongmi.android.tv.ui.custom.JetStreamLiveSidebarLayout

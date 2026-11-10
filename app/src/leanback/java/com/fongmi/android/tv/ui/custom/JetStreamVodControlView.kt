@@ -170,6 +170,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
     private var showTopInfoSubtitle by mutableStateOf(false)
     private var infoSize by mutableStateOf("")
     private var infoClock by mutableStateOf("")
+    private var playbackClockVisible by mutableStateOf(false)
     private var infoAction by mutableStateOf(ACTION_PLAY)
     private var infoPosition by mutableStateOf("")
     private var infoDuration by mutableStateOf("")
@@ -256,6 +257,10 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
     fun isControlsVisible(): Boolean {
         return controlPanelVisible
+    }
+
+    fun setPlaybackClockVisible(visible: Boolean) {
+        playbackClockVisible = visible
     }
 
     fun setInfoState(
@@ -454,7 +459,9 @@ class JetStreamVodControlView @JvmOverloads constructor(
                     )
                 }
             }
-            if (infoClock.isNotEmpty()) {
+            if (playbackClockVisible) {
+                Spacer(Modifier.width(88.dp))
+            } else if (infoClock.isNotEmpty()) {
                 Text(
                     text = infoClock,
                     color = colorScheme.onSurface,

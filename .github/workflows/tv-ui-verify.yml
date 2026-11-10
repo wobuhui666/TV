@@ -5,6 +5,10 @@ on:
     branches: ['feat/tv-touch-light-theme', 'feat/tv-touch-light-theme-issue77', 'fix/home-history-order-touch']
   workflow_dispatch:
     inputs:
+      playback_clock:
+        description: Verify the persistent TV playback clock, settings and native screenshots
+        type: boolean
+        default: false
       guarded_source:
         description: Verify real guarded sources in the ARM64 sourceprobe package
         type: boolean
@@ -168,12 +172,28 @@ jobs:
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
           TV_WASM: ${{ inputs.wasm }}
+          TV_PLAYBACK_CLOCK: ${{ inputs.playback_clock }}
           TV_EMULATOR_API: ${{ matrix.api }}
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
           if [ "$TV_WASM" = 'true' ]; then
             bash .github/scripts/verify-wasm.sh "$TV_EMULATOR_API"
+          elif [ "$TV_PLAYBACK_CLOCK" = 'true' ]; then
+            python3 - <<'PY'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PY
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+              com.fongmi.android.tv.ui.PlaybackClockIntegrationTest artifacts/playback-clock '3'
           elif [ "$TV_VARIETY_EPISODES" = 'true' ]; then
             python3 - <<'PY'
           import json, pathlib, subprocess
@@ -430,6 +450,7 @@ jobs:
           TV_ASSRT_SUBTITLES: ${{ inputs.assrt_subtitles }}
           TV_UPSTREAM_STABILITY: ${{ inputs.upstream_stability }}
           TV_WASM: ${{ inputs.wasm }}
+          TV_PLAYBACK_CLOCK: ${{ inputs.playback_clock }}
           TV_EMULATOR_API: ${{ matrix.api }}
         uses: reactivecircus/android-emulator-runner@v2
         with:

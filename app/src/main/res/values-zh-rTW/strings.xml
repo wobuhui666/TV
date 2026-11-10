@@ -190,6 +190,7 @@
     <string name="player_libass">字幕渲染</string>
     <string name="player_caption">字幕樣式</string>
     <string name="player_background">背景播放</string>
+    <string name="player_clock">播放時鐘</string>
     <string name="player_audio_pass_through">音訊直通</string>
     <string name="player_audio_decode">音訊軟解</string>
     <string name="player_video_decode">視訊軟解</string>

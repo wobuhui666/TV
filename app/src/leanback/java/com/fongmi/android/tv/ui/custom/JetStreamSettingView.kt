@@ -553,6 +553,7 @@ class JetStreamSettingView @JvmOverloads constructor(
                     RowSpec(KEY_SEEK_ACCELERATE, context.getString(R.string.setting_seek_accelerate), toggle = true),
                     RowSpec(KEY_CAPTION, context.getString(R.string.player_caption)),
                     RowSpec(KEY_BACKGROUND, context.getString(R.string.player_background), toggle = true),
+                    RowSpec(KEY_PLAYBACK_CLOCK, context.getString(R.string.player_clock), toggle = true),
                     RowSpec(KEY_UA, context.getString(R.string.player_ua)),
                     RowSpec(KEY_AI_SUBTITLE, context.getString(R.string.player_ai_subtitle)),
                     RowSpec(KEY_COMMUNITY_SKIP, context.getString(R.string.player_community_skip), toggle = true),
@@ -678,6 +679,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_SEEK_ACCELERATE = "seek_accelerate"
         const val KEY_CAPTION = "caption"
         const val KEY_BACKGROUND = "background"
+        const val KEY_PLAYBACK_CLOCK = "playback_clock"
         const val KEY_UA = "ua"
         const val KEY_AI_SUBTITLE = "ai_subtitle"
         const val KEY_COMMUNITY_SKIP = "community_skip"

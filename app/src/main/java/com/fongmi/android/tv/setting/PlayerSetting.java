@@ -126,6 +126,14 @@ public class PlayerSetting {
         Prefers.put("background", Math.clamp(background, MIN_BACKGROUND, MAX_BACKGROUND));
     }
 
+    public static boolean isPlaybackClock() {
+        return Prefers.getBoolean("playback_clock");
+    }
+
+    public static void putPlaybackClock(boolean visible) {
+        Prefers.put("playback_clock", visible);
+    }
+
     public static boolean isBackgroundOff() {
         return getBackground() == 0;
     }

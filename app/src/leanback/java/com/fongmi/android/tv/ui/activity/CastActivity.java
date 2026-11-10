@@ -758,6 +758,8 @@ public class CastActivity extends PlaybackActivity implements CustomKeyDownVod.L
     @Override
     protected void onStart() {
         super.onStart();
+        mBinding.playbackClock.getRoot().setVisibility(PlayerSetting.isPlaybackClock() ? View.VISIBLE : View.GONE);
+        mBinding.control.jetstream.setPlaybackClockVisible(PlayerSetting.isPlaybackClock());
         mClock.stop().start();
     }
 
