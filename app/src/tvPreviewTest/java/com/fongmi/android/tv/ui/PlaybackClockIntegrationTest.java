@@ -50,11 +50,13 @@ public final class PlaybackClockIntegrationTest {
     private static final String[] KEYS = {"playback_clock", "player_engine", "background"};
     private Activity activity;
     private SettingActivity settings;
+    private boolean preferencesSaved;
 
     @Before public void setup() {
         assertEquals("Disposable preview only", "com.fongmi.android.tv.preview",
                 instrumentation.getTargetContext().getPackageName());
         for (String key : KEYS) if (Prefers.getPrefers().contains(key)) saved.put(key, Prefers.getPrefers().getAll().get(key));
+        preferencesSaved = true;
         Prefers.remove("playback_clock");
         PlayerSetting.putEngine(PlayerSetting.ENGINE_EXO);
         PlayerSetting.putBackground(0);
@@ -63,7 +65,7 @@ public final class PlaybackClockIntegrationTest {
     @After public void cleanup() {
         if (settings != null) main(settings::finish);
         closePlayback();
-        for (String key : KEYS) {
+        if (preferencesSaved) for (String key : KEYS) {
             if (saved.containsKey(key)) Prefers.put(key, saved.get(key));
             else Prefers.remove(key);
         }
@@ -137,6 +139,9 @@ public final class PlaybackClockIntegrationTest {
         activity = instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), type)
                 .putExtra("empty", false).putExtra("cast", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         await("Playback window", activity::hasWindowFocus);
+        if (type == VideoActivity.class) {
+            await("Empty VOD request completed", () -> ((ProgressLayout) activity.findViewById(R.id.progressLayout)).isEmpty());
+        }
         instrumentation.waitForIdleSync();
         main(() -> {
             ProgressLayout progress = activity.findViewById(R.id.progressLayout);
