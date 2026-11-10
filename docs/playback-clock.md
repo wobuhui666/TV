@@ -21,3 +21,11 @@
 2026-11-10 的 [构建验证](https://github.com/wobuhui666/TV/actions/runs/42834628962)通过 TV ARM64 和 Mobile ARM64 调试包构建、1,036 项 TV 单元测试及共享模块测试；完整 lint 与基线比较无新增错误。
 
 [Android API 34 界面验证](https://github.com/wobuhui666/TV/actions/runs/42838193669)通过 3 项测试：三个实际 TV 播放活动默认隐藏时钟；遥控器滚动后启用设置，返回播放即生效；时钟随时区更新，控制层隐藏后仍可见且不占用焦点。截图使用空媒体请求的播放页面。
+
+## 与弹幕入口一起发布
+
+本次还合入 issue #112 的入口调整：主工具栏继续使用「字幕 · 音轨」，面板标题显示「字幕 · 音轨 · 弹幕」，图标使用字幕屏幕图标。
+
+![弹幕面板与常显时钟](images/playback-clock/danmaku-drawer.png)
+
+[联合 Android 验证](https://github.com/wobuhui666/TV/actions/runs/42842338881)通过构建、单元测试和 3 项界面测试，确认面板标题可见，常显时钟仍然正常显示。
