@@ -131,6 +131,19 @@ public final class PlaybackClockIntegrationTest {
                 assertTrue(clock.isShown());
             });
             NativeUiEvidence.capture("playback-clock-" + type.getSimpleName().toLowerCase(Locale.ROOT) + "-paused");
+            if (type == VideoActivity.class) {
+                main(() -> {
+                    JetStreamVodControlView controls = activity.findViewById(R.id.jetstream);
+                    controls.setInfoState(false, false, "", "", JetStreamVodControlView.ACTION_PLAY, "", "");
+                    controls.setCommand("danmaku", activity.getString(R.string.danmaku), true, false);
+                    controls.setTopActions(false, true, false);
+                    controls.setControlsVisible(true);
+                    controls.showGroup(JetStreamVodControlView.GROUP_CAPTIONS);
+                });
+                assertNotNull("The drawer identifies the danmaku entry", UiDevice.getInstance(instrumentation).wait(
+                        Until.findObject(By.text(activity.getString(R.string.vod_control_group_captions_title))), 5000));
+                NativeUiEvidence.capture("playback-clock-danmaku-drawer");
+            }
             main(() -> {
                 activity.findViewById(R.id.control).setVisibility(View.GONE);
                 activity.findViewById(R.id.widget).setVisibility(View.GONE);

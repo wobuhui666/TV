@@ -74,6 +74,7 @@
     <string name="discover_episodes">%1$d 集</string>
     <string name="vod_control_group_playlist">播放列表</string>
     <string name="vod_control_group_captions">字幕 · 音轨</string>
+    <string name="vod_control_group_captions_title">字幕 · 音轨 · 弹幕</string>
     <string name="vod_control_group_settings">设置</string>
 
     <!-- Setting -->
