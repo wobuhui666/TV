@@ -85,9 +85,19 @@ public final class PlaybackClockIntegrationTest {
         settings = (SettingActivity) instrumentation.startActivitySync(new Intent(
                 instrumentation.getTargetContext(), SettingActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         await("Settings window", settings::hasWindowFocus);
-        main(() -> ((JetStreamSettingView) settings.findViewById(R.id.settingView)).showSection(JetStreamSettingView.SECTION_PLAYBACK));
-        UiObject2 toggle = UiDevice.getInstance(instrumentation).wait(Until.findObject(By.text(settings.getString(R.string.player_clock))), 5000);
-        assertNotNull("Playback clock option", toggle);
+        main(() -> {
+            JetStreamSettingView view = settings.findViewById(R.id.settingView);
+            view.showSection(JetStreamSettingView.SECTION_PLAYBACK);
+            view.requestInitialFocus();
+        });
+        UiDevice device = UiDevice.getInstance(instrumentation);
+        UiObject2 toggle = null;
+        for (int step = 0; step < 12 && toggle == null; step++) {
+            toggle = device.wait(Until.findObject(By.text(settings.getString(R.string.player_clock))), 500);
+            if (toggle == null) device.pressDPadDown();
+        }
+        NativeUiEvidence.capture("playback-clock-settings-before-toggle");
+        assertNotNull("Playback clock option after scrolling with the remote", toggle);
         toggle.click();
         await("Saved clock preference", PlayerSetting::isPlaybackClock);
         NativeUiEvidence.capture("playback-clock-settings");
