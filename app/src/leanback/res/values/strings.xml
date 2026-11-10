@@ -74,6 +74,7 @@
     <string name="discover_episodes">%1$d episodes</string>
     <string name="vod_control_group_playlist">Playlist</string>
     <string name="vod_control_group_captions">Captions &amp; Audio</string>
+    <string name="vod_control_group_captions_title">Captions · Audio · Danmaku</string>
     <string name="vod_control_group_settings">Settings</string>
 
     <!-- Setting -->

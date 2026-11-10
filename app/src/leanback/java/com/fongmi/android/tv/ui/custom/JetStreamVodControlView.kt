@@ -170,6 +170,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
     private var showTopInfoSubtitle by mutableStateOf(false)
     private var infoSize by mutableStateOf("")
     private var infoClock by mutableStateOf("")
+    private var persistentClockVisible by mutableStateOf(false)
     private var infoAction by mutableStateOf(ACTION_PLAY)
     private var infoPosition by mutableStateOf("")
     private var infoDuration by mutableStateOf("")
@@ -179,7 +180,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
     private var drawerFocusKey by mutableStateOf<String?>(null)
     private val commandGroups = mutableStateListOf(
         CommandGroupState(GROUP_PLAYLIST, R.drawable.msr_auto_awesome_motion, R.string.vod_control_group_playlist, "", true, PLAYLIST_COMMANDS),
-        CommandGroupState(GROUP_CAPTIONS, R.drawable.msr_closed_caption, R.string.vod_control_group_captions, "", true, CAPTION_COMMANDS),
+        CommandGroupState(GROUP_CAPTIONS, R.drawable.msr_subtitles, R.string.vod_control_group_captions, "", true, CAPTION_COMMANDS),
         CommandGroupState(GROUP_SETTINGS, R.drawable.msr_settings, R.string.vod_control_group_settings, "", true, SETTINGS_COMMANDS)
     )
     private val commands = mutableStateMapOf<String, CommandState>()
@@ -256,6 +257,10 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
     fun isControlsVisible(): Boolean {
         return controlPanelVisible
+    }
+
+    fun setPlaybackClockVisible(visible: Boolean) {
+        persistentClockVisible = visible
     }
 
     fun setInfoState(
@@ -454,7 +459,9 @@ class JetStreamVodControlView @JvmOverloads constructor(
                     )
                 }
             }
-            if (infoClock.isNotEmpty()) {
+            if (persistentClockVisible) {
+                Spacer(Modifier.width(88.dp))
+            } else if (infoClock.isNotEmpty()) {
                 Text(
                     text = infoClock,
                     color = colorScheme.onSurface,
@@ -754,7 +761,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
                     .padding(vertical = 18.dp)
             ) {
                 Text(
-                    text = displayedGroup?.let { groupLabel(it) }.orEmpty(),
+                    text = displayedGroup?.let { groupLabel(it, panelTitle = true) }.orEmpty(),
                     color = colorScheme.onSurface,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -861,7 +868,10 @@ class JetStreamVodControlView @JvmOverloads constructor(
     }
 
     @Composable
-    private fun groupLabel(group: CommandGroupState): String {
+    private fun groupLabel(group: CommandGroupState, panelTitle: Boolean = false): String {
+        if (panelTitle && group.labelRes == R.string.vod_control_group_captions) {
+            return stringResource(R.string.vod_control_group_captions_title)
+        }
         return if (group.labelRes != 0) stringResource(group.labelRes) else group.customLabel
     }
 

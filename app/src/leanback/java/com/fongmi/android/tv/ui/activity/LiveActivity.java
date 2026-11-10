@@ -1419,6 +1419,8 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     @Override
     protected void onStart() {
         super.onStart();
+        mBinding.playbackClock.getRoot().setVisibility(PlayerSetting.isPlaybackClock() ? View.VISIBLE : View.GONE);
+        mBinding.control.jetstream.setPlaybackClockVisible(PlayerSetting.isPlaybackClock());
         if (mSpecs != null) mSpecs.setStarted(true);
         AiSubtitlePlaybackUi.refresh(mBinding.control.action.aiSubtitle, mBinding.control.action.aiLanguage);
         mClock.stop().start();

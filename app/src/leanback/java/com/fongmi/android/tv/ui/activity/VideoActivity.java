@@ -2289,6 +2289,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     @Override
     protected void onStart() {
         super.onStart();
+        mBinding.playbackClock.getRoot().setVisibility(PlayerSetting.isPlaybackClock() ? View.VISIBLE : View.GONE);
+        mBinding.control.jetstream.setPlaybackClockVisible(PlayerSetting.isPlaybackClock());
         if (mSpecs != null) mSpecs.setStarted(true);
         SyncplaySession.get().observe(mSyncplayObserver);
         AiSubtitlePlaybackUi.refresh(mBinding.control.action.aiSubtitle, mBinding.control.action.aiLanguage);

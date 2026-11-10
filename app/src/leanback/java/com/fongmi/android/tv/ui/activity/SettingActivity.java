@@ -170,6 +170,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         setRowValue(JetStreamSettingView.KEY_SPEED, format.format(PlayerSetting.getSpeed()) + " " + getString(R.string.times));
         setRowValue(JetStreamSettingView.KEY_CAPTION, caption[PlayerSetting.isCaption() ? 1 : 0]);
         setRowValue(JetStreamSettingView.KEY_BACKGROUND, Setting.getSwitch(PlayerSetting.isBackgroundOn()));
+        setRowValue(JetStreamSettingView.KEY_PLAYBACK_CLOCK, Setting.getSwitch(PlayerSetting.isPlaybackClock()));
         setRowValue(JetStreamSettingView.KEY_UA, getStatus(Setting.getUa()));
         setRowValue(JetStreamSettingView.KEY_COMMUNITY_SKIP, Setting.getSwitch(Setting.isCommunitySkipEnabled()));
         setRowValue(JetStreamSettingView.KEY_MPV_ANIME4K, mpvAnime4K[PlayerSetting.getMpvAnime4K()]);
@@ -380,6 +381,10 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_SPEED -> onSpeed();
             case JetStreamSettingView.KEY_CAPTION -> setCaption();
             case JetStreamSettingView.KEY_BACKGROUND -> onBackground();
+            case JetStreamSettingView.KEY_PLAYBACK_CLOCK -> {
+                PlayerSetting.putPlaybackClock(!PlayerSetting.isPlaybackClock());
+                setRowValue(JetStreamSettingView.KEY_PLAYBACK_CLOCK, Setting.getSwitch(PlayerSetting.isPlaybackClock()));
+            }
             case JetStreamSettingView.KEY_UA -> onUa();
             case JetStreamSettingView.KEY_AI_SUBTITLE -> AiSubtitleSettingsActivity.start(this);
             case JetStreamSettingView.KEY_COMMUNITY_SKIP -> {

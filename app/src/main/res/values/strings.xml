@@ -191,6 +191,7 @@
     <string name="player_libass">libass</string>
     <string name="player_caption">Caption style</string>
     <string name="player_background">Background play</string>
+    <string name="player_clock">Playback clock</string>
     <string name="player_audio_pass_through">Audio passthrough</string>
     <string name="player_audio_decode">Audio software decode</string>
     <string name="player_video_decode">Video software decode</string>
