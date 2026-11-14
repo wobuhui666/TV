@@ -16,7 +16,15 @@ TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuController.java",
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java",
 }
-PATCH_SPECS = ({"patch": PATCH, "sha256": PATCH_SHA256, "targets": TARGETS},)
+RENDER_INDEX_PATCH = Path(__file__).with_name("danmaku-render-index.patch")
+RENDER_INDEX_SHA256 = "22343b0223dc63ebffe4e2f9ba76b408356269f172784597e799a6e38b212eda"
+RENDER_INDEX_TARGETS = {
+    "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java",
+}
+PATCH_SPECS = (
+    {"patch": PATCH, "sha256": PATCH_SHA256, "targets": TARGETS},
+    {"patch": RENDER_INDEX_PATCH, "sha256": RENDER_INDEX_SHA256, "targets": RENDER_INDEX_TARGETS},
+)
 
 
 class PatchError(RuntimeError):

@@ -245,6 +245,7 @@ jobs:
               com.fongmi.android.tv.test.FolderFilterNavigationTest=6
               com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest=7
               com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest=11
+              com.fongmi.android.tv.test.PausedDanmakuVisibilityTest=2
               com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
               com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest=5
               com.fongmi.android.tv.player.TimeshiftExoIntegrationTest=2

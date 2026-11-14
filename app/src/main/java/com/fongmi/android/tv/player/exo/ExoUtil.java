@@ -72,6 +72,7 @@ public class ExoUtil {
                 // Media3 default reports a false fatal timeout during AI AudioSink rebuilds.
                 .setReleaseTimeoutMs(3_000L);
         ExoPlayer player = preloader == null ? builder.build() : preloader.buildExoPlayer(builder);
+        player.addAnalyticsListener(new ExoPlaybackDiagnostics());
         if (BuildConfig.DEBUG) player.addAnalyticsListener(new EventLogger());
         player.setAudioAttributes(AudioAttributes.DEFAULT, true);
         player.setHandleAudioBecomingNoisy(true);

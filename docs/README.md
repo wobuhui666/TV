@@ -29,6 +29,7 @@
 | 主题 | 从这里开始 |
 | --- | --- |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
+| Exo 声音与弹幕停顿 | [弹幕查询优化与诊断验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | 源、播放器及设备回归 | [验证报告目录](testing/README.md) · [测试运行方法](testing/source-validation.md) |
 | 近期功能与界面 | [社区跳过与播放回归](testing/reports/2026-11-01-community-skip/README.md) · [海报墙、字幕和表单](testing/reports/2026-11-01-tv-polish/README.md) |
@@ -53,4 +54,4 @@
 
 ## 维护说明
 
-当前仓库的 `.gitignore` 含 `/docs`：已经跟踪的文档可以正常更新，新文件可能不会出现在普通 `git status` 中。新增公开文档应先检查内容，再用 `git add -f -- docs/明确的文件路径` 逐项纳入；不要把设备配置或整个临时证据目录批量强制提交。本次保留原忽略规则，已显式纳入清单中的文件。
+`docs/` 不再整体忽略，新增文档可正常出现在 `git status` 中，并通过 `git add -- docs/明确的文件路径` 纳入版本控制。新增或移动文档时同步更新本索引及相关链接；提交前逐项检查内容，只保留公开说明、验证摘要和必要图片，设备配置、凭据及原始私有日志留在仓库外。

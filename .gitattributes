@@ -1,2 +1,2 @@
-# Keep mandatory single-space context lines in historical patch references.
-docs/archive/**/source-references/**/*.patch.reference whitespace=-blank-at-eol,-blank-at-eof
+# Unified diff context lines contain a space; target whitespace is checked by git apply.
+third_party/media3/*.patch -whitespace

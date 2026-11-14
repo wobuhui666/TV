@@ -139,6 +139,21 @@ class ApplyPatchesTest(unittest.TestCase):
         again = apply_patches.apply_media3_patches(self.repository, specs, base)
         self.assertEqual(2, again.count("already applied"))
 
+    def test_registered_patches_match_checksums_and_independent_targets(self):
+        targets = set()
+        for spec in apply_patches.PATCH_SPECS:
+            data = spec["patch"].read_bytes()
+            self.assertEqual(spec["sha256"], hashlib.sha256(data).hexdigest())
+            names = set()
+            for line in data.decode("utf-8").splitlines():
+                if line.startswith("diff --git "):
+                    old, new = line.split()[2:]
+                    self.assertEqual(old[2:], new[2:])
+                    names.add(old[2:])
+            self.assertEqual(spec["targets"], names)
+            self.assertFalse(targets.intersection(names), "Patches must have independent targets")
+            targets.update(names)
+
 
 if __name__ == "__main__":
     unittest.main()

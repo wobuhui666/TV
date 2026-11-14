@@ -142,6 +142,14 @@ jobs:
             :app:testLeanbackArm64_v8aDebugUnitTest \
             --no-daemon --build-cache --max-workers=2
 
+      - name: Check pinned playback patches and query allocations
+        if: matrix.package == 'sourceprobe'
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
+          mkdir -p artifacts/playback-stutter
+          python3 tools/testing/playback-stutter/verify.py | tee artifacts/playback-stutter/host-checks.txt
+
       - name: Build application and instrumentation APKs
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
@@ -289,6 +297,7 @@ jobs:
             app/build/reports/lint-results-leanbackArm64_v8aDebug.*
             app/schemas/
             artifacts/lint/
+            artifacts/playback-stutter/
             catvod/build/test-results/
             quickjs/build/test-results/
             wasm/build/test-results/

@@ -142,7 +142,7 @@ git -C "$MEDIA3_SOURCE_DIR" rev-parse HEAD
 
 已有 `.media3` 时不要执行上面的初始化块；先核对 HEAD 和本地修改，再更新配套 settings。该 settings 会从 Media3 目录的父目录寻找 `.github/media3-stubs`，所以推荐放在当前 TV 工作树的 `.media3/`，不要随意指向其他目录。
 
-根目录 `settings.gradle` 在加载 `MEDIA3_SOURCE_DIR` composite 前，统一调用 [固定补丁脚本](third_party/media3/apply_patches.py)。脚本需 `python3` 和 Git 位于 PATH；先校验固定 HEAD、补丁 SHA-256 和两个目标文件的完整 blob ID，再应用暂停弹幕开关修复。首次应用与重复构建均可通过；不匹配的 HEAD、部分应用、目标文件额外改动或不兼容补丁会明确失败，不自动 checkout/reset。其他文件（包括 composite settings）的本地改动会保留。补丁基准、SHA 及更新约束见 [Media3 补丁说明](third_party/media3/README.md)。
+根目录 `settings.gradle` 在加载 `MEDIA3_SOURCE_DIR` composite 前，统一调用 [固定补丁脚本](third_party/media3/apply_patches.py)。脚本需 `python3` 和 Git 位于 PATH；先校验固定 HEAD、每份补丁的 SHA-256 和目标文件的完整 blob ID，再应用暂停弹幕开关与弹幕时间索引修复。首次应用与重复构建均可通过；不匹配的 HEAD、部分应用、目标文件额外改动或不兼容补丁会明确失败，不自动 checkout/reset。其他文件（包括 composite settings）的本地改动会保留。补丁基准、SHA 及更新约束见 [Media3 补丁说明](third_party/media3/README.md)。
 
 每个新终端都要重新导出 `MEDIA3_SOURCE_DIR`、`JAVA_HOME`、SDK 路径和 `TV_SDK_INIT`。记录 TV 提交、固定 Media3 提交及补丁 SHA，才能复现相同源码。
 
