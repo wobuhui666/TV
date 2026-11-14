@@ -4,6 +4,37 @@
 
 [构建与回归](https://github.com/wobuhui666/TV/actions/runs/43590570128) 和 [Android 播放回归](https://github.com/wobuhui666/TV/actions/runs/43590570318) 均成功，测试及产物摘要见 [gha-summary.json](gha-summary.json)。
 
+后续 [Android 11 高码率播放对照](https://github.com/wobuhui666/TV/actions/runs/43629272590) 也成功，验证提交为 `a8b4352dba552e0177ffdeb06bc0d15af57f9a39`；完整公开测量见 [performance-summary.json](performance-summary.json)。该提交增加视频解码器诊断和测试，不改变默认播放策略。
+
+## Android 11 高码率对照
+
+针对海信 Android 11、MT5873、1.83 GB 内存、普通 SDR 也卡且无加载圈的反馈，GHA 使用 API 30 x86_64 模拟器、4 核、2048 MB RAM、256 MB heap、SwiftShader及关闭主机声音输出。1053 项 Preview JUnit、6 项真实 TrackSelector 映射测试和1项包含20组实际播放测量的 Android 测试全部通过，零忽略或条件跳过。
+
+视频由固定种子的 `testsrc2`、时间噪声和 AAC 正弦音生成；均为22秒、30 fps、8-bit BT.709 SDR。实测视频码率分别为1080p H.264约8.30 / 25.98 Mbps、2160p HEVC约44.95 Mbps。另将25.98 Mbps视频复用到含动画 ASS 和字体附件的 MKV。视频不依赖网络来源，在设备内用支持 Range 的 HTTP 服务读取。
+
+对照的 `reference` 是相同固定 Media3 的默认渲染器和媒体源，**不是实际安装的 Takagen99 或原版 FongMi**。`production` 直接调用本项目 `ExoPlayerEngine`；使用测试 Activity 绑定播放器，未加载完整详情页、动态壁纸或首页图片。基础管线和旧/新弹幕均交替顺序测量两次；Texture、异步解码及 ASS 各为一次样本。每组先准备播放器，再测10秒，记录提交给视频 surface 的帧、音频欠载、缓冲事件、GC和UI帧；弹幕测量排除96,000条历史项的首次创建和文字测量时间。
+
+| 对照 | 约10秒的视频提交帧 | 其他结果 |
+| --- | --- | --- |
+| 高码率1080p Reference / Production，Surface无弹幕 | 298–299 / 297–302 | 同用 `OMX.android.goldfish.h264.decoder`；基础管线没有明显劣化 |
+| 4K Reference / Production | 80–81 / 80 | 同用软件 `OMX.google.hevc.decoder`，约215帧丢弃；模拟器共同瓶颈 |
+| 高码率1080p Texture | 290 | Surface基线297–302；Texture丢弃16帧，Surface为3–5帧，存在较小负面信号 |
+| 高码率1080p异步 Reference | 295 | 未优于同步基线，不能据此推荐Android 11统一强制异步 |
+| 密集弹幕旧索引 / 新索引 | 78–79 / 77–78 | 重叠滚动开启、上限150；两者UI约317–325帧，绘制负担压过查询优化 |
+| ASS关 / 开 | 295 / 294 | UI帧598 / 415；原生堆约42 / 113 MB；UI超过50 ms间隔为1 / 34次 |
+
+20组正式测量均无解码错误、无音频欠载和缓冲事件，所有播放时钟在窗口内推进约10秒。4K虽然进入READY，实际仅提交约8 fps，**不能将测试通过解释成4K流畅**；Goldfish / Google软件解码与SwiftShader也不能代表MT5873硬件解码及电视扫描输出。
+
+映射测试确认：当平台仅报告 `FORMAT_EXCEEDS_CAPABILITIES` 而FFmpeg报告完整支持时，硬解偏好仍能选FFmpeg；双方完整支持时优先平台；本项目SOFT模式在两个软解偏好关闭时仍对音视频选FFmpeg。它们验证真实选择逻辑，并未证明用户电视实际遇到了能力误报或软解回退。
+
+实测支持继续优化密集弹幕绘制和ASS资源负担，并核对实际硬解与Surface类型；不支持直接认定裸Exo管线普遍退化或强制异步可以解决。之前的时间索引补丁减少临时分配，但此次密集绘制仍降到约8 fps，不能称它已解决用户卡顿。
+
+专项产物：[测量与测试报告](https://github.com/wobuhui666/TV/actions/runs/43629272590/artifacts/14128240945)、[包含视频解码器诊断的ARM64测试包](https://github.com/wobuhui666/TV/actions/runs/43629272590/artifacts/14127911745)。下载包为原始ARM64 Preview构建，模拟器JNI调整发生在副本，未用于此产物。
+
+前两次流程失败均保留：`43627187274` 遗漏 `-PtvPreview`，没有运行播放；`43627807767` 已完成7项Android测试和20组播放，但外置报告下载遗漏导致流程失败。正式复测改用应用私有目录及 `run-as` 读取，完整报告收集成功。生成媒体、APK与原始logcat留在Actions产物或仓库外，公开摘要不包含私有片源。
+
+复现入口为 `.github/workflows/exo-playback-performance.yml`，或对 `build-validation.yml` 设置 `playback_performance=true`。素材、旧版弹幕对照类和报告均由 `tools/testing/playback-stutter/` 脚本生成。
+
 Media3 固定提交：`342f6590e02ac390e0bd6b4488b8a1bff55747c1`。新增补丁 `danmaku-render-index.patch` 的 SHA-256：`22343b0223dc63ebffe4e2f9ba76b408356269f172784597e799a6e38b212eda`；完整登记与应用约束见 [Media3 补丁说明](../../../../third_party/media3/README.md)。
 
 ## 问题与改动
