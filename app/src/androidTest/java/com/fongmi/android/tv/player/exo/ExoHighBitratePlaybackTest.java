@@ -127,7 +127,7 @@ public final class ExoHighBitratePlaybackTest {
                 editor.apply();
             });
             CoreFixtureServer.stop();
-            File out = new File(instrumentation.getTargetContext().getExternalFilesDir(null), "playback-stutter-evidence");
+            File out = new File(instrumentation.getTargetContext().getFilesDir(), "playback-stutter-evidence");
             assertTrue(out.isDirectory() || out.mkdirs());
             Files.writeString(new File(out, "playback-summary.json").toPath(), report.toString(2), StandardCharsets.UTF_8);
         }

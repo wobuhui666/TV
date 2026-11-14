@@ -23,7 +23,7 @@ adb shell getprop > "$output/device-properties.txt"
 adb shell dumpsys media.codec > "$output/codecs-before.txt"
 adb logcat -c
 collect() {
-    adb pull /sdcard/Android/data/com.fongmi.android.tv.preview/files/playback-stutter-evidence "$output/" >/dev/null 2>&1 || true
+    adb exec-out run-as com.fongmi.android.tv.preview cat files/playback-stutter-evidence/playback-summary.json > "$output/playback-summary.json" 2> "$output/report-copy-error.txt" || true
     adb logcat -b all -d -v threadtime > "$output/logcat.txt" 2>&1 || true
     adb shell dumpsys meminfo com.fongmi.android.tv.preview > "$output/meminfo-after.txt" 2>&1 || true
     adb shell dumpsys media.codec > "$output/codecs-after.txt" 2>&1 || true
