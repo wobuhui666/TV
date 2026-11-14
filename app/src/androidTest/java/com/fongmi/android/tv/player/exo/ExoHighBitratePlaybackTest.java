@@ -190,7 +190,15 @@ public final class ExoHighBitratePlaybackTest {
                 overlayPreparationMs = SystemClock.elapsedRealtime() - overlayStarted;
                 // Pool setup is not part of the steady playback window. Restart media afterward.
                 main(() -> player[0].seekTo(0));
-                SystemClock.sleep(500);
+                long restartDeadline = SystemClock.elapsedRealtime() + 10_000;
+                boolean[] restarted = new boolean[1];
+                while (SystemClock.elapsedRealtime() < restartDeadline && metrics.error == null) {
+                    main(() -> restarted[0] = player[0].getPlaybackState() == Player.STATE_READY
+                            && player[0].getCurrentPosition() >= 500 && player[0].getCurrentPosition() < 5_000);
+                    if (restarted[0]) break;
+                    SystemClock.sleep(100);
+                }
+                assertTrue("Comparison playback must restart after pool preparation", restarted[0]);
             }
             long[] position = new long[2], buffers = new long[]{Long.MAX_VALUE, 0};
             main(() -> position[0] = player[0].getCurrentPosition());
@@ -222,7 +230,8 @@ public final class ExoHighBitratePlaybackTest {
                     .put("status", metrics.error != null ? "decode_error" : ready ? "measured" : "not_ready")
                     .put("overlayPreparationMs", overlayPreparationMs)
                     .put("preparationMs", preparationMs).put("wallWindowMs", SystemClock.elapsedRealtime() - window)
-                    .put("positionAdvanceMs", position[1] - position[0]).put("minMediaBufferedMs", buffers[0])
+                    .put("positionAdvanceMs", position[1] - position[0])
+                    .put("minMediaBufferedMs", buffers[0] == Long.MAX_VALUE ? JSONObject.NULL : buffers[0])
                     .put("submittedFrames", metrics.frames.get()).put("maxFrameSubmitGapMs", metrics.maxGapNs.get() / 1_000_000d)
                     .put("audioUnderruns", metrics.underruns).put("maxAudioFeedGapMs", metrics.maxAudioFeedGapMs)
                     .put("bufferingEvents", metrics.buffering).put("droppedFrameEvents", metrics.dropped)

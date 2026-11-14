@@ -63,7 +63,7 @@ jobs:
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" \
             :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest \
-            :app:testLeanbackArm64_v8aPreviewUnitTest --no-daemon --build-cache --max-workers=2 --console=plain
+            :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
           python3 tools/testing/playback-stutter/verify.py
           python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
           mkdir -p artifacts/arm64-diagnostics
