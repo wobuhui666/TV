@@ -3,6 +3,7 @@ package com.fongmi.android.tv.player.exo;
 import static org.junit.Assert.*;
 
 import androidx.media3.common.C;
+import androidx.media3.common.ColorInfo;
 import androidx.media3.common.Format;
 import androidx.media3.common.Timeline;
 import androidx.media3.exoplayer.DecoderCounters;
@@ -54,8 +55,12 @@ public class ExoPlaybackDiagnosticsTest {
         listener.onDroppedVideoFrames(null, 12, 1_000);
         listener.onAudioSinkError(null, null);
         listener.onAudioCodecError(null, null);
+        listener.onVideoDecoderReleased(null, "ignored");
+        listener.onVideoCodecError(null, null);
+        listener.onVideoDisabled(null, null);
         DiagnosticLog.start(folder.getRoot());
         assertFalse(logs().contains("exo-audio"));
+        assertFalse(logs().contains("exo-video"));
     }
 
     @Test
@@ -127,5 +132,77 @@ public class ExoPlaybackDiagnosticsTest {
         assertTrue(log.contains("audioTrackRelease releasedOutputEncoding=2"));
         assertTrue(log.contains("releasedOutputBufferBytes=96000"));
         assertTrue(log.contains("lastOutputBufferBytes=192000"));
+    }
+
+    @Test
+    public void shouldRetainVideoDecoderAndPrimitiveFormatWhenRecordingStartsDuringPlayback() throws Exception {
+        listener.onVideoDecoderInitialized(null, "OMX.MTK.VIDEO.DECODER.HEVC", 0, 24);
+        listener.onVideoInputFormatChanged(null, new Format.Builder().setSampleMimeType("video/hevc")
+                .setCodecs("hvc1.1.6.L153.B0").setWidth(3840).setHeight(2160).setFrameRate(59.94f)
+                .setAverageBitrate(48_000_000).setColorInfo(new ColorInfo.Builder().setColorSpace(C.COLOR_SPACE_BT2020)
+                        .setColorRange(C.COLOR_RANGE_LIMITED).setColorTransfer(C.COLOR_TRANSFER_ST2084)
+                        .setLumaBitdepth(10).setChromaBitdepth(10).build())
+                .setId("https://private.invalid/video?token=VIDEO_ID_SECRET")
+                .setLabel("VIDEO_LABEL_SECRET").build(), null);
+        DiagnosticLog.start(folder.getRoot());
+        listener.onAudioUnderrun(time, 96_000, 500, 700);
+        listener.onDroppedVideoFrames(time, 9, 1_000);
+        String log = logs();
+        assertTrue(log.contains("lastVideoDecoder=OMX.MTK.VIDEO.DECODER.HEVC"));
+        assertTrue(log.contains("videoMime=video/hevc"));
+        assertTrue(log.contains("videoCodecs=hvc1.1.6.L153.B0"));
+        assertTrue(log.contains("videoWidth=3840 videoHeight=2160 videoFrameRate=59.94"));
+        assertTrue(log.contains("videoBitrate=48000000"));
+        assertTrue(log.contains("videoColorTransfer=" + C.COLOR_TRANSFER_ST2084));
+        assertTrue(log.contains("videoLumaBitdepth=10 videoChromaBitdepth=10"));
+        assertFalse(log.contains("private.invalid"));
+        assertFalse(log.contains("VIDEO_ID_SECRET"));
+        assertFalse(log.contains("VIDEO_LABEL_SECRET"));
+    }
+
+    @Test
+    public void shouldKeepLatestVideoDecoderWhenPreviousReleaseArrivesLate() throws Exception {
+        listener.onVideoDecoderInitialized(null, "ffmpeg", 0, 5);
+        listener.onVideoDecoderInitialized(null, "c2.mtk.avc.decoder", 10, 7);
+        DiagnosticLog.start(folder.getRoot());
+        listener.onVideoDecoderReleased(time, "ffmpeg");
+        String log = logs();
+        assertTrue(log.contains("videoDecoderRelease releasedVideoDecoder=ffmpeg"));
+        assertTrue(log.contains("lastVideoDecoder=c2.mtk.avc.decoder"));
+    }
+
+    @Test
+    public void shouldRecordVideoCountersAndClearContextWhenVideoIsDisabled() throws Exception {
+        listener.onVideoDecoderInitialized(null, "previous-video-decoder", 0, 5);
+        listener.onVideoInputFormatChanged(null, new Format.Builder().setSampleMimeType("video/avc")
+                .setWidth(1920).setHeight(1080).build(), null);
+        DecoderCounters counters = new DecoderCounters();
+        counters.renderedOutputBufferCount = 100;
+        counters.skippedOutputBufferCount = 2;
+        counters.droppedBufferCount = 7;
+        counters.droppedInputBufferCount = 3;
+        counters.maxConsecutiveDroppedBufferCount = 4;
+        DiagnosticLog.start(folder.getRoot());
+        listener.onVideoDisabled(time, counters);
+        String log = logs();
+        assertTrue(log.contains("videoDisabled renderedBuffers=100 skippedBuffers=2 droppedBuffers=7"
+                + " droppedInputBuffers=3 maxConsecutiveDroppedBuffers=4"));
+        DiagnosticLog.stop();
+        DiagnosticLog.start(folder.getRoot());
+        listener.onDroppedVideoFrames(time, 1, 100);
+        log = logs();
+        assertTrue(log.contains("lastVideoDecoder=unknown videoMime=unknown videoCodecs=unknown"));
+        assertTrue(log.contains("videoWidth=-1 videoHeight=-1 videoFrameRate=-1.0"));
+        assertFalse(log.contains("previous-video-decoder"));
+    }
+
+    @Test
+    public void shouldRecordVideoCodecErrorsWithRedaction() throws Exception {
+        DiagnosticLog.start(folder.getRoot());
+        listener.onVideoCodecError(time, new IllegalStateException("https://host.invalid/video?token=VIDEO_ERROR_SECRET"));
+        String log = logs();
+        assertTrue(log.contains("videoCodecError"));
+        assertTrue(log.contains("exo-video"));
+        assertFalse(log.contains("VIDEO_ERROR_SECRET"));
     }
 }

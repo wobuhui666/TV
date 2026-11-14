@@ -3,6 +3,10 @@ name: Build isolated TV validation APKs
 on:
   workflow_dispatch:
     inputs:
+      playback_performance:
+        description: Compare Android 11 high bitrate playback, renderers and danmaku load
+        type: boolean
+        default: false
       lint_baseline_ref:
         description: Compare lint errors against this existing commit; blank requires a clean full lint report
         type: string
@@ -25,7 +29,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  playback-performance:
+    if: inputs.playback_performance
+    uses: ./.github/workflows/exo-playback-performance.yml
   build:
+    if: ${{ !inputs.playback_performance }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:

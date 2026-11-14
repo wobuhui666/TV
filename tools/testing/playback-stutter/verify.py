@@ -44,6 +44,8 @@ def run():
         "onAudioDecoderInitialized", "onAudioInputFormatChanged", "onAudioTrackInitialized",
         "onAudioTrackReleased", "onAudioUnderrun", "onAudioSinkError", "onAudioCodecError",
         "onDroppedVideoFrames", "onAudioDisabled",
+        "onVideoDecoderInitialized", "onVideoDecoderReleased", "onVideoInputFormatChanged",
+        "onVideoDisabled", "onVideoCodecError",
     ]
     methods = []
     for name in callbacks:
@@ -87,22 +89,45 @@ def run():
         "androidx/media3/common/C.java": """package androidx.media3.common; public class C {
             public static final long TIME_UNSET=-9223372036854775807L;
             public static final int ENCODING_PCM_16BIT=2; public @interface Encoding {}
+            public static final int COLOR_SPACE_BT2020=6, COLOR_RANGE_LIMITED=2, COLOR_TRANSFER_ST2084=6;
         }""",
         "androidx/media3/common/Timeline.java": "package androidx.media3.common; public class Timeline { public static final Timeline EMPTY=new Timeline(); }",
         "androidx/media3/common/Format.java": """package androidx.media3.common; public class Format {
-            public static final int NO_VALUE=-1; public String sampleMimeType,id; public int sampleRate=-1,channelCount=-1;
+            public static final int NO_VALUE=-1; public String sampleMimeType,id,label,codecs;
+            public int sampleRate=-1,channelCount=-1,width=-1,height=-1,bitrate=-1; public float frameRate=-1;
+            public ColorInfo colorInfo;
             public String toString() { return id; }
             public static class Builder {
                 private final Format value=new Format();
                 public Builder setSampleMimeType(String mime) { value.sampleMimeType=mime; return this; }
                 public Builder setSampleRate(int rate) { value.sampleRate=rate; return this; }
                 public Builder setChannelCount(int channels) { value.channelCount=channels; return this; }
+                public Builder setCodecs(String codecs) { value.codecs=codecs; return this; }
+                public Builder setWidth(int width) { value.width=width; return this; }
+                public Builder setHeight(int height) { value.height=height; return this; }
+                public Builder setFrameRate(float rate) { value.frameRate=rate; return this; }
+                public Builder setAverageBitrate(int bitrate) { value.bitrate=bitrate; return this; }
+                public Builder setColorInfo(ColorInfo info) { value.colorInfo=info; return this; }
+                public Builder setLabel(String label) { value.label=label; return this; }
                 public Builder setId(String id) { value.id=id; return this; } public Format build() { return value; }
+            }
+        }""",
+        "androidx/media3/common/ColorInfo.java": """package androidx.media3.common; public class ColorInfo {
+            public int colorSpace=-1,colorRange=-1,colorTransfer=-1,lumaBitdepth=-1,chromaBitdepth=-1;
+            public static class Builder {
+                private final ColorInfo value=new ColorInfo();
+                public Builder setColorSpace(int space) { value.colorSpace=space; return this; }
+                public Builder setColorRange(int range) { value.colorRange=range; return this; }
+                public Builder setColorTransfer(int transfer) { value.colorTransfer=transfer; return this; }
+                public Builder setLumaBitdepth(int bits) { value.lumaBitdepth=bits; return this; }
+                public Builder setChromaBitdepth(int bits) { value.chromaBitdepth=bits; return this; }
+                public ColorInfo build() { return value; }
             }
         }""",
         "androidx/media3/exoplayer/DecoderReuseEvaluation.java": "package androidx.media3.exoplayer; public class DecoderReuseEvaluation {}",
         "androidx/media3/exoplayer/DecoderCounters.java": """package androidx.media3.exoplayer; public class DecoderCounters {
-            public int renderedOutputBufferCount,skippedOutputBufferCount; public synchronized void ensureUpdated() {}
+            public int renderedOutputBufferCount,skippedOutputBufferCount,droppedBufferCount,droppedInputBufferCount,
+                maxConsecutiveDroppedBufferCount; public synchronized void ensureUpdated() {}
         }""",
         "androidx/media3/exoplayer/source/MediaSource.java": "package androidx.media3.exoplayer.source; public interface MediaSource { class MediaPeriodId {} }",
         "androidx/media3/exoplayer/audio/AudioSink.java": "package androidx.media3.exoplayer.audio; import androidx.media3.common.C; public interface AudioSink {" + track + "}",

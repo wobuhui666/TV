@@ -21,6 +21,18 @@ final class ExoPlaybackDiagnostics implements AnalyticsListener {
     // Release callbacks carry a fresh config and can arrive after a replacement is initialized.
     // Keep the latest initialization as historical context, rather than claiming it is active.
     @Nullable private AudioSink.AudioTrackConfig lastOutput;
+    private String lastVideoDecoder = "unknown";
+    private String videoMime = "unknown";
+    private String videoCodecs = "unknown";
+    private int videoWidth = Format.NO_VALUE;
+    private int videoHeight = Format.NO_VALUE;
+    private float videoFrameRate = Format.NO_VALUE;
+    private int videoBitrate = Format.NO_VALUE;
+    private int videoColorSpace = Format.NO_VALUE;
+    private int videoColorRange = Format.NO_VALUE;
+    private int videoColorTransfer = Format.NO_VALUE;
+    private int videoLumaBitdepth = Format.NO_VALUE;
+    private int videoChromaBitdepth = Format.NO_VALUE;
 
     @Override
     public void onAudioDecoderInitialized(EventTime time, String name, long timestampMs, long durationMs) {
@@ -76,6 +88,60 @@ final class ExoPlaybackDiagnostics implements AnalyticsListener {
     }
 
     @Override
+    public void onVideoDecoderInitialized(EventTime time, String name, long timestampMs, long durationMs) {
+        lastVideoDecoder = name;
+        if (DiagnosticLog.isEnabled()) record(time, "videoDecoderInit durationMs=" + durationMs);
+    }
+
+    @Override
+    public void onVideoInputFormatChanged(EventTime time, Format format, @Nullable DecoderReuseEvaluation reuse) {
+        // Retain only diagnostic fields, never the Format's URL-bearing id, label or metadata.
+        videoMime = format.sampleMimeType == null ? "unknown" : format.sampleMimeType;
+        videoCodecs = format.codecs == null ? "unknown" : format.codecs;
+        videoWidth = format.width;
+        videoHeight = format.height;
+        videoFrameRate = format.frameRate;
+        videoBitrate = format.bitrate;
+        videoColorSpace = format.colorInfo == null ? Format.NO_VALUE : format.colorInfo.colorSpace;
+        videoColorRange = format.colorInfo == null ? Format.NO_VALUE : format.colorInfo.colorRange;
+        videoColorTransfer = format.colorInfo == null ? Format.NO_VALUE : format.colorInfo.colorTransfer;
+        videoLumaBitdepth = format.colorInfo == null ? Format.NO_VALUE : format.colorInfo.lumaBitdepth;
+        videoChromaBitdepth = format.colorInfo == null ? Format.NO_VALUE : format.colorInfo.chromaBitdepth;
+        record(time, "videoFormat");
+    }
+
+    @Override
+    public void onVideoDecoderReleased(EventTime time, String name) {
+        if (!DiagnosticLog.isEnabled()) return;
+        // The old decoder's release can follow a replacement decoder's initialization.
+        record(time, "videoDecoderRelease releasedVideoDecoder=" + name);
+    }
+
+    @Override
+    public void onVideoCodecError(EventTime time, Exception error) {
+        if (!DiagnosticLog.isEnabled()) return;
+        record(time, "videoCodecError");
+        DiagnosticLog.record("exo-video", error);
+    }
+
+    @Override
+    public void onVideoDisabled(EventTime time, DecoderCounters counters) {
+        if (DiagnosticLog.isEnabled()) {
+            counters.ensureUpdated();
+            record(time, "videoDisabled renderedBuffers=" + counters.renderedOutputBufferCount
+                    + " skippedBuffers=" + counters.skippedOutputBufferCount
+                    + " droppedBuffers=" + counters.droppedBufferCount
+                    + " droppedInputBuffers=" + counters.droppedInputBufferCount
+                    + " maxConsecutiveDroppedBuffers=" + counters.maxConsecutiveDroppedBufferCount);
+        }
+        lastVideoDecoder = videoMime = videoCodecs = "unknown";
+        videoWidth = videoHeight = videoBitrate = Format.NO_VALUE;
+        videoFrameRate = Format.NO_VALUE;
+        videoColorSpace = videoColorRange = videoColorTransfer = Format.NO_VALUE;
+        videoLumaBitdepth = videoChromaBitdepth = Format.NO_VALUE;
+    }
+
+    @Override
     public void onAudioDisabled(EventTime time, DecoderCounters counters) {
         if (DiagnosticLog.isEnabled()) {
             counters.ensureUpdated();
@@ -90,11 +156,16 @@ final class ExoPlaybackDiagnostics implements AnalyticsListener {
 
     private void record(EventTime time, String event) {
         if (!DiagnosticLog.isEnabled()) return;
-        DiagnosticLog.record("exo-audio", event + " realtimeMs=" + time.realtimeMs
+        DiagnosticLog.record(event.startsWith("video") ? "exo-video" : "exo-audio", event + " realtimeMs=" + time.realtimeMs
                 + " positionMs=" + time.currentPlaybackPositionMs
                 + " mediaBufferedDurationMs=" + time.totalBufferedDurationMs
                 + " decoder=" + decoder + " mime=" + mime + " sampleRate=" + sampleRate
-                + " channels=" + channels + describeOutput("lastOutput", lastOutput));
+                + " channels=" + channels + describeOutput("lastOutput", lastOutput)
+                + " lastVideoDecoder=" + lastVideoDecoder + " videoMime=" + videoMime + " videoCodecs=" + videoCodecs
+                + " videoWidth=" + videoWidth + " videoHeight=" + videoHeight + " videoFrameRate=" + videoFrameRate
+                + " videoBitrate=" + videoBitrate + " videoColorSpace=" + videoColorSpace
+                + " videoColorRange=" + videoColorRange + " videoColorTransfer=" + videoColorTransfer
+                + " videoLumaBitdepth=" + videoLumaBitdepth + " videoChromaBitdepth=" + videoChromaBitdepth);
     }
 
     private static String describeOutput(String prefix, @Nullable AudioSink.AudioTrackConfig output) {
