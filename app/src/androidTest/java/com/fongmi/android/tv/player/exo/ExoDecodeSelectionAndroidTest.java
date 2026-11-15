@@ -4,16 +4,24 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import android.content.SharedPreferences;
 
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.MimeTypes;
+import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
 import androidx.media3.common.TrackGroup;
 import androidx.media3.exoplayer.ExoPlaybackException;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.RendererCapabilities;
+import androidx.media3.exoplayer.mediacodec.MediaCodecInfo;
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector;
 import androidx.media3.exoplayer.source.MediaSource;
 import androidx.media3.exoplayer.source.TrackGroupArray;
 import androidx.media3.exoplayer.trackselection.DecodeTrackSelector;
@@ -23,6 +31,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.fongmi.android.tv.player.engine.PlayerEngine;
+import com.fongmi.android.tv.player.PlayerManager;
+import com.fongmi.android.tv.player.media.PlaySpec;
+import com.fongmi.android.tv.player.parse.ParseJob;
+import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.setting.PlayerSetting;
 import com.github.catvod.utils.Prefers;
 
@@ -32,8 +44,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
 
 /** Characterizes the shipping selector with declared capabilities, without codec instances. */
 @RunWith(AndroidJUnit4.class)
@@ -148,6 +163,160 @@ public final class ExoDecodeSelectionAndroidTest {
         });
     }
 
+    @Test
+    public void audioDecoderRecoverySelectsSoftwareAudioAndKeeps4kVideoOnPlatform() throws Exception {
+        onMain(() -> {
+            TrackSelectorResult result = select(PlayerEngine.SOFT, PlayerEngine.HARD,
+                    audioAndVideo(), new TrackGroupArray(AUDIO, VIDEO));
+            assertSelected(result, 1, AUDIO);
+            assertSelected(result, 2, VIDEO);
+            assertNull(result.selections[0]);
+            assertNull(result.selections[3]);
+        });
+    }
+
+    @Test
+    public void videoDecoderRecoveryDoesNotChangeWorkingAudioRenderer() throws Exception {
+        onMain(() -> {
+            TrackSelectorResult result = select(PlayerEngine.HARD, PlayerEngine.SOFT,
+                    audioAndVideo(), new TrackGroupArray(AUDIO, VIDEO));
+            assertSelected(result, 0, AUDIO);
+            assertSelected(result, 3, VIDEO);
+            assertNull(result.selections[1]);
+            assertNull(result.selections[2]);
+        });
+    }
+
+    @Test
+    public void softwareCodecFilteringAffectsOnlyTheFailedTrackType() throws Exception {
+        MediaCodecInfo hardware = MediaCodecInfo.newInstance("vendor.decoder", MimeTypes.VIDEO_H264,
+                MimeTypes.VIDEO_H264, null, true, false, false, false, false);
+        MediaCodecInfo software = MediaCodecInfo.newInstance("software.decoder", MimeTypes.VIDEO_H264,
+                MimeTypes.VIDEO_H264, null, false, true, false, false, false);
+        List<MediaCodecInfo> codecs = List.of(hardware, software);
+        MediaCodecSelector delegate = (mime, secure, tunneling) -> codecs;
+        MediaCodecSelector audioRecovery = ExoUtil.softwareCodecSelector(delegate, true, false);
+        assertEquals(List.of(software), audioRecovery.getDecoderInfos(MimeTypes.AUDIO_AAC, false, false));
+        assertSame(codecs, audioRecovery.getDecoderInfos(MimeTypes.VIDEO_H264, false, false));
+        MediaCodecSelector videoRecovery = ExoUtil.softwareCodecSelector(delegate, false, true);
+        assertSame(codecs, videoRecovery.getDecoderInfos(MimeTypes.AUDIO_AAC, false, false));
+        assertEquals(List.of(software), videoRecovery.getDecoderInfos(MimeTypes.VIDEO_H264, false, false));
+        assertSame(delegate, ExoUtil.softwareCodecSelector(delegate, false, false));
+    }
+
+    @Test
+    public void rendererRecoveryStaysBoundedAcrossRebuildsAndResetsForNewPlayback() throws Exception {
+        onMain(() -> {
+            ExoPlayerEngine engine = new ExoPlayerEngine(PlayerEngine.HARD, new Player.Listener() {});
+            try {
+                ExoPlaybackException error = decoderError(AUDIO.getFormat(0), C.INDEX_UNSET);
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK, engine.handleError(error));
+                engine.rebuild();
+                assertEquals(PlayerEngine.ErrorAction.FATAL, engine.handleError(error));
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK,
+                        engine.handleError(decoderError(VIDEO.getFormat(0), C.INDEX_UNSET)));
+                assertTrue(engine.resetDecodeFallback());
+                engine.rebuild();
+                assertFalse(engine.resetDecodeFallback());
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK, engine.handleError(error));
+                engine.setDecode(PlayerEngine.SOFT);
+                engine.rebuild();
+                assertEquals(PlayerEngine.ErrorAction.DECODE, engine.handleError(error));
+            } finally {
+                engine.release();
+            }
+        });
+    }
+
+    @Test
+    public void missingRendererFormatCanRecoverUsingTheActualRendererType() throws Exception {
+        onMain(() -> {
+            ExoPlayerEngine engine = new ExoPlayerEngine(PlayerEngine.HARD, new Player.Listener() {});
+            try {
+                ExoPlayer player = (ExoPlayer) engine.getPlayer();
+                int audio = C.INDEX_UNSET;
+                for (int i = 0; i < player.getRendererCount(); i++) {
+                    if (player.getRendererType(i) == C.TRACK_TYPE_AUDIO) { audio = i; break; }
+                }
+                assertTrue(audio >= 0);
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK, engine.handleError(decoderError(null, audio)));
+            } finally {
+                engine.release();
+            }
+        });
+    }
+
+    @Test
+    public void unknownRendererFailuresKeepTheExistingModeRetry() throws Exception {
+        onMain(() -> {
+            ExoPlayerEngine engine = new ExoPlayerEngine(PlayerEngine.HARD, new Player.Listener() {});
+            try {
+                assertEquals(PlayerEngine.ErrorAction.DECODE,
+                        engine.handleError(decoderError(null, C.INDEX_UNSET)));
+                assertFalse(engine.resetDecodeFallback());
+            } finally {
+                engine.release();
+            }
+        });
+    }
+
+    @Test
+    public void managerKeepsAudioRecoveryAcrossRebuildsAndClearsItForStartAndParse() throws Exception {
+        onMain(() -> {
+            int savedEngine = PlayerSetting.getEngine();
+            PlayerSetting.putEngine(PlayerSetting.ENGINE_EXO);
+            int[] rebuilds = {0};
+            PlayerManager.Callback callback = (PlayerManager.Callback) Proxy.newProxyInstance(
+                    PlayerManager.Callback.class.getClassLoader(), new Class<?>[]{PlayerManager.Callback.class},
+                    (proxy, method, args) -> {
+                        if (method.getName().equals("onPlayerRebuild")) rebuilds[0]++;
+                        return null;
+                    });
+            PlayerManager manager = new PlayerManager(callback);
+            try {
+                manager.start(PlaySpec.from("first", "file:///decoder-recovery-first.mp4", Map.of(),
+                        MediaMetadata.EMPTY), 60_000, 12_000);
+                Player.Listener listener = field(manager, "listener");
+                ExoPlayerEngine engine = field(manager, "engine");
+                ExoPlaybackException error = decoderError(AUDIO.getFormat(0), C.INDEX_UNSET);
+                listener.onPlayerError(error);
+                assertEquals(1, rebuilds[0]);
+                assertEquals(PlayerEngine.HARD, (int) field(manager, "decode"));
+                assertEquals(PlayerEngine.ErrorAction.FATAL, engine.handleError(error));
+                manager.rebuildAudioPipeline();
+                assertEquals(PlayerEngine.ErrorAction.FATAL, engine.handleError(error));
+
+                manager.start(PlaySpec.from("second", "file:///decoder-recovery-second.mp4", Map.of(),
+                        MediaMetadata.EMPTY), 60_000);
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK, engine.handleError(error));
+                assertEquals(PlayerEngine.HARD, (int) field(manager, "decode"));
+
+                // Stop the parser before its queued WebView work runs, then deliver its result.
+                manager.parse("third", Result.empty(), false, MediaMetadata.EMPTY);
+                ((ParseJob) field(manager, "parseJob")).stop();
+                manager.onParseSuccess(Map.of(), "file:///decoder-recovery-third.mp4", "");
+                assertEquals(PlayerEngine.ErrorAction.DECODE_TRACK, engine.handleError(error));
+                assertEquals(PlayerEngine.HARD, (int) field(manager, "decode"));
+            } finally {
+                manager.release();
+                PlayerSetting.putEngine(savedEngine);
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T field(Object target, String name) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return (T) field.get(target);
+    }
+
+    private static ExoPlaybackException decoderError(Format format, int rendererIndex) {
+        return ExoPlaybackException.createForRenderer(new IllegalStateException("test decoder failure"),
+                "test", rendererIndex, format, C.FORMAT_HANDLED, null, false,
+                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED);
+    }
+
     private static RendererCapabilities[] video(int platformSupport, int ffmpegSupport) {
         return new RendererCapabilities[]{
                 capability("MediaCodecVideoRenderer", C.TRACK_TYPE_VIDEO, platformSupport),
@@ -178,7 +347,12 @@ public final class ExoDecodeSelectionAndroidTest {
 
     private static TrackSelectorResult select(int mode, RendererCapabilities[] renderers, TrackGroupArray groups)
             throws ExoPlaybackException {
-        DecodeTrackSelector selector = (DecodeTrackSelector) ExoUtil.buildTrackSelector(mode);
+        return select(mode, mode, renderers, groups);
+    }
+
+    private static TrackSelectorResult select(int audioMode, int videoMode,
+            RendererCapabilities[] renderers, TrackGroupArray groups) throws ExoPlaybackException {
+        DecodeTrackSelector selector = (DecodeTrackSelector) ExoUtil.buildTrackSelector(audioMode, videoMode);
         selector.init(parameters -> {}, BandwidthMeter.NO_OP);
         try {
             return selector.selectTracks(renderers, groups, new MediaSource.MediaPeriodId(new Object()), Timeline.EMPTY);

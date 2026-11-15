@@ -1,5 +1,3 @@
-# Base: wobuhui666/media 3c2cbe8ac742c2fe15eff52f03eeb3b1b648848d
-# Restore current, unexpired danmaku when enabling or loading while paused.
 diff --git a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuController.java b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuController.java
 index 7bf291c6d1a94bc7a8028b1dbaf05b4245b19c0a..00940a1d713aee360f9eb4a5239e2b1de9772602 100644
 --- a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuController.java
@@ -19,7 +17,7 @@ index 7bf291c6d1a94bc7a8028b1dbaf05b4245b19c0a..00940a1d713aee360f9eb4a5239e2b1d
    }
  
 diff --git a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java
-index 2142ac75048dfca17ade5aa37b7fbd766db9f657..c5f877e37ef219b651fdde3ac8da996a8c619ce0 100644
+index 2142ac75048dfca17ade5aa37b7fbd766db9f657..332999b3d5fdb9ffa1e5dce9c01f23229c090a69 100644
 --- a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java
 +++ b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java
 @@ -45,6 +45,7 @@ public final class DanmakuView extends View {
@@ -83,7 +81,15 @@ index 2142ac75048dfca17ade5aa37b7fbd766db9f657..c5f877e37ef219b651fdde3ac8da996a
      }
    }
  
-@@ -343,7 +362,10 @@ public final class DanmakuView extends View {
+@@ -332,6 +351,7 @@ public final class DanmakuView extends View {
+     if (drawEnabled) {
+       postInvalidateOnAnimation();
+     } else {
++      painter.clearTextCache();
+       invalidate();
+     }
+   }
+@@ -343,7 +363,10 @@ public final class DanmakuView extends View {
      }
      long currentMs = getCurrentPositionMs();
      painter.beginFrame();
@@ -95,7 +101,7 @@ index 2142ac75048dfca17ade5aa37b7fbd766db9f657..c5f877e37ef219b651fdde3ac8da996a
        activateNewItems(currentMs);
      }
      int activeItemCount = drawActiveItems(canvas, currentMs);
-@@ -352,6 +374,35 @@ public final class DanmakuView extends View {
+@@ -352,6 +375,35 @@ public final class DanmakuView extends View {
      }
    }
  
@@ -131,7 +137,25 @@ index 2142ac75048dfca17ade5aa37b7fbd766db9f657..c5f877e37ef219b651fdde3ac8da996a
    private int drawActiveItems(Canvas canvas, long currentMs) {
      int writeIdx = 0;
      for (int i = 0; i < activeItems.size(); i++) {
-@@ -544,6 +595,9 @@ public final class DanmakuView extends View {
+@@ -370,6 +422,9 @@ public final class DanmakuView extends View {
+     if (activeItems.size() > writeIdx) {
+       activeItems.subList(writeIdx, activeItems.size()).clear();
+     }
++    if (writeIdx == 0) {
++      painter.clearTextCache();
++    }
+     return writeIdx;
+   }
+ 
+@@ -497,6 +552,7 @@ public final class DanmakuView extends View {
+   }
+ 
+   private void clearActiveItems() {
++    painter.clearTextCache();
+     for (int i = 0; i < activeItems.size(); i++) {
+       deactivate(activeItems.get(i));
+     }
+@@ -544,6 +600,9 @@ public final class DanmakuView extends View {
        return;
      }
      if (clock.started) {

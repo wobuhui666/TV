@@ -11,7 +11,7 @@ import sys
 
 BASE_COMMIT = "342f6590e02ac390e0bd6b4488b8a1bff55747c1"
 PATCH = Path(__file__).with_name("paused-danmaku-toggle.patch")
-PATCH_SHA256 = "463eba72b1c56c19e38065a8d1f4476ed7a8e6b0d5bd39f0a8c05ceb47c169d7"
+PATCH_SHA256 = "4251fc8a5b8a080f051674f5f3a9a8c5c1c9f8c9b55c382493341386a9d768a3"
 TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuController.java",
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuView.java",
@@ -21,9 +21,15 @@ RENDER_INDEX_SHA256 = "22343b0223dc63ebffe4e2f9ba76b408356269f172784597e799a6e38
 RENDER_INDEX_TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java",
 }
+TEXT_CACHE_PATCH = Path(__file__).with_name("danmaku-text-cache.patch")
+TEXT_CACHE_SHA256 = "b90c9e706d0997a5ad05f065af5ce74e5f040be83f266b1cde2bc786c96dbc13"
+TEXT_CACHE_TARGETS = {
+    "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java",
+}
 PATCH_SPECS = (
     {"patch": PATCH, "sha256": PATCH_SHA256, "targets": TARGETS},
     {"patch": RENDER_INDEX_PATCH, "sha256": RENDER_INDEX_SHA256, "targets": RENDER_INDEX_TARGETS},
+    {"patch": TEXT_CACHE_PATCH, "sha256": TEXT_CACHE_SHA256, "targets": TEXT_CACHE_TARGETS},
 )
 
 

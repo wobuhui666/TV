@@ -45,6 +45,8 @@ public final class AssTextRenderer extends BaseRenderer {
     private final AtomicInteger queued = new AtomicInteger();
     private final AtomicInteger queuedBytes = new AtomicInteger();
     private final AtomicBoolean rendering = new AtomicBoolean();
+    private final AssRenderSchedule schedule = new AssRenderSchedule();
+    private final AssFrameCache frames = new AssFrameCache();
     private HandlerThread thread;
     private Handler worker;
     private Ass ass;
@@ -58,7 +60,6 @@ public final class AssTextRenderer extends BaseRenderer {
     private volatile int generation;
     private volatile long positionUs;
     private long offsetUs;
-    private long lastRenderUs = C.TIME_UNSET;
     private final AtomicBoolean refresh = new AtomicBoolean(true);
     private boolean ended;
 
@@ -105,6 +106,8 @@ public final class AssTextRenderer extends BaseRenderer {
         source = streamSource;
         streamOffsetUs = offset;
         generation++;
+        schedule.reset();
+        output.clear(generation);
         worker().post(() -> { fonts = streamSource.fonts; initialize(current); });
     }
 
@@ -128,9 +131,9 @@ public final class AssTextRenderer extends BaseRenderer {
     @Override protected void onPositionReset(long position, boolean joining, boolean keyFrame) {
         ended = false;
         generation++;
-        lastRenderUs = C.TIME_UNSET;
+        schedule.reset();
         output.clear(generation);
-        worker().post(() -> { if (track != null) track.clearEvent(); eventBytes = 0; historyPackets = 0; });
+        worker().post(() -> { if (track != null) track.clearEvent(); frames.clear(); eventBytes = 0; historyPackets = 0; });
         refresh();
     }
 
@@ -169,9 +172,9 @@ public final class AssTextRenderer extends BaseRenderer {
                 finally { queued.decrementAndGet(); queuedBytes.addAndGet(-data.length); }
             });
         }
-        if (!refresh.get() && lastRenderUs != C.TIME_UNSET && Math.abs(positionUs - lastRenderUs) < 33_000) return;
+        if (!schedule.isDue(positionUs, elapsedRealtimeUs, refresh.get())) return;
         if (!rendering.compareAndSet(false, true)) return;
-        lastRenderUs = positionUs;
+        schedule.scheduled(positionUs, elapsedRealtimeUs);
         int ticket = generation;
         worker().post(() -> {
             try {
@@ -203,12 +206,14 @@ public final class AssTextRenderer extends BaseRenderer {
                     render.setCacheLimit(4096, 24);
                     render.setTrack(track);
                 }
-                render.setFrameSize(width, height);
-                render.setStorageSize(width, height);
+                int renderWidth = width;
+                int renderHeight = height;
+                render.setFrameSize(renderWidth, renderHeight);
+                render.setStorageSize(renderWidth, renderHeight);
                 float size = PlayerSetting.getSubtitleTextSize();
                 render.setFontScale(size == 0 ? 1 : Math.clamp(size / .0533f, .5f, 3f));
                 AssFrame frame = render.renderFrame(positionUs / 1000, AssTexType.BITMAP_ALPHA);
-                if (frame == null || frame.getChanged() != 0) output.frame(frame, width, height, ticket);
+                if (frames.update(frame, renderWidth, renderHeight)) output.frame(frames.getFrame(), renderWidth, renderHeight, ticket);
             } catch (RuntimeException error) { Log.w("Libass", "Render failed", error); }
             finally { rendering.set(false); }
         });
@@ -227,6 +232,7 @@ public final class AssTextRenderer extends BaseRenderer {
         if (worker != null) { worker.post(this::closeNative); thread.quitSafely(); worker = null; thread = null; }
     }
     private void closeNative() {
+        frames.clear();
         if (render != null) render.release();
         if (track != null) track.release();
         if (ass != null) ass.release();

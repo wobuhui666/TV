@@ -92,9 +92,11 @@ public final class ExoHighBitratePlaybackTest {
             }
             runCase("high1080p.mp4", "production", true, false, "none", 0);
             runCase("high1080p.mp4", "async_reference", false, false, "none", 0);
-            for (int repeat = 0; repeat < 2; repeat++) {
-                String[] pair = repeat == 0 ? new String[]{"patched", "legacy"} : new String[]{"legacy", "patched"};
-                for (String overlay : pair) runCase("high1080p.mp4", "production", false, false, overlay, repeat);
+            for (String density : new String[]{"", "_default"}) {
+                for (int repeat = 0; repeat < 2; repeat++) {
+                    String[] pair = repeat == 0 ? new String[]{"patched", "legacy"} : new String[]{"legacy", "patched"};
+                    for (String overlay : pair) runCase("high1080p.mp4", "production", false, false, overlay + density, repeat);
+                }
             }
             runCase("high1080p-ass.mkv", "production", false, false, "none", 0);
             runCase("high1080p-ass.mkv", "production", false, true, "none", 0);
@@ -201,6 +203,9 @@ public final class ExoHighBitratePlaybackTest {
                 assertTrue("Comparison playback must restart after pool preparation", restarted[0]);
             }
             long[] position = new long[2], buffers = new long[]{Long.MAX_VALUE, 0};
+            int[] activeRange = new int[]{Integer.MAX_VALUE, 0};
+            Method activeCount = overlay[0] == null ? null : overlay[0].getClass().getDeclaredMethod("getActiveItemCount");
+            if (activeCount != null) activeCount.setAccessible(true);
             main(() -> position[0] = player[0].getCurrentPosition());
             int[] initialCounters = new int[3];
             main(() -> {
@@ -221,6 +226,13 @@ public final class ExoHighBitratePlaybackTest {
                 main(() -> {
                     buffers[0] = Math.min(buffers[0], player[0].getTotalBufferedDuration());
                     buffers[1] = player[0].getCurrentPosition();
+                    if (activeCount != null) {
+                        try {
+                            int active = (int) activeCount.invoke(overlay[0]);
+                            activeRange[0] = Math.min(activeRange[0], active);
+                            activeRange[1] = Math.max(activeRange[1], active);
+                        } catch (Exception failure) { throw new AssertionError(failure); }
+                    }
                 });
                 SystemClock.sleep(250);
             }
@@ -229,6 +241,8 @@ public final class ExoHighBitratePlaybackTest {
                     .put("nativeAss", nativeAss).put("danmaku", danmaku).put("repeat", repeat).put("ready", ready)
                     .put("status", metrics.error != null ? "decode_error" : ready ? "measured" : "not_ready")
                     .put("overlayPreparationMs", overlayPreparationMs)
+                    .put("minActiveDanmaku", activeCount == null ? 0 : activeRange[0])
+                    .put("maxActiveDanmaku", activeRange[1])
                     .put("preparationMs", preparationMs).put("wallWindowMs", SystemClock.elapsedRealtime() - window)
                     .put("positionAdvanceMs", position[1] - position[0])
                     .put("minMediaBufferedMs", buffers[0] == Long.MAX_VALUE ? JSONObject.NULL : buffers[0])
@@ -256,6 +270,7 @@ public final class ExoHighBitratePlaybackTest {
                 } catch (Exception failure) { throw new AssertionError(failure); }
             });
             cases.put(result);
+            if (activeCount != null) assertTrue("Danmaku comparison must draw active items: " + result, activeRange[1] > 0);
             android.util.Log.i("HighBitrateMetrics", result.toString());
         } finally {
             main(() -> {
@@ -273,12 +288,14 @@ public final class ExoHighBitratePlaybackTest {
     }
 
     private View addDanmaku(String mode) throws Exception {
-        Class<?> type = mode.equals("legacy") ? Class.forName("androidx.media3.ui.danmaku.LegacyDanmakuView") : DanmakuView.class;
+        Class<?> type = mode.startsWith("legacy") ? Class.forName("androidx.media3.ui.danmaku.LegacyDanmakuView") : DanmakuView.class;
         View view = (View) type.getConstructor(android.content.Context.class).newInstance(activity);
         ViewGroup root = (ViewGroup) activity.view.getParent();
         root.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        DanmakuConfig config = new DanmakuConfig.Builder().setTextSizeSp(18).setMaxOnScreen(150)
-                .setAllowScrollOverlap(true).build();
+        // Dense overlap reproduces the earlier bottleneck; default uses the shipping configuration.
+        DanmakuConfig config = mode.endsWith("_default") ? DanmakuConfig.DEFAULT
+                : new DanmakuConfig.Builder().setTextSizeSp(18).setMaxOnScreen(150)
+                        .setAllowScrollOverlap(true).build();
         type.getMethod("setConfig", DanmakuConfig.class).invoke(view, config);
         Method add = type.getMethod("addItems", List.class);
         for (int chunk = 0; chunk < 80; chunk++) {

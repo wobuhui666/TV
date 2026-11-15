@@ -40,7 +40,7 @@ final class NextMediaPreload implements Player.Listener {
         if ("preload_next".equals(key)) App.post(() -> { if (!released) update(); });
     };
 
-    NextMediaPreload(int decode, Player.Listener listener,
+    NextMediaPreload(int audioDecode, int videoDecode, Player.Listener listener,
                      com.fongmi.android.tv.player.subtitle.AdvancedSubtitleController subtitles,
                      PreloadCoordinator coordinator) {
         this.coordinator = coordinator;
@@ -57,15 +57,15 @@ final class NextMediaPreload implements Player.Listener {
                 })
                 .setTrackSelectorFactory(context -> {
                     com.fongmi.android.tv.player.track.DualSubtitleTrackSelector selector = new com.fongmi.android.tv.player.track.DualSubtitleTrackSelector(
-                            (androidx.media3.exoplayer.trackselection.DecodeTrackSelector) ExoUtil.buildTrackSelector(decode), subtitles.secondaryRendererCount());
+                            (androidx.media3.exoplayer.trackselection.DecodeTrackSelector) ExoUtil.buildTrackSelector(audioDecode, videoDecode), subtitles.secondaryRendererCount());
                     subtitles.addSelector(selector);
                     return selector;
                 })
-                .setRenderersFactory(subtitles.renderers(ExoUtil.buildPlaybackRenderersFactory(decode)))
+                .setRenderersFactory(subtitles.renderers(ExoUtil.buildPlaybackRenderersFactory(audioDecode, videoDecode)))
                 .setLoadControl(new DefaultLoadControl.Builder()
                         .setPlayerTargetBufferBytes(PlayerId.PRELOAD.name, 64 * 1024 * 1024).build());
         manager = builder.build();
-        player = ExoUtil.buildPlayer(decode, listener, builder);
+        player = ExoUtil.buildPlayer(audioDecode, videoDecode, listener, builder);
         handler = new Handler(player.getApplicationLooper());
         coordinator.attach(player);
         player.addListener(this);

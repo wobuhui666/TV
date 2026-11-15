@@ -63,11 +63,13 @@ jobs:
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" \
             :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest \
+            :app:assembleLeanbackArmeabi_v7aPreview \
             :app:testLeanbackArm64_v8aPreviewUnitTest -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
           python3 tools/testing/playback-stutter/verify.py
           python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
-          mkdir -p artifacts/arm64-diagnostics
-          cp app/build/outputs/apk/leanbackArm64_v8a/preview/*.apk artifacts/arm64-diagnostics/
+          mkdir -p artifacts/tv-preview
+          cp app/build/outputs/apk/leanbackArm64_v8a/preview/*.apk artifacts/tv-preview/
+          cp app/build/outputs/apk/leanbackArmeabi_v7a/preview/*.apk artifacts/tv-preview/
       - name: Prepare exact native libraries for the disposable emulator package
         run: |
           python3 .github/scripts/prepare-quickjs-preview.py
@@ -108,10 +110,10 @@ jobs:
             app/build/test-results/
             app/build/reports/tests/
           retention-days: 14
-      - name: Upload ARM64 diagnostics build
+      - name: Upload ARM64 and ARMv7 playback builds
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: exo-diagnostics-preview-${{ github.run_id }}
-          path: artifacts/arm64-diagnostics/*.apk
+          name: exo-stutter-preview-${{ github.run_id }}
+          path: artifacts/tv-preview/*.apk
           retention-days: 14

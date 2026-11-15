@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add a test-only legacy danmaku view/pool from the pinned baseline; never change production."""
+"""Add test-only legacy danmaku rendering from the pinned baseline; never change production."""
 
 import os
 from pathlib import Path
@@ -17,9 +17,11 @@ def main():
     if head != BASE:
         raise SystemExit("Comparison must use the fixed Media3 baseline")
     DESTINATION.mkdir(parents=True, exist_ok=True)
-    for name in ("DanmakuView", "DanmakuRenderPool"):
+    names = ("DanmakuView", "DanmakuRenderPool", "DanmakuPainter")
+    for name in names:
         value = subprocess.check_output(["git", "-C", str(MEDIA), "show", BASE + ":" + SOURCE + name + ".java"], text=True)
-        value = value.replace("DanmakuRenderPool", "LegacyDanmakuRenderPool").replace("DanmakuView", "LegacyDanmakuView")
+        for original in names:
+            value = value.replace(original, "Legacy" + original)
         (DESTINATION / ("Legacy" + name + ".java")).write_text(value)
     print("Generated test-only legacy danmaku classes from " + BASE)
 
