@@ -1,10 +1,40 @@
 # Exo 声音与弹幕停顿排查
 
+2026-11-15 已交付按轨道解码回退、弹幕查询减分配和 ASS 空白帧去重；最新结果见[最终修复与回归](#2026-11-15-最终修复与回归)。未获得稳定收益的绘制实验均已撤回，尚不能断言 MT5873 实机卡顿已消除。
+
 日期：2026-11-14。GHA 验证提交：`b0aa1ce6e956267bb6d9b307fe3e3a06f392b2dc`，分支 `fix/exo-danmaku-stutter-20261114`；基准提交：`6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec`。宿主机初查在有其他未提交功能改动的主工作树进行，GHA 使用只包含本轮修复、诊断及验证配置的隔离分支。
 
 [构建与回归](https://github.com/wobuhui666/TV/actions/runs/43590570128) 和 [Android 播放回归](https://github.com/wobuhui666/TV/actions/runs/43590570318) 均成功，测试及产物摘要见 [gha-summary.json](gha-summary.json)。
 
 后续 [Android 11 高码率播放对照](https://github.com/wobuhui666/TV/actions/runs/43629272590) 也成功，验证提交为 `a8b4352dba552e0177ffdeb06bc0d15af57f9a39`；完整公开测量见 [performance-summary.json](performance-summary.json)。该提交增加视频解码器诊断和测试，不改变默认播放策略。
+
+## 2026-11-15 最终修复与回归
+
+最终代码：`f25a1f3b7bccfdcc93f90dac2108e51595f74e4c`，分支仍为 `fix/exo-danmaku-stutter-20261114`。只保留有明确行为依据的修改：
+
+- 可识别的音频／视频解码失败分别回退，避免音频错误同时强制4K视频软解；每条轨道最多回退一次，当前媒体重建保留状态，新播放重置。手动软解和未知轨道的既有处理保留，预加载与前台配置一致。
+- 保留此前弹幕时间索引补丁，减少历史查询临时分配；撤回文字位图、RenderNode及其生命周期扩展，恢复原绘制路径。
+- ASS在空白区间只输出一次清屏，忽略原生标记未变化的帧；不替换／回收字形位图，不改变原渲染节奏。切流、seek、释放仍清理状态。
+
+[最终安装包回归](https://github.com/wobuhui666/TV/actions/runs/43672539635) 成功：1058项应用JUnit（145个测试类）、36项Android回归均通过，零失败／跳过；完整摘要及APK校验值见 [final-regression-summary.json](final-regression-summary.json)。该轮设置 `playback_regression_only=true`：执行全部应用JUnit、36项Android回归和5组实际播放，包括基线参考、基线生产、高码率1080p、4K及原生ASS。它验证解码回退、字幕状态和管线可播放，不是新的性能对照；不得把通过条件解释为流畅度达标。完整27组矩阵仍可通过默认的 `playback_performance=true` 运行。
+
+本轮5组播放均进入READY且无解码错误、无缓冲事件。约10秒的视频提交帧数为：1080p参考293、生产300，高码率1080p生产299，ASS生产294（确认选中字幕），4K生产79。前三类均无音频欠载；4K使用 `OMX.google.hevc.decoder` 软件解码，出现1次欠载，最大音频供给间隔516ms。ASS仍存在UI帧间隔波动。不能把4K进入READY或整体测试通过写成4K流畅。
+
+交付包：[ARM64／ARMv7 Preview APK](https://github.com/wobuhui666/TV/actions/runs/43672539635/artifacts/14145262497)；[回归证据](https://github.com/wobuhui666/TV/actions/runs/43672539635/artifacts/14144779232)。已下载核对两份APK的包名 `com.fongmi.android.tv.preview`、单一目标ABI和SHA256；原始ARM包在模拟器JNI替换之前复制。仅模拟器副本用于运行，未验证ARM真机解码、扬声器或海信驱动。
+
+### 已撤回的性能实验
+
+| 提交／GHA | 功能回归 | 同轮实测与决定 |
+| --- | --- | --- |
+| `804fe10455` / [43667197500](https://github.com/wobuhui666/TV/actions/runs/43667197500) | 1063项JUnit、46项Android、24组播放通过 | 位图缓存：密集弹幕UI帧率下降15.7%；默认弹幕视频下降11.7%、UI下降11.8%，原生堆增加约7MiB。撤回。 |
+| `8d9a8c2018` / [43669199666](https://github.com/wobuhui666/TV/actions/runs/43669199666) | 1063项JUnit、42项Android、27组播放通过 | RenderNode默认弹幕视频增加15.3%、UI增加3.3%，重叠场景视频下降7.8%；ASS视频下降11.0%，无可靠内存下降。改为重叠绕过并撤回ASS字形替换后再测。 |
+| `61880fdab7` / [43670962327](https://github.com/wobuhui666/TV/actions/runs/43670962327) | 1063项JUnit、42项Android、27组播放通过 | 普通弹幕UI增加4.1%，视频下降9.2%；ASS重复差异很大，未获得稳定收益。撤回其余绘制和渲染节奏实验。 |
+
+完整数据分别见 [位图实验](bitmap-experiment-summary.json)、[绘制指令实验](display-list-experiment-summary.json) 和 [收紧策略实验](guarded-experiment-summary.json)。这些旧测试包不作为最终修复包推荐。
+
+后两轮参考播放器也有音频欠载和明显波动：`43669199666` 的20个场景合计668次欠载、9个场景29次缓冲；`43670962327` 的26个场景合计1064次欠载、18个场景105次缓冲，参考基线两次分别提交96/276帧，首轮68次欠载、次轮零欠载。普通高码率生产路径也没有稳定追平参考路径，不能据这些结果判定用户的声音／画面停顿已修好。
+
+两次27组矩阵均将基础管线、两种弹幕配置和旧／新ASS交换顺序重复测量；旧ASS renderer来自固定提交 `6bf8b92be7311ea03cf103c028cf3d0a94d822bc` 并校验SHA，其余测试包装复制当轮代码，来源清单记录改名与共享缓存差异。`controlsPassed`仅要求参考基线提交超过20帧、时钟前进超过500ms，表示管线存活；音频欠载、缓冲和低帧率仍须单独阅读。
 
 ## Android 11 高码率对照
 
