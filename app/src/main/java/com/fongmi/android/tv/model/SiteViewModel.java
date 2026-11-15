@@ -21,6 +21,7 @@ import com.github.catvod.utils.Trans;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -102,10 +103,16 @@ public class SiteViewModel extends ViewModel {
                              BooleanSupplier isCurrentPage, Consumer<Result> onPlayable) {
         var config = VodConfig.get().getConfig();
         Site site = VodConfig.get().getSite(key);
+        SourceHealthManager.Attempt attempt = SourceHealthManager.attempt(key, SourceHealthManager.Phase.DETAIL);
         executeAction(owner, page, key + "\ndetail:" + id, () -> isCurrentPage.getAsBoolean()
                 && config == VodConfig.get().getConfig() && site == VodConfig.get().getSite(key),
-                () -> SiteApi.detailContent(key, id), value -> {
-                    if (value != null && !value.getVod().getFlags().isEmpty()) onPlayable.accept(value);
+                () -> {
+                    attempt.start();
+                    try { return SiteApi.detailContent(key, id); }
+                    finally { attempt.finish(); }
+                }, (value, error) -> {
+                    attempt.complete(error == null ? value : null, error);
+                    if (error == null && value != null && !value.getVod().getFlags().isEmpty()) onPlayable.accept(value);
                     else action.setValue(value);
                 });
     }
@@ -115,11 +122,11 @@ public class SiteViewModel extends ViewModel {
     }
 
     private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage, Callable<Result> callable) {
-        executeAction(owner, page, actionKey, isCurrentPage, callable, action::setValue);
+        executeAction(owner, page, actionKey, isCurrentPage, callable, (value, error) -> action.setValue(value));
     }
 
     private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage,
-                               Callable<Result> callable, Consumer<Result> onResult) {
+                               Callable<Result> callable, BiConsumer<Result, Throwable> onResult) {
         SourceActionUi request = SourceActionUi.start(owner, page, actionKey, isCurrentPage, () -> tasks.cancel(TaskType.ACTION));
         if (request == null) return;
         actionUi = request;
@@ -127,10 +134,10 @@ public class SiteViewModel extends ViewModel {
         try {
             tasks.execute(TaskType.ACTION, Constant.TIMEOUT_VOD, callable, value -> {
                 request.finishAction(value != null && (!value.getMsg().isEmpty() || !value.getVod().getFlags().isEmpty()));
-                onResult.accept(value);
+                onResult.accept(value, null);
             }, error -> {
                 request.cancel();
-                action.setValue(error instanceof ExtractException ? Result.error(error.getMessage()) : Result.empty());
+                onResult.accept(error instanceof ExtractException ? Result.error(error.getMessage()) : Result.empty(), error);
                 error.printStackTrace();
             });
         } finally {
@@ -149,8 +156,8 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void detailContent(String key, String id, Result prefetched) {
-        executeHealth(key, SourceHealthManager.Phase.DETAIL,
-                () -> prefetched != null ? prefetched : SiteApi.detailContent(key, id));
+        if (prefetched != null) execute(TaskType.RESULT, result, () -> prefetched);
+        else executeHealth(key, SourceHealthManager.Phase.DETAIL, () -> SiteApi.detailContent(key, id));
     }
 
     public void playerContent(String key, String flag, String id) {
