@@ -21,4 +21,8 @@ public final class LegacyActionPreviewBridge {
     public static AlertDialog createDialog(Activity context, String title, String button, DialogInterface.OnClickListener click) {
         return new AlertDialog.Builder(context).setTitle(title).setPositiveButton(button, click).create();
     }
+
+    public static AlertDialog createLoginDialog(Activity context, String title) {
+        return new AlertDialog.Builder(context).setTitle(title).setPositiveButton("Done", null).create();
+    }
 }

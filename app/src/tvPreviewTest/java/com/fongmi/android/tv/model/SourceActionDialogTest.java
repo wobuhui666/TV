@@ -12,6 +12,7 @@ import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.Constant;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.test.NativeUiEvidence;
@@ -149,6 +150,41 @@ public final class SourceActionDialogTest {
         main(() -> { assertFalse(first.get().isShowing());
             assertEquals(page.getWindow().getAttributes().token, second.get().getWindow().getAttributes().token); });
         NativeUiEvidence.capture("source-config-sequential-window");
+    }
+
+    @Test public void shouldAllowAnotherLegacyFormAfterTheConfigurationOwnerCloses() throws Exception {
+        AtomicReference<AlertDialog> configured = new AtomicReference<>();
+        legacy(new AtomicInteger(), configured, 0, "Source configuration");
+        await("configuration opens", () -> configured.get() != null && configured.get().isShowing());
+        main(page::finish);
+        await("configuration closes before home resumes", () -> home.hasWindowFocus() && !configured.get().isShowing());
+        AtomicReference<AlertDialog> login = new AtomicReference<>();
+        main(() -> {
+            login.set(LegacyActionPreviewBridge.createLoginDialog(home, "Other source login"));
+            login.get().show();
+        });
+        await("a different form from the same source package can open", () -> login.get().isShowing()
+                && device.hasObject(By.text("Other source login")));
+        main(() -> {
+            assertEquals(home.getWindow().getAttributes().token, login.get().getWindow().getAttributes().token);
+            login.get().dismiss();
+        });
+    }
+
+    @Test public void shouldAllowTheSameLegacyFormAfterTheLateCallbackBudgetExpires() throws Exception {
+        AtomicReference<AlertDialog> configured = new AtomicReference<>();
+        legacy(new AtomicInteger(), configured, 0, "Source configuration");
+        await("configuration opens", () -> configured.get() != null && configured.get().isShowing());
+        main(page::finish);
+        await("configuration closes before home resumes", () -> home.hasWindowFocus() && !configured.get().isShowing());
+        SystemClock.sleep(Constant.TIMEOUT_VOD + 500L);
+        main(() -> {
+            AlertDialog next = LegacyActionPreviewBridge.createDialog(home, "A later source form", "Done", null);
+            next.show();
+            assertTrue("Retired configuration requests cannot permanently block another call", next.isShowing());
+            assertEquals(home.getWindow().getAttributes().token, next.getWindow().getAttributes().token);
+            next.dismiss();
+        });
     }
 
     @Test public void shouldKeepPublicDialogOnItsPageAndRejectASecondWindow() throws Exception {

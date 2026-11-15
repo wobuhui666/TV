@@ -36,10 +36,44 @@ class SourceActionUi private constructor(
     private val page = WeakReference(page)
     private val closed = AtomicBoolean()
     private val windows = mutableMapOf<View, WindowManager>()
+    private val sourceNames = ConcurrentHashMap.newKeySet<String>()
+    private val constructors = mutableSetOf<String>()
+    @Volatile private var closedAt = 0L
     private var actionFinished = false
     @Volatile private var awaitingLegacyWindow = false
     private var pendingWindows = 0
     private val windowDeadline = Runnable { awaitingLegacyWindow = false; releaseIfFinished() }
+    private val retireLegacyBindings = Runnable {
+        removeSourceBindings()
+        retiredConstructors.entries.toList().forEach { (name, request) ->
+            if (request === this) retiredConstructors.remove(name, this)
+        }
+    }
+
+    private fun removeSourceBindings() {
+        sourceNames.forEach { name -> sources.remove(name, this) }
+    }
+
+    private fun bindSource(name: String) {
+        if (closed.get() && SystemClock.uptimeMillis() - closedAt >= Constant.TIMEOUT_VOD) return
+        sourceNames.add(name)
+        awaitingLegacyWindow = true
+        sources[name] = this
+        if (closed.get()) App.post {
+            App.removeCallbacks(retireLegacyBindings)
+            App.post(retireLegacyBindings, (closedAt + Constant.TIMEOUT_VOD - SystemClock.uptimeMillis()).coerceAtLeast(0))
+        }
+    }
+
+    private fun rememberConstructor(trace: Array<StackTraceElement>) {
+        val frame = trace.firstOrNull { frame -> sourceNames.any { matchesSource(frame, it) } } ?: return
+        val key = constructorKey(frame)
+        constructors.add(key)
+        if (closed.get()) {
+            if (SystemClock.uptimeMillis() - closedAt < Constant.TIMEOUT_VOD) retiredConstructors[key] = this
+            removeSourceBindings()
+        }
+    }
 
     override fun get(): Activity? = activity.get()?.takeIf { !closed.get() && !it.isFinishing && !it.isDestroyed }
 
@@ -66,7 +100,16 @@ class SourceActionUi private constructor(
 
     private fun release(cancel: Boolean) {
         check(Looper.myLooper() == Looper.getMainLooper())
+        if (closed.get()) return
+        closedAt = SystemClock.uptimeMillis()
         if (!closed.compareAndSet(false, true)) return
+        // Once a window is known, only its constructor can be a late callback.
+        // Other login/configuration forms in the same JAR keep their own UI.
+        if (constructors.isNotEmpty()) {
+            constructors.forEach { retiredConstructors[it] = this }
+            removeSourceBindings()
+        } else if (!awaitingLegacyWindow) removeSourceBindings()
+        if (sourceNames.isNotEmpty()) App.post(retireLegacyBindings, Constant.TIMEOUT_VOD.toLong())
         activity.get()?.lifecycle?.removeObserver(this)
         page.get()?.lifecycle?.removeObserver(this)
         activity.get()?.let { active.remove(it, this) }
@@ -125,9 +168,16 @@ class SourceActionUi private constructor(
 
     companion object {
         private val active = ConcurrentHashMap<FragmentActivity, SourceActionUi>()
-        // A closed owner remains a tombstone for delayed, unscoped legacy callbacks.
-        // These entries retain only weak pages after release; no source ClassLoader.
+        // Unscoped legacy callbacks have a bounded grace period. Retain weak pages
+        // and observed constructors, never a permanent block on a whole source package.
         private val sources = ConcurrentHashMap<String, SourceActionUi>()
+        private val retiredConstructors = ConcurrentHashMap<String, SourceActionUi>()
+
+        private fun matchesSource(frame: StackTraceElement, name: String): Boolean =
+            if (name.endsWith(".")) frame.className.startsWith(name)
+            else frame.className == name || frame.className.startsWith(name + "\$")
+
+        private fun constructorKey(frame: StackTraceElement): String = frame.className + "#" + frame.methodName
 
         @JvmStatic
         fun start(activity: FragmentActivity, page: LifecycleOwner, actionKey: String,
@@ -150,15 +200,13 @@ class SourceActionUi private constructor(
         fun bind(spider: Spider) {
             val request = Init.currentActivityOwner() as? SourceActionUi ?: return
             if (!spider.javaClass.name.startsWith("com.github.catvod.spider.")) return
-            request.awaitingLegacyWindow = true
-            sources["com.github.catvod.spider."] = request
+            request.bindSource("com.github.catvod.spider.")
         }
 
         @JvmStatic
         fun bind(bridge: Class<*>) {
             val request = Init.currentActivityOwner() as? SourceActionUi ?: return
-            request.awaitingLegacyWindow = true
-            sources[bridge.name] = request
+            request.bindSource(bridge.name)
         }
 
         /** Activity must return an actual WindowManagerImpl: Window casts it internally. */
@@ -168,13 +216,16 @@ class SourceActionUi private constructor(
             val trace = Thread.currentThread().stackTrace
             if (trace.none { it.className == "android.app.Dialog" && it.methodName == "<init>" }) return original
             val current = Init.currentActivityOwner()
-            val request = if (current != null) current as? SourceActionUi else trace.firstNotNullOfOrNull { frame ->
-                sources.entries.firstOrNull { (name, _) ->
-                    if (name.endsWith(".")) frame.className.startsWith(name)
-                    else frame.className == name || frame.className.startsWith(name + "\$" )
-                }?.value
+            val request = if (current != null) current as? SourceActionUi else {
+                val bound = trace.firstNotNullOfOrNull { frame ->
+                    sources.entries.firstOrNull { (name, _) -> matchesSource(frame, name) }?.value
+                }
+                bound?.takeUnless { it.closed.get() }
+                    ?: trace.firstNotNullOfOrNull { retiredConstructors[constructorKey(it)] }
+                    ?: bound
             }
             if (request == null) return original
+            request.rememberConstructor(trace)
             val manager = request.get()?.windowManager ?: original
             if (Build.VERSION.SDK_INT >= 29) {
                 val userAction = trace.any { it.methodName in setOf("performClick", "performItemClick") ||
