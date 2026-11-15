@@ -277,7 +277,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     public void onItemClick(Vod item) {
         if (!isInteractive() || mViewModel == null || item == null) return;
         if (item.isAction()) {
-            mViewModel.action(getKey(), item.getAction());
+            mViewModel.action(requireActivity(), getViewLifecycleOwner(), getKey(), item.getAction(), this::isInteractive);
         } else if (item.isFolder()) {
             FolderFragment parent = getParent();
             if (parent != null) parent.openFolder(item.getId(), mExtends);
@@ -309,7 +309,20 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (!isVisibleToUser && mViewModel != null) mViewModel.cancelAction();
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (hidden && mViewModel != null) mViewModel.cancelAction();
+    }
+
+    @Override
     public void onDestroyView() {
+        if (mViewModel != null) mViewModel.cancelAction();
         mViewReady = false;
         if (mBinding != null) {
             mBinding.swipeLayout.setOnRefreshListener(null);

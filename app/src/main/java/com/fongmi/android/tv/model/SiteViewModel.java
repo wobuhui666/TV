@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.model;
 
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -12,11 +14,14 @@ import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.exception.ExtractException;
 import com.fongmi.android.tv.player.extractor.Source;
 import com.fongmi.android.tv.source.health.SourceHealthManager;
+import com.fongmi.android.tv.ui.dialog.SourceActionUi;
+import com.github.catvod.Init;
 import com.github.catvod.utils.Trans;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 public class SiteViewModel extends ViewModel {
@@ -28,6 +33,7 @@ public class SiteViewModel extends ViewModel {
 
     private final ViewModelTaskRunner<TaskType> tasks;
     private final ViewModelSearchRunner searches;
+    private SourceActionUi actionUi;
 
     public SiteViewModel() {
         result = new MutableLiveData<>();
@@ -55,6 +61,7 @@ public class SiteViewModel extends ViewModel {
     }
 
     public SiteViewModel init() {
+        cancelAction();
         searches.stop();
         tasks.cancelAll();
         search.setValue(null);
@@ -80,7 +87,43 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void action(String key, String act) {
-        execute(TaskType.ACTION, action, () -> SiteApi.action(key, act));
+        if (Init.activity() instanceof FragmentActivity owner) action(owner, owner, key, act, () -> true);
+    }
+
+    public void action(FragmentActivity owner, LifecycleOwner page, String key, String act, BooleanSupplier isCurrentPage) {
+        var config = VodConfig.get().getConfig();
+        Site site = VodConfig.get().getSite(key);
+        executeAction(owner, page, key + "\n" + act, () -> isCurrentPage.getAsBoolean()
+                && config == VodConfig.get().getConfig() && site == VodConfig.get().getSite(key), () -> SiteApi.action(key, act));
+    }
+
+    void executeAction(FragmentActivity owner, LifecycleOwner page, BooleanSupplier isCurrentPage, Callable<Result> callable) {
+        executeAction(owner, page, "source-action", isCurrentPage, callable);
+    }
+
+    private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage, Callable<Result> callable) {
+        SourceActionUi request = SourceActionUi.start(owner, page, actionKey, isCurrentPage, () -> tasks.cancel(TaskType.ACTION));
+        if (request == null) return;
+        actionUi = request;
+        Runnable restore = Init.enterActivity(request);
+        try {
+            tasks.execute(TaskType.ACTION, Constant.TIMEOUT_VOD, callable, value -> {
+                request.finishAction(value != null && !value.getMsg().isEmpty());
+                action.setValue(value);
+            }, error -> {
+                request.cancel();
+                action.setValue(error instanceof ExtractException ? Result.error(error.getMessage()) : Result.empty());
+                error.printStackTrace();
+            });
+        } finally {
+            restore.run();
+        }
+    }
+
+    public void cancelAction() {
+        if (actionUi != null) actionUi.cancel();
+        actionUi = null;
+        tasks.cancel(TaskType.ACTION);
     }
 
     public void detailContent(String key, String id) {
@@ -144,6 +187,7 @@ public class SiteViewModel extends ViewModel {
 
     @Override
     protected void onCleared() {
+        cancelAction();
         stopSearch();
         tasks.cancelAll();
     }

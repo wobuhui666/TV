@@ -318,7 +318,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     public void onItemClick(Vod item, View poster) {
         if (!isInteractive() || mViewModel == null || item == null) return;
         if (item.isAction()) {
-            mViewModel.action(getKey(), item.getAction());
+            mViewModel.action(requireActivity(), getViewLifecycleOwner(), getKey(), item.getAction(), this::isInteractive);
         } else if (item.isFolder()) {
             getParent().openFolder(item.getId(), mExtends);
             headerVisible = mBinding.recycler.isHeaderVisible();
@@ -349,10 +349,17 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (!isVisibleToUser && mViewModel != null) mViewModel.cancelAction();
+    }
+
+    @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         if (!mViewReady || mBinding == null) return;
         if (hidden) {
+            if (mViewModel != null) mViewModel.cancelAction();
             mBinding.recycler.showHeader();
         } else {
             if (headerVisible) mBinding.recycler.showHeader();
@@ -408,6 +415,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
 
     @Override
     public void onDestroyView() {
+        if (mViewModel != null) mViewModel.cancelAction();
         mViewReady = false;
         mFilterGeneration++;
         if (mBinding != null && mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);

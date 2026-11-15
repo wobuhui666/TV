@@ -284,7 +284,11 @@ public class SiteApi {
     public static Result action(@NonNull String key, @NonNull String action) throws Exception {
         Site site = VodConfig.get().getSite(key);
         SpiderDebug.log("action", "key=%s,action=%s", key, action);
-        if (site.getType() == 3) return Result.fromJson(site.recent().spider().action(action));
+        if (site.getType() == 3) {
+            var spider = site.recent().spider();
+            com.fongmi.android.tv.ui.dialog.SourceActionUi.bind(spider);
+            return Result.fromJson(spider.action(action));
+        }
         if (site.getType() == 4) return Result.fromJson(OkHttp.string(action));
         return Result.empty();
     }

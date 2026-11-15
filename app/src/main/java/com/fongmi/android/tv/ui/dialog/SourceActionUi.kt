@@ -1,0 +1,193 @@
+package com.fongmi.android.tv.ui.dialog
+
+import android.app.Activity
+import android.os.Build
+import android.os.Looper
+import android.os.SystemClock
+import android.view.KeyEvent
+import android.view.View
+import android.view.WindowManager
+import android.view.inspector.WindowInspector
+import androidx.annotation.RequiresApi
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import com.fongmi.android.tv.App
+import com.fongmi.android.tv.Constant
+import com.github.catvod.Init
+import com.github.catvod.crawler.Spider
+import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.BooleanSupplier
+import java.util.function.Supplier
+
+/** A source action owns its queued UI and windows until the user finishes or leaves its page. */
+class SourceActionUi private constructor(
+    activity: FragmentActivity,
+    page: LifecycleOwner,
+    private var actionKey: String?,
+    private var isCurrentPage: BooleanSupplier?,
+    private var onCancel: Runnable?,
+) : Supplier<Activity?>, LifecycleEventObserver {
+    private val activity = WeakReference(activity)
+    private val page = WeakReference(page)
+    private val closed = AtomicBoolean()
+    private val windows = mutableMapOf<View, WindowManager>()
+    private var actionFinished = false
+    @Volatile private var awaitingLegacyWindow = false
+    private var pendingWindows = 0
+    private val windowDeadline = Runnable { awaitingLegacyWindow = false; releaseIfFinished() }
+
+    override fun get(): Activity? = activity.get()?.takeIf { !closed.get() && !it.isFinishing && !it.isDestroyed }
+
+    private fun isUsable(): Boolean = get() != null && isCurrentPage?.asBoolean == true &&
+        activity.get()?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true &&
+        page.get()?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
+
+    fun finishAction(hasFeedback: Boolean) {
+        actionFinished = true
+        if (hasFeedback) awaitingLegacyWindow = false
+        if (awaitingLegacyWindow) App.post(windowDeadline, Constant.TIMEOUT_VOD.toLong())
+        releaseIfFinished()
+    }
+
+    fun cancel() = release(true)
+
+    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+        if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_DESTROY) cancel()
+    }
+
+    private fun releaseIfFinished() {
+        if (actionFinished && !awaitingLegacyWindow && pendingWindows == 0 && windows.isEmpty()) release(false)
+    }
+
+    private fun release(cancel: Boolean) {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        if (!closed.compareAndSet(false, true)) return
+        activity.get()?.lifecycle?.removeObserver(this)
+        page.get()?.lifecycle?.removeObserver(this)
+        activity.get()?.let { active.remove(it, this) }
+        App.removeCallbacks(windowDeadline)
+        awaitingLegacyWindow = false
+        isCurrentPage = null
+        actionKey = null
+        val cancellation = onCancel
+        onCancel = null
+        // Public dialogs close through their futures first. Legacy windows then close
+        // through their Window callback, without changing the source's dismiss listener.
+        if (cancel) cancellation?.run()
+        val remaining = windows.toMap()
+        windows.clear()
+        App.post { remaining.forEach { (view, manager) -> closeWindow(view, manager) } }
+    }
+
+    @RequiresApi(29)
+    private fun captureWindow(manager: WindowManager, userAction: Boolean) {
+        val before = WindowInspector.getGlobalWindowViews().toSet()
+        val hadWindow = windows.keys.any { it.parent != null || it.isAttachedToWindow }
+        pendingWindows++
+        awaitingLegacyWindow = false
+        App.removeCallbacks(windowDeadline)
+        // Capture before Dialog constructs its window. This callback runs after its
+        // addView in the same UI message, before the new window's first traversal.
+        App.post {
+            try {
+                val added = WindowInspector.getGlobalWindowViews().filter { it !in before &&
+                    (it.layoutParams as? WindowManager.LayoutParams)?.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION }
+                for (view in added) {
+                    if (!isUsable() || ((hadWindow || windows.isNotEmpty()) && !userAction)) {
+                        closeWindow(view, manager)
+                    } else if (view !in windows) {
+                        windows[view] = manager
+                        view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                            override fun onViewAttachedToWindow(view: View) = Unit
+                            override fun onViewDetachedFromWindow(view: View) {
+                                view.removeOnAttachStateChangeListener(this)
+                                windows.remove(view)
+                                releaseIfFinished()
+                            }
+                        })
+                    }
+                }
+            } finally {
+                pendingWindows--
+                releaseIfFinished()
+            }
+        }
+    }
+
+    companion object {
+        private val active = ConcurrentHashMap<FragmentActivity, SourceActionUi>()
+        // A closed owner remains a tombstone for delayed, unscoped legacy callbacks.
+        // These entries retain only weak pages after release; no source ClassLoader.
+        private val sources = ConcurrentHashMap<String, SourceActionUi>()
+
+        @JvmStatic
+        fun start(activity: FragmentActivity, page: LifecycleOwner, actionKey: String,
+                  isCurrentPage: BooleanSupplier, onCancel: Runnable): SourceActionUi? {
+            check(Looper.myLooper() == Looper.getMainLooper())
+            active[activity]?.let { previous ->
+                if (!previous.actionFinished || previous.pendingWindows > 0 || previous.windows.isNotEmpty() ||
+                    (previous.awaitingLegacyWindow && previous.actionKey == actionKey)) return null
+                previous.cancel()
+            }
+            val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel)
+            if (!request.isUsable() || !activity.hasWindowFocus()) return null
+            active[activity] = request
+            activity.lifecycle.addObserver(request)
+            if (page !== activity) page.lifecycle.addObserver(request)
+            return request
+        }
+
+        @JvmStatic
+        fun bind(spider: Spider) {
+            val request = Init.currentActivityOwner() as? SourceActionUi ?: return
+            if (!spider.javaClass.name.startsWith("com.github.catvod.spider.")) return
+            request.awaitingLegacyWindow = true
+            sources["com.github.catvod.spider."] = request
+        }
+
+        @JvmStatic
+        fun bind(bridge: Class<*>) {
+            val request = Init.currentActivityOwner() as? SourceActionUi ?: return
+            request.awaitingLegacyWindow = true
+            sources[bridge.name] = request
+        }
+
+        /** Activity must return an actual WindowManagerImpl: Window casts it internally. */
+        @JvmStatic
+        fun windowManager(original: WindowManager): WindowManager {
+            if (Looper.myLooper() != Looper.getMainLooper()) return original
+            val trace = Thread.currentThread().stackTrace
+            if (trace.none { it.className == "android.app.Dialog" && it.methodName == "<init>" }) return original
+            val current = Init.currentActivityOwner()
+            val request = if (current != null) current as? SourceActionUi else trace.firstNotNullOfOrNull { frame ->
+                sources.entries.firstOrNull { (name, _) ->
+                    if (name.endsWith(".")) frame.className.startsWith(name)
+                    else frame.className == name || frame.className.startsWith(name + "\$" )
+                }?.value
+            }
+            if (request == null) return original
+            val manager = request.get()?.windowManager ?: original
+            if (Build.VERSION.SDK_INT >= 29) {
+                val userAction = trace.any { it.methodName in setOf("performClick", "performItemClick") ||
+                    it.className.endsWith("AlertController\$ButtonHandler") }
+                request.captureWindow(manager, userAction)
+            }
+            return manager
+        }
+
+        private fun closeWindow(view: View, manager: WindowManager) {
+            if (view.parent == null && !view.isAttachedToWindow) return
+            // A just-added DecorView has not received its first attach/traversal yet.
+            // The tracked UP also cancels a legacy dialog before that first frame.
+            val now = SystemClock.uptimeMillis()
+            view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
+            view.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK,
+                0, 0, 0, 0, KeyEvent.FLAG_TRACKING))
+            if (view.parent != null || view.isAttachedToWindow) manager.removeViewImmediate(view)
+        }
+    }
+}

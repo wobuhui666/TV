@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.github.catvod.utils.CallTimeout;
+import com.github.catvod.Init;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -64,13 +65,16 @@ public class Task {
                                                 long timeoutMillis, boolean allowDialogs) {
         SettableFuture<T> result = SettableFuture.create();
         CallTimeout timeout = new CallTimeout(timeoutMillis, allowDialogs);
+        var activityOwner = Init.activityOwner();
         ListenableFutureTask<T> task = ListenableFutureTask.create(() -> {
             Runnable restore = timeout.enter();
+            Runnable restoreActivity = Init.enterActivity(activityOwner);
             try {
                 return callable.call();
             } catch (Exception failure) {
                 throw timeout.redactFailure(failure);
             } finally {
+                restoreActivity.run();
                 restore.run();
             }
         });

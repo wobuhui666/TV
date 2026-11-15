@@ -1,13 +1,27 @@
 package com.fongmi.quickjs.method;
 
 import com.github.catvod.utils.CallTimeout;
+import com.github.catvod.Init;
+import android.app.Activity;
 import org.junit.Test;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import static org.junit.Assert.*;
 
 public class InvocationTest {
+    @Test public void deferredCallbacksKeepTheOriginalActivityOwner() throws Exception {
+        Supplier<Activity> owner = () -> null;
+        Runnable restore = Init.enterActivity(owner);
+        Invocation invocation;
+        try { invocation = new Invocation(); }
+        finally { restore.run(); }
+        try {
+            CompletableFuture.runAsync(() -> invocation.run(() -> assertSame(owner, Init.currentActivityOwner()))).get();
+            assertNull(Init.currentActivityOwner());
+        } finally { invocation.close(); }
+    }
     @Test public void preservesCallerAcrossDeferredNativeCallbackAndRestoresScope() throws Exception {
         Invocation first = new Invocation();
         Invocation second = new Invocation();
