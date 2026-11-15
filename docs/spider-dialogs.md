@@ -33,7 +33,9 @@ if (result !== null) {
 
 未传 buttons 时提供确认/取消；结果为 `{"button":"ok","values":{...}}`。自定义 buttons 有 1 到 3 个，依次对应主操作、次操作和第三操作，id 必须唯一。默认按钮会验证所有启用字段；`validate: []` 可跳过字段验证，或传字段名数组只验证其中一部分。
 
-`cancelable` 默认为 true。返回/取消与页面销毁返回 null；调用任务被取消或源释放时会取消未完成请求，源应按自身异常处理流程退出。
+`cancelable` 默认为 true。返回/取消与离开调用页面返回 null；调用任务被取消或源释放时会取消未完成请求，源应按自身异常处理流程退出。
+
+弹窗在发起调用时绑定页面，跨线程和延迟显示保持该归属；页面暂停、销毁或来源切换后，旧请求不能在首页重新显示。同一页面同时只显示一个公共弹窗，重复请求返回 null；先关闭前一步，再继续调用仍可显示后续表单。片库中的配置操作在进行中忽略重复点击。
 
 ## 二维码、图片和选项
 
@@ -85,3 +87,7 @@ Java/Python 回调在发起调用的工作线程执行；QuickJS 回调回到本
 - preview 设备测试类 `com.fongmi.android.tv.test.SpiderDialogTest`：真实 Java 与 QuickJS 表单、输入验证、二维码、选择器、遥控焦点、异步连续弹窗、任务取消与超时暂停；只使用 loopback HTTP 和虚构登录数据。截图目录为应用 externalFiles 下的 `spider-dialog-verification/`。
 
 真实 Python 虚拟机调用还需要包含 Python 原生库的 ARM 测试设备；Python facade 测试不能替代该验证。需要源主动接入上述 API，现有源不会自动出现登录界面。
+
+## 旧 Java 源的自建窗口
+
+片库配置操作兼容 `com.github.catvod.spider.*` 中使用 Activity 构造的旧 Android Dialog：窗口绑定到发起操作的页面。Android 10／API 29 及以上还检查新增窗口，清理重复窗口与离开页面后的延迟窗口；较低 API 不包含这项旧窗口清理。自建窗口未经过公共弹窗协议，独立异步回调只能按来源包识别归属，无法精确区分所有未知 JAR 的调用。新源应使用公共接口传递页面、取消和连续交互的生命周期。

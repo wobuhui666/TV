@@ -206,7 +206,7 @@ When the source or a configured API supplies danmaku, the player can search, imp
 
 ## Live TV and local-network playback
 
-Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
+Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Tap the line control on a channel with multiple lines to choose from the full list. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
 
 Catchup and timeshift depend on the provider's retained window and replay URL/metadata. Supported sources can expose seeking within that window and a return-to-live action, preserving the current playback/pause state when replay resolution fails. This is provider-backed replay, not universal local recording. [LIVE.md](docs/LIVE.md) documents the source formats and catchup fields; [CONFIG.md](docs/CONFIG.md) covers the app configuration.
 
