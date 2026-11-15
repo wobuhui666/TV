@@ -33,6 +33,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.fongmi.android.tv.player.media.PlaySpec;
+import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.setting.AdvancedSubtitleSetting;
 import com.fongmi.android.tv.test.CoreFixtureServer;
 import com.fongmi.android.tv.test.CorePlaybackActivity;
@@ -99,7 +100,10 @@ public final class ExoHighBitratePlaybackTest {
                 }
             }
             runCase("high1080p-ass.mkv", "production", false, false, "none", 0);
-            runCase("high1080p-ass.mkv", "production", false, true, "none", 0);
+            for (int repeat = 0; repeat < 2; repeat++) {
+                String[] pair = repeat == 0 ? new String[]{"legacy_ass", "production"} : new String[]{"production", "legacy_ass"};
+                for (String mode : pair) runCase("high1080p-ass.mkv", mode, false, true, "none", repeat);
+            }
             int referenceControls = 0;
             for (int i = 0; i < cases.length(); i++) {
                 JSONObject result = cases.getJSONObject(i);
@@ -138,7 +142,7 @@ public final class ExoHighBitratePlaybackTest {
     private void runCase(String file, String mode, boolean texture, boolean nativeAss, String danmaku, int repeat) throws Exception {
         Metrics metrics = new Metrics();
         ExoPlayer[] player = new ExoPlayer[1];
-        ExoPlayerEngine[] engine = new ExoPlayerEngine[1];
+        PlayerEngine[] engine = new PlayerEngine[1];
         View[] overlay = new View[1];
         long beforeGc = runtimeStat("art.gc.gc-count"), beforeGcTime = runtimeStat("art.gc.gc-time");
         long started = SystemClock.elapsedRealtime();
@@ -149,8 +153,12 @@ public final class ExoHighBitratePlaybackTest {
                         com.fongmi.android.tv.player.subtitle.AssTextRenderer.available());
                 AdvancedSubtitleSetting.ass(nativeAss);
                 activity.view.setRender(texture ? 1 : 0);
-                if (mode.equals("production")) {
-                    engine[0] = new ExoPlayerEngine(1, metrics);
+                if (mode.equals("production") || mode.equals("legacy_ass")) {
+                    try {
+                        engine[0] = mode.equals("production") ? new ExoPlayerEngine(1, metrics)
+                                : (PlayerEngine) Class.forName("com.fongmi.android.tv.player.exo.LegacyExoPlayerEngine")
+                                        .getConstructor(int.class, Player.Listener.class).newInstance(1, metrics);
+                    } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
                     player[0] = (ExoPlayer) engine[0].getPlayer();
                     activity.view.setPlayer(player[0]);
                     engine[0].bindPlayerView(activity.view);
@@ -267,6 +275,7 @@ public final class ExoHighBitratePlaybackTest {
                                 .put("decoderSkippedBuffers", counters.skippedOutputBufferCount - initialCounters[2]);
                     }
                     result.put("selectedText", player[0].getCurrentTracks().isTypeSelected(C.TRACK_TYPE_TEXT));
+                    if (nativeAss) assertTrue("ASS comparison must select text", result.getBoolean("selectedText"));
                 } catch (Exception failure) { throw new AssertionError(failure); }
             });
             cases.put(result);

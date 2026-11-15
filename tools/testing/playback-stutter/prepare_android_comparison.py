@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import subprocess
 
+import prepare_ass_comparison
+
 ROOT = Path(__file__).resolve().parents[3]
 MEDIA = Path(os.environ.get("MEDIA3_SOURCE_DIR", ROOT / ".media3"))
 BASE = "342f6590e02ac390e0bd6b4488b8a1bff55747c1"
@@ -24,6 +26,7 @@ def main():
             value = value.replace(original, "Legacy" + original)
         (DESTINATION / ("Legacy" + name + ".java")).write_text(value)
     print("Generated test-only legacy danmaku classes from " + BASE)
+    prepare_ass_comparison.main()
 
 
 if __name__ == "__main__":

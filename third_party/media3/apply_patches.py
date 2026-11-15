@@ -21,15 +21,15 @@ RENDER_INDEX_SHA256 = "22343b0223dc63ebffe4e2f9ba76b408356269f172784597e799a6e38
 RENDER_INDEX_TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java",
 }
-TEXT_CACHE_PATCH = Path(__file__).with_name("danmaku-text-cache.patch")
-TEXT_CACHE_SHA256 = "b90c9e706d0997a5ad05f065af5ce74e5f040be83f266b1cde2bc786c96dbc13"
-TEXT_CACHE_TARGETS = {
+DISPLAY_LIST_PATCH = Path(__file__).with_name("danmaku-display-list.patch")
+DISPLAY_LIST_SHA256 = "988e8b21176516f7eaf8d88733ed408a4364b2ffb34f9685a4d3e95b9d5778db"
+DISPLAY_LIST_TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java",
 }
 PATCH_SPECS = (
     {"patch": PATCH, "sha256": PATCH_SHA256, "targets": TARGETS},
     {"patch": RENDER_INDEX_PATCH, "sha256": RENDER_INDEX_SHA256, "targets": RENDER_INDEX_TARGETS},
-    {"patch": TEXT_CACHE_PATCH, "sha256": TEXT_CACHE_SHA256, "targets": TEXT_CACHE_TARGETS},
+    {"patch": DISPLAY_LIST_PATCH, "sha256": DISPLAY_LIST_SHA256, "targets": DISPLAY_LIST_TARGETS},
 )
 
 
