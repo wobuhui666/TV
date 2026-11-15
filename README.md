@@ -195,7 +195,7 @@ TV 正式发布同时提供两种包名，按是否要与 FongMi/TV 同时安装
 
 | 版本 | 文件名 | 包名 | 说明 |
 | --- | --- | --- | --- |
-| 标准版 | `leanback-arm64_v8a.apk`、`leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | 与 FongMi/TV 同包名，可覆盖升级本项目旧版。 |
+| 标准版 | `leanback-arm64_v8a.apk`、`leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | 与 FongMi/TV 同包名，但签名不同，无法覆盖安装；可覆盖升级本项目相同签名的旧版。 |
 | 共存版 | `leanback-arm64_v8a-coexist.apk`、`leanback-armeabi_v7a-coexist.apk` | `com.wobuhui666.android.tv` | 可与 FongMi/TV 或标准版同时安装，桌面名称不变。 |
 
 共存版须知：
