@@ -123,7 +123,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private final Rect mToolbarTouchBounds = new Rect();
     private final Rect mContentTouchBounds = new Rect();
     private boolean mTouchBrowsing;
-    private int mHomeFocusScrollStrategy = HorizontalGridView.FOCUS_SCROLL_ALIGNED;
+    private int mHomeFocusScrollStrategy;
     private boolean mRestoreRefreshFocus;
     private boolean mInitialFocusPending;
     private boolean mRefreshFeaturedFocus;
