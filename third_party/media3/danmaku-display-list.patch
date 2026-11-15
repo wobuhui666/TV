@@ -1,5 +1,5 @@
 diff --git a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java
-index 35a709511e392c82d651b374e1b22e39478198c1..704916cb14818e2bf3f1efb04dec3e5cabcbff87 100644
+index 35a709511e392c82d651b374e1b22e39478198c1..e661578395450198e0f76f7d6233a8f8acc53a4e 100644
 --- a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java
 +++ b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java
 @@ -20,12 +20,17 @@ import android.graphics.Color;
@@ -48,11 +48,12 @@ index 35a709511e392c82d651b374e1b22e39478198c1..704916cb14818e2bf3f1efb04dec3e5c
      currentPaintSizePx = textSizePx;
      fillPaint.setTextSize(textSizePx);
      strokePaint.setTextSize(textSizePx);
-@@ -202,6 +214,161 @@ final class DanmakuPainter {
+@@ -202,6 +214,163 @@ final class DanmakuPainter {
    }
  
    private void drawAt(Canvas canvas, DanmakuRenderItem item, float x, float y, float sizePx) {
-+    if (Build.VERSION.SDK_INT >= 29 && canvas.isHardwareAccelerated()) {
++    if (Build.VERSION.SDK_INT >= 29 && canvas.isHardwareAccelerated()
++        && !config.allowScrollOverlap) {
 +      if (displayListCache == null) {
 +        displayListCache = new TextDisplayListCache();
 +      }
@@ -78,6 +79,7 @@ index 35a709511e392c82d651b374e1b22e39478198c1..704916cb14818e2bf3f1efb04dec3e5c
 +        || before.transparency != after.transparency
 +        || before.styleMode != after.styleMode
 +        || before.colorMode != after.colorMode
++        || before.allowScrollOverlap != after.allowScrollOverlap
 +        || before.shadowTransparency != after.shadowTransparency
 +        || before.shadowRadiusMultiplier != after.shadowRadiusMultiplier
 +        || before.strokeWidthMultiplier != after.strokeWidthMultiplier

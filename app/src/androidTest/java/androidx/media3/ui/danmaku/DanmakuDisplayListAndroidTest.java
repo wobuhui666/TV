@@ -109,9 +109,18 @@ public final class DanmakuDisplayListAndroidTest {
         assertSame(first, entries(view.painter).get(view.items.get(0)));
         main(() -> view.painter.setConfig(config().setDurationMs(12_000).setMaxOnScreen(40).build()));
         assertSame(first, entries(view.painter).get(view.items.get(0)));
+        main(() -> view.painter.setConfig(config().setAllowScrollOverlap(true).build()));
+        assertNull("Enabling overlap must release cached commands", value(view.painter, "displayListCache"));
+        assertFalse(firstNode.hasDisplayList());
+        frame(view, () -> {});
+        assertTrue(view.hardware);
+        assertNull("Overlap must keep the original hardware drawing path", value(view.painter, "displayListCache"));
+        frame(view, () -> view.painter.setConfig(config().setAllowScrollOverlap(false).build()));
+        RenderNode restored = node(entries(view.painter).get(view.items.get(0)));
+        assertTrue(restored.hasDisplayList());
         main(() -> view.painter.setConfig(config().setTransparency(0.7f).build()));
         assertNull(value(view.painter, "displayListCache"));
-        assertFalse("Configuration changes must free native display lists", firstNode.hasDisplayList());
+        assertFalse("Configuration changes must free native display lists", restored.hasDisplayList());
     }
 
     @Test public void recordingAdmissionAndNativeMemoryStayBoundedWithoutVisibleEviction() {

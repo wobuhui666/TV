@@ -213,7 +213,7 @@ public final class AssTextRenderer extends BaseRenderer {
                 float size = PlayerSetting.getSubtitleTextSize();
                 render.setFontScale(size == 0 ? 1 : Math.clamp(size / .0533f, .5f, 3f));
                 AssFrame frame = render.renderFrame(positionUs / 1000, AssTexType.BITMAP_ALPHA);
-                if (frames.update(frame, renderWidth, renderHeight)) output.frame(frames.getFrame(), renderWidth, renderHeight, ticket);
+                if (frames.update(frame)) output.frame(frames.getFrame(), renderWidth, renderHeight, ticket);
             } catch (RuntimeException error) { Log.w("Libass", "Render failed", error); }
             finally { rendering.set(false); }
         });

@@ -22,7 +22,7 @@ RENDER_INDEX_TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java",
 }
 DISPLAY_LIST_PATCH = Path(__file__).with_name("danmaku-display-list.patch")
-DISPLAY_LIST_SHA256 = "988e8b21176516f7eaf8d88733ed408a4364b2ffb34f9685a4d3e95b9d5778db"
+DISPLAY_LIST_SHA256 = "1d7b37e7f1e87b9a09ed1704434fc718d8cd5621775c43e5be6046599844e01a"
 DISPLAY_LIST_TARGETS = {
     "libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuPainter.java",
 }
