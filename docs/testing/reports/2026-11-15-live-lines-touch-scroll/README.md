@@ -4,11 +4,13 @@
 
 ## 测试版本与环境
 
-- TV 基准提交：`6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec`，叠加当前工作区修改。本报告不代表该提交原始 APK 的结果。
+- GHA 构建快照：`6786aa6b6537c4e4415ff0b8e3d5926fcc7aa033`；基于 `6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec`，包含当时工作区已有改动与本次修复。本报告不代表 Release 191 原始 APK 的结果。
 - Media3：`342f6590e02ac390e0bd6b4488b8a1bff55747c1`，使用仓库固定补丁。
 - Ubuntu 24.04、JDK 21.0.13、Python 3.10.22、Android SDK 37.0 / build-tools 37.0.0。
 - 本机约 2 GB 内存，无 adb 设备或 Android 模拟器；本地 Kotlin 编译因换页缓慢而中止，未形成测试结果。
-- 按用户要求改用 GitHub Actions 的隔离构建与 Android API 34 x86_64 模拟器；运行链接与结果将在完成后补充。
+- 按用户要求改用 GitHub Actions 的隔离构建与 Android API 34 x86_64 模拟器。
+
+[TV／手机 APK、单测和 lint 构建](https://github.com/wobuhui666/TV/actions/runs/43680375719)；[专项单测与两尺寸 UI 回归](https://github.com/wobuhui666/TV/actions/runs/43680375763)。
 
 ## 行为与覆盖
 
@@ -24,11 +26,13 @@
 
 | 检查 | 结果 |
 | --- | --- |
-| 13 项直播专项 JUnit | 等待 GHA 验证 |
+| 13 项直播专项 JUnit | GHA 通过，6 + 7 项，零失败／错误／跳过 |
 | TV / mobile ARM64 debug APK | 等待 GHA 验证 |
 | TV preview 应用与 AndroidTest 编译 | 等待 GHA 验证 |
-| TV ARM64 debug lint | 等待 GHA 验证 |
-| 新增 6 项 Android UI 用例 | 等待 GHA 模拟器验证，两种尺寸共 12 项 |
+| TV ARM64 debug lint | 首轮发现 3 个线路编号格式参数错误，已修正，等待重跑 |
+| 新增 6 项 Android UI 用例 | 首轮失败，修正后重跑；两种尺寸共 12 项 |
+
+首轮 UI 暴露了两处问题：Leanback 不实现 RecyclerView 的滚动统计，测试及返回键判定需要使用可见行几何；线路面板的标题触摸会穿透到外部取消层。已修正，并保留同一行位置、精确选线和取消不回调的断言，补充逐步焦点／触摸状态与截图。lint 发现已有 `%s` 编号资源被传入整数，调用处改为字符串，保留现有翻译格式。
 
 本轮不包含 MPV 黑屏或 Exo 性能调查。旧版来源首页主动刷新会删除旧推荐行，本次保留该加载策略；内容增删造成的布局位移不等于焦点强制回顶。尚未验证实际手机触摸、长列表电视遥控和真实直播线路播放，UI 用例编译成功不能代替设备验收。
 

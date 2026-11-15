@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.dialog
 
+import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -25,7 +26,11 @@ class LiveLineDialog : BasePlaybackSelectionDialog() {
         return binding
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun initView() {
+        // Consume only unused panel space; otherwise a non-clicking header tap can
+        // fall through to Material's outside-dismiss layer. This surface has no action.
+        binding.root.setOnTouchListener { _, _ -> true }
         binding.title.setText(R.string.dialog_select_live_line)
         binding.recycler.itemAnimator = null
         binding.recycler.setHasFixedSize(true)

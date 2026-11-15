@@ -1227,7 +1227,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         }
         // 2) List scrolled down while toolbar hidden → scroll top + show toolbar + focus nav.
         if (mBinding.recycler.getSelectedPosition() > 0 || !mToolbarVisible
-                || mBinding.recycler.canScrollVertically(-1)) {
+                || isHomeScrolled()) {
             mBinding.recycler.scrollToPosition(0);
             requestNavFocus();
             return;
@@ -1235,6 +1235,19 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         // 3) Already on top nav / title → exit or background.
         if (PlaybackService.isRunning()) Util.moveToBackground(this);
         else super.onBackInvoked();
+    }
+
+    private boolean isHomeScrolled() {
+        RecyclerView.ViewHolder first = mBinding.recycler.findViewHolderForAdapterPosition(0);
+        if (first != null) return first.itemView.getTop() < mBinding.recycler.getPaddingTop();
+        // Leanback does not provide RecyclerView's scroll offset/range metrics.
+        // A visible later row proves that the first row has left the viewport.
+        for (int i = 0; i < mBinding.recycler.getChildCount(); i++) {
+            View child = mBinding.recycler.getChildAt(i);
+            if (mBinding.recycler.getChildAdapterPosition(child) > 0 && child.getBottom() > 0
+                    && child.getTop() < mBinding.recycler.getHeight()) return true;
+        }
+        return false;
     }
 
     private boolean isContentFocused() {

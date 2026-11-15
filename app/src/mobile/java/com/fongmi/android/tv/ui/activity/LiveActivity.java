@@ -402,7 +402,7 @@ public class LiveActivity extends PlaybackActivity implements CustomKeyDown.List
         if (selection == null) return;
         Config config = LiveConfig.get().getConfig();
         Live home = getHome();
-        boolean shown = LiveLineDialog.show(this, selection.labels(number -> getString(R.string.live_line, number)), selection.getSelectedIndex(), index -> {
+        boolean shown = LiveLineDialog.show(this, selection.labels(number -> getString(R.string.live_line, String.valueOf(number))), selection.getSelectedIndex(), index -> {
             if (isCurrentLineSelection(selection, config, home)) mLive.selectLine(selection, index);
         }, () -> App.post(() -> {
             if (isCurrentLineSelection(selection, config, home)) showControl();
