@@ -167,9 +167,14 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     }
 
     public static void start(Activity activity, String key, Vod item, String mark) {
+        start(activity, key, item, mark, null);
+    }
+
+    public static void start(Activity activity, String key, Vod item, String mark, Result detail) {
         Intent intent = createIntent(activity, key, item.getId(), item.getName(), item.getPic());
         intent.putExtra("mark", TextUtils.isEmpty(item.getPlayId()) ? mark : null);
         intent.putExtra("playId", item.getPlayId());
+        if (detail != null) intent.putExtra("sourceDetail", detail);
         if (!item.getSourceCandidates().isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(item.getSourceCandidates()));
         activity.startActivity(intent);
     }
@@ -561,7 +566,9 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     public void requestDetail(String key, String id) {
         beginPlaybackRequest();
-        mViewModel.detailContent(key, id);
+        Result detail = getIntent().getParcelableExtra("sourceDetail");
+        getIntent().removeExtra("sourceDetail");
+        mViewModel.detailContent(key, id, key.equals(getKey()) && id.equals(getId()) ? detail : null);
     }
 
     @Override

@@ -324,7 +324,10 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             headerVisible = mBinding.recycler.isHeaderVisible();
         } else {
             if (getSite().isIndex()) CollectActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster);
+            else if (item.getStyle(getStyle()).isList()) {
+                mViewModel.openListItem(requireActivity(), getViewLifecycleOwner(), getKey(), item.getId(), this::isInteractive,
+                        result -> VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster, result));
+            } else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster);
         }
     }
 

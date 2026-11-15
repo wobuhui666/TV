@@ -97,19 +97,37 @@ public class SiteViewModel extends ViewModel {
                 && config == VodConfig.get().getConfig() && site == VodConfig.get().getSite(key), () -> SiteApi.action(key, act));
     }
 
+    /** Legacy list sources use detailContent for configuration buttons as well as videos. */
+    public void openListItem(FragmentActivity owner, LifecycleOwner page, String key, String id,
+                             BooleanSupplier isCurrentPage, Consumer<Result> onPlayable) {
+        var config = VodConfig.get().getConfig();
+        Site site = VodConfig.get().getSite(key);
+        executeAction(owner, page, key + "\ndetail:" + id, () -> isCurrentPage.getAsBoolean()
+                && config == VodConfig.get().getConfig() && site == VodConfig.get().getSite(key),
+                () -> SiteApi.detailContent(key, id), value -> {
+                    if (value != null && !value.getVod().getFlags().isEmpty()) onPlayable.accept(value);
+                    else action.setValue(value);
+                });
+    }
+
     void executeAction(FragmentActivity owner, LifecycleOwner page, BooleanSupplier isCurrentPage, Callable<Result> callable) {
         executeAction(owner, page, "source-action", isCurrentPage, callable);
     }
 
     private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage, Callable<Result> callable) {
+        executeAction(owner, page, actionKey, isCurrentPage, callable, action::setValue);
+    }
+
+    private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage,
+                               Callable<Result> callable, Consumer<Result> onResult) {
         SourceActionUi request = SourceActionUi.start(owner, page, actionKey, isCurrentPage, () -> tasks.cancel(TaskType.ACTION));
         if (request == null) return;
         actionUi = request;
         Runnable restore = Init.enterActivity(request);
         try {
             tasks.execute(TaskType.ACTION, Constant.TIMEOUT_VOD, callable, value -> {
-                request.finishAction(value != null && !value.getMsg().isEmpty());
-                action.setValue(value);
+                request.finishAction(value != null && (!value.getMsg().isEmpty() || !value.getVod().getFlags().isEmpty()));
+                onResult.accept(value);
             }, error -> {
                 request.cancel();
                 action.setValue(error instanceof ExtractException ? Result.error(error.getMessage()) : Result.empty());
@@ -127,7 +145,12 @@ public class SiteViewModel extends ViewModel {
     }
 
     public void detailContent(String key, String id) {
-        executeHealth(key, SourceHealthManager.Phase.DETAIL, () -> SiteApi.detailContent(key, id));
+        detailContent(key, id, null);
+    }
+
+    public void detailContent(String key, String id, Result prefetched) {
+        executeHealth(key, SourceHealthManager.Phase.DETAIL,
+                () -> prefetched != null ? prefetched : SiteApi.detailContent(key, id));
     }
 
     public void playerContent(String key, String flag, String id) {

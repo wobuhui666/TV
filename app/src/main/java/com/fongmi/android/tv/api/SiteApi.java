@@ -155,7 +155,9 @@ public class SiteApi {
             Source.get().parse(vod.setFlags());
             return Result.vod(vod);
         } else if (isSpider(site)) {
-            String detailContent = site.recent().spider().detailContent(Arrays.asList(id));
+            var spider = site.recent().spider();
+            com.fongmi.android.tv.ui.dialog.SourceActionUi.bind(spider);
+            String detailContent = spider.detailContent(Arrays.asList(id));
             SpiderDebug.log("detail", detailContent);
             Result result = Result.fromJson(detailContent);
             Source.get().parse(result.getVod().setFlags());

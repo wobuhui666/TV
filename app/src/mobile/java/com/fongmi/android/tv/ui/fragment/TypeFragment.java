@@ -285,7 +285,10 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
             Activity activity = getActivity();
             if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
             if (getSite().isIndex()) SearchActivity.start(activity, item.getName());
-            else VideoActivity.start(activity, getKey(), item, isFolder() ? item.getName() : null);
+            else if (mAdapter.getStyle().isList()) {
+                mViewModel.openListItem(requireActivity(), getViewLifecycleOwner(), getKey(), item.getId(), this::isInteractive,
+                        result -> VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, result));
+            } else VideoActivity.start(activity, getKey(), item, isFolder() ? item.getName() : null);
         }
     }
 
