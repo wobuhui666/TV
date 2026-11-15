@@ -64,6 +64,8 @@ public final class ExoHighBitratePlaybackTest {
 
     @Test(timeout = 1_500_000)
     public void measureSameMediaAcrossPipelineSurfaceCodecAndDanmakuModes() throws Exception {
+        boolean regressionOnly = Boolean.parseBoolean(InstrumentationRegistry.getArguments()
+                .getString("playback_regression_only", "false"));
         fixtureRoot = new File(instrumentation.getTargetContext().getFilesDir(), "core-fixtures");
         JSONObject manifest = new JSONObject(Files.readString(new File(fixtureRoot, "manifest.json").toPath()));
         assertEquals(4, manifest.getJSONArray("files").length());
@@ -73,6 +75,7 @@ public final class ExoHighBitratePlaybackTest {
         Map<String, ?> saved = Prefers.getPrefers().getAll();
         JSONObject report = new JSONObject();
         report.put("sdk", Build.VERSION.SDK_INT).put("model", Build.MODEL).put("hardware", Build.HARDWARE)
+                .put("profile", regressionOnly ? "regression" : "comparison")
                 .put("fixtureManifest", manifest).put("cases", cases)
                 .put("scope", "API emulator; platform codecs and SwiftShader; no MT5873 hardware or audible output")
                 .put("reference", "DefaultRenderersFactory and default source using the same pinned Media3; not another installed app");
@@ -84,25 +87,33 @@ public final class ExoHighBitratePlaybackTest {
                 Prefers.put("ai_subtitle_enabled", false); Prefers.put("audio_effect_preset", 0);
                 activity.view.setDanmakuEnabled(false);
             });
-            for (String file : new String[]{"baseline1080p.mp4", "high1080p.mp4", "high2160p.mp4"}) {
-                for (int repeat = 0; repeat < 2; repeat++) {
-                    // Reverse pair order to avoid consistently attributing warm-up to the reference.
-                    String[] pair = repeat == 0 ? new String[]{"reference", "production"} : new String[]{"production", "reference"};
-                    for (String mode : pair) runCase(file, mode, false, false, "none", repeat);
+            if (regressionOnly) {
+                runCase("baseline1080p.mp4", "reference", false, false, "none", 0);
+                for (String file : new String[]{"baseline1080p.mp4", "high1080p.mp4", "high2160p.mp4"}) {
+                    runCase(file, "production", false, false, "none", 0);
                 }
-            }
-            runCase("high1080p.mp4", "production", true, false, "none", 0);
-            runCase("high1080p.mp4", "async_reference", false, false, "none", 0);
-            for (String density : new String[]{"", "_default"}) {
-                for (int repeat = 0; repeat < 2; repeat++) {
-                    String[] pair = repeat == 0 ? new String[]{"patched", "legacy"} : new String[]{"legacy", "patched"};
-                    for (String overlay : pair) runCase("high1080p.mp4", "production", false, false, overlay + density, repeat);
+                runCase("high1080p-ass.mkv", "production", false, true, "none", 0);
+            } else {
+                for (String file : new String[]{"baseline1080p.mp4", "high1080p.mp4", "high2160p.mp4"}) {
+                    for (int repeat = 0; repeat < 2; repeat++) {
+                        // Reverse pair order to avoid consistently attributing warm-up to the reference.
+                        String[] pair = repeat == 0 ? new String[]{"reference", "production"} : new String[]{"production", "reference"};
+                        for (String mode : pair) runCase(file, mode, false, false, "none", repeat);
+                    }
                 }
-            }
-            runCase("high1080p-ass.mkv", "production", false, false, "none", 0);
-            for (int repeat = 0; repeat < 2; repeat++) {
-                String[] pair = repeat == 0 ? new String[]{"legacy_ass", "production"} : new String[]{"production", "legacy_ass"};
-                for (String mode : pair) runCase("high1080p-ass.mkv", mode, false, true, "none", repeat);
+                runCase("high1080p.mp4", "production", true, false, "none", 0);
+                runCase("high1080p.mp4", "async_reference", false, false, "none", 0);
+                for (String density : new String[]{"", "_default"}) {
+                    for (int repeat = 0; repeat < 2; repeat++) {
+                        String[] pair = repeat == 0 ? new String[]{"patched", "legacy"} : new String[]{"legacy", "patched"};
+                        for (String overlay : pair) runCase("high1080p.mp4", "production", false, false, overlay + density, repeat);
+                    }
+                }
+                runCase("high1080p-ass.mkv", "production", false, false, "none", 0);
+                for (int repeat = 0; repeat < 2; repeat++) {
+                    String[] pair = repeat == 0 ? new String[]{"legacy_ass", "production"} : new String[]{"production", "legacy_ass"};
+                    for (String mode : pair) runCase("high1080p-ass.mkv", mode, false, true, "none", repeat);
+                }
             }
             int referenceControls = 0;
             for (int i = 0; i < cases.length(); i++) {
@@ -113,7 +124,7 @@ public final class ExoHighBitratePlaybackTest {
                     referenceControls++;
                 }
             }
-            assertEquals(2, referenceControls);
+            assertEquals(regressionOnly ? 1 : 2, referenceControls);
             assertTrue("Native ASS case must actually select a text track",
                     cases.getJSONObject(cases.length() - 1).getBoolean("selectedText"));
             report.put("controlsPassed", true);

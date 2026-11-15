@@ -30,26 +30,30 @@ collect() {
 }
 trap collect EXIT
 adb shell am instrument -w -r -e core_fixture_root core-fixtures \
-  -e class com.fongmi.android.tv.player.exo.ExoDecodeSelectionAndroidTest,com.fongmi.android.tv.player.exo.ExoHighBitratePlaybackTest,androidx.media3.ui.danmaku.DanmakuDisplayListAndroidTest,com.fongmi.android.tv.player.subtitle.AssFrameCacheAndroidTest,com.fongmi.android.tv.test.PausedDanmakuVisibilityTest,com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest,com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest \
+  -e playback_regression_only "${PLAYBACK_REGRESSION_ONLY:-false}" \
+  -e class com.fongmi.android.tv.player.exo.ExoDecodeSelectionAndroidTest,com.fongmi.android.tv.player.exo.ExoHighBitratePlaybackTest,com.fongmi.android.tv.player.subtitle.AssFrameCacheAndroidTest,com.fongmi.android.tv.test.PausedDanmakuVisibilityTest,com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest,com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest \
   com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$output/instrumentation.txt"
 collect
 python3 - <<'PY'
 import json
+import os
 from pathlib import Path
 import re
 root = Path('artifacts/playback-stutter')
 value = (root / 'instrumentation.txt').read_text()
-assert re.search(r'^OK \(42 tests\)', value, re.M), 'Expected all decoder, text rendering, playback and ownership tests'
+assert re.search(r'^OK \(36 tests\)', value, re.M), 'Expected all decoder, text rendering, playback and ownership tests'
 assert not re.search(r'INSTRUMENTATION_STATUS_CODE: -(3|4)', value), 'No ignored or assumption-skipped tests'
 reports = list(root.rglob('playback-summary.json'))
 assert len(reports) == 1, reports
 report = json.loads(reports[0].read_text())
-assert report['controlsPassed'] and len(report['cases']) == 27
+regression_only = os.environ.get('PLAYBACK_REGRESSION_ONLY', 'false').lower() == 'true'
+assert report['controlsPassed'] and len(report['cases']) == (5 if regression_only else 27)
 assert all(case['ready'] and case['error'] is None for case in report['cases']), 'Every playback case must prepare without decoding errors'
 assert any(case['file'] == 'high2160p.mp4' for case in report['cases'])
-assert {case['danmaku'] for case in report['cases']} >= {'none', 'patched', 'legacy', 'patched_default', 'legacy_default'}
-assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'legacy_ass']) == 2
-assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'production']) == 2
+if not regression_only:
+    assert {case['danmaku'] for case in report['cases']} >= {'none', 'patched', 'legacy', 'patched_default', 'legacy_default'}
+    assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'legacy_ass']) == 2
+    assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'production']) == 2
 log = (root / 'logcat.txt').read_text()
 assert not re.search(r'Libass.*(Initialization failed|Native renderer unavailable|Render failed)', log), 'Native ASS comparison must render successfully'
 print(json.dumps({'controlsPassed': report['controlsPassed'], 'cases': len(report['cases']),

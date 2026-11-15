@@ -2,7 +2,16 @@ name: Exo high bitrate playback comparison
 
 on:
   workflow_dispatch:
+    inputs:
+      regression_only:
+        description: Run focused playback regression
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      regression_only:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,6 +27,7 @@ jobs:
     env:
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       PYTHONDONTWRITEBYTECODE: '1'
+      PLAYBACK_REGRESSION_ONLY: ${{ inputs.regression_only }}
     steps:
       - uses: actions/checkout@v4
         with:

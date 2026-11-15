@@ -3,6 +3,10 @@ name: Build isolated TV validation APKs
 on:
   workflow_dispatch:
     inputs:
+      playback_regression_only:
+        description: Run focused playback regression without repeating the performance matrix
+        type: boolean
+        default: false
       playback_performance:
         description: Compare Android 11 high bitrate playback, renderers and danmaku load
         type: boolean
@@ -32,6 +36,8 @@ jobs:
   playback-performance:
     if: inputs.playback_performance
     uses: ./.github/workflows/exo-playback-performance.yml
+    with:
+      regression_only: ${{ inputs.playback_regression_only }}
   build:
     if: ${{ !inputs.playback_performance }}
     runs-on: ubuntu-latest

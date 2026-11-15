@@ -45,7 +45,6 @@ public final class AssTextRenderer extends BaseRenderer {
     private final AtomicInteger queued = new AtomicInteger();
     private final AtomicInteger queuedBytes = new AtomicInteger();
     private final AtomicBoolean rendering = new AtomicBoolean();
-    private final AssRenderSchedule schedule = new AssRenderSchedule();
     private final AssFrameCache frames = new AssFrameCache();
     private HandlerThread thread;
     private Handler worker;
@@ -60,6 +59,7 @@ public final class AssTextRenderer extends BaseRenderer {
     private volatile int generation;
     private volatile long positionUs;
     private long offsetUs;
+    private long lastRenderUs = C.TIME_UNSET;
     private final AtomicBoolean refresh = new AtomicBoolean(true);
     private boolean ended;
 
@@ -106,7 +106,6 @@ public final class AssTextRenderer extends BaseRenderer {
         source = streamSource;
         streamOffsetUs = offset;
         generation++;
-        schedule.reset();
         output.clear(generation);
         worker().post(() -> { fonts = streamSource.fonts; initialize(current); });
     }
@@ -131,7 +130,7 @@ public final class AssTextRenderer extends BaseRenderer {
     @Override protected void onPositionReset(long position, boolean joining, boolean keyFrame) {
         ended = false;
         generation++;
-        schedule.reset();
+        lastRenderUs = C.TIME_UNSET;
         output.clear(generation);
         worker().post(() -> { if (track != null) track.clearEvent(); frames.clear(); eventBytes = 0; historyPackets = 0; });
         refresh();
@@ -172,9 +171,9 @@ public final class AssTextRenderer extends BaseRenderer {
                 finally { queued.decrementAndGet(); queuedBytes.addAndGet(-data.length); }
             });
         }
-        if (!schedule.isDue(positionUs, elapsedRealtimeUs, refresh.get())) return;
+        if (!refresh.get() && lastRenderUs != C.TIME_UNSET && Math.abs(positionUs - lastRenderUs) < 33_000) return;
         if (!rendering.compareAndSet(false, true)) return;
-        schedule.scheduled(positionUs, elapsedRealtimeUs);
+        lastRenderUs = positionUs;
         int ticket = generation;
         worker().post(() -> {
             try {
