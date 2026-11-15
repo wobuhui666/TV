@@ -11,7 +11,7 @@ import java.util.Locale;
 
 public final class TmdbEndpoint {
 
-    public static final String DEFAULT_ROOT = "https://tapi.coolmarket.eu.org/";
+    public static final String DEFAULT_ROOT = "https://t.coolmarket.eu.org/";
     public static final String DEFAULT_API_BASE = DEFAULT_ROOT + "3/";
     public static final String DEFAULT_IMAGE_BASE = DEFAULT_ROOT + "t/p/";
     public static final String DIRECT_ROOT = "https://api.themoviedb.org/";

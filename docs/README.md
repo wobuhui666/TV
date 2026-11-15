@@ -32,6 +32,7 @@
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | 源、播放器及设备回归 | [验证报告目录](testing/README.md) · [测试运行方法](testing/source-validation.md) |
 | 近期功能与界面 | [社区跳过与播放回归](testing/reports/2026-11-01-community-skip/README.md) · [海报墙、字幕和表单](testing/reports/2026-11-01-tv-polish/README.md) |
+| 连续集数的社区跳过匹配 | [名称处理中间层部署、专项测试与网络检查](testing/reports/2026-11-14-community-skip/README.md) |
 | 流畅度和稳定性 | [真实配置、生命周期与对比结果](testing/reports/2026-10-31-responsiveness/README.md) |
 | TMDB 透明 Logo 轮廓 | [实现、预览和安装验证](ui-redesign/tmdb-logo/README.md) |
 | Girigiri 加载优化 | [优化前后同设备测量](testing/reports/2026-10-06-girigiri-loading/README.md) |
