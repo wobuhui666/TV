@@ -49,6 +49,10 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
+      live_lines_touch_scroll:
+        description: Verify live line selection and home touch scrolling at two display sizes
+        type: boolean
+        default: false
       home_background:
         description: Verify native home artwork blending with wallpaper on and off
         type: boolean
@@ -70,30 +74,30 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.live_lines_touch_scroll && 'live-lines-touch-scroll' || inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
   guarded-source:
-    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm
+    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll
     uses: ./.github/workflows/guarded-source-verify.yml
     with:
       preload: ${{ inputs.preload }}
   responsiveness:
-    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm
+    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
       compare_baseline: ${{ inputs.compare_baseline }}
       polish: ${{ inputs.polish }}
   verify:
-    if: ${{ inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
+    if: ${{ inputs.live_lines_touch_scroll || inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        api: ${{ fromJSON(inputs.wasm && '[24,34]' || '[34]') }}
+        api: ${{ fromJSON(!inputs.live_lines_touch_scroll && inputs.wasm && '[24,34]' || '[34]') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,10 +147,54 @@ jobs:
       - name: Rebuild pinned legacy and modern spider DEX fixtures
         if: inputs.wasm
         run: python3 .github/scripts/prepare-spider-api-fixtures.py
+      - name: Verify focused live line unit tests
+        if: inputs.live_lines_touch_scroll
+        env:
+          MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+          TMDB_API_KEY: compact-ui-fixture
+        run: |
+          set -o pipefail
+          out=artifacts/live-lines-touch-scroll/focused-unit
+          mkdir -p "$out"
+          gradle_status=0
+          if ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:testLeanbackArm64_v8aPreviewUnitTest \
+              --tests com.fongmi.android.tv.playback.live.LiveLineSelectionTest \
+              --tests com.fongmi.android.tv.playback.live.LivePlaybackLineSelectionTest \
+              -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain 2>&1 | tee "$out/gradle.txt"; then
+            gradle_status=0
+          else
+            gradle_status=$?
+          fi
+          python3 - "$gradle_status" <<'PY'
+          import json, os, pathlib, shutil, sys, xml.etree.ElementTree as ET
+          source = pathlib.Path('app/build/test-results/testLeanbackArm64_v8aPreviewUnitTest')
+          output = pathlib.Path('artifacts/live-lines-touch-scroll/focused-unit')
+          expected = {
+              'com.fongmi.android.tv.playback.live.LiveLineSelectionTest': 6,
+              'com.fongmi.android.tv.playback.live.LivePlaybackLineSelectionTest': 7,
+          }
+          suites = []
+          for path in sorted(source.glob('TEST-*.xml')):
+              shutil.copy2(path, output / path.name)
+              suite = ET.parse(path).getroot()
+              suites.append({'class': suite.get('name'),
+                             **{field: int(suite.get(field, 0)) for field in ('tests', 'failures', 'errors', 'skipped')}})
+          counts = {suite['class']: suite['tests'] for suite in suites}
+          totals = {field: sum(suite[field] for suite in suites) for field in ('tests', 'failures', 'errors', 'skipped')}
+          passed = int(sys.argv[1]) == 0 and counts == expected and totals == {
+              'tests': 13, 'failures': 0, 'errors': 0, 'skipped': 0,
+          }
+          summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': passed,
+                     'gradleStatus': int(sys.argv[1]), **totals, 'suites': suites}
+          (output / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, indent=2))
+          if not passed:
+              raise SystemExit('Expected exactly 13 focused live line unit tests, no failures or skips')
+          PY
       - name: Build TV preview and run local unit tests
         env:
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-          TMDB_API_KEY: ${{ inputs.live_home && 'tmdb-live-preview' || (inputs.compact_home || inputs.home_background) && 'compact-ui-fixture' || '' }}
+          TMDB_API_KEY: ${{ inputs.live_lines_touch_scroll && 'compact-ui-fixture' || inputs.live_home && 'tmdb-live-preview' || (inputs.compact_home || inputs.home_background) && 'compact-ui-fixture' || '' }}
           ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
@@ -155,7 +203,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tv-preview-apk${{ inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
+          name: tv-preview-apk${{ inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: app/build/outputs/apk/leanbackArm64_v8a/preview/*.apk
       - name: Enable KVM
         run: |
@@ -165,6 +213,7 @@ jobs:
       - name: Prepare emulator checks
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
@@ -177,7 +226,9 @@ jobs:
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_WASM" = 'true' ]; then
+          if [ "$TV_LIVE_LINES_TOUCH_SCROLL" = 'true' ]; then
+            bash .github/scripts/verify-live-lines-touch-scroll.sh
+          elif [ "$TV_WASM" = 'true' ]; then
             bash .github/scripts/verify-wasm.sh "$TV_EMULATOR_API"
           elif [ "$TV_PLAYBACK_CLOCK" = 'true' ]; then
             python3 - <<'PY'
@@ -245,6 +296,7 @@ jobs:
               com.fongmi.android.tv.test.FolderFilterNavigationTest=6
               com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest=7
               com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest=11
+              com.fongmi.android.tv.test.PausedDanmakuVisibilityTest=2
               com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest=3
               com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest=5
               com.fongmi.android.tv.player.TimeshiftExoIntegrationTest=2
@@ -388,7 +440,7 @@ jobs:
           fi
           VERIFY
       - name: Prepare runtime TMDB preview credential
-        if: inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
+        if: inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm && !inputs.live_lines_touch_scroll
         env:
           TMDB_PREVIEW_KEY: ${{ secrets.TV94_TMDB_PREVIEW_KEY }}
         run: |
@@ -443,6 +495,7 @@ jobs:
         timeout-minutes: ${{ inputs.home_background && 20 || 40 }}
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
           TV_EPISODE_NAVIGATION: ${{ inputs.episode_navigation }}
@@ -469,7 +522,7 @@ jobs:
           pre-emulator-launch-script: ${{ inputs.home_background && 'nohup timeout --kill-after=5s 1200s bash "$RUNNER_TEMP/watch-home-emulator-host.sh" </dev/null >/dev/null 2>&1 & echo $! > "$RUNNER_TEMP/home-emulator-host-watcher.pid"' || '' }}
           script: bash "$RUNNER_TEMP/verify-tv-home.sh"
       - name: Remove runtime preview credential
-        if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm
+        if: always() && inputs.live_home && !inputs.upstream_stability && !inputs.variety_episodes && !inputs.wasm && !inputs.live_lines_touch_scroll
         run: |
           python3 - <<'PY'
           import os, pathlib
@@ -508,13 +561,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tv-ui-verification-${{ github.run_id }}${{ inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
+          name: tv-ui-verification-${{ github.run_id }}${{ inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: |
             artifacts/tv-ui/
             artifacts/upstream-features/
             artifacts/playback-specs/
             artifacts/playback-clock/
             artifacts/compact-home/
+            artifacts/live-lines-touch-scroll/
             artifacts/home-background/
             artifacts/live-home/
             artifacts/assrt-subtitles/

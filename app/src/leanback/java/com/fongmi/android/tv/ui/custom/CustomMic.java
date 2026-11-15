@@ -154,8 +154,7 @@ public class CustomMic extends AppCompatImageView {
     @Override
     protected void onFocusChanged(boolean gainFocus, int direction, @Nullable Rect previouslyFocusedRect) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
-        if (gainFocus && isAvailable()) start();
-        else if (!gainFocus) stop();
+        if (!gainFocus) stop();
     }
 
     @Override

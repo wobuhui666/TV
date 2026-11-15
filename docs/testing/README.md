@@ -4,6 +4,12 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-15 | [直播线路与首页触摸滚动](reports/2026-11-15-live-lines-touch-scroll/README.md) | 指定线路、过期列表保护与首页异步焦点回顶；本轮构建结果及未执行的设备 UI 用例见报告 |
+| 2026-11-15 | [媒体库与全屏播放器打磨](reports/2026-11-15-library-polish/README.md) | aiwex 实播、海报尺寸、全屏选集、换源与遥控器回归；结果和限制见报告 |
+| 2026-11-14 | [aiwex 实际配置](reports/2026-11-14-aiwex-live/README.md) | 用户指定在线配置的导入、Guard、搜索与返回；实测范围和架构限制见报告 |
+| 2026-11-14 | [媒体库搜索与界面](reports/2026-11-14-library-search/README.md) | 搜索后台解析／关联、卡片回收、主题与滚动；本轮 Android 和 lint 结果见报告 |
+| 2026-11-15 | [Exo 声音与弹幕停顿](reports/2026-11-14-playback-stutter/README.md) | 最终1058项JUnit、36项Android及5组功能实播；三轮性能实验与撤回原因保留，MT5873实机未验证 |
+| 2026-11-14 | [连续集数与社区跳过](reports/2026-11-14-community-skip/README.md) | Groq / Workers AI 两端部署、29 项中间层测试、68 项客户端专项 JVM 测试及真实季集匹配；未构建新 APK 或电视实测 |
 | 2026-11-01 | [社区片头片尾、播放与界面](reports/2026-11-01-community-skip/README.md) | 779 项单测、实际 Exo 区间跳转、99 源配置加载与设置截图；GHA 抽测源未返回内容，未验证本轮真实片源播放 |
 | 2026-11-01 | [海报墙、推荐筛选、字幕与表单](reports/2026-11-01-tv-polish/README.md) | 实际 Android 筛选、字幕标签、长表单滚动提示；示例内容，不代表 ARM 实机性能 |
 | 2026-10-31 | [流畅度与稳定性](reports/2026-10-31-responsiveness/README.md) | 离屏释放、晚到分页、解析取消与帧时间对比；纯 ARM 隔离包单独验证受保护来源 |

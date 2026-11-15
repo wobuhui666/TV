@@ -19,6 +19,8 @@ import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.activity.HomePreviewFixtures;
 import com.fongmi.android.tv.ui.activity.TvHomePreviewActivity;
@@ -53,6 +55,7 @@ public final class CompactHomeIntegrationTest {
         assertEquals("Isolated preview only", "com.fongmi.android.tv.preview", instrumentation.getTargetContext().getPackageName());
         main(() -> {
             savedPreferences = Prefers.getPrefers().getAll();
+            ExperienceSettings.putMode(ExperienceMode.LIBRARY);
             fixture = HomePreviewFixtures.openCompact(instrumentation.getTargetContext());
         });
         home = (TvHomePreviewActivity) instrumentation.startActivitySync(new Intent(
@@ -66,6 +69,9 @@ public final class CompactHomeIntegrationTest {
         if (home != null) await("home closes before restoring fixture state", home::isDestroyed);
         if (fixture != null) main(fixture::close);
         if (savedPreferences != null) main(() -> {
+            Object mode = savedPreferences.get("tv_experience_mode_v1");
+            if (mode instanceof String value) Prefers.put("tv_experience_mode_v1", value);
+            else Prefers.remove("tv_experience_mode_v1");
             Map<String, ?> restored = Prefers.getPrefers().getAll();
             for (String key : List.of("browse_home_layout_v1", "browse_poster_home")) {
                 assertEquals("Restore exact preference presence for " + key, savedPreferences.containsKey(key), restored.containsKey(key));
@@ -74,24 +80,22 @@ public final class CompactHomeIntegrationTest {
         });
     }
 
-    @Test public void shouldUseCompactDefaultAndKeepLibraryInNavigation() {
+    @Test public void shouldKeepNativeSourceLibraryAndSeparateDiscoveryInNavigation() {
         main(() -> {
-            assertFalse("The legacy flag cannot override the new default", Prefers.getBoolean("browse_poster_home", true));
-            assertFalse(Prefers.getPrefers().contains("browse_home_layout_v1"));
-            assertEquals(BrowseExperienceSettings.HOME_COMPACT, BrowseExperienceSettings.getHomeLayout());
+            assertTrue("The native source directory remains available in library mode", ExperienceSettings.usesLibrary());
             @SuppressWarnings("unchecked") List<JetStreamHomeNavView.NavItem> nav = (List<JetStreamHomeNavView.NavItem>) HomePreviewFixtures.field(home.findViewById(R.id.nav), "items");
             assertTrue(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_vod))));
-            assertFalse(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_discover))));
-            assertTrue(home.categoriesPosition() > home.historyPosition());
-            assertEquals(List.of("trending_day", "douban_movie", "douban_tv"), visibleShelfKeys());
+            assertTrue(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_discover))));
         });
-        NativeUiEvidence.capture("compact-home");
         text("片库").click();
         await("library routes through its existing activity", () -> routeIs("VodActivity"));
         assertEquals("preview-source-0", home.lastNavigation.getStringExtra("key"));
+        Result source = home.lastNavigation.getParcelableExtra("result");
+        assertNotNull(source);
+        assertEquals("The source's own categories remain available", 2, source.getTypes().size());
         device.pressDPadRight();
         device.pressDPadCenter();
-        await("remote navigation skips the removed recommendation tab", () -> routeIs("SearchActivity"));
+        await("TMDB is available through its separate discovery entry", () -> routeIs("DiscoverActivity"));
     }
 
     @Test public void shouldKeepCategoryOrderAndExposeFilterShortcut() throws Exception {
@@ -119,7 +123,7 @@ public final class CompactHomeIntegrationTest {
             @SuppressWarnings("unchecked") List<Vod> items = (List<Vod>) HomePreviewFixtures.field(source, "items");
             @SuppressWarnings("unchecked") List<Vod> actions = (List<Vod>) HomePreviewFixtures.field(source, "actions");
             assertEquals(20, items.size());
-            assertEquals(1, actions.size());
+            assertEquals(2, actions.size());
             assertTrue(actions.get(0).getPic().isEmpty());
             assertTrue(actions.get(0).getId().isEmpty());
             home.focusRow(home.sourcePosition());
@@ -133,6 +137,19 @@ public final class CompactHomeIntegrationTest {
             assertTrue("The source header remains inside the viewport", source.getTop() >= 0);
         });
         NativeUiEvidence.capture("compact-source-actions");
+    }
+
+    @Test public void shouldOpenSourceAccountFolderWithoutTmdbInterception() {
+        main(() -> home.focusRow(home.sourcePosition()));
+        text("账号设置").click();
+        await("The source folder opens its native category activity", () -> routeIs("VodActivity"));
+        assertEquals("preview-source-0", home.lastNavigation.getStringExtra("key"));
+        Result folder = home.lastNavigation.getParcelableExtra("result");
+        assertNotNull(folder);
+        assertEquals(1, folder.getTypes().size());
+        assertEquals("source-settings", folder.getTypes().get(0).getTypeId());
+        assertTrue(folder.getTypes().get(0).isFolder());
+        assertEquals("Opening a folder does not execute an unrelated login action", 0, fixture.actionCalls.get());
     }
 
     @Test public void shouldRebindSourceCardsAfterAnIdenticalRefresh() {

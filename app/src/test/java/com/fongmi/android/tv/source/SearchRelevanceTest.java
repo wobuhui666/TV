@@ -143,6 +143,21 @@ public class SearchRelevanceTest {
         assertFalse(SearchRelevance.evaluate("庆余年 第二季", "2019", query).relevant());
     }
 
+    @Test public void shouldReusePreparedQueriesWithoutLosingBracketAliasesOrSupplementEvidence() {
+        List<SearchRelevance.Query> queries = List.of(
+                new SearchRelevance.Query("黑客帝国", List.of("The Matrix"), "1999", null),
+                new SearchRelevance.Query("公园男孩", List.of("Trailer Park Boys"), "", null),
+                new SearchRelevance.Query("庆余年", List.of("Joy of Life"), "2024", 2));
+        var preparedQueries = queries.stream().map(SearchRelevance::prepareQuery).toList();
+        for (String title : List.of("黑客帝国（The Matrix）", "黑客帝国 / The Matrix", "The Matrix / Trailer",
+                "Trailer Park Boys", "Trailer Park Boys / Review", "庆余年 第二季", "Joy of Life S02", "庆余年 第一季")) {
+            var result = SearchRelevance.prepareResult(title, "2024");
+            for (int index = 0; index < queries.size(); index++) assertEquals(
+                    SearchRelevance.evaluate(title, "2024", queries.get(index)),
+                    SearchRelevance.evaluatePrepared(result, preparedQueries.get(index)));
+        }
+    }
+
     private static SearchRelevance.Match match(String query, String title) {
         return SearchRelevance.evaluate(title, "", SearchRelevance.Query.of(query));
     }

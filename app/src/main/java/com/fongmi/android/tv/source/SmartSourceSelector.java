@@ -8,8 +8,13 @@ import com.github.catvod.utils.Trans;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public final class SmartSourceSelector {
+
+    private static final Pattern MOVIE_CUT = Pattern.compile("(?i)导演剪辑|導演剪輯|导剪|導剪|加长|加長|未删减|未刪減|剧场版|劇場版|影院版|院线版|院線版|director(?:['’]s)?[ ._-]*cut|extended|uncut|theatrical|remaster(?:ed)?");
 
     private SmartSourceSelector() {
     }
@@ -74,6 +79,56 @@ public final class SmartSourceSelector {
             }
         }
         return ambiguous ? null : selected;
+    }
+
+    /**
+     * Supplies a season only for bare labels. Explicit file coordinates always remain authoritative.
+     * A mixed-season catalogue cannot identify the season of an unmarked file by list position.
+     */
+    public static Integer implicitEpisodeSeason(Vod source) {
+        if (source == null) return null;
+        Integer declared = MediaMatcher.identity(source).getSeason();
+        Set<Integer> labelled = new LinkedHashSet<>();
+        for (Flag flag : source.getFlags()) for (Episode episode : flag.getEpisodes()) {
+            EpisodeLabel label = episode.getLabel();
+            if (!episode.isGeneratedLabel() && label.isSingleEpisode() && !label.isPreview()
+                    && !label.isSpecial() && label.season() != null) labelled.add(label.season());
+        }
+        if (declared != null) {
+            return labelled.stream().allMatch(declared::equals) ? declared : null;
+        }
+        // Unlabelled catalogues can be the implicit first season. Once explicit season files
+        // exist, bare ordinals do not establish which season they belong to.
+        return labelled.isEmpty() ? 1 : null;
+    }
+
+    /** A film with several cuts or files needs an explicit choice, unless its saved URL still exists. */
+    public static FlagSelection selectMovie(Vod source, String savedUrl, String preferredFlag) {
+        if (source == null) return null;
+        List<Flag> flags = new ArrayList<>(source.getFlags());
+        flags.sort(Comparator.comparingInt(flag -> flag.getFlag().equals(preferredFlag) ? 0 : 1));
+        if (savedUrl != null && !savedUrl.isEmpty()) {
+            for (Flag flag : flags) for (Episode episode : flag.getEpisodes()) {
+                if (savedUrl.equals(episode.getUrl()) && !episode.getLabel().isPreview()) {
+                    return new FlagSelection(flag, episode, 1000, flag.getEpisodes().size());
+                }
+            }
+        }
+        FlagSelection selected = null;
+        Set<String> cuts = new LinkedHashSet<>();
+        for (Flag flag : flags) {
+            List<Episode> content = flag.getEpisodes().stream().filter(episode ->
+                    !episode.getUrl().isEmpty() && !episode.getLabel().isPreview() && !episode.getLabel().isSpecial()).toList();
+            if (content.isEmpty()) continue;
+            // A list can contain separate edits, parts, or language versions of the film.
+            if (content.stream().map(Episode::getUrl).distinct().count() != 1) return null;
+            Episode episode = content.get(0);
+            java.util.regex.Matcher cut = MOVIE_CUT.matcher(episode.getName());
+            cuts.add(cut.find() ? cut.group().toLowerCase(java.util.Locale.ROOT) : "");
+            if (cuts.size() > 1) return null;
+            if (selected == null) selected = new FlagSelection(flag, episode, 0, flag.getEpisodes().size());
+        }
+        return selected;
     }
 
     /** Explicit list selections never fall back to a saved position or an unrelated episode. */

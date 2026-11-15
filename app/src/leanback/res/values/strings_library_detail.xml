@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_sources_action">Sources</string>
+    <string name="library_all_episodes">All episodes</string>
+    <string name="library_episodes_loading">Loading episodes…</string>
+    <string name="library_episodes_empty">No episode information</string>
+    <string name="library_cancel_playback">Cancel loading</string>
+    <string name="library_play_episode">Play episode %1$d</string>
+    <string name="library_resume_episode">Resume episode %1$d · %2$s</string>
+    <string name="library_resume_position">Resume · %1$s</string>
+</resources>

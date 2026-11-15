@@ -79,7 +79,7 @@ public class PosterHomeCatalogTest {
 
     @Test
     public void shouldKeepCompactHomeToItsSelectedShelves() {
-        assertEquals(List.of("trending_day", "douban_movie", "douban_tv"), PosterHomeCatalog.compactKeys(PosterHomeCatalog.ALL));
+        assertEquals(List.of("trending_day", "popular_movie", "popular_tv"), PosterHomeCatalog.compactKeys(PosterHomeCatalog.ALL));
         assertFalse(PosterHomeCatalog.compactKeys(PosterHomeCatalog.MOVIES).contains("douban_tv"));
         assertFalse(PosterHomeCatalog.compactKeys(PosterHomeCatalog.TV).contains("now_playing"));
         assertEquals(List.of("top_movie", "top_tv"), PosterHomeCatalog.compactKeys(PosterHomeCatalog.TOP));
@@ -109,6 +109,22 @@ public class PosterHomeCatalogTest {
         assertEquals(20, PosterHomeCatalog.sourceVideos(items).size());
         assertEquals(List.of(action), PosterHomeCatalog.sourceActions(items));
         assertTrue(PosterHomeCatalog.compactItems(List.of(action), PosterHomeCatalog.ALL).isEmpty());
+    }
+
+    @Test
+    public void shouldKeepSourceFoldersReachableBesideConfigurationActions() throws Exception {
+        List<Vod> items = new ArrayList<>();
+        for (int i = 0; i < 30; i++) items.add(vod("source:" + i, "影片" + i, "movie", "2026", true));
+        Vod folder = vod("source-settings", "账号设置", "", "", false);
+        Field tag = Vod.class.getDeclaredField("vodTag");
+        tag.setAccessible(true);
+        tag.set(folder, "folder");
+        folder.setPic("");
+        items.add(folder);
+
+        assertEquals(List.of(folder), PosterHomeCatalog.sourceActions(items));
+        assertEquals(20, PosterHomeCatalog.sourceVideos(items).size());
+        assertFalse(PosterHomeCatalog.sourceVideos(items).contains(folder));
     }
 
     private static Vod vod(String id, String title, String type, String year, boolean landscape) {

@@ -20,6 +20,10 @@ public interface VodPlaybackHost {
 
     default void clearPreload() {}
 
+    default Result takePrefetchedPlayer(VodPlayRequest request) { return null; }
+
+    default boolean strictLibraryEpisodeNavigation() { return false; }
+
     default boolean canSkipCommunitySegment() { return false; }
 
     default void skipCommunitySegment(long positionMs) {}

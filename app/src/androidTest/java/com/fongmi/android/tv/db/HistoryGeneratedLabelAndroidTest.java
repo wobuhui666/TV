@@ -122,6 +122,7 @@ public final class HistoryGeneratedLabelAndroidTest {
     private AppDatabase openDatabase() {
         return Room.databaseBuilder(context, AppDatabase.class, databaseName)
                 .addMigrations(Migrations.MIGRATION_37_38)
+                .addMigrations(Migrations.MIGRATION_38_39)
                 .allowMainThreadQueries().build();
     }
 
@@ -132,6 +133,8 @@ public final class HistoryGeneratedLabelAndroidTest {
         sqlite.beginTransaction();
         try {
             sqlite.execSQL("DROP TABLE History");
+            sqlite.execSQL("DROP TABLE Keep");
+            sqlite.execSQL("CREATE TABLE Keep (`key` TEXT NOT NULL,siteName TEXT,vodName TEXT,vodPic TEXT,createTime INTEGER NOT NULL,type INTEGER NOT NULL,cid INTEGER NOT NULL,PRIMARY KEY(`key`))");
             sqlite.execSQL(LEGACY_HISTORY);
             sqlite.execSQL("CREATE INDEX index_History_cid_createTime ON History (`cid`, `createTime`)");
             sqlite.execSQL("INSERT INTO History (`key`,`vodName`,`vodFlag`,`vodRemarks`,`episodeUrl`,`revSort`,`revPlay`,`createTime`,`opening`,`ending`,`openingSource`,`endingSource`,`position`,`duration`,`speed`,`scale`,`cid`) VALUES (?,?,?,?,?,0,0,123,45000,60000,'manual','unknown',120000,1800000,1.0,-1,?)",

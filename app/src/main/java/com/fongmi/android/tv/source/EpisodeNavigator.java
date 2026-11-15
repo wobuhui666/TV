@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.source;
 
 import com.fongmi.android.tv.bean.Episode;
+import com.fongmi.android.tv.bean.Flag;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,6 +57,30 @@ public final class EpisodeNavigator {
             if (hasVarietyCoordinate(episode) && episode.getLabel().isVariety()) return true;
         }
         return false;
+    }
+
+    /** Catalogue playback advances explicit coordinates, independent of a source's display order. */
+    public static Episode relativeCoordinate(List<Episode> episodes, int current, int offset,
+                                             Integer selectedSeason, Integer implicitSourceSeason) {
+        if (episodes == null || episodes.isEmpty()) return null;
+        Episode selected = episodes.get(Math.max(0, Math.min(current, episodes.size() - 1)));
+        if (selected == null || offset == 0) return selected;
+        EpisodeLabel label = selected.getLabel();
+        if (selected.isGeneratedLabel() || !label.isApiSafe()) return selected;
+        Integer season = label.season() == null ? selectedSeason : label.season();
+        if (season == null || season < 0 || season > 999) return selected;
+
+        Flag line = new Flag();
+        line.getEpisodes().addAll(episodes);
+        int direction = Integer.signum(offset);
+        for (long step = 0; step < Math.abs((long) offset); step++) {
+            EpisodeTarget next = EpisodeTarget.of(selected, season).offset(direction);
+            if (next == null) break;
+            Episode candidate = SmartSourceSelector.findEpisode(line, next, implicitSourceSeason);
+            if (candidate == null) break;
+            selected = candidate;
+        }
+        return selected;
     }
 
     private static boolean hasVarietyCoordinate(Episode episode) {

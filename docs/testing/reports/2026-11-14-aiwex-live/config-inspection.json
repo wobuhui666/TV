@@ -1,0 +1,65 @@
+{
+  "checked_at_utc": "2026-11-14T17:56:12+00:00",
+  "inspection": "Read-only configuration and artifact validation; no spider execution",
+  "configuration": {
+    "url": "https://9280.kstore.vip/aiwex.json",
+    "http_status": 200,
+    "content_type": "application/json",
+    "server_date": "Sat, 14 Nov 2026 17:56:10 GMT",
+    "bytes": 34815,
+    "elapsed_ms": 766,
+    "sha256": "69de929d43d5cda702e6d86c0428686f4d94efc420cfb7d29262b6563e13b92e",
+    "valid_json": true,
+    "site_count": 100,
+    "distinct_site_keys": 100,
+    "searchable_count": 92,
+    "disabled_search_count": 8,
+    "site_types": {
+      "3": 100
+    },
+    "distinct_csp_classes": 84,
+    "guard_class_count": 100,
+    "direct_http_api_count": 0,
+    "per_site_jar_count": 0,
+    "parse_count": 4,
+    "doh_count": 5,
+    "live_count": 2,
+    "same_as_initial_download": true
+  },
+  "spider": {
+    "source_scheme": "http",
+    "source_host": "oss4liview.moji.com",
+    "http_status": 200,
+    "content_type": "image/jpeg",
+    "server_date": "Sat, 14 Nov 2026 08:49:37 GMT",
+    "bytes": 1043146,
+    "elapsed_ms": 2047,
+    "sha256": "9848e4d7b2d81b193ec458459d21f9cada92e0374a424a9ddaeaf440736af178",
+    "md5": "541366f5860ceb66e1c3005f5a299afe",
+    "declared_md5_matches": true,
+    "same_as_initial_download": true,
+    "zip_valid": true,
+    "dex_count": 1,
+    "native_libraries": [
+      {
+        "elf_machine": 40,
+        "architecture": "ARM",
+        "elf_bits": 32,
+        "bytes": 48364
+      },
+      {
+        "elf_machine": 183,
+        "architecture": "ARM64",
+        "elf_bits": 64,
+        "bytes": 48680
+      }
+    ]
+  },
+  "coverage": {
+    "configuration_http_verified": true,
+    "spider_integrity_verified": true,
+    "native_architectures_inspected": true,
+    "spider_search_executed": false,
+    "android_device_verified": false
+  }
+}

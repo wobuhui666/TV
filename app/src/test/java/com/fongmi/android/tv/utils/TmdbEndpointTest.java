@@ -14,9 +14,9 @@ public class TmdbEndpointTest {
 
     @Test
     public void shouldKeepDefaultEndpoint() {
-        assertEquals("https://tapi.coolmarket.eu.org/", TmdbEndpoint.DEFAULT_ROOT);
-        assertEquals("https://tapi.coolmarket.eu.org/3/", TmdbEndpoint.DEFAULT_API_BASE);
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/", TmdbEndpoint.DEFAULT_IMAGE_BASE);
+        assertEquals("https://t.coolmarket.eu.org/", TmdbEndpoint.DEFAULT_ROOT);
+        assertEquals("https://t.coolmarket.eu.org/3/", TmdbEndpoint.DEFAULT_API_BASE);
+        assertEquals("https://t.coolmarket.eu.org/t/p/", TmdbEndpoint.DEFAULT_IMAGE_BASE);
     }
 
     @Test

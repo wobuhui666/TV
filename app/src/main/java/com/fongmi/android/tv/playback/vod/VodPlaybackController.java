@@ -300,7 +300,15 @@ public class VodPlaybackController {
     private boolean tryCrossSiteEpisode(int offset) {
         if (!SourceSelectionSetting.getMode().selectsAutomatically()
                 || !SourceSelectionSetting.isCrossSiteEnabled() || !state.hasEpisode()) return false;
-        EpisodeTarget next = state.getEpisodeTarget().offset(offset);
+        EpisodeTarget current = state.getEpisodeTarget();
+        if (host.strictLibraryEpisodeNavigation()) {
+            History history = state.getHistory();
+            Episode episode = state.getEpisode();
+            if (history == null || history.getMediaSeason() == null || history.getMediaEpisode() == null
+                    || episode.isGeneratedLabel() || !episode.getLabel().isApiSafe()) return false;
+            current = EpisodeTarget.coordinate(history.getMediaSeason(), history.getMediaEpisode());
+        }
+        EpisodeTarget next = current.offset(offset);
         if (next == null) return false;
         state.setEpisodeTarget(next);
         fallbackPolicy.search(host.getVodName(), true);
@@ -512,7 +520,9 @@ public class VodPlaybackController {
         else stopCommunitySkip();
         VodPlayRequest request = VodPlayRequest.create(host.getVodKey(), flag, episode);
         state.setPendingRequest(request);
-        Result cached = preloader.consume(request);
+        Result cached = host.takePrefetchedPlayer(request);
+        if (cached != null && cannotApply(cached, request)) cached = null;
+        if (cached == null) cached = preloader.consume(request);
         if (cached != null) {
             applyPlayerResult(cached, request);
             return;
@@ -565,6 +575,11 @@ public class VodPlaybackController {
     private Episode getRelativeEpisode(int offset) {
         List<Episode> episodes = state.getFlag().getEpisodes();
         int current = state.getFlag().getPosition();
+        if (host.strictLibraryEpisodeNavigation()) {
+            History history = state.getHistory();
+            return EpisodeNavigator.relativeCoordinate(episodes, current, offset,
+                    history == null ? null : history.getMediaSeason(), SmartSourceSelector.implicitEpisodeSeason(state.getMedia()));
+        }
         return EpisodeNavigator.relative(episodes, current, offset);
     }
 }

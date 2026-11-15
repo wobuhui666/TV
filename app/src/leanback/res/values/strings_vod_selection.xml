@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vod_control_episodes">Episodes</string>
+    <string name="vod_control_line">Playback line</string>
+    <string name="vod_control_quality">Picture quality</string>
+</resources>

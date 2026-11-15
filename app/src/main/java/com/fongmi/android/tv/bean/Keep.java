@@ -41,6 +41,11 @@ public class Keep implements Diffable<Keep> {
     private int type;
     @SerializedName("cid")
     private int cid;
+    @SerializedName("mediaRef")
+    private String mediaRef;
+
+    public String getMediaRef() { return mediaRef == null ? "" : mediaRef; }
+    public void setMediaRef(String value) { mediaRef = value; }
 
     public static List<Keep> arrayFrom(String str) {
         Type listType = TypeToken.getParameterized(List.class, Keep.class).getType();

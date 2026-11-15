@@ -92,7 +92,7 @@ Every release ships two package names. Pick one depending on whether you want it
 
 | Edition | Files | Package | Notes |
 | --- | --- | --- | --- |
-| Standard | `leanback-arm64_v8a.apk`, `leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | Same package as FongMi/TV; upgrades earlier builds of this project in place. |
+| Standard | `leanback-arm64_v8a.apk`, `leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | Same package as FongMi/TV, but a different signature prevents installing over it; upgrades earlier builds of this project in place only when the signatures match. |
 | Coexist | `leanback-arm64_v8a-coexist.apk`, `leanback-armeabi_v7a-coexist.apk` | `com.wobuhui666.android.tv` | Installs side by side with FongMi/TV or the standard edition; the launcher name stays the same. |
 
 About the coexist edition:
@@ -206,7 +206,7 @@ When the source or a configured API supplies danmaku, the player can search, imp
 
 ## Live TV and local-network playback
 
-Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
+Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Tap the current line to choose from the full list; cancelling or selecting the current line keeps playback running. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
 
 Catchup and timeshift depend on the provider's retained window and replay URL/metadata. Supported sources can expose seeking within that window and a return-to-live action, preserving the current playback/pause state when replay resolution fails. This is provider-backed replay, not universal local recording. [LIVE.md](docs/LIVE.md) documents the source formats and catchup fields; [CONFIG.md](docs/CONFIG.md) covers the app configuration.
 

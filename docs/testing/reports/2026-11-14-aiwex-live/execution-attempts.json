@@ -1,0 +1,99 @@
+{
+  "schema": "tv.aiwex.execution-attempts.v1",
+  "fullApkSha256": "cea0fe43cc1825447af9e44944d0915b74f11e3b723838557fb84b8b8ab090c3",
+  "fullApkBytes": 116711495,
+  "auditedAppSourceFiles": 56,
+  "configurationAudit": {
+    "configuredSites": 100,
+    "searchableSites": 92,
+    "auditIsNotRuntimeSuccess": true
+  },
+  "actualGuardSearchVerified": false,
+  "actualFullApkQueriesExecuted": 0,
+  "actualBackTestExecuted": false,
+  "attempts": [
+    {
+      "attempt": "api24-online-driver",
+      "apkKind": "Lite with1629 identical DEX/resource/manifest entries",
+      "instrumentationExecuted": true,
+      "configurationCallbackArrived": true,
+      "configurationLoaded": false,
+      "configurationLoadMs": 52840,
+      "maxMainHandlerDelayMs": 26,
+      "failure": "UnknownHostException resolving default DoH host",
+      "sourceOrQueryExecuted": false
+    },
+    {
+      "attempt": "api30-initial-bootstrap",
+      "profile": "TV",
+      "cores": 2,
+      "controllerExit": 1,
+      "observedOutcome": "Controller did not reach installation; early system bootstrap logs only",
+      "bootWaitLimitSeconds": 600,
+      "controllerElapsedApproxSeconds": 629,
+      "appInstalled": false
+    },
+    {
+      "attempt": "api30-warm-diagnostic",
+      "profile": "TV",
+      "cores": 2,
+      "controllerExit": 1,
+      "observedOutcome": "Boot completed sufficiently for property checks; recursive native-library enumeration exceeded20s and aborted controller",
+      "failureIsApplicationFailure": false,
+      "appInstalled": false
+    },
+    {
+      "attempt": "api30-warm-property-controller",
+      "profile": "TV",
+      "cores": 2,
+      "controllerExit": 1,
+      "observedOutcome": "At least one matching emulator log reported boot completed298809ms; controller failed before install; repeated10s property checks can be false negatives",
+      "allFailuresAttributedToBootDeadline": false,
+      "appInstalled": false
+    },
+    {
+      "attempt": "api30-phone-two-core-install",
+      "profile": "Pixel2",
+      "cores": 2,
+      "readiness": "Actual package/activity binder responses",
+      "readyResponseRangeMs": [
+        11179,
+        18568
+      ],
+      "fullApkPushMs": 8192,
+      "installerExit": 20,
+      "failure": "Package service unavailable",
+      "frameworkFailure": "NetworkStack TetheringService execution ANR then Lost network stack/SystemServer death",
+      "apkParsedByInstaller": false,
+      "appExecuted": false
+    },
+    {
+      "attempt": "api30-phone-single-core-install",
+      "profile": "Pixel2",
+      "cores": 1,
+      "readyObservedMs": 170722,
+      "packageBinderMs": 1861,
+      "activityBinderMs": 1370,
+      "sysBootPropertyAtReadiness": "",
+      "fullApkPushMs": 10185,
+      "installerExit": 255,
+      "failure": "SecurityException: Caller has no access to installer session",
+      "installerIdentityChangeCauseVerified": false,
+      "appExecuted": false
+    },
+    {
+      "attempt": "api30-phone-single-core-root-install",
+      "profile": "Pixel2",
+      "cores": 1,
+      "actualAdbShellUid": 0,
+      "fullApkPushMs": 71108,
+      "installerExit": 20,
+      "failure": "Package service unavailable",
+      "appExecuted": false
+    }
+  ],
+  "invalidFixNotApplied": "Android11 has no effective ro.hw_timeout_multiplier support for the fixed foreground service execution timeout",
+  "testNetworkFixturesOrClientReplacement": false,
+  "privateConfigurationBodiesOrHeadersIncluded": false,
+  "currentApi30RepeatedInstallationStopped": true
+}

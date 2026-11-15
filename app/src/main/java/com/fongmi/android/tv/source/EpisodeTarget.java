@@ -42,12 +42,34 @@ public final class EpisodeTarget {
         return new EpisodeTarget(number, String.valueOf(number));
     }
 
+    /** A catalogue coordinate is explicit evidence; it is never a position in a source playlist. */
+    public static EpisodeTarget coordinate(int season, int number) {
+        if (season < 0 || season > 999 || number <= 0 || number > 9999) {
+            throw new IllegalArgumentException("Invalid season or episode coordinate");
+        }
+        return new EpisodeTarget(number, "S" + season + "E" + number);
+    }
+
+    public Integer getSeason() {
+        return label.season();
+    }
+
     public Integer getNumber() {
         return number;
     }
 
     public String getName() {
         return name;
+    }
+
+    /** Cache identity keeps an explicit raw file selection distinct from a catalogue coordinate. */
+    public boolean sameSelection(EpisodeTarget other) {
+        return other != null && generated == other.generated && Objects.equals(number, other.number)
+                && Objects.equals(label.season(), other.label.season()) && name.equals(other.name)
+                && url.equals(other.url) && label.part().equals(other.label.part())
+                && label.variant().equals(other.label.variant()) && label.airDate().equals(other.label.airDate())
+                && label.edition().equals(other.label.edition()) && label.isPreview() == other.label.isPreview()
+                && label.isSpecial() == other.label.isSpecial() && label.isAmbiguous() == other.label.isAmbiguous();
     }
 
     public boolean isUnnumbered() {
@@ -67,12 +89,14 @@ public final class EpisodeTarget {
         return matches(episode, null);
     }
 
-    boolean matches(Episode episode, Integer sourceSeason) {
+    public boolean matches(Episode episode, Integer sourceSeason) {
         if (episode == null) return false;
-        if (generated || episode.isGeneratedLabel()) return !url.isEmpty() && url.equals(episode.getUrl());
         EpisodeLabel candidate = episode.getLabel();
         Integer season = candidate.season() == null ? sourceSeason : candidate.season();
         if (label.season() != null && season != null && !label.season().equals(season)) return false;
+        // Generated display ordinals establish only a URL identity, never a season/episode mapping.
+        // The known source season still must agree before that URL can preserve a selection.
+        if (generated || episode.isGeneratedLabel()) return !url.isEmpty() && url.equals(episode.getUrl());
         if (!label.part().equals(candidate.part()) || label.isSpecial() != candidate.isSpecial()
                 || label.isPreview() != candidate.isPreview() || !label.variant().equals(candidate.variant())) return false;
         if (label.hasAirDate() && candidate.hasAirDate() && !label.airDate().equals(candidate.airDate())) return false;

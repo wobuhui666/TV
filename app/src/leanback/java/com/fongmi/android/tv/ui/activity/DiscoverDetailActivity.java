@@ -51,6 +51,10 @@ public class DiscoverDetailActivity extends BaseActivity {
     private boolean metadataError;
 
     public static void start(Activity activity, Vod item, View sharedPoster) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            LibraryDetailActivity.start(activity, item);
+            return;
+        }
         DiscoverMediaKey key = DiscoverMediaKey.parse(item.getId());
         if (key != null) {
             start(activity, key, item.getName(), item.getPic(), item.getBackdrop(), item.getContent(), item.getYear(), item.getRemarks(), sharedPoster);
@@ -70,6 +74,12 @@ public class DiscoverDetailActivity extends BaseActivity {
 
     public static void start(Activity activity, DiscoverMediaKey key, String title, String poster, String backdrop,
                              String overview, String year, String rating, View sharedPoster) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            Vod item = new Vod(); item.setId(key.toString()); item.setTypeName(key.getMediaType());
+            item.setName(title); item.setPic(poster); item.setBackdrop(backdrop); item.setContent(overview); item.setYear(year); item.setRemarks(rating);
+            LibraryDetailActivity.start(activity, item);
+            return;
+        }
         Intent intent = new Intent(activity, DiscoverDetailActivity.class);
         intent.putExtra("key", key.toString());
         intent.putExtra("title", title);

@@ -79,6 +79,7 @@ import com.fongmi.android.tv.ui.dialog.ParseDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
 import com.fongmi.android.tv.ui.dialog.TrackDialog;
+import com.fongmi.android.tv.ui.dialog.VodSelectionDialog;
 import com.fongmi.android.tv.playback.PlaybackAction;
 import com.fongmi.android.tv.playback.PlaybackReset;
 import com.fongmi.android.tv.playback.vod.VodPlayRequest;
@@ -112,6 +113,55 @@ import java.util.Objects;
 public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, CustomKeyDownVod.Listener, TrackDialog.Listener, ParseDialog.Listener, Clock.Callback, com.fongmi.android.tv.ui.dialog.BasePlaybackSideSheetDialog.Listener {
 
     private static final String HERO_TRANSITION = "jetstream_hero";
+    public static final int RESULT_LIBRARY_FAILURE = RESULT_FIRST_USER + 7;
+
+    public static Intent libraryIntent(Activity activity, Vod source, String reference, Integer season, Integer number,
+                                       Flag flag, Episode episode, History progress) {
+        Intent intent = createIntent(activity, source.getSiteKey(), source.getId(), source.getName(), source.getPic());
+        intent.putExtra("libraryPlayback", true);
+        Vod work = activity instanceof LibraryDetailActivity ? activity.getIntent().getParcelableExtra("work") : null;
+        intent.putExtra("libraryWorkName", work == null || work.getName().isEmpty() ? source.getName() : work.getName());
+        intent.putExtra("mediaRef", reference);
+        if (season != null) intent.putExtra("mediaSeason", season);
+        if (number != null) intent.putExtra("mediaEpisode", number);
+        intent.putExtra("playId", episode.getUrl());
+        intent.putExtra("libraryEpisodeName", episode.getName());
+        intent.putExtra("libraryFlag", flag.getFlag());
+        if (progress != null) intent.putExtra("libraryProgress", progress.toString());
+        return intent;
+    }
+
+    private boolean isLibraryPlayback() { return getIntent().getBooleanExtra("libraryPlayback", false); }
+
+    @Override public boolean strictLibraryEpisodeNavigation() {
+        return isLibraryPlayback() && getIntent().hasExtra("mediaSeason") && getIntent().hasExtra("mediaEpisode");
+    }
+
+    @Override public Result takePrefetchedPlayer(com.fongmi.android.tv.playback.vod.VodPlayRequest request) {
+        String token = getIntent().getStringExtra("libraryPrefetch");
+        getIntent().removeExtra("libraryPrefetch");
+        Result cached = com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetch.consume(token, getIntent().getStringExtra("mediaRef"), VodConfig.getCid(), getVodId(), request);
+        if (cached != null) com.fongmi.android.tv.player.extractor.Source.get().beginResolve();
+        return cached;
+    }
+
+    private void libraryPlaybackFailed() {
+        if (!isLibraryPlayback() || isFinishing()) return;
+        saveHistory(true);
+        returnLibraryPlayback(RESULT_LIBRARY_FAILURE);
+        finish();
+    }
+
+    private void returnLibraryPlayback(int result) {
+        returnLibraryPlayback(result, false);
+    }
+
+    private void returnLibraryPlayback(int result, boolean selectResources) {
+        Intent data = new Intent();
+        if (mHistory != null) data.putExtra("libraryHistory", mHistory.copy().toString());
+        data.putExtra("librarySelectResources", selectResources);
+        setResult(result, data);
+    }
 
     private ActivityVideoBinding mBinding;
     private PlaybackSpecsController mSpecs;
@@ -787,6 +837,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void resetPlaybackForError(String msg) {
+        if (isLibraryPlayback()) { libraryPlaybackFailed(); return; }
         PlaybackReset.afterError(player(), () -> mClock.setCallback(null));
         showError(msg);
     }
@@ -823,6 +874,19 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void renderDetail(Vod item, History history) {
+        if (isLibraryPlayback()) {
+            history.setMediaRef(getIntent().getStringExtra("mediaRef"));
+            history.setMediaSeason(getIntent().hasExtra("mediaSeason") ? getIntent().getIntExtra("mediaSeason", 1) : null);
+            history.setMediaEpisode(getIntent().hasExtra("mediaEpisode") ? getIntent().getIntExtra("mediaEpisode", 1) : null);
+            history.setVodFlag(getIntent().getStringExtra("libraryFlag"));
+            history.setEpisodeUrl(getIntent().getStringExtra("playId"));
+            history.setVodRemarks(getIntent().getStringExtra("libraryEpisodeName"));
+            String saved = getIntent().getStringExtra("libraryProgress");
+            if (saved != null) {
+                History incoming = History.objectFrom(saved);
+                history.setPosition(incoming.getPosition()); history.setDuration(incoming.getDuration());
+            } else { history.setPosition(C.TIME_UNSET); history.setDuration(C.TIME_UNSET); }
+        }
         mContentRating = item.getContentRating();
         if (mSpecs != null) mSpecs.onMetadataChanged();
         mHistory = history;
@@ -846,6 +910,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void renderFallbackName(String name) {
+        if (isLibraryPlayback()) { libraryPlaybackFailed(); return; }
         showTitleText(name);
     }
 
@@ -861,6 +926,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         }
         mBinding.flag.setItems(texts, selected);
         mFlagSelectedPos = selected;
+        syncJetStreamCommands();
     }
 
     @Override
@@ -873,6 +939,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         int pos = mFlagItems.indexOf(item);
         mFlagSelectedPos = pos;
         mBinding.flag.setSelectedPosition(pos);
+        syncJetStreamCommands();
     }
 
     @Override
@@ -880,6 +947,11 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         int pos = findEpisodePosition(item);
         mEpisodeSelectedPos = pos;
         mBinding.episode.setSelectedPosition(pos);
+        if (isLibraryPlayback() && mHistory != null && getIntent().hasExtra("mediaEpisode") && !item.isGeneratedLabel() && item.getNumber() > 0) {
+            mHistory.setMediaEpisode(item.getNumber());
+            if (item.getLabel().season() != null) mHistory.setMediaSeason(item.getLabel().season());
+        }
+        syncJetStreamCommands();
     }
 
     @Override
@@ -1002,7 +1074,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void checkCast() {
-        if (isCast() && !isFullscreen()) enterFullscreen();
+        if ((isCast() || isLibraryPlayback()) && !isFullscreen()) enterFullscreen();
         else mBinding.progressLayout.showProgress();
     }
 
@@ -1057,11 +1129,13 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.episode.setItems(texts, selected);
         mEpisodeSelectedPos = selected;
         setArrayAdapter(items.size());
+        syncJetStreamCommands();
         setR2Callback();
     }
 
     private void setQualityVisible(boolean visible) {
         setRowVisibility(mBinding.quality, visible);
+        syncJetStreamCommands();
         setR2Callback();
     }
 
@@ -1197,7 +1271,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void onChange() {
-        mVod.manualSwitchSource();
+        if (isLibraryPlayback()) {
+            saveHistory(true);
+            returnLibraryPlayback(RESULT_OK, true);
+            onPaused();
+            finish();
+        } else mVod.manualSwitchSource();
     }
 
     private void onRepeat() {
@@ -1539,17 +1618,20 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     private void onJetStreamPlayPause() {
         if (service() == null || controller() == null) return;
-        if (player().isPlaying()) onPaused();
-        else if (player().isEmpty()) onRefresh();
+        if (player().isEmpty()) onRefresh();
+        else if (isPlaybackRequested()) onPaused();
         else onPlay();
         syncJetStreamControl();
     }
 
     private void onJetStreamCommand(String key) {
         switch (key) {
-            case "parse", "subtitle", "text", "audio", "video", "danmaku", "player", "edition", "chapter", "syncplay" -> playbackPanelCommand = key;
+            case "episodes", "line", "quality", "parse", "subtitle", "text", "audio", "video", "danmaku", "player", "edition", "chapter", "syncplay" -> playbackPanelCommand = key;
         }
         switch (key) {
+            case "episodes" -> showEpisodeSelection();
+            case "line" -> showLineSelection();
+            case "quality" -> showQualitySelection();
             case "timeshift_live" -> returnToLive();
             case "prev" -> checkPrev();
             case "next" -> checkNext();
@@ -1584,6 +1666,50 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         syncJetStreamControl();
     }
 
+    private void showEpisodeSelection() {
+        if (mEpisodeItems.size() < 2 || mVod == null) return;
+        List<Episode> choices = List.copyOf(mEpisodeItems);
+        String source = getHistoryKey();
+        String flag = mHistory == null ? "" : mHistory.getVodFlag();
+        VodSelectionDialog.show(this, getString(R.string.vod_control_episodes), choices.stream().map(Episode::getName).toList(),
+                Math.max(0, findEpisodeSelectedPosition()), position -> {
+                    Episode episode = choices.get(position);
+                    if (!source.equals(getHistoryKey()) || mHistory == null || !flag.equals(mHistory.getVodFlag()) || !mEpisodeItems.contains(episode)) return;
+                    if (!episode.isSelected()) {
+                        cancelPendingSeek();
+                        mVod.selectEpisode(episode);
+                    }
+                });
+        hideControl(false);
+    }
+
+    private void showLineSelection() {
+        if (mFlagItems.size() < 2 || mVod == null) return;
+        List<Flag> choices = List.copyOf(mFlagItems);
+        String source = getHistoryKey();
+        VodSelectionDialog.show(this, getString(R.string.vod_control_line), choices.stream().map(Flag::getShow).toList(),
+                Math.max(0, mFlagSelectedPos), position -> {
+                    if (!source.equals(getHistoryKey()) || !mFlagItems.contains(choices.get(position))) return;
+                    cancelPendingSeek();
+                    mVod.selectFlag(choices.get(position));
+                });
+        hideControl(false);
+    }
+
+    private void showQualitySelection() {
+        Result result = mQualityResult;
+        if (result == null || result.getUrl().getValues().size() < 2 || mVod == null) return;
+        List<String> labels = new ArrayList<>();
+        for (int i = 0; i < result.getUrl().getValues().size(); i++) labels.add(result.getUrl().n(i));
+        VodSelectionDialog.show(this, getString(R.string.vod_control_quality), labels, result.getUrl().getPosition(), position -> {
+            if (mQualityResult != result) return;
+            cancelPendingSeek();
+            result.getUrl().set(position);
+            mVod.selectQuality(result);
+        });
+        hideControl(false);
+    }
+
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
@@ -1608,7 +1734,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         String key = playbackPanelCommand;
         playbackPanelCommand = null;
         showControl(mBinding.control.jetstream);
-        mBinding.control.jetstream.showGroup(mBinding.control.jetstream.groupForCommand(key), key);
+        if ("episodes".equals(key)) mBinding.control.jetstream.restoreEpisodeSelectionFocus();
+        else mBinding.control.jetstream.showGroup(mBinding.control.jetstream.groupForCommand(key), key);
     }
 
     private void onJetStreamCommandLongClick(String key) {
@@ -1636,6 +1763,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mBinding.control.jetstream.setTimeshiftEnabled(isTimeshiftPlayback());
         mBinding.control.jetstream.setMediaTitle(getJetStreamTitle(), getJetStreamSecondaryText(), getJetStreamTertiaryText());
         mBinding.control.jetstream.setPlaybackState(playing, repeating);
+        mBinding.control.jetstream.setTransportActions(mEpisodeItems.size() > 1, mEpisodeItems.size() > 1, true);
         mBinding.control.jetstream.setDanmakuToggle(owner, danmakuEnabled);
         mBinding.control.jetstream.setTopActions(true, true, true);
         syncJetStreamCommands();
@@ -1643,8 +1771,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void syncJetStreamCommands() {
-        setJetStreamCommand("prev", mBinding.control.action.prev, true);
-        setJetStreamCommand("next", mBinding.control.action.next, true);
+        if (mBinding == null) return;
+        mBinding.control.jetstream.setEpisodeSelectionVisible(mEpisodeItems.size() > 1);
+        setJetStreamCommand("episodes", getString(R.string.vod_control_episodes), mEpisodeItems.size() > 1, false);
+        setJetStreamCommand("line", getString(R.string.vod_control_line), mFlagItems.size() > 1, false);
+        setJetStreamCommand("quality", getString(R.string.vod_control_quality), mQualityResult != null
+                && mBinding.quality.getVisibility() == View.VISIBLE && mQualityResult.getUrl().getValues().size() > 1, false);
+        setJetStreamCommand("prev", mBinding.control.action.prev, mEpisodeItems.size() > 1);
+        setJetStreamCommand("next", mBinding.control.action.next, mEpisodeItems.size() > 1);
         setJetStreamCommand("change", mBinding.control.action.change2, true);
         setJetStreamCommand("parse", mBinding.control.action.parse, isVisible(mBinding.control.action.parse));
         setJetStreamCommand("replay", mBinding.control.action.replay, true);
@@ -1680,16 +1814,36 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private CharSequence getJetStreamTitle() {
+        if (isLibraryPlayback()) {
+            String title = getIntent().getStringExtra("libraryWorkName");
+            return TextUtils.isEmpty(title) ? getVodName() : title;
+        }
         CharSequence widgetTitle = mBinding.widget.title.getText();
         return TextUtils.isEmpty(widgetTitle) ? getVodName() : widgetTitle;
     }
 
     private CharSequence getJetStreamSecondaryText() {
+        if (isLibraryPlayback()) {
+            String episode = getEpisode().getName();
+            if (episode.isEmpty() && mHistory != null) episode = mHistory.getVodRemarks();
+            if (episode.isEmpty()) episode = Objects.toString(getIntent().getStringExtra("libraryEpisodeName"), "");
+            Integer number = mHistory == null ? null : mHistory.getMediaEpisode();
+            // Only normalize an exact, already-confirmed number. File/version labels remain intact.
+            if (number != null && (episode.isEmpty() || episode.equals(number.toString()))) return getString(R.string.library_episode, number);
+            return episode;
+        }
         if (!TextUtils.isEmpty(mDetailRemark)) return mDetailRemark;
         return TextUtils.isEmpty(mDetailYear) ? mDetailSite : mDetailYear;
     }
 
     private CharSequence getJetStreamTertiaryText() {
+        if (isLibraryPlayback()) {
+            String site = getSite().getName();
+            String line = mFlagSelectedPos >= 0 && mFlagSelectedPos < mFlagItems.size() ? mFlagItems.get(mFlagSelectedPos).getShow()
+                    : mHistory == null ? "" : mHistory.getVodFlag();
+            if (line.isEmpty() || line.equals(site)) return site;
+            return site.isEmpty() ? line : site + " · " + line;
+        }
         return TextUtils.isEmpty(mDetailDirector) ? mDetailSite : mDetailDirector;
     }
 
@@ -1991,6 +2145,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     protected void onError(String msg) {
+        if (isLibraryPlayback()) { libraryPlaybackFailed(); return; }
         if (mSpecs != null) mSpecs.dismiss();
         mVod.playbackError(msg);
     }
@@ -2180,7 +2335,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         // 只有焦点确实在控制面板内才记忆，否则 onToggle 同帧内会把还未交接的 video 记成 mFocus2，
         // 下次弹控制条焦点落在 video 上导致方向键失效。
         if (isJetStreamControlVisible() && mBinding.control.getRoot().hasFocus()) mFocus2 = getCurrentFocus();
-        if (isFullscreen() && !isJetStreamControlVisible() && mKeyDown.hasEvent(event) && isPlaybackReady()) return mKeyDown.onKeyDown(event);
+        if (isFullscreen() && !isJetStreamControlVisible() && mKeyDown.hasEvent(event)
+                && (isPlaybackReady() || KeyUtil.isUpKey(event) || KeyUtil.isDownKey(event) || KeyUtil.isEnterKey(event))) return mKeyDown.onKeyDown(event);
         if (KeyUtil.isMediaFastForward(event)) return onSeekForward();
         if (KeyUtil.isMediaRewind(event)) return onSeekBack();
         return super.dispatchKeyEvent(event);
@@ -2243,17 +2399,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onKeyUp() {
-        long position = player().getPosition();
-        long duration = player().getDuration();
-        if (player().canSetOpening(position, duration)) {
-            mBinding.control.jetstream.showGroup(JetStreamVodControlView.GROUP_SETTINGS);
-            showControl(mBinding.control.jetstream);
-        } else if (player().canSetEnding(position, duration)) {
-            mBinding.control.jetstream.showGroup(JetStreamVodControlView.GROUP_SETTINGS);
-            showControl(mBinding.control.jetstream);
-        } else {
-            showControl(getFocus2());
-        }
+        showControl(getFocus2());
     }
 
     @Override
@@ -2263,7 +2409,7 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override
     public void onKeyCenter() {
-        if (!isPlaybackReady()) return;
+        if (!isPlaybackReady()) { showControl(getFocus2()); return; }
         if (player().isPlaying()) onPaused();
         else if (player().isEmpty()) onRefresh();
         else onPlay();
@@ -2314,7 +2460,12 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
             cancelPendingSeek();
             hideCenter();
         } else if (isFullscreen()) {
-            exitFullscreen();
+            if (isLibraryPlayback()) {
+                saveHistory(true);
+                returnLibraryPlayback(RESULT_OK);
+                onPaused();
+                finish();
+            } else exitFullscreen();
         } else {
             mViewModel.stopSearch();
             if (isTaskRoot()) startActivity(new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
