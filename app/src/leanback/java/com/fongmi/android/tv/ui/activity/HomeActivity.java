@@ -123,6 +123,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private final Rect mToolbarTouchBounds = new Rect();
     private final Rect mContentTouchBounds = new Rect();
     private boolean mTouchBrowsing;
+    private int mHomeFocusScrollStrategy = HorizontalGridView.FOCUS_SCROLL_ALIGNED;
     private boolean mRestoreRefreshFocus;
     private boolean mInitialFocusPending;
     private boolean mRefreshFeaturedFocus;
@@ -802,7 +803,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     private void clearHistory() {
         if (isFinishing() || isDestroyed() || mHistoryCid != VodConfig.getCid()) return;
-        mTouchBrowsing = false;
+        setTouchBrowsing(false);
         int cid = mHistoryCid;
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
@@ -910,7 +911,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     public void onNavClick(String key) {
         int resId = Integer.parseInt(key);
         if (resId == R.string.home_tab_home) {
-            mTouchBrowsing = false;
+            setTouchBrowsing(false);
             requestRecyclerFocus(firstFocusableRowIndex());
         } else if (resId == R.string.home_vod) openLibrary();
         else if (resId == R.string.home_live) LiveActivity.start(this);
@@ -969,7 +970,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             return;
         }
         if (item.getCid() != VodConfig.getCid() || mHistoryAdapter.indexOf(item) < 0) return;
-        mTouchBrowsing = false;
+        setTouchBrowsing(false);
         mHistoryFocusGeneration++;
         cancelHistoryLoad();
         int position = mHistoryAdapter.indexOf(item);
@@ -1019,7 +1020,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             @Override public void onClosed(boolean restoreFocus) {
                 mHistoryActions = null;
                 if (!restoreFocus) return;
-                mTouchBrowsing = false;
+                setTouchBrowsing(false);
                 long generation = ++mHistoryFocusGeneration;
                 mHistoryActionFocus = () -> {
                     if (generation != mHistoryFocusGeneration || cid != VodConfig.getCid()) return;
@@ -1105,7 +1106,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                     && mContentTouchBounds.contains(Math.round(event.getRawX()), Math.round(event.getRawY()))) {
                 // A drag can leave focus on the toolbar. Keep its viewport after UP and
                 // fling completion until the user explicitly resumes focus navigation.
-                mTouchBrowsing = true;
+                setTouchBrowsing(true);
             }
         }
         try {
@@ -1129,6 +1130,20 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (mFeaturedPresenter != null) mFeaturedPresenter.onUserInteraction();
     }
 
+    @SuppressLint("RestrictedApi")
+    private void setTouchBrowsing(boolean browsing) {
+        if (mTouchBrowsing == browsing) return;
+        mTouchBrowsing = browsing;
+        if (browsing) {
+            mHomeFocusScrollStrategy = mBinding.recycler.getFocusScrollStrategy();
+            // ALIGNED repositions the selected row on every adapter layout, even
+            // when a drag has left focus in the toolbar or on an offscreen card.
+            mBinding.recycler.setFocusScrollStrategy(HorizontalGridView.FOCUS_SCROLL_ITEM);
+        } else {
+            mBinding.recycler.setFocusScrollStrategy(mHomeFocusScrollStrategy);
+        }
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (KeyUtil.isActionDown(event)) {
@@ -1136,7 +1151,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                     || KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event)
                     || event.getKeyCode() == KeyEvent.KEYCODE_BACK || event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE
                     || event.getKeyCode() == KeyEvent.KEYCODE_MENU || event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
-                mTouchBrowsing = false;
+                setTouchBrowsing(false);
             }
             onHomeInteraction();
         }
@@ -1210,7 +1225,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onBackInvoked() {
-        mTouchBrowsing = false;
+        setTouchBrowsing(false);
         if (mBinding.progressLayout.isProgress()) {
             showContent();
             return;

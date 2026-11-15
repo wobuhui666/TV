@@ -44,6 +44,8 @@ class LiveLineDialog : BasePlaybackSelectionDialog() {
 
             override fun onBindViewHolder(holder: LineHolder, position: Int) {
                 holder.binding.text.text = labels[position]
+                // TV focus animation owns selected; activated identifies the playing line.
+                holder.binding.text.isActivated = position == selectedIndex
                 holder.binding.text.isSelected = position == selectedIndex
                 holder.itemView.setOnClickListener {
                     val index = holder.bindingAdapterPosition

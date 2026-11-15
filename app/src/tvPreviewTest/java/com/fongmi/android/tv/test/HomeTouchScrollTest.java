@@ -268,6 +268,7 @@ public final class HomeTouchScrollTest {
                 .append(" touchMode=").append(grid.isInTouchMode())
                 .append(" touchBrowsing=").append(HomePreviewFixtures.field(home, "mTouchBrowsing"))
                 .append(" selected=").append(home.pageGrid().getSelectedPosition())
+                .append(" focusScrollStrategy=").append(home.pageGrid().getFocusScrollStrategy())
                 .append(" scrollState=").append(grid.getScrollState())
                 .append(" rows=").append(home.pageAdapter().size()).append(" visible=[");
         for (int i = 0; i < grid.getChildCount(); i++) {
