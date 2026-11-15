@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.inspector.WindowInspector
@@ -80,7 +81,9 @@ class SourceActionUi private constructor(
         if (cancel) cancellation?.run()
         val remaining = windows.toMap()
         windows.clear()
-        App.post { remaining.forEach { (view, manager) -> closeWindow(view, manager) } }
+        // Close during ON_PAUSE, while the owner's token and dialog state are
+        // still live; waiting until destruction can leave a detached Dialog open.
+        remaining.forEach { (view, manager) -> closeWindow(view, manager) }
     }
 
     @RequiresApi(29)
@@ -183,9 +186,16 @@ class SourceActionUi private constructor(
 
         private fun closeWindow(view: View, manager: WindowManager) {
             if (view.parent == null && !view.isAttachedToWindow) return
+            // Android 13+ Dialog ignores BACK key events when predictive back is
+            // enabled. An outside-cancel event still runs its public cancel path,
+            // updates isShowing and preserves the source's dismiss listener.
+            val now = SystemClock.uptimeMillis()
+            val outside = MotionEvent.obtain(now, now, MotionEvent.ACTION_OUTSIDE, -1f, -1f, 0)
+            try { view.dispatchTouchEvent(outside) }
+            finally { outside.recycle() }
+            if (view.parent == null && !view.isAttachedToWindow) return
             // A just-added DecorView has not received its first attach/traversal yet.
             // The tracked UP also cancels a legacy dialog before that first frame.
-            val now = SystemClock.uptimeMillis()
             view.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK))
             view.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK,
                 0, 0, 0, 0, KeyEvent.FLAG_TRACKING))
