@@ -1,0 +1,127 @@
+{
+  "buildCommit": "eac9fca98ffa61275dc1df0245e5ce6d7aa85c59",
+  "uiCommit": "d3d86b3d65167835043c634067727182a7982b3e",
+  "buildRun": "https://github.com/wobuhui666/TV/actions/runs/43685289320",
+  "uiRun": "https://github.com/wobuhui666/TV/actions/runs/43683966987",
+  "applicationJUnit": {
+    "tests": 1170,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focusedLiveJUnit": {
+    "headSha": "d3d86b3d65167835043c634067727182a7982b3e",
+    "passed": true,
+    "gradleStatus": 0,
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "class": "com.fongmi.android.tv.playback.live.LiveLineSelectionTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.live.LivePlaybackLineSelectionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "ui": {
+    "headSha": "d3d86b3d65167835043c634067727182a7982b3e",
+    "passed": true,
+    "passedTests": 12,
+    "displays": [
+      {
+        "size": "1920x1080",
+        "density": 320,
+        "passed": true,
+        "passedTests": 6,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          }
+        ],
+        "capturedFrames": 22
+      },
+      {
+        "size": "1280x720",
+        "density": 240,
+        "passed": true,
+        "passedTests": 6,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          }
+        ],
+        "capturedFrames": 15
+      }
+    ],
+    "scope": "Offline production TV home and live line panel; no live streams or Exo performance measurement"
+  },
+  "lint": {
+    "baselineSha": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+    "currentSha": "eac9fca98ffa61275dc1df0245e5ce6d7aa85c59",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 379,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "passed": true
+  },
+  "apks": [
+    {
+      "file": "sourceprobe-test-debug.apk",
+      "applicationId": "com.fongmi.android.tv.sourceprobe.test",
+      "versionCode": null,
+      "versionName": null,
+      "sha256": "f05badb2b81a90cbc24a265dcc5266738bfe921b4f5cf22f57650ac9d1abfd9a"
+    },
+    {
+      "file": "sourceprobe-app-debug.apk",
+      "applicationId": "com.fongmi.android.tv.sourceprobe",
+      "versionCode": 587,
+      "versionName": "5.8.7",
+      "sha256": "c95207a2488948b52897449da11acc434eb0fe4df184137eba32c7cfe4fe6bcc"
+    },
+    {
+      "file": "app-mobile-arm64_v8a-debug.apk",
+      "applicationId": "com.fongmi.android.tv.sourceprobe",
+      "versionCode": 587,
+      "versionName": "5.8.7",
+      "sha256": "ee90d9b7e9018a8ab8d18590ac773bf8e1eca97d47bd357e8b3972800c0bab29"
+    }
+  ],
+  "uiToFinalBuildChange": "Remove redundant default field initialization; touch and line selection behavior unchanged"
+}

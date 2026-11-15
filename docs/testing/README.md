@@ -4,7 +4,8 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
-| 2026-11-15 | [直播线路与首页触摸滚动](reports/2026-11-15-live-lines-touch-scroll/README.md) | 指定线路、过期列表保护与首页异步焦点回顶；本轮构建结果及未执行的设备 UI 用例见报告 |
+| 2026-11-15 | [Instabox Android 安装与界面](reports/2026-11-15-instabox-android/README.md) | 现有 ARM64 APK 经实例 ARM 转译安装，首页、我的、设置与方向键返回通过；未验证最新工作树或片源播放 |
+| 2026-11-15 | [直播线路与首页触摸滚动](reports/2026-11-15-live-lines-touch-scroll/README.md) | 1170 项应用单测、12 项模拟器 UI 与 TV／手机 APK 通过；实体设备及真实直播流未覆盖 |
 | 2026-11-15 | [媒体库与全屏播放器打磨](reports/2026-11-15-library-polish/README.md) | aiwex 实播、海报尺寸、全屏选集、换源与遥控器回归；结果和限制见报告 |
 | 2026-11-14 | [aiwex 实际配置](reports/2026-11-14-aiwex-live/README.md) | 用户指定在线配置的导入、Guard、搜索与返回；实测范围和架构限制见报告 |
 | 2026-11-14 | [媒体库搜索与界面](reports/2026-11-14-library-search/README.md) | 搜索后台解析／关联、卡片回收、主题与滚动；本轮 Android 和 lint 结果见报告 |
