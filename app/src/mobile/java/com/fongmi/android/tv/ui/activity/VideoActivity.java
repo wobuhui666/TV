@@ -174,7 +174,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
         Intent intent = createIntent(activity, key, item.getId(), item.getName(), item.getPic());
         intent.putExtra("mark", TextUtils.isEmpty(item.getPlayId()) ? mark : null);
         intent.putExtra("playId", item.getPlayId());
-        if (detail != null) intent.putExtra("sourceDetail", detail);
+        if (detail != null) intent.putExtra("sourceDetail", App.gson().toJson(detail));
         if (!item.getSourceCandidates().isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(item.getSourceCandidates()));
         activity.startActivity(intent);
     }
@@ -566,7 +566,7 @@ public class VideoActivity extends PlaybackActivity implements Clock.Callback, C
     @Override
     public void requestDetail(String key, String id) {
         beginPlaybackRequest();
-        Result detail = getIntent().getParcelableExtra("sourceDetail");
+        String detail = getIntent().getStringExtra("sourceDetail");
         getIntent().removeExtra("sourceDetail");
         mViewModel.detailContent(key, id, key.equals(getKey()) && id.equals(getId()) ? detail : null);
     }

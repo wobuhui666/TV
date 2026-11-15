@@ -30,7 +30,8 @@ public final class LegacyDetailPreviewSpider extends Spider {
         details.incrementAndGet();
         if (ids.contains("legacy-movie")) {
             return "{\"list\":[{\"vod_id\":\"legacy-movie\",\"vod_name\":\"A video in the same list\","
-                    + "\"vod_play_from\":\"fixture\",\"vod_play_url\":\"Episode 1$https://tv-home-fixture.invalid/video.mp4\"}]}";
+                    + "\"vod_play_from\":\"fixture\",\"vod_play_url\":\"Episode 1$https://tv-home-fixture.invalid/video.mp4\"}],"
+                    + "\"header\":{\"User-Agent\":\"LegacyFixture\"},\"parse\":0}";
         }
         handler.postDelayed(() -> {
             shown = new AlertDialog.Builder(cachedActivity)

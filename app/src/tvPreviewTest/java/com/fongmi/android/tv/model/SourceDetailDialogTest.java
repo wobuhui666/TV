@@ -156,25 +156,34 @@ public final class SourceDetailDialogTest {
         await("normal list videos still navigate", () -> playbackIntent.get() != null);
         assertEquals(1, spider.details.get());
         assertEquals("legacy-movie", playbackIntent.get().getStringExtra("id"));
-        Result detail = playbackIntent.get().getParcelableExtra("sourceDetail");
+        String detail = playbackIntent.get().getStringExtra("sourceDetail");
         assertNotNull(detail);
         Parcel parcel = Parcel.obtain();
-        Result transported;
+        Intent transported;
         try {
-            parcel.writeParcelable(detail, 0);
+            parcel.writeParcelable(playbackIntent.get(), 0);
             parcel.setDataPosition(0);
-            transported = parcel.readParcelable(Result.class.getClassLoader());
+            transported = parcel.readParcelable(Intent.class.getClassLoader());
         } finally {
             parcel.recycle();
         }
-        assertEquals(1, transported.getVod().getFlags().size());
         AtomicInteger delivered = new AtomicInteger();
+        AtomicReference<Result> deliveredDetail = new AtomicReference<>();
         main(() -> {
             videoModel = new VideoViewModel();
-            videoModel.getResult().observe(page, value -> delivered.incrementAndGet());
-            videoModel.detailContent(site.getKey(), "legacy-movie", transported);
+            videoModel.getResult().observe(page, value -> {
+                deliveredDetail.set(value);
+                delivered.incrementAndGet();
+            });
+            videoModel.detailContent(site.getKey(), "legacy-movie", transported.getStringExtra("sourceDetail"));
         });
         await("the player consumes the transported detail", () -> delivered.get() == 1);
+        assertEquals(1, deliveredDetail.get().getVod().getFlags().size());
+        assertEquals(1, deliveredDetail.get().getVod().getFlags().get(0).getEpisodes().size());
+        assertEquals("https://tv-home-fixture.invalid/video.mp4",
+                deliveredDetail.get().getVod().getFlags().get(0).getEpisodes().get(0).getUrl());
+        assertEquals("LegacyFixture", deliveredDetail.get().getHeader().get("User-Agent"));
+        assertEquals(0, deliveredDetail.get().getParse().intValue());
         assertEquals("Navigation must reuse the source response", 1, spider.details.get());
         main(() -> videoModel.detailContent(site.getKey(), "legacy-movie"));
         await("explicit refresh fetches a new detail", () -> delivered.get() == 2);

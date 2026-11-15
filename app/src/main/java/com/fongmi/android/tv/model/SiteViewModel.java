@@ -155,8 +155,8 @@ public class SiteViewModel extends ViewModel {
         detailContent(key, id, null);
     }
 
-    public void detailContent(String key, String id, Result prefetched) {
-        if (prefetched != null) execute(TaskType.RESULT, result, () -> prefetched);
+    public void detailContent(String key, String id, String prefetched) {
+        if (prefetched != null) execute(TaskType.RESULT, result, () -> Result.fromJson(prefetched));
         else executeHealth(key, SourceHealthManager.Phase.DETAIL, () -> SiteApi.detailContent(key, id));
     }
 
