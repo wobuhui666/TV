@@ -106,7 +106,9 @@ class SourceActionUi private constructor(
                             override fun onViewDetachedFromWindow(view: View) {
                                 view.removeOnAttachStateChangeListener(this)
                                 windows.remove(view)
-                                releaseIfFinished()
+                                // AlertDialog posts the next user step before its dismiss
+                                // callback. Let that queued constructor retain the owner.
+                                App.post { releaseIfFinished() }
                             }
                         })
                     }

@@ -349,12 +349,6 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     }
 
     @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        if (!isVisibleToUser && mViewModel != null) mViewModel.cancelAction();
-    }
-
-    @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         if (!mViewReady || mBinding == null) return;
@@ -410,6 +404,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+        if (!isVisibleToUser && mViewModel != null) mViewModel.cancelAction();
         if (mViewReady && mBinding != null) mBinding.recycler.moveToTop();
     }
 
