@@ -7,13 +7,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.SurfaceTexture;
 import android.net.Uri;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.TextureView;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.media3.common.C;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.PlaybackParameters;
@@ -68,6 +72,11 @@ public final class MpvPlaybackSemanticsAndroidTest {
     private PlayerManager manager;
     private FileActivity picker;
     private TextureView texture;
+    private ViewGroup detachedTextureParent;
+    private ViewGroup.LayoutParams detachedTextureLayout;
+    private int detachedTextureIndex;
+    private SurfaceTexture previousTextureSurface;
+    private JSONObject surfaceRecreation;
     private PlaySpec spec;
     private boolean passed;
     private boolean expectedEngineRebuild;
@@ -343,11 +352,15 @@ public final class MpvPlaybackSemanticsAndroidTest {
             main(() -> { if (playingBefore) manager.play(); else manager.pause(); });
             await(() -> playingBefore != paused(), 10000);
             openSubtitlePicker();
+            recreateSurfaceWhilePickerIsForeground();
             await(() -> !value(texture::isAvailable) && paused(), 10000);
             long held = value(manager::getPosition);
             main(() -> picker.finish());
             picker = null;
+            await(() -> value(() -> activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)), 10000);
+            main(this::restoreDetachedTexture);
             await(() -> value(texture::isAvailable) && ready() && paused(), 15000);
+            verifyNewTextureSurface();
             assertEquals("Cancel preserves the folder action's pause", held, (long) value(manager::getPosition), 900);
             assertEquals(1.25, number("speed"), .005);
             captureVideo(stage);
@@ -360,13 +373,17 @@ public final class MpvPlaybackSemanticsAndroidTest {
             out.write("1\n00:00:00,000 --> 00:01:30,000\nMPV LOCAL SUBTITLE FIXTURE\n".getBytes(StandardCharsets.UTF_8));
         }
         openSubtitlePicker();
+        recreateSurfaceWhilePickerIsForeground();
         await(() -> !value(texture::isAvailable) && paused(), 10000);
         long held = value(manager::getPosition);
         main(() -> picker.onItemClick(subtitle));
         picker = null;
+        await(() -> value(() -> activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)), 10000);
+        main(this::restoreDetachedTexture);
         // The production local selection callback intentionally resumes playback.
         await(() -> value(texture::isAvailable) && ready() && !paused() && !"no".equals(property("sid"))
                 && !property("sid").isEmpty(), 15000);
+        verifyNewTextureSurface();
         assertTrue("Local subtitle selected in actual libmpv", hasSelectedExternalSubtitle());
         assertTrue("Local selection must not restart the media", nativePosition() >= held - 900);
         assertEquals(1.25, number("speed"), .005);
@@ -374,6 +391,61 @@ public final class MpvPlaybackSemanticsAndroidTest {
         returns.put(snapshot().put("cancelled", false).put("externalSubtitleSelected", true));
         await(() -> nativePosition() > held + 650, 10000);
         passed = true;
+    }
+
+    /** This device keeps stopped textures; detach the real view without fabricating player events. */
+    private void recreateSurfaceWhilePickerIsForeground() {
+        await(() -> value(() -> picker != null && picker.hasWindowFocus()) && paused(), 10000);
+        main(() -> {
+            assertNull("The previous texture must already be restored", detachedTextureParent);
+            assertTrue("Keep the original TextureView parent", texture.getParent() instanceof ViewGroup);
+            detachedTextureParent = (ViewGroup) texture.getParent();
+            detachedTextureIndex = detachedTextureParent.indexOfChild(texture);
+            detachedTextureLayout = texture.getLayoutParams();
+            previousTextureSurface = texture.getSurfaceTexture();
+            try {
+                report.put("explicitSurfaceRecreation", true);
+                surfaceRecreation = new JSONObject().put("stage", stage)
+                        .put("naturalSurfaceReleasedBeforeRemoval", !texture.isAvailable())
+                        .put("originalChildIndex", detachedTextureIndex)
+                        .put("originalLayoutWidth", detachedTextureLayout.width)
+                        .put("originalLayoutHeight", detachedTextureLayout.height);
+                JSONArray recreations = report.optJSONArray("surfaceRecreations");
+                if (recreations == null) { recreations = new JSONArray(); report.put("surfaceRecreations", recreations); }
+                recreations.put(surfaceRecreation);
+                detachedTextureParent.removeView(texture);
+                assertFalse("Removing the view must detach it from the actual window", texture.isAttachedToWindow());
+                assertFalse("Android must release the original SurfaceTexture", texture.isAvailable());
+                if (previousTextureSurface != null && Build.VERSION.SDK_INT >= 26) assertTrue("The old native SurfaceTexture must be released",
+                        previousTextureSurface.isReleased());
+                surfaceRecreation.put("viewDetachedFromWindow", true).put("oldSurfaceReleased", true);
+            } catch (Exception failure) { throw new AssertionError(failure); }
+        });
+    }
+
+    /** Also used from cleanup after failures; preserve the same view, index, and layout parameters. */
+    private void restoreDetachedTexture() {
+        if (detachedTextureParent == null) return;
+        if (texture.getParent() == null) {
+            int index = Math.min(detachedTextureIndex, detachedTextureParent.getChildCount());
+            detachedTextureParent.addView(texture, index, detachedTextureLayout);
+            try { surfaceRecreation.put("restoredChildIndex", index).put("sameViewRestored", true); }
+            catch (Exception failure) { throw new AssertionError(failure); }
+        }
+        assertSame("Restore the original texture parent", detachedTextureParent, texture.getParent());
+        assertSame("Restore the original layout parameters", detachedTextureLayout, texture.getLayoutParams());
+        detachedTextureParent = null;
+        detachedTextureLayout = null;
+    }
+
+    private void verifyNewTextureSurface() {
+        main(() -> {
+            assertNotNull("Android must create a real new SurfaceTexture", texture.getSurfaceTexture());
+            if (previousTextureSurface != null) assertNotSame("Use a newly created SurfaceTexture after detach",
+                    previousTextureSurface, texture.getSurfaceTexture());
+            try { surfaceRecreation.put("newSurfaceCreated", true); }
+            catch (Exception failure) { throw new AssertionError(failure); }
+        });
     }
 
     private void openSubtitlePicker() {
@@ -455,27 +527,40 @@ public final class MpvPlaybackSemanticsAndroidTest {
                 try {
                     int[] pixels = new int[160 * 90];
                     bitmap.getPixels(pixels, 0, 160, 0, 0, 160, 90);
-                    int nonblack = 0, minimum = 255, maximum = 0;
+                    int nonblack = 0, colored = 0, minimum = 255, maximum = 0;
                     for (int pixel : pixels) {
-                        int bright = Math.max((pixel >> 16) & 255, Math.max((pixel >> 8) & 255, pixel & 255));
+                        int red = (pixel >> 16) & 255, green = (pixel >> 8) & 255, blue = pixel & 255;
+                        int bright = Math.max(red, Math.max(green, blue));
+                        int dark = Math.min(red, Math.min(green, blue));
                         if ((pixel >>> 24) != 0 && bright > 8) nonblack++;
+                        if ((pixel >>> 24) != 0 && bright > 60 && bright - dark > 40) colored++;
                         minimum = Math.min(minimum, bright);
                         maximum = Math.max(maximum, bright);
                     }
-                    if (nonblack > 100 && maximum - minimum > 16) {
+                    JSONArray attempts = report.optJSONArray("frameCaptureAttempts");
+                    if (attempts == null) { attempts = new JSONArray(); report.put("frameCaptureAttempts", attempts); }
+                    attempts.put(new JSONObject().put("stage", label).put("nonblackPixels", nonblack)
+                            .put("coloredPixels", colored).put("brightnessRange", maximum - minimum));
+                    // testsrc2 contains large colored areas; white subtitles on black cannot pass.
+                    if (nonblack > 100 && colored > 1000 && maximum - minimum > 16) {
                         JSONArray frames = report.optJSONArray("frames");
                         if (frames == null) { frames = new JSONArray(); report.put("frames", frames); }
                         frames.put(new JSONObject().put("stage", label).put("nonblackPixels", nonblack)
-                                .put("brightnessRange", maximum - minimum));
+                                .put("coloredPixels", colored).put("brightnessRange", maximum - minimum));
                         File image = new File(target.getFilesDir(), "mpv119-" + testName.getMethodName() + "-" + label + ".png");
                         try (FileOutputStream out = new FileOutputStream(image)) { bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); }
                         return;
+                    }
+                    if (SystemClock.elapsedRealtime() >= until - 100) {
+                        File image = new File(target.getFilesDir(), "mpv119-" + testName.getMethodName() + "-" + label + "-failed.png");
+                        try (FileOutputStream out = new FileOutputStream(image)) { bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); }
+                        report.put("failedVideoFrame", image.getName());
                     }
                 } finally { bitmap.recycle(); }
             }
             SystemClock.sleep(100);
         } while (SystemClock.elapsedRealtime() < until);
-        fail("Real TextureView pixels remained blank or uniform during " + label);
+        fail("Real TextureView did not show the colored testsrc2 video during " + label);
     }
 
     private void await(BooleanSupplier condition, long timeout) {
@@ -504,15 +589,21 @@ public final class MpvPlaybackSemanticsAndroidTest {
             try {
                 main(() -> {
                     observingPositions = false;
-                    if (picker != null) picker.finish();
-                    if (nativeObserverRegistered) MPVLib.removeObserver(observer);
-                    if (manager != null) {
-                        manager.getPlayer().removeListener(playerObserver);
-                        manager.bindPlayerView(null);
-                        if (activity != null) activity.getView().setPlayer(null);
-                        manager.release();
+                    try {
+                        if (picker != null) picker.finish();
+                        restoreDetachedTexture();
+                    } finally {
+                        try {
+                            if (nativeObserverRegistered) MPVLib.removeObserver(observer);
+                            if (manager != null) {
+                                try {
+                                    manager.getPlayer().removeListener(playerObserver);
+                                    manager.bindPlayerView(null);
+                                    if (activity != null) activity.getView().setPlayer(null);
+                                } finally { manager.release(); }
+                            }
+                        } finally { if (activity != null) activity.finish(); }
                     }
-                    if (activity != null) activity.finish();
                 });
                 long until = SystemClock.elapsedRealtime() + 15000;
                 while (!MpvPlayerEngine.isAvailable() && SystemClock.elapsedRealtime() < until) SystemClock.sleep(100);

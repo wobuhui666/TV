@@ -9,6 +9,14 @@ on:
         description: Optional application commit for a baseline build; blank uses this workflow commit
         type: string
         default: ''
+      comparison_ref:
+        description: Optional full commit SHA for a second app built with the current MPV test fixture and the same signing key
+        type: string
+        default: ''
+      splice_source_run:
+        description: Optional prior workflow run containing the device's source APK; generate small transfer packages from unchanged ZIP bodies
+        type: string
+        default: ''
       full_validation:
         description: Also run focused and full app JUnit, compile mobile ARM64, and compare lint against the fixed baseline
         type: boolean
@@ -16,9 +24,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: mpv-playback-regression-${{ github.ref }}-${{ inputs.application_ref }}
+  group: mpv-playback-regression-${{ github.ref }}-${{ inputs.application_ref }}-${{ inputs.comparison_ref }}
   cancel-in-progress: false
 
 jobs:
@@ -99,30 +108,22 @@ jobs:
           }
           GRADLE
           chmod +x ./gradlew
-
-      - name: Build TV ARM64 debug app and instrumentation
-        run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
-            :app:assembleLeanbackArm64_v8aDebug \
-            :app:assembleLeanbackArm64_v8aDebugAndroidTest \
-            --no-daemon --build-cache --max-workers=2 --console=plain \
-            | tee artifacts/commands/build-apks.log
-
-      - name: Verify APK package, instrumentation target and native MPV libraries
-        run: |
-          python - <<'PY'
-          import hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
+          cat > "$RUNNER_TEMP/verify-mpv-apks.py" <<'PY'
+          import hashlib, json, os, pathlib, re, shutil, subprocess, sys, zipfile
+          root = pathlib.Path(sys.argv[1])
+          destination = pathlib.Path(sys.argv[2])
+          fixture_commit, build_role = sys.argv[3:5]
           groups = {
-              'app': list(pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug').glob('*.apk')),
-              'test': list(pathlib.Path('app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug').glob('*.apk')),
+              'app': list((root / 'app/build/outputs/apk/leanbackArm64_v8a/debug').glob('*.apk')),
+              'test': list((root / 'app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug').glob('*.apk')),
           }
           app_id = 'com.fongmi.android.tv.mpv119'
           tools = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0'
-          destination = pathlib.Path('mpv-regression-apks')
-          destination.mkdir()
+          destination.mkdir(parents=True)
           metadata = {
-              'applicationCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
-              'media3Commit': subprocess.check_output(['git', '-C', '.media3', 'rev-parse', 'HEAD'], text=True).strip(),
+              'applicationCommit': subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip(),
+              'media3Commit': subprocess.check_output(['git', '-C', os.environ['MEDIA3_SOURCE_DIR'], 'rev-parse', 'HEAD'], text=True).strip(),
+              'fixtureCommit': fixture_commit, 'buildRole': build_role,
               'applicationId': app_id, 'abi': 'arm64-v8a', 'buildType': 'debug',
               'instrumentationExecuted': False, 'files': [],
           }
@@ -165,6 +166,137 @@ jobs:
           metadata['signingCertificateSha256'] = certificates[0]
           (destination / 'build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
           PY
+
+      - name: Use the current MPV fixture for an optional comparison
+        if: inputs.comparison_ref != ''
+        run: |
+          git fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git show "$GITHUB_SHA:app/src/androidTest/java/com/fongmi/android/tv/player/mpv/MpvPlaybackSemanticsAndroidTest.java" \
+            > app/src/androidTest/java/com/fongmi/android/tv/player/mpv/MpvPlaybackSemanticsAndroidTest.java
+
+      - name: Build TV ARM64 debug app and instrumentation
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
+            :app:assembleLeanbackArm64_v8aDebug \
+            :app:assembleLeanbackArm64_v8aDebugAndroidTest \
+            --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/build-apks.log
+
+      - name: Verify APK package, instrumentation target and native MPV libraries
+        env:
+          COMPARISON_REF: ${{ inputs.comparison_ref }}
+        run: |
+          fixture_commit=$(git rev-parse HEAD)
+          if [ -n "$COMPARISON_REF" ]; then fixture_commit="$GITHUB_SHA"; fi
+          python "$RUNNER_TEMP/verify-mpv-apks.py" "$GITHUB_WORKSPACE" \
+            "$GITHUB_WORKSPACE/mpv-regression-apks" "$fixture_commit" primary
+
+      - name: Build optional comparison app with the current test fixture
+        if: inputs.comparison_ref != ''
+        env:
+          COMPARISON_REF: ${{ inputs.comparison_ref }}
+        run: |
+          [[ "$COMPARISON_REF" =~ ^[0-9a-fA-F]{40}$ ]] || { echo 'comparison_ref must be a full commit SHA'; exit 1; }
+          git fetch --no-tags --depth=1 origin "$COMPARISON_REF" "$GITHUB_SHA"
+          comparison_root="$RUNNER_TEMP/tv-mpv119-comparison"
+          git worktree add --detach "$comparison_root" "$COMPARISON_REF"
+          printf 'toolchainVersion=21\n' > "$comparison_root/gradle/gradle-daemon-jvm.properties"
+          git show "$GITHUB_SHA:app/src/androidTest/java/com/fongmi/android/tv/player/mpv/MpvPlaybackSemanticsAndroidTest.java" \
+            > "$comparison_root/app/src/androidTest/java/com/fongmi/android/tv/player/mpv/MpvPlaybackSemanticsAndroidTest.java"
+          chmod +x "$comparison_root/gradlew"
+          # Only the AndroidTest fixture is replaced; baseline app/debug code stays at its ref.
+          # Both app/test pairs use the one temporary signing key configured above.
+          "$comparison_root/gradlew" -p "$comparison_root" -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
+            :app:assembleLeanbackArm64_v8aDebug \
+            :app:assembleLeanbackArm64_v8aDebugAndroidTest \
+            --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/build-comparison-apks.log
+          python "$RUNNER_TEMP/verify-mpv-apks.py" "$comparison_root" \
+            "$GITHUB_WORKSPACE/mpv-regression-apks/comparison" "$GITHUB_SHA" baseline
+          python - <<'PY'
+          import json, pathlib
+          root = pathlib.Path('mpv-regression-apks')
+          primary = json.loads((root / 'build-metadata.json').read_text())
+          baseline = json.loads((root / 'comparison/build-metadata.json').read_text())
+          assert primary['signingCertificateSha256'] == baseline['signingCertificateSha256'], 'Comparison signing key differs'
+          assert primary['fixtureCommit'] == baseline['fixtureCommit'], 'Comparison must use the same test fixture commit'
+          PY
+
+      - name: Create optional small APK comparison transfer packages
+        if: inputs.splice_source_run != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPLICE_SOURCE_RUN: ${{ inputs.splice_source_run }}
+        run: |
+          [[ "$SPLICE_SOURCE_RUN" =~ ^[1-9][0-9]*$ ]] || { echo 'splice_source_run must be a workflow run ID'; exit 1; }
+          git fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git show "$GITHUB_SHA:.github/scripts/create-apk-splice.py" > "$RUNNER_TEMP/create-apk-splice.py"
+          python - <<'PY'
+          import hashlib, json, os, pathlib, shutil, subprocess, zipfile
+          run_id = os.environ['SPLICE_SOURCE_RUN']
+          repository = os.environ['GITHUB_REPOSITORY']
+          response = json.loads(subprocess.check_output(
+              ['gh', 'api', f'repos/{repository}/actions/runs/{run_id}/artifacts?per_page=100'], text=True))
+          matches = [item for item in response['artifacts'] if item['name'] == f'mpv119-arm64-debug-{run_id}']
+          if len(matches) != 1 or matches[0]['expired']:
+              raise SystemExit('Requested source APK artifact is missing or expired; omit splice_source_run for ordinary builds')
+          artifact = matches[0]
+          source_root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'mpv-splice-source'
+          source_root.mkdir()
+          archive = source_root / 'source.zip'
+          with archive.open('wb') as output:
+              subprocess.run(['gh', 'api', f"repos/{repository}/actions/artifacts/{artifact['id']}/zip"], stdout=output, check=True)
+          def digest(path):
+              result = hashlib.sha256()
+              with path.open('rb') as stream:
+                  for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                      result.update(chunk)
+              return result.hexdigest()
+          archive_hash = digest(archive)
+          if artifact.get('digest') and artifact['digest'] != 'sha256:' + archive_hash:
+              raise SystemExit('Source artifact archive hash mismatch')
+          with zipfile.ZipFile(archive) as bundle:
+              # Read only the original artifact's primary app and its public metadata.
+              names = bundle.namelist()
+              for name in ['mpv119-app-arm64-debug.apk', 'build-metadata.json']:
+                  if names.count(name) != 1:
+                      raise SystemExit('Source artifact lacks an unambiguous primary APK/metadata')
+                  with bundle.open(name) as source, (source_root / name).open('wb') as output:
+                      shutil.copyfileobj(source, output)
+          source_meta = json.loads((source_root / 'build-metadata.json').read_text())
+          source_app = source_root / 'mpv119-app-arm64-debug.apk'
+          entries = [entry for entry in source_meta['files'] if entry['file'] == source_app.name]
+          if (source_meta['applicationId'] != 'com.fongmi.android.tv.mpv119' or source_meta['abi'] != 'arm64-v8a'
+                  or len(entries) != 1 or entries[0]['sha256'] != digest(source_app)):
+              raise SystemExit('Source APK metadata/hash mismatch')
+          destination = pathlib.Path('mpv-comparison-transfer')
+          destination.mkdir()
+          builds = [('fixed', pathlib.Path('mpv-regression-apks'))]
+          comparison = pathlib.Path('mpv-regression-apks/comparison')
+          if comparison.exists():
+              builds.append(('baseline', comparison))
+          metadata = {'sourceRun': int(run_id), 'sourceArtifact': artifact['id'],
+                      'sourceArtifactSha256': archive_hash, 'sourceApplication': source_meta, 'builds': []}
+          for role, directory in builds:
+              target = destination / role
+              subprocess.run(['python', str(pathlib.Path(os.environ['RUNNER_TEMP']) / 'create-apk-splice.py'),
+                  '--source', str(source_app), '--new', str(directory / 'mpv119-app-arm64-debug.apk'),
+                  '--output-dir', str(target)], check=True)
+              shutil.copyfile(directory / 'build-metadata.json', target / 'build-metadata.json')
+              metadata['builds'].append({'role': role, 'recipe': role + '/recipe.json',
+                                         'metadata': role + '/build-metadata.json'})
+          shutil.copyfile('mpv-regression-apks/mpv119-test-arm64-debug.apk', destination / 'mpv119-test-arm64-debug.apk')
+          (destination / 'transfer-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+
+      - name: Upload optional small APK comparison transfer
+        if: inputs.splice_source_run != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv119-comparison-transfer-${{ github.run_id }}
+          path: mpv-comparison-transfer/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload isolated ARM64 APK pair
         uses: actions/upload-artifact@v4
