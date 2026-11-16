@@ -463,11 +463,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             if (outputReloadPending) return;
             switch (property) {
                 case "pause" -> playWhenReady = !value;
-                case "paused-for-cache" -> {
-                    if (!fileLoaded || pendingSeekAfterLoadMs != C.TIME_UNSET || pendingResumeSeekMs != C.TIME_UNSET) break;
-                    loading = value;
-                    if (value) playbackState = Player.STATE_BUFFERING;
-                    else if (mediaItem != null && playbackState == Player.STATE_BUFFERING) playbackState = Player.STATE_READY;
+                case "paused-for-cache", "seeking" -> {
+                    if (fileLoaded) updateBufferingState();
                 }
             }
             invalidateState();
@@ -852,6 +849,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 if (applyDolbyPolicy()) return;
                 addInitialSubtitles();
                 applyAudioEffects();
+                updateBufferingState();
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_AUDIO_RECONFIG -> {
@@ -872,10 +870,9 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 if (recoverVideoOutputIfNeeded()) return;
                 restoreOutputReloadState();
                 if (!finishResumeSeek()) return;
-                loading = false;
-                if (mediaItem != null) playbackState = Player.STATE_READY;
                 seekAfterLoadIfNeeded();
                 readRuntimeState();
+                updateBufferingState();
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_END_FILE -> {
@@ -971,12 +968,18 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private void acceptPosition() {
         if (pendingResumeSeekMs != C.TIME_UNSET && fileLoaded && !awaitingOutputStart && finishResumeSeek()) {
-            loading = false;
-            playbackState = Player.STATE_READY;
+            updateBufferingState();
         }
         // Property notifications can be queued before a reload or seek completes.
         // Read the current native clock rather than publishing their stale payload.
         readPosition();
+    }
+
+    private void updateBufferingState() {
+        if (!fileLoaded || playerError != null || mediaItem == null) return;
+        loading = pendingSeekAfterLoadMs != C.TIME_UNSET || pendingResumeSeekMs != C.TIME_UNSET
+                || propBoolean("paused-for-cache") || propBoolean("seeking");
+        playbackState = loading ? Player.STATE_BUFFERING : Player.STATE_READY;
     }
 
     private boolean canReadPosition() {
@@ -1288,6 +1291,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void observeProperties() {
         MPVLib.INSTANCE.observeProperty("time-pos", MpvFormat.MPV_FORMAT_INT64);
         MPVLib.INSTANCE.observeProperty("time-pos/full", MpvFormat.MPV_FORMAT_DOUBLE);
+        MPVLib.INSTANCE.observeProperty("seeking", MpvFormat.MPV_FORMAT_FLAG);
         MPVLib.INSTANCE.observeProperty("duration/full", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("duration", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("pause", MpvFormat.MPV_FORMAT_FLAG);
@@ -1641,7 +1645,14 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         MPVLib.INSTANCE.setOptionString("force-window", "yes");
         updateSurfaceSize(width, height);
         if (TextUtils.isEmpty(pendingUrl)) MPVLib.INSTANCE.setPropertyString("vo", activeVideoOutputDriver());
-        restoreSuspendedVideoTrack();
+        if (suspendedVideoTrack != null && fileLoaded) readPosition();
+        boolean videoRestored = restoreSuspendedVideoTrack();
+        if (videoRestored && fileLoaded && TextUtils.isEmpty(pendingUrl)) {
+            // Refill the new decoder at the current timestamp, including for HTTP
+            // demuxers which discarded video packets while the track was disabled.
+            pendingSeekAfterLoadMs = Math.max(0, positionMs);
+            seekAfterLoadIfNeeded();
+        }
         markRenderedFirstFrame();
         loadPendingUrl();
     }
@@ -1669,10 +1680,12 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         ownsSurface = false;
     }
 
-    private void restoreSuspendedVideoTrack() {
-        if (suspendedVideoTrack == null) return;
+    private boolean restoreSuspendedVideoTrack() {
+        if (suspendedVideoTrack == null) return false;
+        boolean enabled = !"no".equals(suspendedVideoTrack);
         MPVLib.INSTANCE.setPropertyString("vid", suspendedVideoTrack);
         suspendedVideoTrack = null;
+        return enabled;
     }
 
     private void resetSuspendedVideoTrack() {

@@ -513,6 +513,12 @@ public final class MpvPlaybackSemanticsAndroidTest {
                 .put("paused", !value(() -> manager.getPlayer().getPlayWhenReady()))
                 .put("vo", mpv ? property("current-vo") : JSONObject.NULL)
                 .put("speed", value(() -> manager.getPlayer().getPlaybackParameters().speed))
+                .put("cachePaused", mpv ? Boolean.TRUE.equals(MPVLib.INSTANCE.getPropertyBoolean("paused-for-cache")) : JSONObject.NULL)
+                .put("seeking", mpv ? Boolean.TRUE.equals(MPVLib.INSTANCE.getPropertyBoolean("seeking")) : JSONObject.NULL)
+                .put("eofReached", mpv ? Boolean.TRUE.equals(MPVLib.INSTANCE.getPropertyBoolean("eof-reached")) : JSONObject.NULL)
+                .put("voConfigured", mpv ? Boolean.TRUE.equals(MPVLib.INSTANCE.getPropertyBoolean("vo-configured")) : JSONObject.NULL)
+                .put("vid", mpv ? property("vid") : JSONObject.NULL)
+                .put("demuxerReaderPts", mpv ? finite(number("demuxer-cache-state/reader-pts")) : JSONObject.NULL)
                 .put("nativeStartEvents", starts.get());
     }
 
