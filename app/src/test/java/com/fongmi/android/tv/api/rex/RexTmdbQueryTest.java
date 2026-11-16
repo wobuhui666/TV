@@ -109,4 +109,23 @@ public class RexTmdbQueryTest {
         assertEquals("movie/now_playing", RexTmdbQuery.forFacet(new DiscoverFacet(DiscoverFacet.NOW_PLAYING, "", "院线", "")).path);
         assertEquals("discover/movie", RexTmdbQuery.forFacet(new DiscoverFacet(null, "", "", "")).path);
     }
+
+    @Test public void shouldSelectDomesticWorksByProductionCountry() {
+        for (String type : new String[]{RexTmdbQuery.MOVIE, RexTmdbQuery.TV}) {
+            RexTmdbQuery.Query query = RexTmdbQuery.chinese(type, false);
+            assertEquals("discover/" + type, query.path);
+            assertEquals(type, query.fallbackMediaType);
+            assertEquals("CN", query.params.get("with_origin_country"));
+            assertEquals("popularity.desc", query.params.get("sort_by"));
+            assertFalse("Chinese translations cannot establish production country", query.params.containsKey("with_original_language"));
+            assertFalse("A watch region includes foreign productions", query.params.containsKey("watch_region"));
+        }
+    }
+
+    @Test public void shouldRequireEnoughVotesForDomesticTopRatedWorks() {
+        RexTmdbQuery.Query query = RexTmdbQuery.chinese(RexTmdbQuery.MOVIE, true);
+        assertEquals("CN", query.params.get("with_origin_country"));
+        assertEquals("vote_average.desc", query.params.get("sort_by"));
+        assertEquals("100", query.params.get("vote_count.gte"));
+    }
 }

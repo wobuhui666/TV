@@ -704,8 +704,9 @@ public final class LibraryExperienceAndroidTest {
         await("Mode selection window", mode::hasWindowFocus);
         NativeUiEvidence.capture("library-mode-reference");
         main(() -> {
-            LinearLayout root = (LinearLayout) field(mode, "root");
-            ((LinearLayout) root.getChildAt(1)).getChildAt(1).performClick();
+            View simple = mode.findViewById(android.R.id.content).findViewWithTag(ExperienceMode.SIMPLE.name());
+            assertNotNull("Simple mode remains a reachable choice", simple);
+            simple.performClick();
         });
         await("Mode applied", () -> mode.isDestroyed());
         assertEquals(ExperienceMode.SIMPLE, ExperienceSettings.getMode());

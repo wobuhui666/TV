@@ -20,6 +20,7 @@ import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.bean.DiscoverFilterPanel;
 import com.fongmi.android.tv.bean.DiscoverQuery;
 import com.fongmi.android.tv.bean.DiscoverRequestState;
+import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
@@ -84,6 +85,7 @@ public final class CompactDiscoveryIntegrationTest {
     private volatile boolean holdFeed;
     private volatile boolean holdDirect;
     private volatile boolean emptyQuery;
+    private volatile boolean oversizedTmdb;
     private volatile boolean prepared;
 
     @Before public void setup() {
@@ -255,6 +257,32 @@ public final class CompactDiscoveryIntegrationTest {
         NativeUiEvidence.capture("compact-douban-section");
     }
 
+    @Test public void compactPreviewKeepsTheSharedRegularPageAndCapsCacheHits() {
+        assertFalse("Synthetic TMDB key required", BuildConfig.TMDB_API_KEY.isEmpty());
+        oversizedTmdb = true;
+        AtomicReference<List<RexFeedResult>> compact = new AtomicReference<>();
+        main(() -> {
+            loader = new RexFeedLoader();
+            loader.load(List.of(RexSections.byKey("trending_day").limit(12)), compact::set);
+        });
+        await("The compact preview arrives", () -> compact.get() != null && compact.get().size() == 1);
+        assertEquals(12, compact.get().get(0).getItems().size());
+        assertEquals("Only the shared trending query was requested", 1, requests.size());
+        assertTrue(requests.get(0).encodedPath().endsWith("/trending/all/day"));
+
+        AtomicReference<List<RexFeedResult>> regular = new AtomicReference<>();
+        main(() -> loader.load(List.of(RexSections.byKey("trending_day").limit(RexSection.DEFAULT_LIMIT)), regular::set));
+        await("The regular page is served from the same shared cache", () -> regular.get() != null);
+        assertEquals("A compact preview cannot truncate the shared page", 20, regular.get().get(0).getItems().size());
+        assertEquals("No second network request", 1, requests.size());
+
+        AtomicReference<List<RexFeedResult>> compactAgain = new AtomicReference<>();
+        main(() -> loader.load(List.of(RexSections.byKey("trending_day").limit(12)), compactAgain::set));
+        await("The compact cache hit arrives", () -> compactAgain.get() != null);
+        assertEquals("A cache hit still respects the requesting surface's limit", 12, compactAgain.get().get(0).getItems().size());
+        assertEquals(1, requests.size());
+    }
+
     @Test public void closingLoaderCancelsTheFeedAndDoesNotStartFallback() {
         holdFeed = true;
         AtomicReference<List<RexFeedResult>> results = new AtomicReference<>();
@@ -294,6 +322,12 @@ public final class CompactDiscoveryIntegrationTest {
         if (path.endsWith("/search_subjects")) return "{\"subjects\":[{\"id\":\"701\",\"title\":\"Fallback fixture\",\"cover\":\"android.resource://" + instrumentation.getTargetContext().getPackageName() + "/" + R.drawable.wallpaper_1 + "\",\"rate\":\"8.1\"}]}";
         if (path.endsWith("/new_search_subjects")) return emptyQuery ? "{\"data\":[]}" : "{\"data\":[{\"id\":\"101\",\"title\":\"Query fixture\",\"cover\":\"android.resource://" + instrumentation.getTargetContext().getPackageName() + "/" + R.drawable.wallpaper_1 + "\",\"rate\":\"8.2\"}]}";
         if (path.contains("/genre/")) return "{\"genres\":[]}";
+        if (oversizedTmdb && path.endsWith("/trending/all/day")) {
+            List<String> items = new ArrayList<>();
+            for (int i = 0; i < 30; i++) items.add("{\"id\":" + (1000 + i)
+                    + ",\"title\":\"Trending fixture " + i + "\",\"poster_path\":\"/poster.jpg\",\"media_type\":\"movie\"}");
+            return "{\"page\":1,\"total_pages\":1,\"results\":[" + String.join(",", items) + "]}";
+        }
         if (path.endsWith("/discover/movie")) {
             int id = "vote_average.desc".equals(url.queryParameter("sort_by")) ? 202 : "primary_release_date.desc".equals(url.queryParameter("sort_by")) ? 303 : 201;
             return "{\"page\":1,\"total_pages\":1,\"results\":[{\"id\":" + id + ",\"title\":\"TMDB fixture\",\"poster_path\":\"/poster.jpg\",\"media_type\":\"movie\"}]}";

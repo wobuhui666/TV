@@ -4,6 +4,8 @@ import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.ui.rex.RexFeedResult;
+import com.fongmi.android.tv.ui.rex.RexSections;
+import com.fongmi.android.tv.bean.RexSection;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,6 +24,7 @@ public final class PosterHomeCatalog {
     public static final int MOVIES = 1;
     public static final int TV = 2;
     public static final int TOP = 3;
+    public static final int COMPACT_SHELF_LIMIT = 12;
 
     private PosterHomeCatalog() {
     }
@@ -40,20 +43,21 @@ public final class PosterHomeCatalog {
     }
 
     public static List<String> compactKeys(int category) {
-        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
-            return switch (category) {
-                case MOVIES -> List.of("now_playing", "popular_movie", "top_movie");
-                case TV -> List.of("popular_tv", "top_tv");
-                case TOP -> List.of("top_movie", "top_tv");
-                default -> List.of("trending_day", "popular_movie", "popular_tv");
-            };
-        }
         return switch (category) {
-            case MOVIES -> List.of("douban_movie", "now_playing", "popular_movie", "top_movie");
-            case TV -> List.of("douban_tv", "popular_tv");
-            case TOP -> List.of("top_movie", "top_tv");
-            default -> List.of("trending_day", "douban_movie", "douban_tv");
+            case MOVIES -> List.of("cn_movie", "douban_movie", "now_playing");
+            case TV -> List.of("cn_tv", "douban_tv", "popular_tv");
+            case TOP -> List.of("cn_top_movie", "cn_top_tv");
+            default -> List.of("cn_movie", "cn_tv", "trending_day");
         };
+    }
+
+    public static List<RexSection> compactSections(int category) {
+        List<RexSection> result = new ArrayList<>();
+        for (String key : compactKeys(category)) {
+            RexSection section = RexSections.byKey(key);
+            if (section != null) result.add(section.limit(COMPACT_SHELF_LIMIT));
+        }
+        return result;
     }
 
     /** Keep identities intact: titles alone must not collapse different films or seasons. */
@@ -68,28 +72,37 @@ public final class PosterHomeCatalog {
             if (category == TV && !DiscoverMediaKey.TV.equals(item.getTypeName())) continue;
             if (!seen.add(item.getId())) continue;
             result.add(item);
-            if (result.size() == 20) break;
+            if (result.size() == COMPACT_SHELF_LIMIT) break;
         }
         return result;
     }
 
     public static List<Vod> compactHero(List<RexFeedResult> feeds, int category) {
-        Map<DiscoverApi.Row, List<Vod>> content = new java.util.EnumMap<>(DiscoverApi.Row.class);
-        for (RexFeedResult feed : feeds) {
-            DiscoverApi.Row row = switch (feed.getSection().getKey()) {
-                case "trending_day" -> DiscoverApi.Row.TMDB_DAY;
-                case "now_playing" -> DiscoverApi.Row.TMDB_NOW_PLAYING;
-                case "popular_movie" -> DiscoverApi.Row.TMDB_POPULAR_MOVIE;
-                case "popular_tv" -> DiscoverApi.Row.TMDB_POPULAR_TV;
-                case "top_movie" -> DiscoverApi.Row.TMDB_TOP_MOVIE;
-                case "top_tv" -> DiscoverApi.Row.TMDB_TOP_TV;
-                case "douban_movie" -> DiscoverApi.Row.DOUBAN_HOT_MOVIE;
-                case "douban_tv" -> DiscoverApi.Row.DOUBAN_HOT_TV;
-                default -> null;
-            };
-            if (row != null) content.put(row, compactItems(feed.getItems(), category));
+        if (feeds == null) return List.of();
+        Map<String, List<Vod>> content = new LinkedHashMap<>();
+        List<String> order = new ArrayList<>(compactKeys(category));
+        // Existing snapshot callers can still offer the original Douban poster fallback.
+        if (category != TOP) {
+            if (category != TV) order.add("douban_movie");
+            if (category != MOVIES) order.add("douban_tv");
         }
-        return hero(content, category);
+        for (RexFeedResult feed : feeds) content.put(feed.getSection().getKey(), compactItems(feed.getItems(), category));
+        Map<String, Vod> result = new LinkedHashMap<>();
+        // Round-robin keeps domestic films and series visible alongside the global spotlight.
+        for (boolean requireLandscape : new boolean[]{true, false}) {
+            for (int i = 0; i < COMPACT_SHELF_LIMIT; i++) {
+                for (String key : order) {
+                    List<Vod> items = content.getOrDefault(key, List.of());
+                    if (i >= items.size()) continue;
+                    Vod item = items.get(i);
+                    if (requireLandscape && item.getBackdrop().equals(item.getPic())) continue;
+                    String title = TITLE_SEPARATORS.matcher(item.getName().toLowerCase(Locale.ROOT)).replaceAll("");
+                    result.putIfAbsent(title + ":" + item.getYear() + ":" + item.getTypeName(), item);
+                    if (result.size() == 5) return new ArrayList<>(result.values());
+                }
+            }
+        }
+        return new ArrayList<>(result.values());
     }
 
     public static List<Vod> sourceVideos(List<Vod> items) {

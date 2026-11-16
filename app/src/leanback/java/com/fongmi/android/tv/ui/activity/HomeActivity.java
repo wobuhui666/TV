@@ -58,6 +58,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
@@ -431,7 +432,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         android.util.Log.d("TV-home-focus", "phase=" + phase + "; target=" + target + "; current=" + (current ? 1 : 0)
                 + "; requestGeneration=" + requestGeneration + "; generation=" + mHistoryFocusGeneration
                 + "; selected=" + mBinding.recycler.getSelectedPosition() + "; scrollState=" + mBinding.recycler.getScrollState()
-                + "; holderPosition=" + holderPosition);
+                + "; holderPosition=" + holderPosition + "; windowFocus=" + (hasWindowFocus() ? 1 : 0)
+                + "; lifecycle=" + getLifecycle().getCurrentState().ordinal() + "; touchBrowsing=" + (mTouchBrowsing ? 1 : 0));
     }
 
     /** Top JetStream nav (点播/直播/搜索/…) — host focus for empty home / Back-to-toolbar. */
@@ -751,7 +753,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         List<JetStreamHomeNavView.NavItem> items = new ArrayList<>();
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_home), getString(R.string.home_tab_home), R.drawable.ic_home_vod));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_vod), getString(R.string.home_tab_library), R.drawable.ic_home_vod));
-        items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
+        if (!ExperienceSettings.usesLibrary()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
         if (LiveConfig.hasUrl()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_live), getString(R.string.home_live), R.drawable.ic_home_live));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_search), getString(R.string.home_search), R.drawable.ic_home_search));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_my), getString(R.string.home_tab_my), R.drawable.ic_home_setting));

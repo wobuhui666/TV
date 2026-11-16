@@ -18,6 +18,7 @@ import androidx.test.uiautomator.Until;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.config.VodConfig;
 import com.fongmi.android.tv.bean.Result;
+import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
@@ -93,22 +94,42 @@ public final class CompactHomeIntegrationTest {
         });
     }
 
-    @Test public void shouldKeepNativeSourceLibraryAndSeparateDiscoveryInNavigation() {
+    @Test public void shouldMergeRecommendationsIntoHomeAndKeepTheNativeSourceLibrary() {
         main(() -> {
             assertTrue("The native source directory remains available in library mode", ExperienceSettings.usesLibrary());
             @SuppressWarnings("unchecked") List<JetStreamHomeNavView.NavItem> nav = (List<JetStreamHomeNavView.NavItem>) HomePreviewFixtures.field(home.findViewById(R.id.nav), "items");
             assertTrue(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_vod))));
-            assertTrue(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_discover))));
+            assertFalse("Curated recommendations are part of Home", nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_discover))));
         });
+        await("Home shows a bounded selection including domestic films and series", () -> visibleShelfKeys().equals(
+                List.of("cn_movie", "cn_tv", "trending_day")));
+        main(this::assertCuratedShelfLimits);
+        NativeUiEvidence.capture("curated-home-domestic");
         text("片库").click();
         await("library routes through its existing activity", () -> routeIs("VodActivity"));
         assertEquals("preview-source-0", home.lastNavigation.getStringExtra("key"));
         Result source = home.lastNavigation.getParcelableExtra("result");
         assertNotNull(source);
         assertEquals("The source's own categories remain available", 2, source.getTypes().size());
-        device.pressDPadRight();
-        device.pressDPadCenter();
-        await("TMDB is available through its separate discovery entry", () -> routeIs("DiscoverActivity"));
+    }
+
+    @Test public void shouldKeepTheSameCuratedHomeInSimpleMode() {
+        main(home::finish);
+        await("Full-library home closes before switching mode", home::isDestroyed);
+        main(() -> ExperienceSettings.putMode(ExperienceMode.SIMPLE));
+        home = (TvHomePreviewActivity) instrumentation.startActivitySync(new Intent(
+                instrumentation.getTargetContext(), TvHomePreviewActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        await("Simple home loads its domestic selection", () -> home.hasWindowFocus()
+                && visibleShelfKeys().equals(List.of("cn_movie", "cn_tv", "trending_day")));
+        main(() -> {
+            @SuppressWarnings("unchecked") List<JetStreamHomeNavView.NavItem> nav = (List<JetStreamHomeNavView.NavItem>) HomePreviewFixtures.field(home.findViewById(R.id.nav), "items");
+            assertFalse(nav.stream().anyMatch(item -> item.getKey().equals(String.valueOf(R.string.home_discover))));
+            assertCuratedShelfLimits();
+        });
+        text("片库").click();
+        await("Simple mode retains the native source library", () -> routeIs("VodActivity"));
+        assertEquals("preview-source-0", home.lastNavigation.getStringExtra("key"));
+        assertEquals(2, ((Result) home.lastNavigation.getParcelableExtra("result")).getTypes().size());
     }
 
     @Test public void shouldKeepCategoryOrderAndExposeFilterShortcut() throws Exception {
@@ -116,7 +137,8 @@ public final class CompactHomeIntegrationTest {
         await("category row is visible", () -> rowView(home.categoriesPosition()) != null);
         text(home.getString(R.string.home_wall_movies)).click();
         await("movie shelves replace the compact selection", () -> visibleShelfKeys().equals(
-                List.of("now_playing", "popular_movie", "top_movie")));
+                List.of("cn_movie", "douban_movie", "now_playing")));
+        main(this::assertCuratedShelfLimits);
         device.pressDPadDown();
         AtomicBoolean touchBrowsing = new AtomicBoolean();
         main(() -> touchBrowsing.set((boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
@@ -159,6 +181,19 @@ public final class CompactHomeIntegrationTest {
             assertFalse("Old hero data cannot survive an empty snapshot", home.controller().isFocusable(home.pageAdapter().get(0)));
         });
         NativeUiEvidence.capture("compact-home-empty");
+    }
+
+    @Test public void shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges() {
+        int[] labels = {R.string.home_wall_tv, R.string.home_wall_top, R.string.home_wall_all};
+        List<List<String>> expected = List.of(List.of("cn_tv", "douban_tv", "popular_tv"),
+                List.of("cn_top_movie", "cn_top_tv"), List.of("cn_movie", "cn_tv", "trending_day"));
+        for (int i = 0; i < labels.length; i++) {
+            main(() -> home.focusRow(home.categoriesPosition()));
+            text(home.getString(labels[i])).click();
+            List<String> keys = expected.get(i);
+            await("Only the selected category's previews remain", () -> visibleShelfKeys().equals(keys));
+            main(this::assertCuratedShelfLimits);
+        }
     }
 
     @Test public void shouldKeepNoArtworkActionBeyondThePreviewLimit() {
@@ -265,6 +300,26 @@ public final class CompactHomeIntegrationTest {
         @SuppressWarnings("unchecked") List<Object> shelves = (List<Object>) HomePreviewFixtures.field(home.controller(), "shelves");
         return java.util.stream.IntStream.range(0, home.pageAdapter().size()).mapToObj(home.pageAdapter()::get)
                 .filter(shelves::contains).map(shelf -> (String) HomePreviewFixtures.field(shelf, "key")).toList();
+    }
+
+    private void assertCuratedShelfLimits() {
+        @SuppressWarnings("unchecked") List<Object> shelves = (List<Object>) HomePreviewFixtures.field(home.controller(), "shelves");
+        int visible = 0;
+        for (int i = 0; i < home.pageAdapter().size(); i++) {
+            Object item = home.pageAdapter().get(i);
+            if (!shelves.contains(item)) continue;
+            visible++;
+            @SuppressWarnings("unchecked") List<Vod> posters = (List<Vod>) HomePreviewFixtures.field(item, "items");
+            assertTrue("Every home shelf is a limited preview", posters.size() <= 12);
+            assertFalse("The fixture supplies content for every selected shelf", posters.isEmpty());
+        }
+        assertTrue("Home does not expand into the entire recommendation catalog", visible <= 3);
+        Object loader = HomePreviewFixtures.field(home.controller(), "rexLoader");
+        @SuppressWarnings("unchecked") List<RexSection> requested = (List<RexSection>) HomePreviewFixtures.field(loader, "sections");
+        assertEquals("Only the selected home shelves are requested", visibleShelfKeys(),
+                requested.stream().map(RexSection::getKey).toList());
+        Object spotlight = HomePreviewFixtures.field(home.controller(), "rexSpotlightRow");
+        assertEquals("Specialty recommendations do not add another home rail", -1, home.pageAdapter().indexOf(spotlight));
     }
 
     private View rowView(int position) {

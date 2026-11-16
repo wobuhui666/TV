@@ -77,12 +77,12 @@ public final class RexFeedLoader {
         cancelDeadline();
         for (RexSection section : sections) {
             List<Vod> cached = cached(section.getKey());
-            if (cached != null) merged.put(section.getKey(), cached);
+            if (cached != null) merged.put(section.getKey(), capped(cached, section.getLimit()));
             else {
                 pending++;
                 missing.add(section);
                 // A partial refresh must not remove still-visible sections while they load.
-                if (previous.containsKey(section.getKey())) merged.put(section.getKey(), previous.get(section.getKey()));
+                if (previous.containsKey(section.getKey())) merged.put(section.getKey(), capped(previous.get(section.getKey()), section.getLimit()));
             }
         }
         if (pending == 0) {
@@ -233,18 +233,19 @@ public final class RexFeedLoader {
             return;
         }
         if (closed || done || request != generation) return;
-        List<Vod> capped = items.isEmpty()
-                ? List.of()
-                : new ArrayList<>(items.subList(0, Math.min(items.size(), section.getLimit())));
-        merged.put(section.getKey(), capped);
-        if (!capped.isEmpty()) CACHE.put(section.getKey(), new CacheEntry(capped));
+        List<Vod> preview = capped(items, section.getLimit());
+        merged.put(section.getKey(), preview);
+        // Cache the regular page independently of a compact home's smaller visible preview.
+        // The same key is also used by classic home and discovery after a mode switch.
+        if (!items.isEmpty()) CACHE.put(section.getKey(), new CacheEntry(capped(items,
+                Math.max(RexSection.DEFAULT_LIMIT, section.getLimit()))));
         pending = Math.max(0, pending - 1);
         if (pending == 0) {
             done = true;
             cancelDeadline();
             cancelDelivery();
             deliver(request);
-        } else if (!capped.isEmpty() && delivery == null) {
+        } else if (!preview.isEmpty() && delivery == null) {
             // Several feeds often finish together; publish one bounded UI update.
             delivery = () -> {
                 delivery = null;
@@ -262,6 +263,10 @@ public final class RexFeedLoader {
             if (items != null && !items.isEmpty()) results.add(new RexFeedResult(section, items));
         }
         if (listener != null) listener.onResults(results);
+    }
+
+    private static List<Vod> capped(List<Vod> items, int limit) {
+        return items.isEmpty() ? List.of() : new ArrayList<>(items.subList(0, Math.min(items.size(), limit)));
     }
 
     private void cancelDeadline() {

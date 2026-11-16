@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="library_mode">使用模式</string>
-    <string name="library_mode_hint">选择适合你的浏览方式，播放设置和片源配置会保留</string>
-    <string name="library_mode_current">✓ 当前使用</string>
+    <string name="library_mode_hint">选择你的浏览方式</string>
+    <string name="library_mode_current">当前使用</string>
     <string name="library_mode_preview_title">影片详情</string>
     <string name="library_mode_full">媒体库</string>
     <string name="library_mode_simple">简洁</string>
     <string name="library_mode_classic">经典</string>
-    <string name="library_mode_full_help">TMDB 作品与片源融合，大背景、季集、资源和完整影片资料</string>
-    <string name="library_mode_simple_help">保留播放、简介、季集与资源；更多资料按需展开</string>
-    <string name="library_mode_classic_help">原有片源目录、搜索、详情与小窗操作</string>
+    <string name="library_mode_full_help">沉浸背景、季集与完整影片资料</string>
+    <string name="library_mode_simple_help">专注播放，更多资料按需展开</string>
+    <string name="library_mode_classic_help">片源目录、原有详情与小窗播放</string>
     <string name="library_mode_apply">应用模式</string>
     <string name="library_mode_applied">模式已切换，返回首页后生效</string>
     <string name="library_play">播放</string>
