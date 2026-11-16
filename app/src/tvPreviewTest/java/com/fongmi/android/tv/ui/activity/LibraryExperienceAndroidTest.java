@@ -1095,6 +1095,7 @@ public final class LibraryExperienceAndroidTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
         await("First playback returns its numbered target", () -> first.isDestroyed() && detail.hasWindowFocus()
                 && Integer.valueOf(1).equals(field(detail, "selectedEpisode")));
+        awaitRestoredPlaybackFocus(detail, "play");
 
         click(detail, "original:线路一:second");
         VideoActivity second = awaitPlayer(); await("Raw selection starts the second episode", () -> requestedMedia.equals(List.of("first", "second")));
@@ -1102,6 +1103,7 @@ public final class LibraryExperienceAndroidTest {
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
         await("Raw selection replaces the previous numbered target", () -> second.isDestroyed() && detail.hasWindowFocus()
                 && field(detail, "selectedEpisode") == null);
+        awaitRestoredPlaybackFocus(detail, "original:线路一:second");
 
         click(detail, "play");
         awaitPlayer(); await("Resume keeps the last explicitly selected source episode", () -> plays.get() == 3);
@@ -1365,6 +1367,16 @@ public final class LibraryExperienceAndroidTest {
     private void assertFocused(LibraryDetailActivity detail, String key) {
         assertEquals(key, focused(detail));
         assertTrue("TV focus is exposed to accessibility", detailNode(key).isFocused());
+    }
+    private void awaitRestoredPlaybackFocus(LibraryDetailActivity detail, String key) {
+        await("Playback return finishes restoring actual focus to " + key, () -> {
+            UiObject2 node = device.findObject(By.res(key));
+            return !(boolean) field(detail, "focusRestorePending") && field(detail, "pendingUiFocus") == null
+                    && !(boolean) field(detail, "renderQueued") && key.equals(focused(detail))
+                    && node != null && node.isFocused();
+        });
+        assertFocused(detail, key);
+        instrumentation.waitForIdleSync();
     }
     private void click(LibraryDetailActivity detail, String key) {
         focus(detail, key);

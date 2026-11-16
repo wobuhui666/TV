@@ -66,6 +66,15 @@ public final class CompactHomeIntegrationTest {
                 instrumentation.getTargetContext(), TvHomePreviewActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         await("compact home and source categories load", () -> home.hasWindowFocus()
                 && ((Result) HomePreviewFixtures.field(home, "mResult")).getTypes().size() == 2);
+        // Android touch mode survives the previous Activity; each fixture starts with remote navigation.
+        device.pressDPadUp();
+        AtomicBoolean touchMode = new AtomicBoolean();
+        main(() -> touchMode.set(home.pageGrid().isInTouchMode()
+                || (boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
+        if (touchMode.get()) device.pressDPadUp();
+        await("the new home starts in Android and application D-pad mode", () ->
+                !home.pageGrid().isInTouchMode()
+                        && !(boolean) HomePreviewFixtures.field(home, "mTouchBrowsing"));
     }
 
     @After public void close() {
