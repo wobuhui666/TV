@@ -39,13 +39,23 @@ object SpiderDialogStyle {
         val decor = window.decorView
         window.setWindowAnimations(R.style.JetStreamDialogAnim)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        window.setLayout((decor.resources.displayMetrics.widthPixels * 0.68f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        val dialogWidth = (decor.resources.displayMetrics.widthPixels * 0.68f).toInt()
         val background = GradientDrawable().apply { cornerRadius = decor.jetStreamDp(28) }
         decor.bindJetStreamTheme { background.setColor(decor.jetStreamColor(R.color.jetstream_surface)) }
         window.setBackgroundDrawable(background)
         style(decor)
         addScrollHints(decor)
         JetStreamDialogDecor.tintButtons(dialog)
+        // Reserve the native footer before AlertDialog gives the custom form remaining space.
+        decor.findViewById<View>(androidx.appcompat.R.id.buttonPanel)
+            ?.takeIf { it.visibility == View.VISIBLE }?.let { panel ->
+                panel.measure(
+                    View.MeasureSpec.makeMeasureSpec(dialogWidth, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                panel.minimumHeight = maxOf(panel.minimumHeight, panel.measuredHeight)
+            }
+        window.setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     private fun addScrollHints(view: View) {
