@@ -462,7 +462,12 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         runForPlayback(() -> {
             if (outputReloadPending) return;
             switch (property) {
-                case "pause" -> playWhenReady = !value;
+                case "pause" -> {
+                    if (canReadPosition()) {
+                        Boolean paused = MPVLib.INSTANCE.getPropertyBoolean("pause");
+                        if (paused != null) playWhenReady = !paused;
+                    }
+                }
                 case "paused-for-cache", "seeking" -> {
                     if (fileLoaded) updateBufferingState();
                 }
@@ -475,7 +480,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     public void eventProperty(String property, String value) {
         runForPlayback(() -> {
             if (outputReloadPending) return;
-            if ("speed".equals(property)) playbackParameters = new PlaybackParameters(parseFloat(value, playbackParameters.speed));
+            if ("speed".equals(property)) readPlaybackSpeed();
             invalidateState();
         });
     }
@@ -487,7 +492,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             switch (property) {
                 case "time-pos/full" -> acceptPosition();
                 case "duration/full", "duration" -> durationMs = secondsToMs(value, C.TIME_UNSET);
-                case "speed" -> playbackParameters = new PlaybackParameters((float) value);
+                case "speed" -> readPlaybackSpeed();
                 case "audio-delay" -> audioOffsetMs = secondsToMs(value, 0);
                 case "sub-delay" -> textOffsetMs = secondsToMs(value, 0);
             }
@@ -836,7 +841,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             }
             case MpvEvent.MPV_EVENT_FILE_LOADED -> {
                 if (recoverVideoOutputIfNeeded()) return;
-                restoreOutputReloadState();
+                restorePlaybackControls();
                 fileLoaded = true;
                 loading = false;
                 playbackState = Player.STATE_READY;
@@ -868,7 +873,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             case MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
                 if (!fileLoaded) return;
                 if (recoverVideoOutputIfNeeded()) return;
-                restoreOutputReloadState();
+                if (outputReloadPending) restorePlaybackControls();
                 if (!finishResumeSeek()) return;
                 seekAfterLoadIfNeeded();
                 readRuntimeState();
@@ -1010,12 +1015,19 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         readDuration();
         readVideoSize();
         readTracks();
-        Double speed = MPVLib.INSTANCE.getPropertyDouble("speed");
-        if (speed != null) playbackParameters = new PlaybackParameters(speed.floatValue());
+        if (!canReadPosition()) return;
+        readPlaybackSpeed();
         Double audioDelay = MPVLib.INSTANCE.getPropertyDouble("audio-delay");
         if (audioDelay != null) audioOffsetMs = secondsToMs(audioDelay, 0);
         Double subDelay = MPVLib.INSTANCE.getPropertyDouble("sub-delay");
         if (subDelay != null) textOffsetMs = secondsToMs(subDelay, 0);
+    }
+
+    private void readPlaybackSpeed() {
+        // Keep app controls authoritative while loadfile and its resume seek reset native state.
+        if (!canReadPosition()) return;
+        Double speed = MPVLib.INSTANCE.getPropertyDouble("speed");
+        if (speed != null) playbackParameters = new PlaybackParameters(speed.floatValue());
     }
 
     private void readPosition() {
@@ -1412,9 +1424,9 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         return true;
     }
 
-    private void restoreOutputReloadState() {
-        if (!outputReloadPending) return;
-        // Ignore native reset notifications until the reloaded file can receive our current controls.
+    private void restorePlaybackControls() {
+        // Loadfile can reset native controls after PlayerManager restores a paused session.
+        // Reapply the latest app values once the file can receive them.
         MPVLib.INSTANCE.setPropertyString("pause", playWhenReady ? "no" : "yes");
         MPVLib.INSTANCE.setPropertyString("speed", Float.toString(playbackParameters.speed));
         MPVLib.INSTANCE.setPropertyString("volume", Float.toString(volume * 100f));
@@ -1830,14 +1842,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private static String seconds(long milliseconds) {
         return String.format(Locale.US, "%.3f", milliseconds / 1000.0);
-    }
-
-    private static float parseFloat(String value, float fallback) {
-        try {
-            return Float.parseFloat(value);
-        } catch (Exception e) {
-            return fallback;
-        }
     }
 
     private void runForPlayback(Runnable runnable) {
