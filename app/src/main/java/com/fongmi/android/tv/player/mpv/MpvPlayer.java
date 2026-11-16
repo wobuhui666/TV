@@ -818,7 +818,10 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         applySeekPreroll(false);
         applySubtitleStyle();
         restoreSuspendedVideoTrack();
-        pendingSeekAfterLoadMs = startPositionMs > 0 && MpvLoadFile.deferInitialSeek(url)
+        // A paused local reload after a VO rebind can keep a configured but empty
+        // output. Refill it at the held timestamp just like a deferred HTTP seek.
+        pendingSeekAfterLoadMs = startPositionMs > 0
+                && (MpvLoadFile.deferInitialSeek(url) || outputReloadPending && !playWhenReady)
                 ? startPositionMs : C.TIME_UNSET;
         pendingResumeSeekMs = C.TIME_UNSET;
         awaitingOutputStart = true;
