@@ -31,9 +31,11 @@
 | --- | --- |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
 | 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |
+| 首页精选与模式预览 | [真实首页、24 项回归与覆盖限制](testing/reports/2026-11-16-home-modes/README.md) |
 | 媒体库与全屏播放器打磨 | [真实片源、画面与遥控器验证](testing/reports/2026-11-15-library-polish/README.md) |
 | 媒体库详情对齐与原生稳定性 | [详情/TLS 阶段的有限回归与历史失败](testing/reports/2026-11-16-library-alignment-stability/README.md) |
 | Compose TV 媒体库详情 | [详情重做、验证结果与性能限制](testing/reports/2026-11-15-library-detail-redesign/README.md) |
+| MPV 重播、刷新与字幕返回 | [进度与 Surface 生命周期](mpv-hls-seeking.md) · [#119 验证记录](testing/reports/2026-11-16-issue119-mpv/README.md) |
 | Exo 声音与弹幕停顿 | [解码回退修复与 GHA 验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | 源、播放器及设备回归 | [验证报告目录](testing/README.md) · [测试运行方法](testing/source-validation.md) |

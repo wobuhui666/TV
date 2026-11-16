@@ -180,7 +180,7 @@ public class VodPlaybackController {
         historyPolicy.updateEpisode(state.getHistory(), state.getFlag(), item, explicit);
         host.renderEpisodeSelection(item);
         if (host.isFullscreenForPlayback()) host.showEpisodeReady(item);
-        refresh();
+        refresh(false);
     }
 
     public void selectQuality(Result result) {
@@ -253,7 +253,7 @@ public class VodPlaybackController {
     public void replay() {
         if (requestedEpisodeMissing || !host.getVodPlayId().isEmpty()) return;
         if (state.getHistory() != null) state.getHistory().setPosition(C.TIME_UNSET);
-        if (host.isPlayerEmpty()) refresh();
+        if (host.isPlayerEmpty()) refresh(false);
         else {
             communitySkipEnabled = Setting.isCommunitySkipEnabled();
             if (!host.isTimeshiftPlayback()) communitySkip.start(state.getMedia(), state.getHistory(), state.getEpisode());
@@ -262,8 +262,18 @@ public class VodPlaybackController {
     }
 
     public void refresh() {
+        refresh(true);
+    }
+
+    private void refresh(boolean preservePosition) {
         stopCommunitySkip();
-        saveCurrentHistory();
+        History history = currentHistory();
+        if (preservePosition && history != null && !requestedEpisodeMissing && host.getVodPlayId().isEmpty()
+                && !host.isTimeshiftPlayback() && !host.isPlayerEmpty()) {
+            long position = host.getPlayerPosition();
+            if (position >= 0) history.setPosition(position);
+        }
+        historyPolicy.save(history);
         host.stopPlaybackForRefresh();
         if (requestedEpisodeMissing || !host.getVodPlayId().isEmpty()) return;
         if (!state.hasFlags() || !state.hasEpisode()) return;

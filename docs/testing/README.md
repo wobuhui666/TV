@@ -4,7 +4,9 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-16 | [首页精选与模式选择](reports/2026-11-16-home-modes/README.md) | 39 项专项 JVM、23 项首页／模式／触摸与 1 项模式兼容回归通过；真实首页、下载与源扩展 ABI、lint 限制见报告 |
 | 2026-11-16 | [媒体库详情对齐与原生稳定性](reports/2026-11-16-library-alignment-stability/README.md) | 详情/TLS 阶段 12 项单测、2 项离线、4 项交互、10 次详情及两组各 34 次连接／1536 个副本压力通过；分别运行于三个进程，旧失败和实体电视限制保留 |
+| 2026-11-16 | [#119 MPV 重播、刷新与字幕返回](reports/2026-11-16-issue119-mpv/README.md) | 重播、连续刷新、EOF、Exo→MPV 与字幕 Surface 重建；记录最终提交及设备结果，保留历史失败和 MT5873／真实 Vulkan 的覆盖限制 |
 | 2026-11-15 | [代理配置解析](reports/2026-11-15-proxy-parsing/README.md) | 基线 3 项失败、修复后 4 项 JVM 回归通过；Android 初始化与在线实测未完成 |
 | 2026-11-15 | [Exo 声音与弹幕停顿](reports/2026-11-14-playback-stutter/README.md) | 最终1058项JUnit、36项Android及5组功能实播；三轮性能实验与撤回原因保留，MT5873实机未验证 |
 | 2026-11-15 | [Issue #119 界面修复](reports/2026-11-15-issue119-ui/README.md) | 直播完整线路列表、TV 包触摸浏览位置与源配置弹窗；两种尺寸的 Android 窗口、焦点和表单回归 |
