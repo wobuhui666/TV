@@ -449,7 +449,8 @@ jobs:
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/library-instrumentation.txt" || library_status=$?
             cat "$out/core-instrumentation.txt" "$out/library-instrumentation.txt" > "$out/instrumentation.txt"
             collect_compact
-            python3 - "$core_status" "$library_status" <<'PY'
+            compact_status=0
+            python3 - "$core_status" "$library_status" <<'PY' || compact_status=$?
           import collections, json, os, pathlib, re, sys
           root = pathlib.Path('artifacts/compact-home')
           expected = {
@@ -505,7 +506,10 @@ jobs:
               raise SystemExit('Require all 68 compact/library cases and target-UID fixture reads to pass')
           PY
             collect_compact
-            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest
+            upstream_status=0
+            bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest || upstream_status=$?
+            test "$compact_status" -eq 0
+            test "$upstream_status" -eq 0
           else
             bash .github/scripts/verify-tv-ui.sh
             bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest,com.fongmi.android.tv.player.TimeshiftPlaybackAndroidTest,com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest,com.fongmi.android.tv.test.TimeshiftControlsTest,com.fongmi.android.tv.player.TimeshiftExoIntegrationTest

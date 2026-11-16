@@ -401,16 +401,15 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 int better = firstFocusableRowIndex();
                 if (better >= 0) target = better;
             }
-            mBinding.recycler.setSelectedPosition(target);
             int focusTarget = target;
-            mBinding.recycler.postDelayed(() -> {
-                if (!current.getAsBoolean()) return;
-                RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(focusTarget);
-                View focus = holder == null ? null : findFocusable(holder.itemView);
+            mBinding.recycler.setSelectedPosition(focusTarget, holder -> {
+                if (!current.getAsBoolean() || holder.getBindingAdapterPosition() != focusTarget) return;
+                // A missing row must finish selection/layout before focus can leave the old row.
+                View focus = findFocusable(holder.itemView);
                 if (focus != null && focus.requestFocus()) return;
                 if (canRequestFocus(mBinding.recycler) && mBinding.recycler.requestFocus() && mBinding.recycler.hasFocus()) return;
                 requestNavFocus(current);
-            }, 50);
+            });
         });
     }
 
