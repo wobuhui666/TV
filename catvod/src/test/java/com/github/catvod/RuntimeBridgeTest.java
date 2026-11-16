@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+import android.app.Activity;
 
 import static org.junit.Assert.*;
 
@@ -15,6 +17,7 @@ public class RuntimeBridgeTest {
 
     @After
     public void clearHost() {
+        Init.setActivity(null);
         Init.setToast(null);
         Init.setDialog(null);
     }
@@ -52,5 +55,45 @@ public class RuntimeBridgeTest {
     public void missingDialogHostFailsThroughBothNames() {
         assertThrows(ExecutionException.class, () -> Runtime.dialog("{}", null).get());
         assertThrows(ExecutionException.class, () -> Init.dialog("{}", null).get());
+    }
+
+    @Test
+    public void nestedActivityOwnersRestoreTheCallingScope() {
+        Supplier<Activity> first = () -> null;
+        Supplier<Activity> second = () -> null;
+        Runnable restoreFirst = Init.enterActivity(first);
+        try {
+            assertSame(first, Init.activityOwner());
+            Runnable restoreSecond = Init.enterActivity(second);
+            try { assertSame(second, Init.currentActivityOwner()); }
+            finally { restoreSecond.run(); }
+            assertSame(first, Init.currentActivityOwner());
+        } finally { restoreFirst.run(); }
+        assertNull(Init.currentActivityOwner());
+    }
+
+    @Test
+    public void aBoundMissingPageDoesNotConsultTheGlobalHost() {
+        Init.setActivity(() -> { fail("A bound request cannot migrate to the global page"); return null; });
+        Runnable restore = Init.enterActivity(() -> null);
+        try { assertNull(Init.activity()); assertNull(Runtime.activity()); }
+        finally { restore.run(); }
+    }
+
+    @Test
+    public void capturedActivityOwnerCrossesWorkersWithoutLeakingTheirScope() throws Exception {
+        Supplier<Activity> owner = () -> null;
+        Supplier<Activity> captured;
+        Runnable restore = Init.enterActivity(owner);
+        try { captured = Init.activityOwner(); }
+        finally { restore.run(); }
+        CompletableFuture.runAsync(() -> {
+            assertNull(Init.currentActivityOwner());
+            Runnable restoreWorker = Init.enterActivity(captured);
+            try { assertSame(owner, Init.activityOwner()); }
+            finally { restoreWorker.run(); }
+            assertNull(Init.currentActivityOwner());
+        }).get();
+        assertNull(Init.currentActivityOwner());
     }
 }

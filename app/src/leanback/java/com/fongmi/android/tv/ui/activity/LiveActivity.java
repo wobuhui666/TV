@@ -47,6 +47,7 @@ import com.fongmi.android.tv.impl.LiveListener;
 import com.fongmi.android.tv.impl.PassListener;
 import com.fongmi.android.tv.model.LiveViewModel;
 import com.fongmi.android.tv.playback.PlaybackReset;
+import com.fongmi.android.tv.playback.live.LiveLineSelection;
 import com.fongmi.android.tv.playback.live.LivePlayRequest;
 import com.fongmi.android.tv.playback.live.LivePlaybackController;
 import com.fongmi.android.tv.playback.live.LivePlaybackHost;
@@ -64,6 +65,7 @@ import com.fongmi.android.tv.ui.custom.JetStreamAnimator;
 import com.fongmi.android.tv.ui.custom.JetStreamVodControlView;
 import com.fongmi.android.tv.ui.dialog.HistoryDialog;
 import com.fongmi.android.tv.ui.dialog.LiveDialog;
+import com.fongmi.android.tv.ui.dialog.LiveLineDialog;
 import com.fongmi.android.tv.ui.dialog.PassDialog;
 import com.fongmi.android.tv.ui.dialog.PlayerEngineDialog;
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog;
@@ -483,8 +485,23 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     }
 
     private void onLine() {
-        nextLine(false);
-        syncJetStreamControl();
+        LiveLineSelection selection = mLive.getLineSelection();
+        if (selection == null) return;
+        Config config = LiveConfig.get().getConfig();
+        Live home = getHome();
+        boolean shown = LiveLineDialog.show(this, selection.labels(number -> getString(R.string.live_line, String.valueOf(number))), selection.getSelectedIndex(), index -> {
+            if (isCurrentLineSelection(selection, config, home)) mLive.selectLine(selection, index);
+        }, () -> App.post(() -> {
+            if (!isCurrentLineSelection(selection, config, home)) return;
+            showControl(mBinding.control.jetstream);
+            mBinding.control.jetstream.showGroup(JetStreamVodControlView.GROUP_PLAYLIST, "line");
+        }));
+        if (shown) hideControl(false);
+    }
+
+    private boolean isCurrentLineSelection(LiveLineSelection selection, Config config, Live home) {
+        return !isFinishing() && !isDestroyed() && mChannel != null && mLive.isCurrentLineSelection(selection)
+                && config == LiveConfig.get().getConfig() && home == getHome();
     }
 
     private void onScale() {
@@ -1038,12 +1055,14 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
     public void renderChannelSelection(Channel channel) {
         App.post(mR0, 100);
         mChannel = channel;
+        LiveLineDialog.dismiss(this);
         setArtwork();
         showInfo();
     }
 
     @Override
     public void renderLineSelection(Channel channel, boolean show) {
+        LiveLineDialog.dismiss(this);
         if (show) showInfo();
         else setInfo();
     }
@@ -1072,6 +1091,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mHides.clear();
         mChannel = null;
         mGroup = null;
+        LiveLineDialog.dismiss(this);
         syncJetStreamControl();
         if (restoreFocus) requestFocusLater(mBinding.video);
     }

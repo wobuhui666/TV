@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
@@ -19,6 +20,7 @@ import androidx.viewbinding.ViewBinding;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.ui.custom.CustomWallView;
 import com.fongmi.android.tv.utils.ResUtil;
+import com.fongmi.android.tv.ui.dialog.SourceActionUi;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.DynamicColorsOptions;
 
@@ -29,6 +31,13 @@ import org.greenrobot.eventbus.ThreadMode;
 public abstract class BaseActivity extends AppCompatActivity {
 
     protected abstract ViewBinding getBinding();
+
+    @Override
+    public Object getSystemService(String name) {
+        Object service = super.getSystemService(name);
+        return WINDOW_SERVICE.equals(name) && service instanceof WindowManager manager
+                ? SourceActionUi.windowManager(manager) : service;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

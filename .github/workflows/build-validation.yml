@@ -3,6 +3,14 @@ name: Build isolated TV validation APKs
 on:
   workflow_dispatch:
     inputs:
+      playback_regression_only:
+        description: Run focused playback regression without repeating the performance matrix
+        type: boolean
+        default: false
+      playback_performance:
+        description: Compare Android 11 high bitrate playback, renderers and danmaku load
+        type: boolean
+        default: false
       lint_baseline_ref:
         description: Compare lint errors against this existing commit; blank requires a clean full lint report
         type: string
@@ -25,7 +33,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  playback-performance:
+    if: inputs.playback_performance
+    uses: ./.github/workflows/exo-playback-performance.yml
+    with:
+      regression_only: ${{ inputs.playback_regression_only }}
   build:
+    if: ${{ !inputs.playback_performance }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -141,6 +155,14 @@ jobs:
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :app:testLeanbackArm64_v8aDebugUnitTest \
             --no-daemon --build-cache --max-workers=2
+
+      - name: Check pinned playback patches and query allocations
+        if: matrix.package == 'sourceprobe'
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
+          mkdir -p artifacts/playback-stutter
+          python3 tools/testing/playback-stutter/verify.py | tee artifacts/playback-stutter/host-checks.txt
 
       - name: Build application and instrumentation APKs
         run: |
@@ -289,6 +311,7 @@ jobs:
             app/build/reports/lint-results-leanbackArm64_v8aDebug.*
             app/schemas/
             artifacts/lint/
+            artifacts/playback-stutter/
             catvod/build/test-results/
             quickjs/build/test-results/
             wasm/build/test-results/

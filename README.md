@@ -133,7 +133,7 @@ ASSRT 服务的 API 请求限制为每分钟 20 次，字幕下载链接临时�
 
 ### 直播、来源扩展与登录
 
-直播支持 M3U、TXT、JSON 来源、频道分组、线路切换与 EPG 节目表；节目回看沿用来源的 catchup 协议。来源提供时移信息时，TV 和手机显示最近一段可回看的时间窗口、时间轴和“返回直播”；没有时移协议的直播使用原有控制。请求失败会保留现有播放和暂停状态，切节目或移除媒体会取消旧查询。详见 [直播格式](docs/LIVE.md) 与 [直播时移协议](docs/live-timeshift.md)。
+直播支持 M3U、TXT、JSON 来源、频道分组、线路切换与 EPG 节目表；多线路频道可点线路按钮打开完整列表选择。节目回看沿用来源的 catchup 协议。来源提供时移信息时，TV 和手机显示最近一段可回看的时间窗口、时间轴和“返回直播”；没有时移协议的直播使用原有控制。请求失败会保留现有播放和暂停状态，切节目或移除媒体会取消旧查询。详见 [直播格式](docs/LIVE.md) 与 [直播时移协议](docs/live-timeshift.md)。
 
 来源可通过 Java JAR、QuickJS、Python 扩展提供列表、搜索、详情、播放、代理和弹幕接口。新旧接口兼容入口共存，支持常见二进制请求体；Python 按需初始化，失败与销毁按来源隔离。来源主动请求登录时，TV／手机可显示文本／密码输入、选择列表、图片／二维码等交互，长表单支持遥控滚动和淡色滚动提示。离开页面或取消任务会关闭对应交互，后台任务不会擅自弹出登录界面。接口约定见 [SPIDER.md](docs/SPIDER.md)。
 
@@ -195,7 +195,7 @@ TV 正式发布同时提供两种包名，按是否要与 FongMi/TV 同时安装
 
 | 版本 | 文件名 | 包名 | 说明 |
 | --- | --- | --- | --- |
-| 标准版 | `leanback-arm64_v8a.apk`、`leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | 与 FongMi/TV 同包名，可覆盖升级本项目旧版。 |
+| 标准版 | `leanback-arm64_v8a.apk`、`leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | 与 FongMi/TV 同包名，但签名不同，无法覆盖安装；可覆盖升级本项目相同签名的旧版。 |
 | 共存版 | `leanback-arm64_v8a-coexist.apk`、`leanback-armeabi_v7a-coexist.apk` | `com.wobuhui666.android.tv` | 可与 FongMi/TV 或标准版同时安装，桌面名称不变。 |
 
 共存版须知：
