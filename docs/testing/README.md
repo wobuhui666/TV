@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 2026-11-15 | [代理配置解析](reports/2026-11-15-proxy-parsing/README.md) | 基线 3 项失败、修复后 4 项 JVM 回归通过；Android 初始化与在线实测未完成 |
 | 2026-11-15 | [Exo 声音与弹幕停顿](reports/2026-11-14-playback-stutter/README.md) | 最终1058项JUnit、36项Android及5组功能实播；三轮性能实验与撤回原因保留，MT5873实机未验证 |
+| 2026-11-15 | [Issue #119 界面修复](reports/2026-11-15-issue119-ui/README.md) | 直播完整线路列表、TV 包触摸浏览位置与源配置弹窗；两种尺寸的 Android 窗口、焦点和表单回归 |
 | 2026-11-01 | [社区片头片尾、播放与界面](reports/2026-11-01-community-skip/README.md) | 779 项单测、实际 Exo 区间跳转、99 源配置加载与设置截图；GHA 抽测源未返回内容，未验证本轮真实片源播放 |
 | 2026-11-14 | [连续集数与社区跳过](reports/2026-11-14-community-skip/README.md) | Groq / Workers AI 两端部署、29 项历史中间层测试、82 项独立 PR JVM 测试及真实季集匹配；未构建新 APK 或电视实测 |
 | 2026-11-01 | [海报墙、推荐筛选、字幕与表单](reports/2026-11-01-tv-polish/README.md) | 实际 Android 筛选、字幕标签、长表单滚动提示；示例内容，不代表 ARM 实机性能 |

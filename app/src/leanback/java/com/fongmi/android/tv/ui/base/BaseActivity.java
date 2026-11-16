@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.graphics.drawable.ColorDrawable;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -28,6 +29,7 @@ import com.fongmi.android.tv.ui.theme.JetStreamWallpaper;
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
 import com.fongmi.android.tv.ui.theme.RexTheme;
 import com.fongmi.android.tv.utils.Util;
+import com.fongmi.android.tv.ui.dialog.SourceActionUi;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -41,6 +43,13 @@ public abstract class BaseActivity extends AppCompatActivity {
     private boolean appliedLightTheme;
 
     protected abstract ViewBinding getBinding();
+
+    @Override
+    public Object getSystemService(@NonNull String name) {
+        Object service = super.getSystemService(name);
+        return WINDOW_SERVICE.equals(name) && service instanceof WindowManager manager
+                ? SourceActionUi.windowManager(manager) : service;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

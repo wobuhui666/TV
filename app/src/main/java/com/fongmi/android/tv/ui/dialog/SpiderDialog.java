@@ -58,17 +58,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public final class SpiderDialog implements LifecycleEventObserver {
 
     private static final int[] BUTTONS = {DialogInterface.BUTTON_POSITIVE, DialogInterface.BUTTON_NEGATIVE, DialogInterface.BUTTON_NEUTRAL};
+    private static final Map<FragmentActivity, SpiderDialog> ACTIVE = new WeakHashMap<>();
 
     private final CompletableFuture<String> result = new CompletableFuture<>();
     private final Map<String, Input> inputs = new LinkedHashMap<>();
     private final Map<Integer, ButtonOptions> buttons = new LinkedHashMap<>();
     private final Function<String, CompletableFuture<String>> onAction;
+    private final Supplier<Activity> activityOwner;
+    private final WeakReference<Activity> requestedActivity;
     private CompletableFuture<String> action;
     private FragmentActivity activity;
     private AlertDialog dialog;
@@ -84,27 +90,40 @@ public final class SpiderDialog implements LifecycleEventObserver {
     }
 
     public static CompletableFuture<String> show(String options, Function<String, CompletableFuture<String>> onAction) {
-        SpiderDialog request = new SpiderDialog(onAction);
+        SpiderDialog request = new SpiderDialog(Init.activityOwner(), onAction);
         CompletableFuture<String> completion = request.result.whenCompleteAsync((value, error) -> request.close(), App::post);
         completion.whenComplete((value, error) -> {
             if (completion.isCancelled()) request.cancel();
         });
-        App.post(() -> request.showDialog(options));
+        App.post(() -> {
+            Runnable restore = Init.enterActivity(request.activityOwner);
+            try { request.showDialog(options); }
+            finally { restore.run(); }
+        });
         return completion;
     }
 
-    private SpiderDialog(Function<String, CompletableFuture<String>> onAction) {
+    private SpiderDialog(Supplier<Activity> activityOwner, Function<String, CompletableFuture<String>> onAction) {
+        this.activityOwner = activityOwner;
+        this.requestedActivity = new WeakReference<>(activityOwner.get());
         this.onAction = onAction;
     }
 
     private void showDialog(String options) {
         if (result.isDone()) return;
         try {
-            Activity current = Init.activity();
+            Activity current = requestedActivity.get();
+            if (current != activityOwner.get()) throw new IllegalStateException("Dialog page has changed");
             if (!(current instanceof FragmentActivity owner)) throw new IllegalStateException("No Activity available for dialog");
             if (!owner.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)
                     || owner.getSupportFragmentManager().isStateSaved()) throw new IllegalStateException("Dialog Activity is not ready");
             activity = owner;
+            SpiderDialog existing = ACTIVE.get(owner);
+            if (existing != null && !existing.result.isDone()) {
+                result.complete(null);
+                return;
+            }
+            ACTIVE.put(owner, this);
             if (options == null || options.length() > 2 * 1024 * 1024) throw new IllegalArgumentException("Dialog options are too large");
             JSONObject json = new JSONObject(options);
             MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(activity).setTitle(json.optString("title"));
@@ -605,7 +624,7 @@ public final class SpiderDialog implements LifecycleEventObserver {
 
     @Override
     public void onStateChanged(LifecycleOwner source, Lifecycle.Event event) {
-        if (event == Lifecycle.Event.ON_DESTROY) result.complete(null);
+        if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_DESTROY) result.complete(null);
     }
 
     private void cancel() {
@@ -617,7 +636,10 @@ public final class SpiderDialog implements LifecycleEventObserver {
         if (action != null) action.cancel(true);
         closePicker();
         if (images != null) images.clear(image);
-        if (activity != null) activity.getLifecycle().removeObserver(this);
+        if (activity != null) {
+            activity.getLifecycle().removeObserver(this);
+            ACTIVE.remove(activity, this);
+        }
         if (dialog != null) dialog.dismiss();
         inputs.clear();
         buttons.clear();

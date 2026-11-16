@@ -35,6 +35,7 @@
 | 代理配置解析 | [运行时缓存排除与 JVM 对照](testing/reports/2026-11-15-proxy-parsing/README.md) |
 | 近期功能与界面 | [社区跳过与播放回归](testing/reports/2026-11-01-community-skip/README.md) · [海报墙、字幕和表单](testing/reports/2026-11-01-tv-polish/README.md) |
 | 连续集数的社区跳过匹配 | [名称处理中间层部署、专项测试与网络检查](testing/reports/2026-11-14-community-skip/README.md) |
+| Issue #119 第 4、5、7 项 | [直播选线、首页触摸滚动与配置弹窗](testing/reports/2026-11-15-issue119-ui/README.md) |
 | 流畅度和稳定性 | [真实配置、生命周期与对比结果](testing/reports/2026-10-31-responsiveness/README.md) |
 | TMDB 透明 Logo 轮廓 | [实现、预览和安装验证](ui-redesign/tmdb-logo/README.md) |
 | Girigiri 加载优化 | [优化前后同设备测量](testing/reports/2026-10-06-girigiri-loading/README.md) |
@@ -56,4 +57,4 @@
 
 ## 维护说明
 
-`docs/` 不再整体忽略，新增文档可正常出现在 `git status` 中，并通过 `git add -- docs/明确的文件路径` 纳入版本控制。新增或移动文档时同步更新本索引及相关链接；提交前逐项检查内容，只保留公开说明、验证摘要和必要图片，设备配置、凭据及原始私有日志留在仓库外。
+`docs/` 不再整体忽略，新增文档可正常出现在 `git status` 中，并通过 `git add -- docs/明确的文件路径` 纳入版本控制。新增或移动文档时同步更新本索引及相关链接；提交前逐项检查内容，只保留公开说明、验证摘要和必要图片，设备配置、凭据、APK 及原始私有日志留在仓库外。

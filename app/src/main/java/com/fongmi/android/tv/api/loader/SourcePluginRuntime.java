@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.api.loader;
 
 import com.github.catvod.utils.CallTimeout;
+import com.github.catvod.Init;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -28,12 +29,15 @@ final class SourcePluginRuntime extends ThreadGroup {
         if (parentOf(Thread.currentThread().getThreadGroup())) return action.get();
         AtomicBoolean canceled = new AtomicBoolean();
         CallTimeout deadline = CallTimeout.current();
+        var activityOwner = Init.activityOwner();
         FutureTask<T> task = new FutureTask<>(() -> {
             cancellation.set(canceled);
             Runnable restore = deadline == null ? () -> {} : deadline.enter();
+            Runnable restoreActivity = Init.enterActivity(activityOwner);
             try {
                 return action.get();
             } finally {
+                restoreActivity.run();
                 restore.run();
                 cancellation.remove();
             }

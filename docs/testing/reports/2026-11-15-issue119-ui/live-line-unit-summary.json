@@ -1,0 +1,25 @@
+{
+  "headSha": "d0930b0e476d1d01bad1fe621aeba3c8d60fbd59",
+  "passed": true,
+  "gradleStatus": 0,
+  "tests": 13,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": [
+    {
+      "class": "com.fongmi.android.tv.playback.live.LiveLineSelectionTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.fongmi.android.tv.playback.live.LivePlaybackLineSelectionTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ]
+}
