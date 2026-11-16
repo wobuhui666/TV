@@ -422,6 +422,16 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         long targetMs = positionMs == C.TIME_UNSET ? 0 : Math.max(0, positionMs);
         if (durationMs > 0) targetMs = Math.min(targetMs, durationMs);
         this.positionMs = targetMs;
+        if (playbackState == Player.STATE_ENDED && mediaItem != null && mediaItem.localConfiguration != null) {
+            // At EOF libmpv has closed the file. Reopen it to make replay seekable.
+            beginVideoOutputPlayback();
+            loading = true;
+            playbackState = Player.STATE_BUFFERING;
+            renderedFirstFrame = false;
+            newlyRenderedFirstFrame = false;
+            loadUrl(mediaItem.localConfiguration.uri.toString(), targetMs);
+            return Futures.immediateVoidFuture();
+        }
         if (!fileLoaded || outputReloadPending) {
             pendingResumeSeekMs = C.TIME_UNSET;
             if (!TextUtils.isEmpty(pendingUrl)) pendingStartPositionMs = targetMs;
@@ -430,7 +440,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         }
         if (pendingResumeSeekMs != C.TIME_UNSET) pendingResumeSeekMs = targetMs;
         command("seek", seconds(targetMs), "absolute+exact");
-        if (playbackState == Player.STATE_ENDED) playbackState = Player.STATE_READY;
         return Futures.immediateVoidFuture();
     }
 

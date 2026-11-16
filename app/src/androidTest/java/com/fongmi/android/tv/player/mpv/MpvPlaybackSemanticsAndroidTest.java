@@ -187,6 +187,33 @@ public final class MpvPlaybackSemanticsAndroidTest {
         passed = true;
     }
 
+    @Test(timeout = 120000) public void replayAfterEndReloadsSameMediaAtBeginning() throws Exception {
+        long duration = value(manager::getDuration);
+        stage = "seek-near-real-end";
+        main(() -> { manager.pause(); manager.seekTo(duration - 600); });
+        await(() -> ready() && near(duration - 600, 350) && paused(), 15000);
+        Player player = value(manager::getPlayer);
+        Uri media = value(() -> manager.getPlayer().getCurrentMediaItem().localConfiguration.uri);
+        main(manager::play);
+        stage = "real-eof";
+        await(() -> value(() -> manager.getPlayer().getPlaybackState() == Player.STATE_ENDED), 15000);
+        report.put("reachedActualEnd", true).put("durationMs", duration).put("endState", snapshot());
+
+        int loads = starts.get();
+        stage = "replay-after-eof";
+        main(() -> manager.replay(C.TIME_UNSET));
+        await(() -> starts.get() > loads && ready() && !paused()
+                && nativePosition() < 1800 && value(manager::getPosition) < 1800, 15000);
+        assertEquals("EOF replay opens this same file once", loads + 1, starts.get());
+        assertSame("EOF replay keeps the MPV native generation", player, value(manager::getPlayer));
+        assertEquals("EOF replay keeps the same media", media,
+                value(() -> manager.getPlayer().getCurrentMediaItem().localConfiguration.uri));
+        assertEquals("EOF replay keeps the selected speed", 1.25, number("speed"), .005);
+        captureVideo(stage);
+        report.put("afterReplay", snapshot()).put("newNativeStartEvents", starts.get() - loads);
+        passed = true;
+    }
+
     @Test(timeout = 240000) public void exoToMpvSwitchThenRepeatedRefreshPreservesProgress() throws Exception {
         stage = "before-exo-switch";
         main(() -> { manager.seekTo(18000); manager.pause(); });
