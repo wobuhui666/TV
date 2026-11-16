@@ -19,6 +19,8 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.BySelector;
+import androidx.test.uiautomator.Direction;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import com.fongmi.android.tv.App;
@@ -114,8 +116,10 @@ public final class SpiderDialogTest {
         assertEquals("Required field stops callback", 0, callbacks.get());
         field("Code").setText("1234");
         text("Verify").click();
+        scrollToDialogControl(By.text("Code accepted"), Direction.UP, "Code accepted");
         text("Code accepted");
         assertEquals(1, callbacks.get());
+        scrollToDialogControl(By.desc("Code"), Direction.DOWN, "Code input");
         assertFalse(field("Code").isEnabled());
         capture("java-login-validated");
         text("Done").click();
@@ -414,6 +418,19 @@ public final class SpiderDialogTest {
         UiObject2 found = device.findObject(By.desc(label));
         assertNotNull("Missing dialog field " + label, found);
         return found;
+    }
+
+    private void scrollToDialogControl(BySelector selector, Direction direction, String label) {
+        long until = SystemClock.uptimeMillis() + 8000;
+        do {
+            instrumentation.waitForIdleSync();
+            refresh();
+            if (device.hasObject(selector)) return;
+            UiObject2 form = device.findObject(By.scrollable(true));
+            if (form != null) form.scroll(direction, 0.8f);
+            SystemClock.sleep(100);
+        } while (SystemClock.uptimeMillis() < until);
+        fail("Dialog scrolling did not reveal " + label);
     }
 
     private void focused(String label) {
