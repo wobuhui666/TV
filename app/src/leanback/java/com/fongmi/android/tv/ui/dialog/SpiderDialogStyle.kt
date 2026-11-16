@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.LinearLayoutCompat
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.ui.custom.JetStreamDialogDecor
 import com.fongmi.android.tv.ui.custom.JetStreamDialogButton
@@ -77,6 +78,20 @@ object SpiderDialogStyle {
         val panelPadding = if (panel === bar) 0 else panel.paddingTop + panel.paddingBottom
         // The custom form can consume spare space only after the original native actions fit.
         panel.minimumHeight = maxOf(panel.minimumHeight, barHeight + panelPadding)
+        val custom = (panel.parent as? ViewGroup)?.findViewById<View>(androidx.appcompat.R.id.customPanel)
+            ?.takeIf { it.visibility != View.GONE } ?: return
+        when (val params = custom.layoutParams) {
+            is LinearLayoutCompat.LayoutParams -> {
+                params.height = 0
+                params.weight = 1f
+                custom.layoutParams = params
+            }
+            is LinearLayout.LayoutParams -> {
+                params.height = 0
+                params.weight = 1f
+                custom.layoutParams = params
+            }
+        }
     }
 
     private fun addScrollHints(view: View) {

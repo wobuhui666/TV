@@ -469,8 +469,22 @@ public final class SpiderDialogTest {
                     View button = root.findViewById(id);
                     if (button != null) buttons.put(nativeGeometry(button));
                 }
+                JSONArray ancestors = new JSONArray();
+                for (android.view.ViewParent parent = panel.getParent(); parent instanceof View ancestor; parent = parent.getParent()) {
+                    JSONObject details = nativeGeometry(ancestor);
+                    if (ancestor instanceof ViewGroup group) {
+                        JSONArray children = new JSONArray();
+                        for (int index = 0; index < group.getChildCount(); index++) children.put(nativeGeometry(group.getChildAt(index)));
+                        details.put("children", children);
+                    }
+                    ancestors.put(details);
+                }
+                JSONObject ids = new JSONObject().put("topPanel", androidx.appcompat.R.id.topPanel)
+                        .put("contentPanel", androidx.appcompat.R.id.contentPanel).put("customPanel", androidx.appcompat.R.id.customPanel)
+                        .put("buttonPanel", androidx.appcompat.R.id.buttonPanel);
                 JSONObject geometry = new JSONObject().put("schema", "tv.source-dialog-native-geometry.v1")
-                        .put("panel", nativeGeometry(panel)).put("bar", nativeGeometry(bar)).put("buttons", buttons);
+                        .put("panel", nativeGeometry(panel)).put("bar", nativeGeometry(bar)).put("buttons", buttons)
+                        .put("ancestors", ancestors).put("appcompatIds", ids);
                 File directory = new File(activity.getExternalFilesDir(null), "spider-dialog-verification");
                 assertTrue(directory.isDirectory() || directory.mkdirs());
                 try (FileOutputStream output = new FileOutputStream(new File(directory, name + "-geometry.json"))) {
@@ -485,13 +499,22 @@ public final class SpiderDialogTest {
     private JSONObject nativeGeometry(View view) throws Exception {
         Rect bounds = new Rect();
         boolean visibleBounds = view.getGlobalVisibleRect(bounds);
-        return new JSONObject().put("id", view.getId()).put("class", view.getClass().getName())
+        JSONObject geometry = new JSONObject().put("id", view.getId()).put("class", view.getClass().getName())
                 .put("measuredWidth", view.getMeasuredWidth()).put("measuredHeight", view.getMeasuredHeight())
                 .put("width", view.getWidth()).put("height", view.getHeight()).put("minimumHeight", view.getMinimumHeight())
                 .put("visibility", view.getVisibility()).put("shown", view.isShown()).put("clickable", view.isClickable())
                 .put("visibleBounds", visibleBounds)
                 .put("bounds", new JSONArray().put(bounds.left).put(bounds.top).put(bounds.right).put(bounds.bottom))
                 .put("padding", new JSONArray().put(view.getPaddingLeft()).put(view.getPaddingTop()).put(view.getPaddingRight()).put(view.getPaddingBottom()));
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        if (params != null) {
+            geometry.put("layoutParamsClass", params.getClass().getName()).put("layoutWidth", params.width).put("layoutHeight", params.height);
+            if (params instanceof ViewGroup.MarginLayoutParams margins) geometry.put("margins", new JSONArray()
+                    .put(margins.leftMargin).put(margins.topMargin).put(margins.rightMargin).put(margins.bottomMargin));
+            if (params instanceof androidx.appcompat.widget.LinearLayoutCompat.LayoutParams compat) geometry.put("weight", compat.weight);
+            else if (params instanceof android.widget.LinearLayout.LayoutParams linear) geometry.put("weight", linear.weight);
+        }
+        return geometry;
     }
 
     private static final class Fixture extends NanoHTTPD {
