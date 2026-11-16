@@ -144,7 +144,7 @@ jobs:
               if role == 'test' and not re.search(r'android:targetPackage[^\n]*="' + re.escape(app_id) + r'"', manifest):
                   raise SystemExit('Unexpected instrumentation target package')
               signed = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(source)], text=True)
-              certificate = re.search(r'Signer #1 certificate SHA-256 digest: (\S+)', signed)
+              certificate = re.search(r'(?:Signer #[0-9]+|V[0-9]+ Signer): certificate SHA-256 digest: (\S+)', signed)
               if certificate is None or certificate.group(1).lower() != expected_cert:
                   raise SystemExit('Expected Gradle debug signing certificate: ' + signed)
               certificates.append(certificate.group(1))
@@ -173,6 +173,17 @@ jobs:
           path: mpv-regression-apks/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Keep built APKs for verification diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv119-diagnostic-apks-${{ github.run_id }}
+          path: |
+            app/build/outputs/apk/leanbackArm64_v8a/debug/*.apk
+            app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug/*.apk
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Run focused MPV and VOD unit tests
         if: inputs.full_validation || github.event_name == 'push'
