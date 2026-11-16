@@ -445,6 +445,7 @@ jobs:
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/core-instrumentation.txt" || core_status=$?
             collect_compact
+            adb logcat -b all -d -v threadtime > "$out/core-logcat.txt" 2>&1 || true
             library_status=0
             adb shell am instrument -w -r -e native_ui_evidence true \
               -e class com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest \

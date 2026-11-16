@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.ColorFilter
+import android.graphics.Rect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
@@ -13,11 +14,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.Window
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.LinearLayoutCompat
 import com.fongmi.android.tv.R
 import com.fongmi.android.tv.ui.custom.JetStreamDialogDecor
 import com.fongmi.android.tv.ui.custom.JetStreamDialogButton
@@ -50,6 +51,49 @@ object SpiderDialogStyle {
         JetStreamDialogDecor.tintButtons(dialog)
         reserveNativeButtons(dialog, dialogWidth)
         window.setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+        constrainVisibleViewport(window, decor, dialogWidth)
+    }
+
+    private fun constrainVisibleViewport(window: Window, decor: View, width: Int) {
+        val listener = object : ViewTreeObserver.OnGlobalLayoutListener, View.OnAttachStateChangeListener {
+            private val previousFrame = Rect()
+            private var constrained = false
+
+            override fun onGlobalLayout() {
+                val frame = Rect()
+                decor.getWindowVisibleDisplayFrame(frame)
+                if (previousFrame.isEmpty) previousFrame.set(frame)
+                else if (previousFrame != frame) {
+                    previousFrame.set(frame)
+                    if (constrained) {
+                        constrained = false
+                        trace("frame-changed", frame)
+                        window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        return
+                    }
+                }
+                // Floating-window layout may clip a larger measured Decor without remeasuring its children.
+                if (!constrained && decor.height > 0 && decor.measuredHeight > decor.height) {
+                    constrained = true
+                    trace("clamp", frame)
+                    window.setLayout(width, decor.height)
+                }
+            }
+
+            private fun trace(phase: String, frame: Rect) {
+                if (com.fongmi.android.tv.BuildConfig.DEBUG || com.fongmi.android.tv.BuildConfig.BUILD_TYPE == "preview") {
+                    android.util.Log.d("TV-dialog-viewport", "phase=$phase; frame=$frame; measured=${decor.measuredHeight}; actual=${decor.height}; requested=${window.attributes.height}")
+                }
+            }
+
+            override fun onViewAttachedToWindow(view: View) = Unit
+            override fun onViewDetachedFromWindow(view: View) {
+                view.viewTreeObserver.takeIf { it.isAlive }?.removeOnGlobalLayoutListener(this)
+                view.removeOnAttachStateChangeListener(this)
+            }
+        }
+        decor.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        decor.addOnAttachStateChangeListener(listener)
     }
 
     private fun reserveNativeButtons(dialog: AlertDialog, dialogWidth: Int) {
@@ -78,20 +122,6 @@ object SpiderDialogStyle {
         val panelPadding = if (panel === bar) 0 else panel.paddingTop + panel.paddingBottom
         // The custom form can consume spare space only after the original native actions fit.
         panel.minimumHeight = maxOf(panel.minimumHeight, barHeight + panelPadding)
-        val custom = (panel.parent as? ViewGroup)?.findViewById<View>(androidx.appcompat.R.id.customPanel)
-            ?.takeIf { it.visibility != View.GONE } ?: return
-        when (val params = custom.layoutParams) {
-            is LinearLayoutCompat.LayoutParams -> {
-                params.height = 0
-                params.weight = 1f
-                custom.layoutParams = params
-            }
-            is LinearLayout.LayoutParams -> {
-                params.height = 0
-                params.weight = 1f
-                custom.layoutParams = params
-            }
-        }
     }
 
     private fun addScrollHints(view: View) {
