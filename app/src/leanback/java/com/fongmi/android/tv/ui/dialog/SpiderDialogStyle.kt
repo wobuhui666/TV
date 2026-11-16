@@ -52,7 +52,7 @@ object SpiderDialogStyle {
     }
 
     private fun reserveNativeButtons(dialog: AlertDialog, dialogWidth: Int) {
-        val buttons = intArrayOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+        val buttons = listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
             .mapNotNull { dialog.getButton(it)?.takeIf { button -> button.visibility == View.VISIBLE } }
         val bar = buttons.firstOrNull()?.parent as? ViewGroup ?: return
         val panel = (bar.parent as? ScrollView) ?: bar
