@@ -212,7 +212,9 @@ jobs:
           ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
         run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Prepare QuickJS and AVIF for the x86_64 preview emulator
-        run: python3 .github/scripts/prepare-quickjs-preview.py
+        run: |
+          python3 -m unittest discover -s tools/tests -p 'test_preview_artifacts.py' -v
+          python3 .github/scripts/prepare-quickjs-preview.py
       - name: Upload preview APK
         if: always()
         uses: actions/upload-artifact@v4

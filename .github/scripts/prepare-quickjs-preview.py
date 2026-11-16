@@ -2,12 +2,15 @@
 """Add pinned x86_64 JNI libraries to the disposable emulator preview APK."""
 
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -28,10 +31,55 @@ CONSCRYPT_VERSION = "2.9.0"
 CONSCRYPT_WRAPPER_SHA256 = "53ee06fc093b6f085c7f81da77f622823e65489cf1bdc64a87230a23603d7773"
 CONSCRYPT_LIBRARY_SHA256 = "1018d9c3878e0bba16aa038b2875506efb31459bb2b6b0b4c7f72418d9408fa8"
 CONSCRYPT_LIBRARY = "libconscrypt_jni.so"
+MAX_AAR_BYTES = 16 * 1024 * 1024
+DOWNLOAD_ATTEMPTS = 4
+MAX_RETRY_DELAY = 15
 
 
 def run(*args):
     return subprocess.check_output([str(arg) for arg in args], text=True)
+
+
+def load_pinned_aar(group, artifact, version, checksum, label, *, gradle_home=None):
+    """Reuse only the exact verified Gradle artifact, or fetch the same pinned bytes."""
+    gradle_cache_home = Path(gradle_home or os.environ.get("GRADLE_USER_HOME") or Path.home() / ".gradle")
+    filename = f"{artifact}-{version}.aar"
+    cache = gradle_cache_home / "caches/modules-2/files-2.1" / group / artifact / version
+    for candidate in sorted(cache.glob(f"*/{filename}")):
+        try:
+            with candidate.open("rb") as source:
+                content = source.read(MAX_AAR_BYTES + 1)
+        except OSError:
+            continue
+        if len(content) <= MAX_AAR_BYTES and hashlib.sha256(content).hexdigest() == checksum:
+            return content
+
+    url = f"https://repo.maven.apache.org/maven2/{group.replace('.', '/')}/{artifact}/{version}/{filename}"
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                content = response.read(MAX_AAR_BYTES + 1)
+        except urllib.error.HTTPError as error:
+            if error.code not in (429, 500, 502, 503, 504) or attempt == DOWNLOAD_ATTEMPTS - 1:
+                raise
+            delay = min(MAX_RETRY_DELAY, 2 ** attempt)
+            try:
+                delay = min(MAX_RETRY_DELAY, max(0, int(error.headers.get("Retry-After", ""))))
+            except (AttributeError, TypeError, ValueError):
+                pass
+            time.sleep(delay)
+            continue
+        except (urllib.error.URLError, OSError, http.client.HTTPException):
+            if attempt == DOWNLOAD_ATTEMPTS - 1:
+                raise
+            time.sleep(min(MAX_RETRY_DELAY, 2 ** attempt))
+            continue
+        # Integrity failures are final; retries must not hide unexpected repository bytes.
+        if len(content) > MAX_AAR_BYTES:
+            raise SystemExit(f"{label} wrapper exceeds the 16 MiB limit")
+        if hashlib.sha256(content).hexdigest() != checksum:
+            raise SystemExit(f"{label} wrapper checksum mismatch")
+        return content
 
 
 def main():
@@ -64,12 +112,7 @@ def main():
             "-alias", "androiddebugkey", "-keyalg", "RSA", "-keysize", "2048",
             "-validity", "2", "-dname", "CN=TV CI Preview,O=Android,C=US")
         wrapper = directory / "quickjs.aar"
-        url = ("https://repo.maven.apache.org/maven2/wang/harlon/quickjs/wrapper-android/"
-               f"{WRAPPER_VERSION}/wrapper-android-{WRAPPER_VERSION}.aar")
-        with urllib.request.urlopen(url, timeout=60) as response:
-            content = response.read(16 * 1024 * 1024 + 1)
-        if hashlib.sha256(content).hexdigest() != WRAPPER_SHA256:
-            raise SystemExit("QuickJS wrapper checksum mismatch")
+        content = load_pinned_aar("wang.harlon.quickjs", "wrapper-android", WRAPPER_VERSION, WRAPPER_SHA256, "QuickJS")
         wrapper.write_bytes(content)
         with zipfile.ZipFile(wrapper) as bundle:
             library = bundle.read("jni/x86_64/" + LIBRARY)
@@ -78,12 +121,7 @@ def main():
 
         # Glide probes AVIF before standard image decoders, even for TMDB JPEG artwork.
         # The ARM64 build strips x86_64 JNI, so the emulator needs this matching decoder too.
-        avif_url = ("https://repo.maven.apache.org/maven2/org/aomedia/avif/android/avif/"
-                    f"{AVIF_VERSION}/avif-{AVIF_VERSION}.aar")
-        with urllib.request.urlopen(avif_url, timeout=60) as response:
-            avif_content = response.read(16 * 1024 * 1024 + 1)
-        if hashlib.sha256(avif_content).hexdigest() != AVIF_WRAPPER_SHA256:
-            raise SystemExit("AVIF wrapper checksum mismatch")
+        avif_content = load_pinned_aar("org.aomedia.avif.android", "avif", AVIF_VERSION, AVIF_WRAPPER_SHA256, "AVIF")
         avif_wrapper = directory / "avif.aar"
         avif_wrapper.write_bytes(avif_content)
         with zipfile.ZipFile(avif_wrapper) as bundle:
@@ -91,24 +129,14 @@ def main():
         if hashlib.sha256(avif_library).hexdigest() != AVIF_LIBRARY_SHA256:
             raise SystemExit("AVIF x86_64 library checksum mismatch")
 
-        archive_url = ("https://repo.maven.apache.org/maven2/me/zhanghai/android/libarchive/library/"
-                       f"{ARCHIVE_VERSION}/library-{ARCHIVE_VERSION}.aar")
-        with urllib.request.urlopen(archive_url, timeout=60) as response:
-            archive_content = response.read(16 * 1024 * 1024 + 1)
-        if hashlib.sha256(archive_content).hexdigest() != ARCHIVE_WRAPPER_SHA256:
-            raise SystemExit("libarchive wrapper checksum mismatch")
+        archive_content = load_pinned_aar("me.zhanghai.android.libarchive", "library", ARCHIVE_VERSION, ARCHIVE_WRAPPER_SHA256, "libarchive")
         archive_wrapper = directory / "libarchive.aar"
         archive_wrapper.write_bytes(archive_content)
         with zipfile.ZipFile(archive_wrapper) as bundle:
             archive_library = bundle.read("jni/x86_64/" + ARCHIVE_LIBRARY)
 
         # ECH uses the app's unbundled Conscrypt, whose JNI is also removed by ARM64 filtering.
-        conscrypt_url = ("https://repo.maven.apache.org/maven2/org/conscrypt/conscrypt-android/"
-                        f"{CONSCRYPT_VERSION}/conscrypt-android-{CONSCRYPT_VERSION}.aar")
-        with urllib.request.urlopen(conscrypt_url, timeout=60) as response:
-            conscrypt_content = response.read(16 * 1024 * 1024 + 1)
-        if hashlib.sha256(conscrypt_content).hexdigest() != CONSCRYPT_WRAPPER_SHA256:
-            raise SystemExit("Conscrypt wrapper checksum mismatch")
+        conscrypt_content = load_pinned_aar("org.conscrypt", "conscrypt-android", CONSCRYPT_VERSION, CONSCRYPT_WRAPPER_SHA256, "Conscrypt")
         conscrypt_wrapper = directory / "conscrypt.aar"
         conscrypt_wrapper.write_bytes(conscrypt_content)
         with zipfile.ZipFile(conscrypt_wrapper) as bundle:
