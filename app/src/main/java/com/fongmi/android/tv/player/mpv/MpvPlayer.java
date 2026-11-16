@@ -116,6 +116,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private long bufferedPositionMs;
     private long pendingStartPositionMs;
     private long pendingSeekAfterLoadMs;
+    private long pendingResumeSeekMs = C.TIME_UNSET;
+    private @Nullable String suspendedVideoTrack;
     private long audioOffsetMs;
     private long textOffsetMs;
     private float volume;
@@ -420,12 +422,24 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         long targetMs = positionMs == C.TIME_UNSET ? 0 : Math.max(0, positionMs);
         if (durationMs > 0) targetMs = Math.min(targetMs, durationMs);
         this.positionMs = targetMs;
-        if (outputReloadPending) {
+        if (playbackState == Player.STATE_ENDED && mediaItem != null && mediaItem.localConfiguration != null) {
+            // At EOF libmpv has closed the file. Reopen it to make replay seekable.
+            beginVideoOutputPlayback();
+            loading = true;
+            playbackState = Player.STATE_BUFFERING;
+            renderedFirstFrame = false;
+            newlyRenderedFirstFrame = false;
+            loadUrl(mediaItem.localConfiguration.uri.toString(), targetMs);
+            return Futures.immediateVoidFuture();
+        }
+        if (!fileLoaded || outputReloadPending) {
+            pendingResumeSeekMs = C.TIME_UNSET;
+            if (!TextUtils.isEmpty(pendingUrl)) pendingStartPositionMs = targetMs;
             pendingSeekAfterLoadMs = targetMs;
             return Futures.immediateVoidFuture();
         }
+        if (pendingResumeSeekMs != C.TIME_UNSET) pendingResumeSeekMs = targetMs;
         command("seek", seconds(targetMs), "absolute+exact");
-        if (playbackState == Player.STATE_ENDED) playbackState = Player.STATE_READY;
         return Futures.immediateVoidFuture();
     }
 
@@ -438,7 +452,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     public void eventProperty(String property, long value) {
         runForPlayback(() -> {
             if (outputReloadPending) return;
-            if ("time-pos".equals(property)) positionMs = Math.max(0, value * 1000L);
+            if ("time-pos".equals(property)) acceptPosition();
             invalidateState();
         });
     }
@@ -448,11 +462,14 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         runForPlayback(() -> {
             if (outputReloadPending) return;
             switch (property) {
-                case "pause" -> playWhenReady = !value;
-                case "paused-for-cache" -> {
-                    loading = value;
-                    if (value) playbackState = Player.STATE_BUFFERING;
-                    else if (mediaItem != null && playbackState == Player.STATE_BUFFERING) playbackState = Player.STATE_READY;
+                case "pause" -> {
+                    if (canReadPosition()) {
+                        Boolean paused = MPVLib.INSTANCE.getPropertyBoolean("pause");
+                        if (paused != null) playWhenReady = !paused;
+                    }
+                }
+                case "paused-for-cache", "seeking" -> {
+                    if (fileLoaded) updateBufferingState();
                 }
             }
             invalidateState();
@@ -463,7 +480,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     public void eventProperty(String property, String value) {
         runForPlayback(() -> {
             if (outputReloadPending) return;
-            if ("speed".equals(property)) playbackParameters = new PlaybackParameters(parseFloat(value, playbackParameters.speed));
+            if ("speed".equals(property)) readPlaybackSpeed();
             invalidateState();
         });
     }
@@ -473,9 +490,9 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         runForPlayback(() -> {
             if (outputReloadPending) return;
             switch (property) {
-                case "time-pos/full" -> positionMs = secondsToMs(value, positionMs);
+                case "time-pos/full" -> acceptPosition();
                 case "duration/full", "duration" -> durationMs = secondsToMs(value, C.TIME_UNSET);
-                case "speed" -> playbackParameters = new PlaybackParameters((float) value);
+                case "speed" -> readPlaybackSpeed();
                 case "audio-delay" -> audioOffsetMs = secondsToMs(value, 0);
                 case "sub-delay" -> textOffsetMs = secondsToMs(value, 0);
             }
@@ -656,6 +673,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 .add(Player.COMMAND_STOP)
                 .add(Player.COMMAND_RELEASE)
                 .add(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+                .add(Player.COMMAND_SEEK_TO_DEFAULT_POSITION)
                 .add(Player.COMMAND_SEEK_BACK)
                 .add(Player.COMMAND_SEEK_FORWARD)
                 .add(Player.COMMAND_SET_SPEED_AND_PITCH)
@@ -690,6 +708,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     }
 
     private void startInternal(PlaySpec spec, long startPositionMs, int decode) {
+        resetSuspendedVideoTrack();
         beginVideoOutputPlayback();
         this.spec = spec;
         this.decode = decode;
@@ -725,6 +744,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private void startMediaItem(MediaItem item, long startPositionMs) {
         if (item.localConfiguration == null) return;
+        resetSuspendedVideoTrack();
         beginVideoOutputPlayback();
         this.spec = null;
         this.mediaItem = item;
@@ -797,8 +817,11 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         restoreSeekPreroll();
         applySeekPreroll(false);
         applySubtitleStyle();
+        restoreSuspendedVideoTrack();
         pendingSeekAfterLoadMs = startPositionMs > 0 && MpvLoadFile.deferInitialSeek(url)
                 ? startPositionMs : C.TIME_UNSET;
+        pendingResumeSeekMs = C.TIME_UNSET;
+        awaitingOutputStart = true;
         command(MpvLoadFile.command(url, startPositionMs));
         command("set", "pause", playWhenReady ? "no" : "yes");
     }
@@ -806,6 +829,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void handleEvent(int eventId, @Nullable MPVNode data) {
         // Queued events may land after release, racing the async native destroy thread.
         if (closed) return;
+        if (awaitingOutputStart && eventId != MpvEvent.MPV_EVENT_START_FILE) return;
         switch (eventId) {
             case MpvEvent.MPV_EVENT_START_FILE -> {
                 awaitingOutputStart = false;
@@ -817,7 +841,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             }
             case MpvEvent.MPV_EVENT_FILE_LOADED -> {
                 if (recoverVideoOutputIfNeeded()) return;
-                restoreOutputReloadState();
+                restorePlaybackControls();
                 fileLoaded = true;
                 loading = false;
                 playbackState = Player.STATE_READY;
@@ -830,6 +854,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 if (applyDolbyPolicy()) return;
                 addInitialSubtitles();
                 applyAudioEffects();
+                updateBufferingState();
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_AUDIO_RECONFIG -> {
@@ -846,13 +871,13 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
+                if (!fileLoaded) return;
                 if (recoverVideoOutputIfNeeded()) return;
-                restoreOutputReloadState();
-                fileLoaded = true;
-                loading = false;
-                if (mediaItem != null) playbackState = Player.STATE_READY;
+                if (outputReloadPending) restorePlaybackControls();
+                if (!finishResumeSeek()) return;
                 seekAfterLoadIfNeeded();
                 readRuntimeState();
+                updateBufferingState();
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_END_FILE -> {
@@ -925,12 +950,46 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     }
 
     private void seekAfterLoadIfNeeded() {
-        if (pendingSeekAfterLoadMs == C.TIME_UNSET) return;
+        if (!fileLoaded || pendingSeekAfterLoadMs == C.TIME_UNSET) return;
         long seekMs = Math.max(0, pendingSeekAfterLoadMs);
         pendingSeekAfterLoadMs = C.TIME_UNSET;
+        pendingResumeSeekMs = seekMs;
         positionMs = seekMs;
+        loading = true;
+        playbackState = Player.STATE_BUFFERING;
         MpvLogCollector.log("MpvPlayer", "加载后定位: " + seekMs + "ms");
-        command("seek", seconds(seekMs), "absolute+exact");
+        if (!command("seek", seconds(seekMs), "absolute+exact")) pendingResumeSeekMs = C.TIME_UNSET;
+    }
+
+    private boolean finishResumeSeek() {
+        if (pendingResumeSeekMs == C.TIME_UNSET) return true;
+        Double actual = MPVLib.INSTANCE.getPropertyDouble("time-pos");
+        if (actual == null || !Double.isFinite(actual) || propBoolean("seeking")
+                || actual * 1000 < pendingResumeSeekMs - 1000
+                || !playWhenReady && actual * 1000 > pendingResumeSeekMs + 1000) return false;
+        pendingResumeSeekMs = C.TIME_UNSET;
+        return true;
+    }
+
+    private void acceptPosition() {
+        if (pendingResumeSeekMs != C.TIME_UNSET && fileLoaded && !awaitingOutputStart && finishResumeSeek()) {
+            updateBufferingState();
+        }
+        // Property notifications can be queued before a reload or seek completes.
+        // Read the current native clock rather than publishing their stale payload.
+        readPosition();
+    }
+
+    private void updateBufferingState() {
+        if (!fileLoaded || playerError != null || mediaItem == null) return;
+        loading = pendingSeekAfterLoadMs != C.TIME_UNSET || pendingResumeSeekMs != C.TIME_UNSET
+                || propBoolean("paused-for-cache") || propBoolean("seeking");
+        playbackState = loading ? Player.STATE_BUFFERING : Player.STATE_READY;
+    }
+
+    private boolean canReadPosition() {
+        return fileLoaded && !awaitingOutputStart && pendingSeekAfterLoadMs == C.TIME_UNSET
+                && pendingResumeSeekMs == C.TIME_UNSET;
     }
 
     private void applySeekPreroll(boolean demuxerKnown) {
@@ -956,15 +1015,23 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         readDuration();
         readVideoSize();
         readTracks();
-        Double speed = MPVLib.INSTANCE.getPropertyDouble("speed");
-        if (speed != null) playbackParameters = new PlaybackParameters(speed.floatValue());
+        if (!canReadPosition()) return;
+        readPlaybackSpeed();
         Double audioDelay = MPVLib.INSTANCE.getPropertyDouble("audio-delay");
         if (audioDelay != null) audioOffsetMs = secondsToMs(audioDelay, 0);
         Double subDelay = MPVLib.INSTANCE.getPropertyDouble("sub-delay");
         if (subDelay != null) textOffsetMs = secondsToMs(subDelay, 0);
     }
 
+    private void readPlaybackSpeed() {
+        // Keep app controls authoritative while loadfile and its resume seek reset native state.
+        if (!canReadPosition()) return;
+        Double speed = MPVLib.INSTANCE.getPropertyDouble("speed");
+        if (speed != null) playbackParameters = new PlaybackParameters(speed.floatValue());
+    }
+
     private void readPosition() {
+        if (!canReadPosition()) return;
         Double value = MPVLib.INSTANCE.getPropertyDouble("time-pos/full");
         if (value == null) value = MPVLib.INSTANCE.getPropertyDouble("time-pos");
         if (value != null) positionMs = secondsToMs(value, positionMs);
@@ -1236,6 +1303,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void observeProperties() {
         MPVLib.INSTANCE.observeProperty("time-pos", MpvFormat.MPV_FORMAT_INT64);
         MPVLib.INSTANCE.observeProperty("time-pos/full", MpvFormat.MPV_FORMAT_DOUBLE);
+        MPVLib.INSTANCE.observeProperty("seeking", MpvFormat.MPV_FORMAT_FLAG);
         MPVLib.INSTANCE.observeProperty("duration/full", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("duration", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("pause", MpvFormat.MPV_FORMAT_FLAG);
@@ -1295,6 +1363,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private void beginVideoOutputPlayback() {
         videoOutputRecovery.beginPlayback();
+        pendingResumeSeekMs = C.TIME_UNSET;
         outputReloadPending = false;
         awaitingOutputStart = false;
         recoveryHasVideo = false;
@@ -1355,9 +1424,9 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         return true;
     }
 
-    private void restoreOutputReloadState() {
-        if (!outputReloadPending) return;
-        // Ignore native reset notifications until the reloaded file can receive our current controls.
+    private void restorePlaybackControls() {
+        // Loadfile can reset native controls after PlayerManager restores a paused session.
+        // Reapply the latest app values once the file can receive them.
         MPVLib.INSTANCE.setPropertyString("pause", playWhenReady ? "no" : "yes");
         MPVLib.INSTANCE.setPropertyString("speed", Float.toString(playbackParameters.speed));
         MPVLib.INSTANCE.setPropertyString("volume", Float.toString(volume * 100f));
@@ -1588,6 +1657,14 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         MPVLib.INSTANCE.setOptionString("force-window", "yes");
         updateSurfaceSize(width, height);
         if (TextUtils.isEmpty(pendingUrl)) MPVLib.INSTANCE.setPropertyString("vo", activeVideoOutputDriver());
+        if (suspendedVideoTrack != null && fileLoaded) readPosition();
+        boolean videoRestored = restoreSuspendedVideoTrack();
+        if (videoRestored && fileLoaded && TextUtils.isEmpty(pendingUrl)) {
+            // Refill the new decoder at the current timestamp, including for HTTP
+            // demuxers which discarded video packets while the track was disabled.
+            pendingSeekAfterLoadMs = Math.max(0, positionMs);
+            seekAfterLoadIfNeeded();
+        }
         markRenderedFirstFrame();
         loadPendingUrl();
     }
@@ -1596,6 +1673,12 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         if (attachedSurface == null) return;
         MpvLogCollector.log("MpvPlayer", "=== 分离 Surface ===");
         try {
+            // Disable video while its window is still valid so the decoder creates
+            // a fresh output for the replacement Surface, including a paused frame.
+            if (suspendedVideoTrack == null && mediaItem != null) {
+                suspendedVideoTrack = propString("vid", "auto");
+                MPVLib.INSTANCE.setPropertyString("vid", "no");
+            }
             MPVLib.INSTANCE.setPropertyString("vo", "null");
             MPVLib.INSTANCE.setOptionString("force-window", "no");
             MPVLib.INSTANCE.detachSurface();
@@ -1607,6 +1690,22 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         }
         attachedSurface = null;
         ownsSurface = false;
+    }
+
+    private boolean restoreSuspendedVideoTrack() {
+        if (suspendedVideoTrack == null) return false;
+        boolean enabled = !"no".equals(suspendedVideoTrack);
+        MPVLib.INSTANCE.setPropertyString("vid", suspendedVideoTrack);
+        suspendedVideoTrack = null;
+        return enabled;
+    }
+
+    private void resetSuspendedVideoTrack() {
+        if (suspendedVideoTrack == null) return;
+        // A native track ID belongs to the previous file. New files use the current
+        // selection policy rather than inheriting an unavailable numeric video ID.
+        suspendedVideoTrack = trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_VIDEO) ? "no" : "auto";
+        restoreSuspendedVideoTrack();
     }
 
     private void updateSurfaceSize(int width, int height) {
@@ -1743,14 +1842,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private static String seconds(long milliseconds) {
         return String.format(Locale.US, "%.3f", milliseconds / 1000.0);
-    }
-
-    private static float parseFloat(String value, float fallback) {
-        try {
-            return Float.parseFloat(value);
-        } catch (Exception e) {
-            return fallback;
-        }
     }
 
     private void runForPlayback(Runnable runnable) {

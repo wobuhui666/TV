@@ -4,6 +4,7 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-16 | [#119 MPV 重播、刷新与字幕返回](reports/2026-11-16-issue119-mpv/README.md) | 重播、连续刷新、EOF、Exo→MPV 与字幕 Surface 重建；记录最终提交及设备结果，保留历史失败和 MT5873／真实 Vulkan 的覆盖限制 |
 | 2026-11-15 | [代理配置解析](reports/2026-11-15-proxy-parsing/README.md) | 基线 3 项失败、修复后 4 项 JVM 回归通过；Android 初始化与在线实测未完成 |
 | 2026-11-15 | [Exo 声音与弹幕停顿](reports/2026-11-14-playback-stutter/README.md) | 最终1058项JUnit、36项Android及5组功能实播；三轮性能实验与撤回原因保留，MT5873实机未验证 |
 | 2026-11-15 | [Issue #119 界面修复](reports/2026-11-15-issue119-ui/README.md) | 直播完整线路列表、TV 包触摸浏览位置与源配置弹窗；两种尺寸的 Android 窗口、焦点和表单回归 |
