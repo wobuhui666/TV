@@ -1,11 +1,14 @@
 package com.fongmi.android.tv.player.skip;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -219,7 +222,7 @@ public class EpisodeIdentityResolverTest {
             RecordedRequest request = server.takeRequest(1, TimeUnit.SECONDS);
             assertNotNull(request);
             assertTrue(request.getPath().startsWith("/3/tv/123?"));
-            assertTrue(request.getPath().contains("append_to_response=external_ids"));
+            assertTrue(request.getPath().contains("append_to_response=external_ids%2Cepisode_groups"));
             assertEquals(new EpisodeIdentity(123, "tt1234567", 1, 4), resolver.resolve("tmdb:tv:123", "Show", "2020", "tv", "第4集"));
             assertEquals(1, server.getRequestCount());
         }
@@ -236,6 +239,213 @@ public class EpisodeIdentityResolverTest {
             server.enqueue(new MockResponse().setBody(second.toString()));
             assertNull(resolver(server).resolve("source-123", "Show", "2020", "tv", "第3集"));
             assertEquals(3, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldResolveContinuousAnimeEpisodesThroughCanonicalAbsoluteOrder() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}"));
+            server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+            server.enqueue(new MockResponse().setBody(absoluteGroup().toString()));
+            EpisodeIdentityResolver resolver = resolver(server);
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 1, 4),
+                    resolver.resolve("source-black-clover", "黑色五叶草", "2017", "动漫", "第4集", true, 171));
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 2, 1),
+                    resolver.resolve("source-black-clover", "黑色五叶草", "2017", "动漫", "第171集", true, 171));
+            assertEquals(3, server.getRequestCount());
+            server.takeRequest(1, TimeUnit.SECONDS);
+            RecordedRequest detail = server.takeRequest(1, TimeUnit.SECONDS);
+            assertTrue(detail.getPath().contains("append_to_response=external_ids%2Cepisode_groups"));
+            assertTrue(server.takeRequest(1, TimeUnit.SECONDS).getPath().startsWith("/3/tv/episode_group/absolute-order?"));
+        }
+    }
+
+    @Test
+    public void shouldUseProxyNormalizedTitleAndRestoreItsEvidenceFromTheMetadataCache() throws Exception {
+        String original = "黑色五叶草 (2017) 更新至171集 1080p 国语版";
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}")
+                    .setHeader("X-Tmdb-Query", encodedTitle("黑色五叶草")).setHeader("X-Title-Normalizer", "rules"));
+            server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+            server.enqueue(new MockResponse().setBody(absoluteGroup().toString()));
+            EpisodeIdentityResolver resolver = resolver(server);
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 1, 4),
+                    resolver.resolve("source-black-clover", original, "2017", "动漫", "第4集", true, 171));
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 2, 1),
+                    resolver.resolve("source-black-clover", original, "2017", "动漫", "第171集", true, 171));
+            assertEquals(3, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldKeepExplicitSeasonWhenTheProxyRemovesReleaseLabels() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}")
+                    .setHeader("X-Tmdb-Query", encodedTitle("黑色五叶草")).setHeader("X-Title-Normalizer", "rules"));
+            server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 2, 4),
+                    resolver(server).resolve("source-black-clover", "黑色五叶草 第二季 (2026) 1080p 国语版", "2026", "动漫", "第4集", true, 171));
+            assertEquals(2, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldApplyProxyNormalizationToMoviesWithoutChangingTheReleaseYear() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":123,\"title\":\"终结者2：审判日\",\"release_date\":\"1991-07-03\"}]}")
+                    .setHeader("X-Tmdb-Query", encodedTitle("终结者2：审判日")).setHeader("X-Title-Normalizer", "rules"));
+            server.enqueue(new MockResponse().setBody("{\"id\":123,\"title\":\"终结者2：审判日\",\"release_date\":\"1991-07-03\",\"external_ids\":{\"imdb_id\":\"tt0103064\"}}"));
+            assertEquals(EpisodeIdentity.movie(123, "tt0103064"),
+                    resolver(server).resolve("source-123", "终结者2：审判日 (1991) 1080p 国语版", "1991", "电影", "正片"));
+        }
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":123,\"title\":\"终结者2：审判日\",\"release_date\":\"1991-07-03\"}]}")
+                    .setHeader("X-Tmdb-Query", encodedTitle("终结者2：审判日")).setHeader("X-Title-Normalizer", "rules"));
+            assertNull(resolver(server).resolve("source-123", "终结者2：审判日 (1991) 1080p 国语版", "1992", "电影", "正片"));
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldNotRelaxOriginalTitleMatchingWithoutProxyEvidence() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}"));
+            assertNull(resolver(server).resolve("source-black-clover", "黑色五叶草 (2017) 1080p 国语版", "2017", "动漫", "第4集", true, 171));
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldValidateDeclaredCleanupAndOnlyRemoveExplicitModelSourceWrappers() {
+        assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
+                "黑色五叶草 (2017) 更新至171集 1080p 国语版", encodedTitle("黑色五叶草"), "rules"));
+        assertEquals("原声带", EpisodeIdentityResolver.approvedSearchTitle(
+                "原声带 第二季 (2023) 1080p", encodedTitle("原声带"), "rules"));
+        assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
+                "[ANi] 黑色五叶草 1080p", encodedTitle("黑色五叶草"), "groq"));
+        assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
+                "【字幕组】黑色五叶草 1080p", encodedTitle("黑色五叶草"), "workers-ai"));
+        assertNull(EpisodeIdentityResolver.approvedSearchTitle(
+                "[ANi] 黑色五叶草 1080p", encodedTitle("黑色五叶草"), "rules"));
+    }
+
+    @Test
+    public void shouldRejectTranslatedTruncatedAndSequelChangingProxyTitles() {
+        for (String source : new String[]{"rules", "groq", "workers-ai"}) {
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", encodedTitle("黑色"), source));
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", encodedTitle("Black Clover"), source));
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("原声带", encodedTitle("带"), source));
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("C++ (2020) 1080p", encodedTitle("C"), source));
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("终结者2：审判日 (1991) 1080p", encodedTitle("终结者：审判日"), source));
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("[ANi] 终结者2：审判日 1080p", encodedTitle("终结者2"), source));
+        }
+        assertNull(EpisodeIdentityResolver.approvedSearchTitle("[第2版] 黑色五叶草", encodedTitle("黑色五叶草"), "groq"));
+    }
+
+    @Test
+    public void shouldRejectMalformedControlAndUndeclaredNormalizationHeaders() {
+        for (String header : new String[]{"%GG", "%FF", encodedTitle("黑色五叶草\n"), encodedTitle("黑色五叶草\u202e")}) {
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", header, "rules"));
+        }
+        for (String source : new String[]{"fallback", "none", "untrusted"}) {
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草 1080p", encodedTitle("黑色五叶草"), source));
+        }
+    }
+
+    @Test
+    public void shouldKeepUnknownSeasonWithoutContinuousPlaylistEvidence() throws Exception {
+        for (int count : new int[]{0, 26, 170, 173}) {
+            try (MockWebServer server = new MockWebServer()) {
+                server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+                assertNull(resolver(server).resolve("tmdb:tv:73223", "黑色五叶草", "2017", "动漫", "第4集", true, count));
+                assertEquals(1, server.getRequestCount());
+            }
+        }
+    }
+
+    @Test
+    public void shouldPreserveExplicitSeasonDespiteContinuousPlaylistCount() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 2, 4),
+                    resolver(server).resolve("tmdb:tv:73223", "黑色五叶草", "2017", "动漫", "S02E04", true, 171));
+            assertEquals(1, server.getRequestCount());
+        }
+    }
+
+    @Test
+    public void shouldRejectAmbiguousOrUnsupportedAbsoluteGroupsWithoutFetchingThem() throws Exception {
+        for (int variant = 0; variant < 3; variant++) {
+            JsonObject detail = blackCloverDetail();
+            JsonArray groups = detail.getAsJsonObject("episode_groups").getAsJsonArray("results");
+            if (variant == 0) groups.add(groups.get(0).deepCopy());
+            if (variant == 1) groups.get(0).getAsJsonObject().addProperty("type", 1);
+            if (variant == 2) groups.get(0).getAsJsonObject().addProperty("id", "../wrong-series");
+            try (MockWebServer server = new MockWebServer()) {
+                server.enqueue(new MockResponse().setBody(detail.toString()));
+                assertNull(resolver(server).resolve("tmdb:tv:73223", "黑色五叶草", "2017", "动漫", "第4集", true, 171));
+                assertEquals(1, server.getRequestCount());
+            }
+        }
+    }
+
+    @Test
+    public void shouldRejectIncompleteDuplicateSpecialOrInvalidAbsoluteMappings() throws Exception {
+        for (int variant = 0; variant < 9; variant++) {
+            JsonObject mapping = absoluteGroup();
+            JsonArray episodes = mapping.getAsJsonArray("groups").get(0).getAsJsonObject().getAsJsonArray("episodes");
+            switch (variant) {
+                case 0 -> episodes.remove(10);
+                case 1 -> episodes.get(10).getAsJsonObject().addProperty("order", 9);
+                case 2 -> episodes.get(10).getAsJsonObject().addProperty("episode_number", 10);
+                case 3 -> episodes.get(10).getAsJsonObject().addProperty("season_number", 0);
+                case 4 -> episodes.get(10).getAsJsonObject().addProperty("episode_number", 171);
+                case 5 -> mapping.addProperty("id", "wrong-group");
+                case 6 -> mapping.addProperty("type", 1);
+                case 7 -> mapping.addProperty("episode_count", 171);
+                case 8 -> episodes.get(10).getAsJsonObject().addProperty("order", 172);
+            }
+            try (MockWebServer server = new MockWebServer()) {
+                server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+                server.enqueue(new MockResponse().setBody(mapping.toString()));
+                assertNull(resolver(server).resolve("tmdb:tv:73223", "黑色五叶草", "2017", "动漫", "第4集", true, 171));
+                assertEquals(2, server.getRequestCount());
+            }
+        }
+    }
+
+    @Test
+    public void shouldVerifySeriesIdentityBeforeRequestingAbsoluteOrder() throws Exception {
+        for (int variant = 0; variant < 3; variant++) {
+            JsonObject detail = blackCloverDetail();
+            switch (variant) {
+                case 0 -> detail.addProperty("id", 73224);
+                case 1 -> detail.addProperty("name", "另一部动画");
+                case 2 -> detail.addProperty("first_air_date", "2020-10-03");
+            }
+            try (MockWebServer server = new MockWebServer()) {
+                server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}"));
+                server.enqueue(new MockResponse().setBody(detail.toString()));
+                assertNull(resolver(server).resolve("source-black-clover", "黑色五叶草", "2017", "动漫", "第4集", true, 171));
+                assertEquals(2, server.getRequestCount());
+            }
+        }
+    }
+
+    @Test
+    public void shouldShareMetadataDeadlineWithAbsoluteOrderLookup() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}"));
+            server.enqueue(new MockResponse().setHeadersDelay(150, TimeUnit.MILLISECONDS).setBody(blackCloverDetail().toString()));
+            server.enqueue(new MockResponse().setHeadersDelay(400, TimeUnit.MILLISECONDS).setBody(absoluteGroup().toString()));
+            EpisodeIdentityResolver resolver = new EpisodeIdentityResolver("fixture-key", server.url("/3/").toString(), new OkHttpClient()::newCall, 450);
+            try {
+                resolver.resolve("source-black-clover", "黑色五叶草", "2017", "动漫", "第4集", true, 171);
+                fail("The absolute mapping response exceeds the remaining shared lookup budget");
+            } catch (IOException expected) {
+                assertEquals(3, server.getRequestCount());
+            }
         }
     }
 
@@ -280,7 +490,32 @@ public class EpisodeIdentityResolverTest {
         return json("{\"id\":123,\"name\":\"Show\",\"first_air_date\":\"2020-01-01\",\"external_ids\":{\"imdb_id\":\"tt1234567\"},\"seasons\":" + seasons + "}");
     }
 
+    private static JsonObject blackCloverDetail() {
+        return json("{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\","
+                + "\"external_ids\":{\"imdb_id\":\"tt7441658\"},\"seasons\":[{\"season_number\":0,\"episode_count\":2},"
+                + "{\"season_number\":1,\"episode_count\":170,\"air_date\":\"2017-10-03\"},"
+                + "{\"season_number\":2,\"episode_count\":26,\"air_date\":\"2026-10-03\"}],"
+                + "\"episode_groups\":{\"results\":[{\"id\":\"absolute-order\",\"type\":2,\"episode_count\":172}]}}");
+    }
+
+    private static JsonObject absoluteGroup() {
+        JsonObject mapping = json("{\"id\":\"absolute-order\",\"type\":2,\"episode_count\":172,\"groups\":[{\"episodes\":[]}]}");
+        JsonArray episodes = mapping.getAsJsonArray("groups").get(0).getAsJsonObject().getAsJsonArray("episodes");
+        for (int order = 0; order < 172; order++) {
+            JsonObject episode = new JsonObject();
+            episode.addProperty("order", order);
+            episode.addProperty("season_number", order < 170 ? 1 : 2);
+            episode.addProperty("episode_number", order < 170 ? order + 1 : order - 169);
+            episodes.add(episode);
+        }
+        return mapping;
+    }
+
     private static JsonObject json(String body) {
         return JsonParser.parseString(body).getAsJsonObject();
+    }
+
+    private static String encodedTitle(String title) {
+        return URLEncoder.encode(title, StandardCharsets.UTF_8);
     }
 }

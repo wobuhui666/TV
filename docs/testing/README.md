@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | 2026-11-15 | [代理配置解析](reports/2026-11-15-proxy-parsing/README.md) | 基线 3 项失败、修复后 4 项 JVM 回归通过；Android 初始化与在线实测未完成 |
 | 2026-11-01 | [社区片头片尾、播放与界面](reports/2026-11-01-community-skip/README.md) | 779 项单测、实际 Exo 区间跳转、99 源配置加载与设置截图；GHA 抽测源未返回内容，未验证本轮真实片源播放 |
+| 2026-11-14 | [连续集数与社区跳过](reports/2026-11-14-community-skip/README.md) | Groq / Workers AI 两端部署、29 项历史中间层测试、82 项独立 PR JVM 测试及真实季集匹配；未构建新 APK 或电视实测 |
 | 2026-11-01 | [海报墙、推荐筛选、字幕与表单](reports/2026-11-01-tv-polish/README.md) | 实际 Android 筛选、字幕标签、长表单滚动提示；示例内容，不代表 ARM 实机性能 |
 | 2026-10-31 | [流畅度与稳定性](reports/2026-10-31-responsiveness/README.md) | 离屏释放、晚到分页、解析取消与帧时间对比；纯 ARM 隔离包单独验证受保护来源 |
 | 2026-10-06 | [同步、Kazumi 与最终安装](reports/2026-10-06-sync-kazumi/README.md) | Syncplay 实际 Exo、WebDAV Room 与坚果云并发、希番双引擎双集、WEX 和最终发布；保留双真机及外站限制 |
