@@ -23,6 +23,8 @@ import com.fongmi.android.tv.bean.DiscoverRequestState;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.activity.DiscoverActivity;
 import com.fongmi.android.tv.ui.activity.RexSectionActivity;
@@ -65,7 +67,7 @@ import okhttp3.ResponseBody;
 /** Production filter activity and fallback loader, with entirely synthetic responses. */
 @RunWith(AndroidJUnit4.class)
 public final class CompactDiscoveryIntegrationTest {
-    private static final String[] PREFERENCES = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_base", "browse_bridge_sk", "browse_home_layout_v1", "browse_poster_home"};
+    private static final String[] PREFERENCES = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_base", "browse_bridge_sk", "browse_home_layout_v1", "browse_poster_home", "tv_experience_mode_v1"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> activities = new ArrayList<>();
     private final List<HttpUrl> requests = new CopyOnWriteArrayList<>();
@@ -91,6 +93,8 @@ public final class CompactDiscoveryIntegrationTest {
             for (String key : PREFERENCES) {
                 if (Prefers.getPrefers().contains(key)) savedPreferences.put(key, Prefers.getPrefers().getAll().get(key));
             }
+            // These fixtures exercise the classic Douban filters before explicitly selecting TMDB.
+            ExperienceSettings.putMode(ExperienceMode.CLASSIC);
             originalClient = OkHttp.client();
             originalTmdb = (OkHttpClient) field(TmdbNetwork.class, "client");
             fixtureClient = new OkHttpClient.Builder().addInterceptor(chain -> {
@@ -154,6 +158,13 @@ public final class CompactDiscoveryIntegrationTest {
                 else editor.remove(key);
             }
             assertTrue(editor.commit());
+            Map<String, ?> restored = Prefers.getPrefers().getAll();
+            for (String key : PREFERENCES) {
+                assertEquals("Restore exact preference presence for " + key, savedPreferences.containsKey(key), restored.containsKey(key));
+                assertEquals("Restore exact preference value for " + key, savedPreferences.get(key), restored.get(key));
+            }
+            assertSame(originalClient, OkHttp.client());
+            assertSame(originalTmdb, field(TmdbNetwork.class, "client"));
             fixtureClient.connectionPool().evictAll();
         });
     }

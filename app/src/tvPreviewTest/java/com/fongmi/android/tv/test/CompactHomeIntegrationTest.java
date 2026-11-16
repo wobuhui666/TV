@@ -108,6 +108,12 @@ public final class CompactHomeIntegrationTest {
         await("movie shelves replace the compact selection", () -> visibleShelfKeys().equals(
                 List.of("now_playing", "popular_movie", "top_movie")));
         device.pressDPadDown();
+        AtomicBoolean touchBrowsing = new AtomicBoolean();
+        main(() -> touchBrowsing.set((boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
+        // Android can consume the first D-pad key while restoring focus from the category tap.
+        if (touchBrowsing.get()) device.pressDPadDown();
+        await("D-pad navigation resumes before requesting the category row", () ->
+                !(boolean) HomePreviewFixtures.field(home, "mTouchBrowsing") && !home.pageGrid().isInTouchMode());
         main(() -> home.focusRow(home.categoriesPosition()));
         await("the refreshed category row exposes its filter control", () -> {
             View row = rowView(home.categoriesPosition());
