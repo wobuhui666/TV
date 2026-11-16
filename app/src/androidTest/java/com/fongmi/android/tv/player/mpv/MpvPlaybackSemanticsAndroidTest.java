@@ -139,8 +139,20 @@ public final class MpvPlaybackSemanticsAndroidTest {
                 .put("externalNetwork", false);
         MPVLib.addObserver(observer);
         nativeObserverRegistered = true;
+        stage = "test-host-ready";
         activity = (MpvRegressionActivity) instrumentation.startActivitySync(new Intent(target, MpvRegressionActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        long hostDeadline = SystemClock.elapsedRealtime() + 15000;
+        while (!value(() -> activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)
+                && activity.hasWindowFocus()
+                && activity.getView().getVideoSurfaceView() instanceof TextureView view
+                && view.isAttachedToWindow() && view.isAvailable())) {
+            assertTrue("The exact test host and texture must be foreground before binding MPV",
+                    SystemClock.elapsedRealtime() < hostDeadline);
+            SystemClock.sleep(80);
+        }
+        report.put("hostResumedBeforePlayer", true).put("hostFocusedBeforePlayer", true)
+                .put("textureAttachedBeforePlayer", true);
         main(() -> {
             manager = new PlayerManager(new Callback());
             activity.setManager(manager);
@@ -525,6 +537,11 @@ public final class MpvPlaybackSemanticsAndroidTest {
     private static Object finite(double value) { return Double.isFinite(value) ? value : JSONObject.NULL; }
 
     private void captureVideo(String label) throws Exception {
+        main(() -> {
+            assertTrue("Capture from the resumed test host",
+                    activity.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED));
+            assertTrue("Capture from the attached test texture", texture.isAttachedToWindow());
+        });
         long until = SystemClock.elapsedRealtime() + 8000;
         do {
             assertEquals("Native player error during " + stage, 0, errors.get());
@@ -614,6 +631,14 @@ public final class MpvPlaybackSemanticsAndroidTest {
                 long until = SystemClock.elapsedRealtime() + 15000;
                 while (!MpvPlayerEngine.isAvailable() && SystemClock.elapsedRealtime() < until) SystemClock.sleep(100);
                 assertTrue("Native player release completed", MpvPlayerEngine.isAvailable());
+                if (activity != null) {
+                    long hostDeadline = SystemClock.elapsedRealtime() + 15000;
+                    while (value(() -> activity.getLifecycle().getCurrentState() != Lifecycle.State.DESTROYED)
+                            && SystemClock.elapsedRealtime() < hostDeadline) SystemClock.sleep(80);
+                    assertEquals("The previous host must be destroyed before the next test",
+                            Lifecycle.State.DESTROYED, value(() -> activity.getLifecycle().getCurrentState()));
+                    report.put("hostDestroyedAfterRelease", true);
+                }
             } finally {
                 SharedPreferences.Editor edit = Prefers.getPrefers().edit();
                 for (String key : settings.keySet()) {
