@@ -114,6 +114,10 @@ jobs:
               'instrumentationExecuted': False, 'files': [],
           }
           certificates = []
+          debug_cert = subprocess.check_output(['keytool', '-exportcert', '-keystore',
+              str(pathlib.Path.home() / '.android/debug.keystore'), '-storepass', 'android',
+              '-alias', 'androiddebugkey'])
+          expected_cert = hashlib.sha256(debug_cert).hexdigest()
           for role, candidates in groups.items():
               if len(candidates) != 1:
                   raise SystemExit('Expected exactly one ' + role + ' APK')
@@ -128,8 +132,8 @@ jobs:
                   raise SystemExit('Unexpected instrumentation target package')
               signed = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(source)], text=True)
               certificate = re.search(r'Signer #1 certificate SHA-256 digest: (\S+)', signed)
-              if certificate is None or 'CN=Android Debug' not in signed:
-                  raise SystemExit('Expected Android debug signing certificate')
+              if certificate is None or certificate.group(1).lower() != expected_cert:
+                  raise SystemExit('Expected Gradle debug signing certificate: ' + signed)
               certificates.append(certificate.group(1))
               if role == 'app':
                   with zipfile.ZipFile(source) as bundle:
