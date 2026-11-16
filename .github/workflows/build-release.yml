@@ -195,6 +195,8 @@ jobs:
           prerelease: ${{ github.ref != 'refs/heads/ui/apple-tv-redesign' }}
           fail_on_unmatched_files: true
           body: |
+            ${{ inputs.release_notes }}
+
             Source: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             Branch: `${{ github.ref_name }}`
 
