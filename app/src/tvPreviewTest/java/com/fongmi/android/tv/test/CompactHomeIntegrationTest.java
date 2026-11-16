@@ -41,6 +41,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.Assert.*;
@@ -115,12 +116,29 @@ public final class CompactHomeIntegrationTest {
         await("D-pad navigation resumes before requesting the category row", () ->
                 !(boolean) HomePreviewFixtures.field(home, "mTouchBrowsing") && !home.pageGrid().isInTouchMode());
         main(() -> home.focusRow(home.categoriesPosition()));
-        await("the refreshed category row exposes its filter control", () -> {
-            View row = rowView(home.categoriesPosition());
-            View filter = row == null ? null : row.findViewById(R.id.filter);
-            android.graphics.Rect bounds = new android.graphics.Rect();
-            return filter != null && filter.getGlobalVisibleRect(bounds) && bounds.height() == filter.getHeight();
-        });
+        try {
+            await("the refreshed category row exposes its filter control", () -> {
+                View row = rowView(home.categoriesPosition());
+                View filter = row == null ? null : row.findViewById(R.id.filter);
+                android.graphics.Rect bounds = new android.graphics.Rect();
+                return filter != null && filter.getGlobalVisibleRect(bounds) && bounds.height() == filter.getHeight();
+            });
+        } catch (AssertionError error) {
+            AtomicReference<String> diagnostic = new AtomicReference<>();
+            main(() -> {
+                View row = rowView(home.categoriesPosition());
+                View filter = row == null ? null : row.findViewById(R.id.filter);
+                android.graphics.Rect bounds = new android.graphics.Rect();
+                boolean visible = filter != null && filter.getGlobalVisibleRect(bounds);
+                diagnostic.set("category=" + home.categoriesPosition() + "; selected=" + home.pageGrid().getSelectedPosition()
+                        + "; generation=" + home.focusGeneration() + "; focus=" + home.getCurrentFocus()
+                        + "; row=" + row + "; filter=" + filter + "; shown=" + (filter != null && filter.isShown())
+                        + "; visibility=" + (filter == null ? -1 : filter.getVisibility())
+                        + "; height=" + (filter == null ? -1 : filter.getHeight()) + "; visible=" + visible + "; bounds=" + bounds);
+            });
+            NativeUiEvidence.capture("compact-home-filter-failure");
+            throw new AssertionError(error.getMessage() + "; " + diagnostic.get(), error);
+        }
         text(home.getString(R.string.home_compact_filter)).click();
         await("filter shortcut emits a pure-filter page intent", () -> routeIs("DiscoverActivity"));
         assertTrue(home.lastNavigation.getBooleanExtra("filters_only", false));

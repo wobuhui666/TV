@@ -975,7 +975,9 @@ public final class LibraryExperienceAndroidTest {
             LibraryDetailActivity detail = open(true, false);
             await("Episodes and resources ready", () -> hasItem(detail, "episode:1:4")
                     && !((LibraryResourcesController) field(detail, "resources")).isRunning());
-            await("Resume action identifies the saved episode and time", () -> playText(detail).contains(detail.getString(R.string.library_episode, 2))
+            String resumeHint = detail.getString(R.string.library_detail_resume_episode_hint,
+                    detail.getString(R.string.library_season, 1), 2, com.fongmi.android.tv.utils.Util.timeMs(120_000));
+            await("Resume action identifies the saved episode and time", () -> resumeHint.equals(state(detail).getPlayHint())
                     && playText(detail).contains("2:00"));
             String resumeLabel = playText(detail);
             focus(detail, "play");
