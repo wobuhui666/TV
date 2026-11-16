@@ -18,8 +18,11 @@ import androidx.test.uiautomator.UiDevice;
 
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.bean.Result;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.ui.activity.HomePreviewFixtures;
 import com.fongmi.android.tv.ui.activity.TvHomePreviewActivity;
+import com.github.catvod.utils.Prefers;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import org.junit.After;
@@ -42,11 +45,14 @@ public final class HomeTouchScrollTest {
     private final UiDevice device = UiDevice.getInstance(instrumentation);
     private HomePreviewFixtures.Session fixture;
     private TvHomePreviewActivity home;
+    private Object savedMode;
 
     @Before public void open() {
         assertEquals("Isolated preview only", "com.fongmi.android.tv.preview",
                 instrumentation.getTargetContext().getPackageName());
         main(() -> {
+            savedMode = Prefers.getPrefers().getAll().get("tv_experience_mode_v1");
+            ExperienceSettings.putMode(ExperienceMode.LIBRARY);
             fixture = HomePreviewFixtures.openCompact(instrumentation.getTargetContext());
         });
         home = (TvHomePreviewActivity) instrumentation.startActivitySync(new Intent(
@@ -71,6 +77,10 @@ public final class HomeTouchScrollTest {
         if (home != null) main(home::finish);
         if (home != null) await("home closes", home::isDestroyed);
         if (fixture != null) main(fixture::close);
+        main(() -> {
+            if (savedMode == null) Prefers.remove("tv_experience_mode_v1");
+            else Prefers.put("tv_experience_mode_v1", (String) savedMode);
+        });
     }
 
     @Test public void shouldKeepScrolledViewportAfterHistoryRefreshAndWindowFocusReturns() {

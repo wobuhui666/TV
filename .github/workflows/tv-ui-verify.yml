@@ -441,7 +441,7 @@ jobs:
             adb shell getprop ro.product.cpu.abilist > "$out/device-abis.txt"
             adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
             core_status=0
-            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.test.ExperienceModePreviewTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest
+            classes=com.fongmi.android.tv.test.HomeTouchScrollTest,com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.test.ExperienceModePreviewTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/core-instrumentation.txt" || core_status=$?
             collect_compact
@@ -457,7 +457,8 @@ jobs:
           import collections, json, os, pathlib, re, sys
           root = pathlib.Path('artifacts/compact-home')
           expected = {
-              'core': {'com.fongmi.android.tv.test.CompactHomeIntegrationTest': 10,
+              'core': {'com.fongmi.android.tv.test.HomeTouchScrollTest': 3,
+                       'com.fongmi.android.tv.test.CompactHomeIntegrationTest': 10,
                        'com.fongmi.android.tv.test.ExperienceModePreviewTest': 3,
                        'com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest': 7,
                        'com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest': 1,
@@ -501,13 +502,13 @@ jobs:
                   and {item['name']: item['sha256'] for item in proof['files']} == checksums \
                   and all(item['readableByTargetUid'] for item in proof['files'])
           summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': len(groups) == 2 and all(group['passed'] for group in groups) and fixture_proof,
-                     'expectedTests': 74, 'completedTests': sum(group['completedTests'] for group in groups),
+                     'expectedTests': 77, 'completedTests': sum(group['completedTests'] for group in groups),
                      'passedTests': sum(group['passedTests'] for group in groups),
                      'fixtureReadableByTargetUid': fixture_proof, 'groups': groups}
           (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           print(json.dumps(summary, indent=2))
           if not summary['passed']:
-              raise SystemExit('Require all 74 compact/library cases and target-UID fixture reads to pass')
+              raise SystemExit('Require all 77 compact/library cases and target-UID fixture reads to pass')
           PY
             collect_compact
             upstream_status=0

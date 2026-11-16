@@ -2,13 +2,13 @@
 
 ## 默认行为
 
-- ECH 默认开启，可在“设置 → 应用”关闭；开启后使用官方 `org.conscrypt:conscrypt-android:2.9.0`。
+- 共享客户端的普通 TLS 与 ECH 均使用官方 `org.conscrypt:conscrypt-android:2.9.0`，不安装全局 provider。ECH 默认开启，可在“设置 → 应用”关闭；该开关只控制 ECH 配置。
 - `EchDnsResolver` 查询 DNS HTTPS 记录（类型 65），从中获取 ECHConfigList。
 - DoH 默认选择腾讯 `https://doh.pub/dns-query`，未手动选择时生效；ECH 查询复用当前 DoH 选择。
 - 显式选择“系统”时，ECH 查询使用 `https://1.1.1.1/dns-query`。
 - 优先使用目标自己发布的 ECH 配置。目标明确没有 HTTPS 记录或没有 ECH 参数时，使用同一 DoH 查询其 A/AAAA；至少有一个地址且所有已返回地址均属于 Cloudflare 已知官方网段，才使用 `crypto.cloudflare.com` 的共享 ECH 配置。
 - 只补充交给 TLS 的 ECHConfigList，不改变目标 URL、HTTP Host、TLS 内层域名、证书身份或连接地址。DoH 服务端的公开记录不会被修改。
-- DoH 查询失败、无法确认 Cloudflare 归属、取不到共享配置或目标端口不是 443 时，回退到原 TLS 路径。
+- DoH 查询失败、无法确认 Cloudflare 归属、取不到共享配置或目标端口不是 443 时，使用普通 Conscrypt TLS 路径。
 - 已尝试 ECH 的握手本身失败时，不自动降级重试；可关闭 ECH 后重新连接。
 - 因此该开关不提供“必须使用 ECH，否则拒绝连接”的强制隐私模式。
 
@@ -37,7 +37,9 @@
 
 `ConscryptLifecycleAndroidTest.shouldKeepNativeSessionReadsSafeDuringAndAfterClose` 另做离线生命周期回归：128 个 SSLEngine 各并发读取 128 轮原生会话数据并关闭，核对关闭后的会话、ALPN、ECH 数据及密钥导出安全返回空值。该测试不联网、不读写设置，报告为 `ech-validation/conscrypt-lifecycle.json`。
 
-固定版本从 2.7.0 更新至 2.9.0，采用上游 [#1551](https://github.com/google/conscrypt/pull/1551) 的 `NativeSsl` 读取与释放互斥，以及 [#1548](https://github.com/google/conscrypt/pull/1548) 的 X509 原生分配登记。ECH 默认值、配置解析及信任委托合同保持原行为。离线回归覆盖读取与关闭边界；X509 释放及 ECH 仍需真实请求和终结压力验证，版本更新本身不能确认先前原生退出的损坏来源。
+`ConscryptLifecycleAndroidTest.shouldKeepUpdatedTlsProviderWithoutEchConfiguration` 核对生产共享客户端与严格信任客户端的普通 socket，以及 ECH 关闭或无配置时的 TLS factory。TLS 仍启用 1.2/1.3，信任管理器保持原实例，关闭后的数据查询安全返回空值。普通 TLS 也使用更新实现的读取／关闭互斥；独立网络栈与 DoH bootstrap 不在这项更改范围内。
+
+固定版本从 2.7.0 更新至 2.9.0，采用上游 [#1551](https://github.com/google/conscrypt/pull/1551) 的 `NativeSsl` 读取与释放互斥，以及 [#1548](https://github.com/google/conscrypt/pull/1548) 的 X509 原生分配登记。ECH 默认值、配置解析及信任委托合同保持原行为。离线回归覆盖读取与关闭边界。详情/TLS 阶段另外完成严格和共享客户端各 34 次实际 ECH／TLS 1.3 连接、1536 个证书副本的显式回收压力回归；两个进程与 10 次详情往返进程分开，API 31 使用 finalizer 回退而未覆盖 Registry 回调。具体版本和历史失败见[专项报告](testing/reports/2026-11-16-library-alignment-stability/README.md)；版本更新和有限回归仍不能确认先前堆损坏的来源。
 
 共享路径保留项目既有的 `trustAll` 与 `hostnameVerifier(true)` 行为。
 该路径只能证明 ECH 集成，不能证明证书验证安全；不得将其结果用于上述安全结论。

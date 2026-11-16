@@ -1,8 +1,12 @@
 # TV 媒体库体验
 
-TV 设置 → 首页与发现 → 使用模式，一次选择完整体验。首次安装和从旧版升级均默认使用「媒体库」；已有片源、播放、字幕、解码设置继续保留。
+在 **设置 → 首页与发现 → 使用模式** 选择完整体验。首次安装和从旧版升级均默认使用「媒体库」；已有片源、播放、字幕、解码设置继续保留。三种模式提供统一的静态微缩界面预览，由代码绘制，不请求网络图片。
 
-首页「片库」始终打开当前片源自己的分类、列表和筛选；源提供的登录／Cookie 操作与账号文件夹继续由该源处理。TMDB 浏览放在独立的「推荐」入口，媒体库模式不替换片源目录。
+**「媒体库」目前仍可能不稳定，也可能不好用。遇到卡顿、崩溃、选源或操作问题，欢迎到 [Issues](https://github.com/wobuhui666/TV/issues) 反馈。切回简洁体验：设置 → 首页与发现 → 使用模式 → 简洁，选择后返回首页生效；同一入口也可选择「经典」。**
+
+媒体库和简洁模式将推荐精选合入首页，顶部保留「首页、片库、直播、搜索、我的」，直播按配置显示。默认精选为「国产电影、国产剧集、此刻热门」三行，以国产内容为主并保留少量全球热门推荐，每行最多 12 部；电影、剧集和高分类目各显示自己的少量栏目，更多作品通过「查看全部」或「筛选找片」浏览。国产栏目使用 TMDB 的中国产地条件，高分栏目另设有效票数门槛，不按中文片名判断产地。
+
+首页「片库」始终打开当前片源自己的分类、列表和筛选；源提供的登录／Cookie 操作与账号文件夹继续由该源处理。首页只加载当前类目的至多三个精选栏目，复用原有缓存、24 秒截止与退出取消机制。「筛选找片」支持类型、产地、年份与评分等条件。
 
 原生片库的列表项目保留原有配置、详情和播放入口；普通海报项目可进入媒体库详情。列表详情继续复用已获取的数据，并在离开所属页面后取消交互。
 
@@ -26,6 +30,7 @@ TMDB 搜索同时覆盖电影和剧集，并支持筛选与分页。同名但年
 
 ## 遥控器操作
 
+- 首页切换分类或从触摸返回遥控器导航时，目标行先滚入屏幕并完成绑定，再交接焦点。「片库」继续打开当前片源自己的分类和目录。
 - 打开详情后自动核对当前作品与季集，预获取确认资源的直链；点击主播放按钮才进入全屏。按钮显示待播集数，续播时显示已看集数和进度；浏览其他剧集只改变浏览焦点和预获取目标，不改主按钮的续播目标。点击剧集卡播放该集，尚未播出的卡片显示提示。
 - 详情主播放按钮按下键先进入换源、收藏等快捷操作，再按下进入当前集；没有对应卡片时进入季／线路选择。剧集卡按上键回到季选择，再按上键回主播放按钮。「全部剧集」可定位指定集；切季立即移除旧季卡片，加载时保留季选择。TMDB 分集每组 30 集，未关联 TMDB 的原始列表按线路分组、每组 40 集，均使用横向卡片与区间选择。
 - 主播放按钮优先续用已观看资源，并参考片源优先级与可靠性。自动选源总等待时间最多 30 秒，单个自动详情请求最多 10 秒；失败会尝试其他匹配资源。选择中主按钮显示「取消加载」，再次确认可取消；点击另一资源会取消旧请求并直接选择新资源。手动详情请求使用原有 30 秒超时并允许片源交互。退出页面或取消选择会丢弃迟到响应。
@@ -59,26 +64,10 @@ Room 数据库从 38 增至 39，仅增加 `History.mediaRef/mediaSeason/mediaEp
 
 ## 验证
 
-此分支是媒体库快照的隔离验证准备，原任务仍在进行，尚未执行新的 CI。`compact_home` 路径可运行媒体库交互、数据库迁移和 `ConscryptLifecycleAndroidTest`，收集设备 ABI、native bridge 属性及 `ech-validation/conscrypt-lifecycle.json`。Preview 使用固定校验的 x86_64 Conscrypt JNI；生命周期用例只验证原生会话读取与关闭，不覆盖 TLS 握手、证书释放或真实播放。原生片库列表沿用已有受保护流程，未增加已解析详情向媒体库的交接。
+2026-11-16 的详情对齐与普通 TLS provider 修订已完成有限回归：12 项单测、2 项离线生命周期、4 项 Preview 交互、10 次真实详情往返，以及严格和共享客户端各 34 次加密连接、1536 个证书副本压力回归通过。详情与两组压力运行于三个独立进程，未完成同一 PID 的详情与证书压力组合验收；API 31 使用 finalizer 回退，Registry 回调未覆盖。最终 ARM64 Debug 主包的三张详情截图和完整下载已核对，旧失败与实体电视限制保留，见[详情对齐与稳定性报告](testing/reports/2026-11-16-library-alignment-stability/README.md)。这些结果属于详情/TLS 阶段，不能替代新首页或发布包验收。
 
-2026-11-16 的详情对齐与 Conscrypt 2.9.0 修订已完成 12 项 TLS／ECH 单元测试、Debug／Preview 四包构建、4 项详情交互及原生读取／关闭回归；默认 ECH 主包在真实搜索中仍发生原生退出，同 PID 详情及证书压力验收未通过。版本、失败与覆盖范围集中记录在[对齐与稳定性报告](testing/reports/2026-11-16-library-alignment-stability/README.md)。
+合并源码的验证使用 GitHub Actions。常规任务包括 `:app:testLeanbackArm64_v8aDebugUnitTest`、TV/mobile Debug 构建及 TV lint；lint 按既有 108 个错误的基线检查新增错误。`LibraryExperienceAndroidTest` 使用隔离 Preview 包和离线 TMDB、片源、图片夹具，核对焦点、季集、取消、失败回退、续播和返回。
 
-常规验证使用 `:app:testLeanbackArm64_v8aDebugUnitTest`、TV/mobile Debug 构建及 TV lint。`LibraryExperienceAndroidTest` 为隔离的 TV Preview 应用提供离线 TMDB、片源与图片夹具；详情测试现已迁移为 Compose 语义与实际方向键，继续检查初始焦点、季集、取消、失败回退、续播和返回。本轮已记录 46 项专项 JVM、48 项完整 Android 回归及 3 项既有方法复测；最终主包使用真实配置检查了深浅主题与详情各栏目。API 31 转译模拟器的帧采样与原生退出使本轮性能／稳定性验收未通过，实体电视尚未验证；具体版本与独立诊断见[详情重做验证报告](testing/reports/2026-11-15-library-detail-redesign/README.md)。
+在 TV appearance and touch verification 工作流同时选择 `compact_home=true`、`library_native_probe=true`，可使用 API 31 原生 x86_64 JNI 先检查真实 TLS 与两种证书 provider 的释放压力，再运行离线首页、模式、媒体库、数据库、目录和表单回归。测试核对安装包与夹具哈希，保留失败诊断。这个对照不加载真实片源，不能证明 ARM 电视稳定性或先前崩溃的根因。
 
-以下为 Compose 详情重做前的历史记录，不代表本轮页面已通过回归。早期 API 24 截图使用移除 ARM 原生库与 Python 的界面验证包；后续 API 31 测试使用完整 ARM64 APK 与转译桥。具体构建、截图与覆盖范围以各报告为准。
-
-验证记录（2026-11-12，基于 `6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec`）：
-
-- `:app:testLeanbackArm64_v8aDebugUnitTest`：1057 项通过，无失败、错误或跳过。
-- `:app:assembleLeanbackArm64_v8aDebug`、`:app:assembleMobileArm64_v8aDebug`、`:app:assembleLeanbackArm64_v8aPreview`、`:app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview`：构建通过。
-- API 24 Android 回归：数据库与备份兼容 5 项、媒体库体验 22 项，共 27 项通过。最后的底色、演员排版和着色属性调整再运行电影、无资源剧集、动漫 3 项，全部通过，并更新实际截图。
-- TV lint：报告生成通过，基线与当前均有 108 个错误，没有新增错误；警告从 348 增至 370，包括保留的旧设置资源和新界面的样式提示。
-- 参考与实际 Android 滚动截图对照位于仓库外的 `/home/ubuntu/TV-concepts/library-comparison-overview.jpg`，另有电影、剧集、动漫分图。构建使用离线测试密钥，仅在验证环境注入；生产密钥未写入源码。
-
-本轮补充验证（2026-11-13）：1091 项完整 JVM 回归通过，新增缓存缺省配置场景随后在 focused 回归检查通过；31 项 Android 回归通过，最终另运行 10 项涵盖预获取取消／返回、全屏交接、乱序下一集和截图的检查，全部通过。TV/mobile Debug 与 Preview 构建通过。TV lint 与基线同为 108 个错误，无新增错误。新版对照图为 `/home/ubuntu/TV-concepts/library-comparison-overview-v2.jpg`。
-
-2026-11-15 操作与布局修订：61 项专项 JVM 回归、61 个独立 Android 用例（首页 8、媒体库 46、进度条 7）经复测全部通过，TV ARM64 Debug、Preview 与 Preview AndroidTest 构建通过。最终 Debug 补充搜索根布局裁剪，并通过 36 项集数识别测试；使用真实 `aiwex.json` 复核片源跳转、深滚动、观影目录往返和回顶，顶部无遮挡且焦点恢复正确。TV lint 仍有 108 个既有错误，无新增错误。验证在 API 31 x86_64 与 ARM64 转译桥上使用完整 APK，保留 35 个原生库和 Python；Preview 回归及播放截图对应裁剪修订前版本，具体版本与覆盖范围见[新版验收报告](testing/reports/2026-11-15-library-polish/README.md#新版验收)。
-
-同日恢复首页「片库」的原生片源路由与账号文件夹入口，TMDB 使用独立的「推荐」入口。真实 `aiwex.json` 验证确认观影搜索目录可打开网盘分类，并进入夸克资源版本分支；其他网盘仅看到列表入口。文才源可从观看记录续播第 1 集，再用全屏选集切换到第 3 集并持续播放。目录与账号操作不计为直接可播放资源，Cookie 操作沿用 `SiteApi.action`；网盘账号登录、真实 Cookie 提交及全部源可播放未验证。
-
-原生 ABI 对照可在 TV appearance and touch verification 工作流中同时选择 `compact_home=true`、`library_native_probe=true`，使用 API 31 原生 x86_64 JNI。它先运行 TLS／两种证书 Provider 释放压力，再运行离线交互；不加载真实片源。此对照尚未执行，不能作为崩溃修复或电视稳定性的证明。
+历史页面、播放与配置验证分别见[搜索报告](testing/reports/2026-11-14-library-search/README.md)、[操作打磨报告](testing/reports/2026-11-15-library-polish/README.md)和[详情重做报告](testing/reports/2026-11-15-library-detail-redesign/README.md)。早期 API 24 UI 包裁剪了 ARM 原生库与 Python，后续 API 31 使用完整 ARM64 包和转译桥；具体提交、截图与覆盖范围以各报告为准。实体电视帧率、全部片源播放、账号登录及真实 Cookie 提交仍未全面验证。

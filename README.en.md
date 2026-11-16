@@ -117,7 +117,7 @@ Choose a theme, open a source, and browse or search for a title. The TV settings
 
 | Entry point | What it controls |
 | --- | --- |
-| TV Settings → Home and discovery | Home layout, Douban bridge URL/key, personal shelf, history-card actions, hero rotation, search relevance, and poster source selection/priority. |
+| TV Settings → Home and discovery | Usage mode, home layout, Douban bridge URL/key, personal shelf, history-card actions, hero rotation, search relevance, and poster source selection/priority. |
 | Settings → Playback | Engine, speed, scale, temporary seek acceleration, background playback, live speech subtitles, and community intro/credit skipping. |
 | Player → Subtitle tracks → Advanced subtitles | Secondary subtitles, ASS styles, offsets, and font import. |
 | Player → Audio tracks → Audio effects | Dialogue emphasis, EQ, loudness normalization, and limiting. |
@@ -133,7 +133,13 @@ The TV home, library, recommendations, title details, and settings share JetStre
 
 Media-library and Simple-mode details use Compose TV, with title/summary information on the left and primary playback controls on the right. Artwork tint follows the global appearance; episodes, sources, and people use lazy lists. The detail page has no clock or top back control. See [the media-library guide](docs/media-library.md) for operation and constraints.
 
-The default compact TV home combines recommendations and continued viewing, with a **Filter titles** shortcut for browsing by type, region, year, and rating. Library stays separate for source categories, folders, filters, and login/cookie actions. Source previews show up to 20 titles while source actions remain independently accessible, including actions without poster artwork. Under **Settings → Home and discovery → Home layout**, you can switch to the legacy source home or legacy poster home without resetting sources, favorites, history, or other browsing settings. A continued-viewing card can expose a long-press/menu action for resuming, finding another source, or deleting just that record. Hero rotation can keep the original automatic timing, pause while focused, or switch only with left/right input.
+Media Library and Simple modes bring curated recommendations into the home page. The default three rows are Chinese movies, Chinese series, and trending titles, with a small selection of worldwide recommendations. Each recommendation row previews up to 12 titles; movie, series, and top-rated categories load only their selected two or three rows. **View all** and **Filter titles** provide more titles and origin/country, type, year, and rating filters. Library continues to open the current source’s categories, folders, filters, and login/cookie actions. Source and personal-shelf previews retain their 20-title limit.
+
+Choose **Settings → Home and discovery → Usage mode** to see three static layout previews drawn by the app and select Media Library, Simple, or Classic. To return to Simple, use **Settings → Home and discovery → Usage mode → Simple** (设置 → 首页与发现 → 使用模式 → 简洁), then return home. Classic keeps the original source directory, details, and small-window playback. Your sources, playback settings, favorites, and history are preserved.
+
+**Media Library may still be unstable or awkward to use. Please report browsing, source-selection, or playback problems in [Issues](https://github.com/wobuhui666/TV/issues).**
+
+A continued-viewing card can expose a long-press/menu action for resuming, finding another source, or deleting just that record. Hero rotation can keep the original automatic timing, pause while focused, or switch only with left/right input.
 
 Recommendation walls load TMDB and Douban data independently. Poster-wall filters expose the fields supported by that wall, while VOD category and folder pages use their source's filters. Filters and episode selection remain attached to the correct page or source when the view is recreated or the source changes.
 
@@ -143,7 +149,7 @@ Poster-detail source selection is another optional entry point. It can use metad
 
 ### Douban cloud bridge
 
-The Douban cloud bridge is an optional third-party recommendation service. It supplies title lists, artwork, and metadata for the TV home's popular Douban movie and series sections and their **View all** pages. Playback still uses your configured sources.
+The Douban cloud bridge is an optional third-party recommendation service. It supplies title lists, artwork, and metadata for Douban rows in the TV home's movie and series categories and their **View all** pages. Playback still uses your configured sources.
 
 Configure it under **TV Settings → Home and discovery**:
 

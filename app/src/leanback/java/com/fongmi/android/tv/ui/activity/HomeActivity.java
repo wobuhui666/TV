@@ -398,6 +398,11 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 requestNavFocus(current);
                 return;
             }
+            // Move focus into content before selection so hero updates cannot retain toolbar focus.
+            if (!mBinding.recycler.hasFocus() && (!mBinding.recycler.requestFocus() || !mBinding.recycler.hasFocus())) {
+                requestNavFocus(current);
+                return;
+            }
             // Leanback can skip setSelection when its stored position still matches a pending D-pad move.
             // Cancel that move before the latest request chooses its target.
             mBinding.recycler.stopScroll();
@@ -412,15 +417,22 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 if (better >= 0) target = better;
             }
             int focusTarget = target;
+            Object focusRow = mAdapter.get(focusTarget);
             mBinding.recycler.setSelectedPosition(focusTarget, holder -> {
                 boolean taskValid = current.getAsBoolean();
-                int holderPosition = holder.getBindingAdapterPosition();
+                int holderPosition = holder == null ? RecyclerView.NO_POSITION : holder.getBindingAdapterPosition();
                 traceRecyclerFocus("task", focusTarget, taskValid, requestGeneration, holderPosition);
-                if (!taskValid || holderPosition != focusTarget) return;
+                if (!taskValid) return;
+                if (holderPosition != focusTarget || holderPosition < 0 || holderPosition >= mAdapter.size()
+                        || mAdapter.get(holderPosition) != focusRow || !canRequestFocus(mBinding.recycler)) {
+                    requestNavFocus(current);
+                    return;
+                }
+                // Selection may already have focused a native control or Compose host in this row.
+                if (holder.itemView.hasFocus()) return;
                 // A missing row must finish selection/layout before focus can leave the old row.
                 View focus = findFocusable(holder.itemView);
                 if (focus != null && focus.requestFocus()) return;
-                if (canRequestFocus(mBinding.recycler) && mBinding.recycler.requestFocus() && mBinding.recycler.hasFocus()) return;
                 requestNavFocus(current);
             });
             traceRecyclerFocus("selected", focusTarget, current.getAsBoolean(), requestGeneration, RecyclerView.NO_POSITION);
@@ -571,6 +583,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (view.isFocusable()) return view;
         if (!(view instanceof ViewGroup)) return null;
         ViewGroup group = (ViewGroup) view;
+        if (group.getDescendantFocusability() == ViewGroup.FOCUS_BLOCK_DESCENDANTS) return null;
         for (int i = 0; i < group.getChildCount(); i++) {
             View target = findFocusable(group.getChildAt(i));
             if (target != null) return target;

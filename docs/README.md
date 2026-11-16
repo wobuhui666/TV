@@ -8,7 +8,7 @@
 | --- | --- |
 | 配置字段与示例 | [CONFIG](CONFIG.md) |
 | 原生海报墙、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
-| TV 媒体库详情与遥控器操作 | [使用说明](media-library.md) |
+| TV 媒体库模式、首页与遥控器操作 | [使用说明](media-library.md) |
 | 诊断、缓存与播放工具 | [使用说明](practical-improvements.md) |
 | OTA 更新与云控 | [使用说明](ota-updates.md) |
 | 直播与节目单 | [LIVE](LIVE.md) |
@@ -32,7 +32,7 @@
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
 | 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |
 | 媒体库与全屏播放器打磨 | [真实片源、画面与遥控器验证](testing/reports/2026-11-15-library-polish/README.md) |
-| 媒体库详情对齐与原生稳定性 | [当前专项结果与待完成的默认 ECH 验收](testing/reports/2026-11-16-library-alignment-stability/README.md) |
+| 媒体库详情对齐与原生稳定性 | [详情/TLS 阶段的有限回归与历史失败](testing/reports/2026-11-16-library-alignment-stability/README.md) |
 | Compose TV 媒体库详情 | [详情重做、验证结果与性能限制](testing/reports/2026-11-15-library-detail-redesign/README.md) |
 | Exo 声音与弹幕停顿 | [解码回退修复与 GHA 验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |

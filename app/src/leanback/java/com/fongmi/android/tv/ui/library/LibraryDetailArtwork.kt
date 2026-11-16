@@ -34,7 +34,6 @@ import com.fongmi.android.tv.ui.theme.RexTheme
 import com.fongmi.android.tv.utils.GlideWarmup
 import com.fongmi.android.tv.utils.ImgUtil
 import com.fongmi.android.tv.utils.TmdbLogoTransformation
-import com.google.android.material.color.utilities.Hct
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -45,9 +44,10 @@ data class DetailArtworkColors(val background: Color, val accent: Color)
 fun detailArtworkColors(dominantColor: Int?, isLight: Boolean): DetailArtworkColors {
     val theme = JetStreamPalette.colorScheme()
     if (dominantColor == null) return DetailArtworkColors(theme.background, theme.tertiary)
-    val seed = Hct.fromInt(dominantColor)
-    val background = Hct.from(seed.hue, min(seed.chroma, 20.0), if (isLight) 98.0 else 7.0).toInt()
-    val accent = Hct.from(seed.hue, min(seed.chroma, 32.0), if (isLight) 42.0 else 80.0).toInt()
+    val seed = FloatArray(3)
+    ColorUtils.colorToM3HCT(dominantColor, seed)
+    val background = ColorUtils.M3HCTToColor(seed[0], min(seed[1], 20f), if (isLight) 98f else 7f)
+    val accent = ColorUtils.M3HCTToColor(seed[0], min(seed[1], 32f), if (isLight) 42f else 80f)
     return DetailArtworkColors(
         background = Color(ColorUtils.blendARGB(theme.background.toArgb(), background, .65f)),
         accent = Color(ColorUtils.blendARGB(theme.tertiary.toArgb(), accent, .55f))

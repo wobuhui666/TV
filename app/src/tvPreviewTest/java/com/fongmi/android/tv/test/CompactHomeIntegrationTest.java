@@ -446,6 +446,8 @@ public final class CompactHomeIntegrationTest {
                 .put("globalVisible", visible).put("globalRect", bounds.toShortString())
                 .put("hasFocus", view.hasFocus()).put("isFocused", view.isFocused())
                 .put("focusable", view.isFocusable()).put("shown", view.isShown())
+                .put("focusableInTouchMode", view.isFocusableInTouchMode()).put("inTouchMode", view.isInTouchMode())
+                .put("descendantFocusability", view instanceof android.view.ViewGroup group ? group.getDescendantFocusability() : JSONObject.NULL)
                 .put("visibility", view.getVisibility()).put("attached", view.isAttachedToWindow());
     }
 
