@@ -642,6 +642,7 @@ jobs:
             artifacts/playback-specs/
             artifacts/playback-clock/
             artifacts/compact-home/
+            artifacts/library-native-probe/
             artifacts/live-lines-touch-scroll/
             artifacts/home-background/
             artifacts/live-home/
