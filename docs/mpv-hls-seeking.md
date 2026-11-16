@@ -3,15 +3,23 @@
 Replay seeks to the beginning (or the configured opening position); refresh
 keeps the position captured before playback stops. HTTP resume seeks wait for
 the new file to load, and the adapter preserves their target until the native
-clock confirms the seek. Queued clock and video events cannot overwrite the
+clock confirms the seek. The adapter also reads MPV's current cache pause and
+seek state before reporting READY. Queued clock and video events cannot overwrite the
 resume target with the old file's position. A new seek during loading replaces
-the pending target.
+the pending target. Pause, speed and volume set during loading are reapplied
+when the file loads, including after a GPU fallback; queued native reset
+notifications cannot replace those settings. Replay after EOF reopens the same
+media at the beginning.
 
 When a local subtitle picker destroys the video Surface, MPV temporarily
 disables the selected video track before releasing that window. On return it
 restores the output and selected track so the decoder renders into the new
-Surface, including when paused. Cancelling retains the picker's pause; choosing
+Surface and seeks to the current timestamp to refill the new decoder, including
+a paused frame. Cancelling retains the picker's pause; choosing
 a local subtitle retains the existing behavior of continuing playback.
+
+The [issue #119 verification report](testing/reports/2026-11-16-issue119-mpv/README.md)
+records the tested application commit, native device results and coverage limits.
 
 ## HLS seek precision
 

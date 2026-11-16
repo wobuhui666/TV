@@ -1,0 +1,794 @@
+{
+  "date": "2026-11-16",
+  "applicationCommit": "e178b85c3237648d8ff8dbadb6d2846cf4cc9557",
+  "fixtureCommit": "9240f8501abf272859f53ccc1a2df710bf2b631b",
+  "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+  "ghaRun": 43951359098,
+  "unitTests": {
+    "full": 1044,
+    "focusedIncludedInFull": 58,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "newErrors": 0,
+    "existingErrors": 108
+  },
+  "applicationId": "com.fongmi.android.tv.mpv119",
+  "apkFiles": {
+    "fixed": [
+      {
+        "file": "mpv119-app-arm64-debug.apk",
+        "applicationId": "com.fongmi.android.tv.mpv119",
+        "sha256": "b4a9ef915b65d3212eba5d939cf8275b80928ed5eb027615b46a36c664930255"
+      },
+      {
+        "file": "mpv119-test-arm64-debug.apk",
+        "applicationId": "com.fongmi.android.tv.mpv119.test",
+        "sha256": "a8550aa03f8236114cc4d28601dc33be34fcb43280c5793e808442e8ad80959e"
+      }
+    ],
+    "baseline": [
+      {
+        "file": "mpv119-app-arm64-debug.apk",
+        "applicationId": "com.fongmi.android.tv.mpv119",
+        "sha256": "e5c2efd0cf0b15f64a9655391a8837cc19d5f0d4d946903864a88a2c2c85c851"
+      },
+      {
+        "file": "mpv119-test-arm64-debug.apk",
+        "applicationId": "com.fongmi.android.tv.mpv119.test",
+        "sha256": "a8550aa03f8236114cc4d28601dc33be34fcb43280c5793e808442e8ad80959e"
+      }
+    ]
+  },
+  "signingCertificateSha256": "7f31e3056ff77765c85aedac9c642e317173472459117dd8749c8ceb6f88b6b1",
+  "nativeLibrarySha256": {
+    "lib/arm64-v8a/libmpv.so": "b1f2061e4868731236d407fdb7ac494a472d937fa9ce909f982cec82f9b96802",
+    "lib/arm64-v8a/libplayer.so": "fdccf8ad1e904072c753b8bcf894f7b620690e1b7b969188416ac2c16e577789"
+  },
+  "device": {
+    "model": "X20",
+    "manufacturer": "incar",
+    "api": 29,
+    "abi": "arm64-v8a",
+    "hardware": "ums512_1h10",
+    "testDisplay": "awake and fixed landscape",
+    "temporaryStoragePermissions": [
+      "READ_EXTERNAL_STORAGE",
+      "WRITE_EXTERNAL_STORAGE"
+    ]
+  },
+  "mediaFixture": {
+    "bytes": 7867807,
+    "sha256": "8cfc126088f99856900e2af4355e28641ed44bb8b3fbe9311bd7572345220a3b",
+    "content": "90-second synthetic SDR H.264/AAC testsrc2",
+    "deviceLocalHttpRangeVerified": true,
+    "deviceLocalHttpFullBodyVerified": true,
+    "deviceLocalHttpServiceUsage": "Read-only existing /file route serving only this task-owned fixture; no service/config changes"
+  },
+  "primaryMatrix": {
+    "tests": 30,
+    "passed": 30,
+    "groups": [
+      {
+        "label": "Local MP4 / gpu",
+        "tests": 6,
+        "passed": 6,
+        "runnerOK": true,
+        "elapsedSeconds": 26.569,
+        "actualVideoOutputs": [
+          "gpu"
+        ],
+        "actualGpuContexts": [
+          "android"
+        ],
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-paused",
+            "frameCaptures": 3,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 13952,
+            "acceptedPass": true
+          }
+        ]
+      },
+      {
+        "label": "Local MP4 / gpu-next OpenGL",
+        "tests": 6,
+        "passed": 6,
+        "runnerOK": true,
+        "elapsedSeconds": 26.995,
+        "actualVideoOutputs": [
+          "gpu-next"
+        ],
+        "actualGpuContexts": [
+          "android"
+        ],
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14052,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-paused",
+            "frameCaptures": 3,
+            "minimumColoredPixels": 14080,
+            "acceptedPass": true
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 13757,
+            "acceptedPass": true
+          }
+        ]
+      },
+      {
+        "label": "Requested Vulkan / natural OpenGL fallback",
+        "tests": 6,
+        "passed": 6,
+        "runnerOK": true,
+        "elapsedSeconds": 27.788,
+        "actualVideoOutputs": [
+          "gpu-next"
+        ],
+        "actualGpuContexts": [
+          "android"
+        ],
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14080,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-paused",
+            "frameCaptures": 3,
+            "minimumColoredPixels": 14080,
+            "acceptedPass": true
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14176,
+            "acceptedPass": true
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 13757,
+            "acceptedPass": true
+          }
+        ]
+      },
+      {
+        "label": "Static HLS / adb-reversed HTTP",
+        "tests": 6,
+        "passed": 6,
+        "runnerOK": true,
+        "elapsedSeconds": 180.822,
+        "actualVideoOutputs": [
+          "gpu"
+        ],
+        "actualGpuContexts": [
+          "android"
+        ],
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-paused",
+            "frameCaptures": 3,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14008,
+            "acceptedPass": true
+          }
+        ]
+      },
+      {
+        "label": "Device-local HTTP MP4",
+        "tests": 6,
+        "passed": 6,
+        "runnerOK": true,
+        "elapsedSeconds": 25.826,
+        "actualVideoOutputs": [
+          "gpu"
+        ],
+        "actualGpuContexts": [
+          "android"
+        ],
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-paused",
+            "frameCaptures": 3,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 2,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": true
+          }
+        ]
+      }
+    ]
+  },
+  "additionalWanHttp": {
+    "label": "HTTP MP4 via WAN adb reverse",
+    "tests": 6,
+    "passed": 5,
+    "runnerOK": false,
+    "elapsedSeconds": 232.292,
+    "actualVideoOutputs": [
+      "gpu"
+    ],
+    "actualGpuContexts": [
+      "android"
+    ],
+    "cases": [
+      {
+        "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": -2,
+        "jsonPassed": false,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "real-exo-ready",
+        "frameCaptures": 1,
+        "minimumColoredPixels": 12949,
+        "acceptedPass": false
+      },
+      {
+        "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": 0,
+        "jsonPassed": true,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "refresh-2",
+        "frameCaptures": 4,
+        "minimumColoredPixels": 12949,
+        "acceptedPass": true
+      },
+      {
+        "test": "replayAfterEndReloadsSameMediaAtBeginning",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": 0,
+        "jsonPassed": true,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "replay-after-eof",
+        "frameCaptures": 2,
+        "minimumColoredPixels": 12949,
+        "acceptedPass": true
+      },
+      {
+        "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": 0,
+        "jsonPassed": true,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "replay-paused",
+        "frameCaptures": 3,
+        "minimumColoredPixels": 14220,
+        "acceptedPass": true
+      },
+      {
+        "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": 0,
+        "jsonPassed": true,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "seek-while-loading",
+        "frameCaptures": 2,
+        "minimumColoredPixels": 12949,
+        "acceptedPass": true
+      },
+      {
+        "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+        "startedInThisRun": true,
+        "completedInThisRun": true,
+        "instrumentationMethodStatus": 0,
+        "jsonPassed": true,
+        "hostDestroyedAfterRelease": true,
+        "preferencesRestored": true,
+        "stage": "select-local-subtitle",
+        "frameCaptures": 4,
+        "minimumColoredPixels": 14008,
+        "acceptedPass": true
+      }
+    ]
+  },
+  "fixedExecutionTotals": {
+    "tests": 36,
+    "passed": 35,
+    "failed": 1
+  },
+  "baselineComparisons": {
+    "status": "completed",
+    "applicationCommit": "7fd11e24adbcd68013d4af442ebdb5e5c235bb82",
+    "fixtureCommit": "9240f8501abf272859f53ccc1a2df710bf2b631b",
+    "tests": 7,
+    "passed": 3,
+    "failed": 4,
+    "groups": [
+      {
+        "label": "Local MP4",
+        "tests": 6,
+        "passed": 3,
+        "elapsedSeconds": 81.855,
+        "runnerOK": false,
+        "cases": [
+          {
+            "test": "exoToMpvSwitchThenRepeatedRefreshPreservesProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-after-exo-2",
+            "frameCaptures": 6,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-2",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": true
+          },
+          {
+            "test": "replayAfterEndReloadsSameMediaAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": -2,
+            "jsonPassed": false,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-after-eof",
+            "frameCaptures": 1,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": false
+          },
+          {
+            "test": "replayFromPlayingAndPausedRestartsAtBeginning",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": -2,
+            "jsonPassed": false,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "replay-playing",
+            "frameCaptures": 1,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": false
+          },
+          {
+            "test": "seekWhileLoadingOverridesPreviousResumeTarget",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": -2,
+            "jsonPassed": false,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "seek-while-loading",
+            "frameCaptures": 1,
+            "minimumColoredPixels": 14220,
+            "acceptedPass": false
+          },
+          {
+            "test": "subtitleFolderCancelAndSelectionRestoreTextureVideo",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": 0,
+            "jsonPassed": true,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "select-local-subtitle",
+            "frameCaptures": 4,
+            "minimumColoredPixels": 14214,
+            "acceptedPass": true
+          }
+        ]
+      },
+      {
+        "label": "WAN HTTP repeated refresh",
+        "tests": 1,
+        "passed": 0,
+        "elapsedSeconds": 37.016,
+        "runnerOK": false,
+        "cases": [
+          {
+            "test": "repeatedRefreshPreservesCurrentPlaybackProgress",
+            "startedInThisRun": true,
+            "completedInThisRun": true,
+            "instrumentationMethodStatus": -2,
+            "jsonPassed": false,
+            "hostDestroyedAfterRelease": true,
+            "preferencesRestored": true,
+            "stage": "refresh-0",
+            "frameCaptures": 1,
+            "minimumColoredPixels": 12949,
+            "acceptedPass": false
+          }
+        ]
+      }
+    ],
+    "observedFailures": [
+      "Replay continued at about30.4s instead of returning to the beginning.",
+      "Replay after actual EOF did not reopen the file.",
+      "The26s loading seek was overwritten by the old12s target.",
+      "First HTTP refresh published native/reported0 instead of retained12s."
+    ],
+    "localSurfaceResult": "Passed on X20; no natural subtitle-return black screen was reproduced."
+  },
+  "temporaryDeviceSettingsRestored": true,
+  "coverageLimits": [
+    "Requested Vulkan actually fell back to OpenGL; real Vulkan rendering was not tested.",
+    "Not the reported Hisense MT5873 Android 11 TV; no hardware or high-bitrate performance claim.",
+    "The synthetic fixture mutes audio; audible output, real sources and HDR were not tested.",
+    "The debug host exercises the production subtitle folder and FileActivity; full VideoActivity and media-library UI were not executed.",
+    "The device naturally retains its background texture; explicit real TextureView removal/reinsertion tests Surface reconstruction, rather than claiming natural reproduction.",
+    "The additional WAN HTTP failure occurs during Exo preparation, before MPV handoff; it is retained separately."
+  ],
+  "cleanup": {
+    "status": "complete",
+    "fixedInstalledAppSha256": "b4a9ef915b65d3212eba5d939cf8275b80928ed5eb027615b46a36c664930255",
+    "rotationRestored": {
+      "accelerometer_rotation": "1",
+      "user_rotation": "1"
+    },
+    "screenOffTimeoutRestored": "300000",
+    "stayAwakeRestored": "0",
+    "disposableStoragePermissionStatesRestored": {
+      "android.permission.READ_EXTERNAL_STORAGE": false,
+      "android.permission.WRITE_EXTERNAL_STORAGE": false
+    },
+    "ownedAdbForward18811Removed": true,
+    "ownedAdbReverse18769Removed": true,
+    "ownedExternalHttpFixtureRemoved": true,
+    "ownedDeviceHttpProbeResponsesRemoved": true,
+    "mainAppServerUntouched": true,
+    "taskFixtureServerStopped": true
+  }
+}
