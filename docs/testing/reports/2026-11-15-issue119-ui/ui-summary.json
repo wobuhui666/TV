@@ -1,0 +1,86 @@
+{
+  "headSha": "d0930b0e476d1d01bad1fe621aeba3c8d60fbd59",
+  "passed": true,
+  "passedTests": 44,
+  "displays": [
+    {
+      "size": "1920x1080",
+      "density": 320,
+      "passed": true,
+      "passedTests": 22,
+      "suites": [
+        {
+          "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+          "passed": true,
+          "tests": 8,
+          "expectedTests": 8
+        },
+        {
+          "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+          "passed": true,
+          "tests": 5,
+          "expectedTests": 5
+        }
+      ],
+      "capturedFrames": 64
+    },
+    {
+      "size": "1280x720",
+      "density": 240,
+      "passed": true,
+      "passedTests": 22,
+      "suites": [
+        {
+          "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+          "passed": true,
+          "tests": 8,
+          "expectedTests": 8
+        },
+        {
+          "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+          "passed": true,
+          "tests": 3,
+          "expectedTests": 3
+        },
+        {
+          "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+          "passed": true,
+          "tests": 5,
+          "expectedTests": 5
+        }
+      ],
+      "capturedFrames": 51
+    }
+  ],
+  "scope": "Offline production TV home, live lines, source configuration windows and Java/QuickJS forms; no live streams or Exo performance measurement"
+}

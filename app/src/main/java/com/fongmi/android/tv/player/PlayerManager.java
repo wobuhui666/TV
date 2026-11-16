@@ -74,6 +74,7 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
     private int audioRecoveryAttempts;
     private String audioRecoveryKey;
     private boolean pendingTimeshiftRebuild;
+    private boolean pendingDecodeFallbackReset;
 
     public PlayerManager(Callback callback) {
         this.callback = callback;
@@ -768,6 +769,7 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
         audioRecoveryAttempts = 0;
         audioRecoveryKey = null;
         retry = 0;
+        pendingDecodeFallbackReset = true;
         this.spec = spec;
         pendingTimeshiftRebuild = false;
         timeshift.start(spec);
@@ -786,6 +788,7 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
         forcePlatformEngine = false;
         pendingStartPositionMs = startPositionMs;
         retry = 0;
+        pendingDecodeFallbackReset = true;
         pendingTimeshiftRebuild = false;
         timeshift.clear();
         spec = PlaySpec.fromParse(result, key, metadata);
@@ -805,6 +808,14 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
             return;
         }
         ensureEngine(spec.checkUa());
+        if (pendingDecodeFallbackReset) {
+            pendingDecodeFallbackReset = false;
+            if (engine.resetDecodeFallback()) {
+                androidx.media3.common.PlaybackParameters parameters = player.getPlaybackParameters();
+                setPlayer(engine.rebuild());
+                restorePlaybackParameters(parameters);
+            }
+        }
         engine.start(spec, startPositionMs);
         setDanmakus(spec.getDanmakus());
         App.post(runnable, timeout);
@@ -998,6 +1009,11 @@ public class PlayerManager implements ParseCallback, TimeshiftPlayback.Host {
             if (action != PlayerEngine.ErrorAction.RECOVERED) App.removeCallbacks(runnable);
             switch (action) {
                 case DECODE -> handleDecodeError(e);
+                case DECODE_TRACK -> {
+                    Notify.show(R.string.error_decode_track_fallback);
+                    long position = isLive() && !timeshift.isReplaying() ? C.TIME_UNSET : getPosition();
+                    restartCurrent(position, true);
+                }
                 case TUNNEL -> handleTunnelError(e);
                 case PLATFORM -> handlePlatformDecoderFallback(e);
                 case RECOVERED -> setDanmakus(spec.getDanmakus());

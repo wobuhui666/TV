@@ -1,0 +1,68 @@
+{
+  "testedCommit": "d0930b0e476d1d01bad1fe621aeba3c8d60fbd59",
+  "buildRun": 43732512790,
+  "uiRun": 43732510697,
+  "junit": {
+    "app": {
+      "tests": 1049,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "catvod": {
+      "tests": 240,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "quickjs": {
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "wasm": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "lint": {
+    "baselineSha": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+    "currentSha": "d0930b0e476d1d01bad1fe621aeba3c8d60fbd59",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "passed": true
+  },
+  "arm64DebugPackages": {
+    "applicationCommit": "d0930b0e476d1d01bad1fe621aeba3c8d60fbd59",
+    "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+    "abi": "arm64-v8a",
+    "buildType": "debug",
+    "instrumentationExecuted": false,
+    "files": [
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "applicationId": "com.fongmi.android.tv.sourceprobe",
+        "sha256": "6b9ae80826243fbaaea39c00efa603019ded8c5d25d9ff79da0dbd7c45116c4f"
+      },
+      {
+        "file": "sourceprobe-test-debug.apk",
+        "applicationId": "com.fongmi.android.tv.sourceprobe.test",
+        "sha256": "de565afaff9c35298067d14160cad48582f353b5ce1cc47f8cab1867e64a63e2"
+      }
+    ],
+    "media3FfmpegJniSha256": "b31aff67cb0179debfb85a4b3ae02368439e3c0fea4f71fa7ccdd42a6195e6bd",
+    "quickJsBudgetJniSha256": "99b99cfcce81f0ec59daf010fea491bc88b225938dd121574f4103ce2a43b145"
+  }
+}

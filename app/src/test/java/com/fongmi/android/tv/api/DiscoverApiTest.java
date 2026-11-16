@@ -146,15 +146,15 @@ public class DiscoverApiTest {
 
     @Test
     public void shouldBuildTmdbPosterUrl() {
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w342/abc.jpg", DiscoverApi.tmdbPic("/abc.jpg"));
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w342/abc.jpg", DiscoverApi.tmdbPic("abc.jpg"));
+        assertEquals("https://t.coolmarket.eu.org/t/p/w342/abc.jpg", DiscoverApi.tmdbPic("/abc.jpg"));
+        assertEquals("https://t.coolmarket.eu.org/t/p/w342/abc.jpg", DiscoverApi.tmdbPic("abc.jpg"));
         assertEquals("", DiscoverApi.tmdbPic(""));
     }
 
     @Test
     public void shouldBuildTmdbBackdropAndLogoUrls() {
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w780/hero.jpg", DiscoverApi.tmdbBackdrop("/hero.jpg"));
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w300/logo.png", DiscoverApi.tmdbLogo("logo.png"));
+        assertEquals("https://t.coolmarket.eu.org/t/p/w780/hero.jpg", DiscoverApi.tmdbBackdrop("/hero.jpg"));
+        assertEquals("https://t.coolmarket.eu.org/t/p/w300/logo.png", DiscoverApi.tmdbLogo("logo.png"));
     }
 
     @Test
@@ -164,7 +164,7 @@ public class DiscoverApiTest {
 
         assertEquals("878", genres.get(0).getId());
         assertEquals("Netflix", providers.get(0).getName());
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w300/n.png", providers.get(0).getImage());
+        assertEquals("https://t.coolmarket.eu.org/t/p/w300/n.png", providers.get(0).getImage());
     }
 
     @Test
@@ -173,7 +173,7 @@ public class DiscoverApiTest {
 
         assertEquals("tmdb:tv:1", items.get(0).getId());
         assertEquals("tv", items.get(0).getTypeName());
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w780/b.jpg", items.get(0).getBackdrop());
+        assertEquals("https://t.coolmarket.eu.org/t/p/w780/b.jpg", items.get(0).getBackdrop());
     }
 
     @Test
@@ -255,7 +255,7 @@ public class DiscoverApiTest {
         assertEquals(166, detail.getRuntimeMinutes());
         assertEquals("丹尼斯", detail.getCreators());
         assertEquals("提莫西", detail.getCast().get(0).getName());
-        assertEquals("https://tapi.coolmarket.eu.org/t/p/w185/a.jpg", detail.getCast().get(0).getProfile());
+        assertEquals("https://t.coolmarket.eu.org/t/p/w185/a.jpg", detail.getCast().get(0).getProfile());
     }
 
     @Test

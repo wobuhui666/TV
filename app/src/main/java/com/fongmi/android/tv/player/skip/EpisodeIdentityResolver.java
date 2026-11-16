@@ -14,12 +14,17 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -76,6 +81,12 @@ public final class EpisodeIdentityResolver {
 
     @Nullable
     public EpisodeIdentity resolve(String vodId, String title, String year, String typeName, String episodeName, boolean reliableEpisodeLabel) throws IOException {
+        return resolve(vodId, title, year, typeName, episodeName, reliableEpisodeLabel, 0);
+    }
+
+    @Nullable
+    public EpisodeIdentity resolve(String vodId, String title, String year, String typeName, String episodeName,
+                                   boolean reliableEpisodeLabel, int continuousEpisodeCount) throws IOException {
         deadlineNs = System.nanoTime() + lookupTimeoutNs;
         DiscoverMediaKey mediaKey = DiscoverMediaKey.parse(vodId);
         if (cancelled || UNSUPPORTED.matcher(normalize(episodeName)).find()) return null;
@@ -91,7 +102,7 @@ public final class EpisodeIdentityResolver {
         if (explicitId > 0) {
             try {
                 JsonObject detail = get("tv/" + explicitId, null, true);
-                return cancelled ? null : identityFromDetail(detail, explicitId, parsed, "", false);
+                return cancelled ? null : identityFromDetail(detail, explicitId, parsed, "", false, continuousEpisodeCount);
             } catch (IOException error) {
                 if (cancelled) return null;
                 // An explicit canonical TMDB id plus explicit season/episode remains usable offline.
@@ -101,14 +112,15 @@ public final class EpisodeIdentityResolver {
         String targetYear = firstYear(year);
         if (targetYear.isEmpty()) targetYear = firstYear(title);
         if (targetYear.isEmpty() || parsed.queryTitle().isEmpty()) return null;
-        JsonObject search = get("search/tv", parsed.queryTitle(), false);
-        List<Long> candidates = matchingCandidates(search, parsed.queryTitle(), targetYear, parsed.season());
+        Metadata search = getMetadata("search/tv", parsed.queryTitle(), false);
+        if (search.searchTitle() != null) parsed = new ParsedEpisode(search.searchTitle(), parsed.season(), parsed.episode());
+        List<Long> candidates = matchingCandidates(search.body(), parsed.queryTitle(), targetYear, parsed.season());
         EpisodeIdentity found = null;
         // Do not make an unbounded sequence of requests for a common title.
         if (candidates.size() > 3) return null;
         for (long id : candidates) {
             if (cancelled) return null;
-            EpisodeIdentity candidate = identityFromDetail(get("tv/" + id, null, true), id, parsed, targetYear, true);
+            EpisodeIdentity candidate = identityFromDetail(get("tv/" + id, null, true), id, parsed, targetYear, true, continuousEpisodeCount);
             if (candidate == null) continue;
             if (found != null && found.tmdbId() != candidate.tmdbId()) return null;
             found = candidate;
@@ -131,7 +143,9 @@ public final class EpisodeIdentityResolver {
         if (targetYear.isEmpty()) targetYear = firstYear(title);
         String query = normalize(title).replaceAll("[（(](?:19|20)[0-9]{2}[）)]\\s*$", "").trim();
         if (query.isEmpty() || targetYear.isEmpty()) return null;
-        List<Long> candidates = matchingMovieCandidates(get("search/movie", query, false), query, targetYear);
+        Metadata search = getMetadata("search/movie", query, false);
+        if (search.searchTitle() != null) query = search.searchTitle();
+        List<Long> candidates = matchingMovieCandidates(search.body(), query, targetYear);
         if (candidates.size() != 1 || cancelled) return null;
         long id = candidates.get(0);
         return movieFromDetail(get("movie/" + id, null, true), id, query, targetYear, true);
@@ -155,19 +169,24 @@ public final class EpisodeIdentityResolver {
     }
 
     private JsonObject get(String path, @Nullable String query, boolean externalIds) throws IOException {
+        return getMetadata(path, query, externalIds).body();
+    }
+
+    private Metadata getMetadata(String path, @Nullable String query, boolean externalIds) throws IOException {
         if (cancelled) throw new IOException("Lookup cancelled");
         HttpUrl url = HttpUrl.parse(apiBase + path);
         if (url == null) throw new IOException("Invalid metadata endpoint");
         HttpUrl.Builder builder = url.newBuilder().addQueryParameter("api_key", apiKey)
                 .addQueryParameter("language", "zh-CN");
         if (query != null) builder.addQueryParameter("query", query).addQueryParameter("include_adult", "false");
-        if (externalIds) builder.addQueryParameter("append_to_response", "external_ids");
+        if (externalIds) builder.addQueryParameter("append_to_response", path.startsWith("tv/") ? "external_ids,episode_groups" : "external_ids");
         HttpUrl requestUrl = builder.build();
         // Include the route and credential in the private cache key, never in logs.
         String cacheKey = requestUrl.toString();
         synchronized (CACHE) {
             CacheEntry cached = CACHE.get(cacheKey);
-            if (cached != null && cached.expiresAt() > System.currentTimeMillis()) return cached.body().deepCopy();
+            if (cached != null && cached.expiresAt() > System.currentTimeMillis())
+                return new Metadata(cached.body().deepCopy(), cached.searchTitle());
             CACHE.remove(cacheKey);
         }
         Call call = callFactory.apply(new Request.Builder().url(requestUrl).build());
@@ -195,16 +214,69 @@ public final class EpisodeIdentityResolver {
             }
             if (!element.isJsonObject()) throw new IOException("Invalid metadata");
             JsonObject result = element.getAsJsonObject();
+            HttpUrl responseUrl = response.request().url();
+            boolean selectedProxy = !"api.themoviedb.org".equals(requestUrl.host())
+                    && requestUrl.scheme().equals(responseUrl.scheme()) && requestUrl.host().equals(responseUrl.host())
+                    && requestUrl.port() == responseUrl.port();
+            String searchTitle = selectedProxy && query != null
+                    ? approvedSearchTitle(query, response.header("X-Tmdb-Query"), response.header("X-Title-Normalizer")) : null;
             synchronized (CACHE) {
-                CACHE.put(cacheKey, new CacheEntry(result.deepCopy(), System.currentTimeMillis() + CACHE_TTL_MS));
+                CACHE.put(cacheKey, new CacheEntry(result.deepCopy(), searchTitle, System.currentTimeMillis() + CACHE_TTL_MS));
                 while (CACHE.size() > 64) CACHE.remove(CACHE.keySet().iterator().next());
             }
-            return result;
+            return new Metadata(result, searchTitle);
         } finally {
             synchronized (this) {
                 if (activeCall == call) activeCall = null;
             }
         }
+    }
+
+    /** A selected proxy may remove release labels; it may not replace or shorten the actual title. */
+    @Nullable
+    static String approvedSearchTitle(String query, @Nullable String encodedTitle, @Nullable String source) {
+        if (encodedTitle == null || encodedTitle.length() > 4096
+                || !"rules".equals(source) && !"groq".equals(source) && !"workers-ai".equals(source)) return null;
+        String title;
+        try {
+            title = URLDecoder.decode(encodedTitle, StandardCharsets.UTF_8.name());
+        } catch (IllegalArgumentException | IOException error) {
+            return null;
+        }
+        if (title.isEmpty() || title.length() > 256 || title.indexOf('\uFFFD') >= 0) return null;
+        for (int index = 0; index < title.length(); index++) {
+            char character = title.charAt(index);
+            if (Character.isISOControl(character) || Character.getType(character) == Character.FORMAT) return null;
+        }
+        title = normalize(title);
+        String expected = cleanSearchMetadata(query);
+        String output = normalizedTitle(title);
+        String cleanedOutput = title.replaceAll("\\s+", " ");
+        if (output.isEmpty() || !normalizedTitle(query).contains(output)) return null;
+        Matcher numbers = Pattern.compile("[0-9]+").matcher(expected);
+        while (numbers.find()) if (!title.contains(numbers.group())) return null;
+        if (expected.equalsIgnoreCase(cleanedOutput)) return title;
+        if ("rules".equals(source) || output.length() < 2) return null;
+        // Only explicit release/source wrappers provide evidence beyond the local metadata rules.
+        expected = expected.replaceAll("^\\s*(?:\\[[^\\[\\]\\r\\n]{1,80}\\]|【[^【】\\r\\n]{1,80}】)\\s*", "")
+                .replaceAll("\\s*(?:\\[[^\\[\\]\\r\\n]{1,80}\\]|【[^【】\\r\\n]{1,80}】)\\s*$", "")
+                .replaceAll("^\\S{1,40}(?:影视|字幕组|资源)\\s+", "")
+                .replaceAll("\\s+(?:在线观看|在线播放|下载)\\s*$", "").trim();
+        return expected.equalsIgnoreCase(cleanedOutput) ? title : null;
+    }
+
+    private static String cleanSearchMetadata(String query) {
+        String value = normalize(query)
+                .replaceAll("[\\[(【]\\s*(?:19|20)[0-9]{2}\\s*[\\])】]", " ");
+        value = SEASON.matcher(value).replaceAll(" ")
+                .replaceAll("(?:更新(?:至)?|更至)\\s*(?:第\\s*)?" + NUMBER + "\\s*[集话期]?", " ")
+                .replaceAll("第\\s*" + NUMBER + "\\s*[集话期]", " ")
+                .replaceAll("(?i)(?<![a-z0-9])(?:s[0-9]{1,3}(?:[ ._-]*e[0-9]{1,4})?|(?:episode|ep|e)\\s*[0-9]{1,4})(?![a-z0-9])", " ")
+                .replaceAll("(?i)(?<![a-z0-9])(?:[0-9]{3,4}[pi]|[48]k|uhd|fhd|hd|web[- .]?dl|webrip|blu[- .]?ray)(?![a-z0-9])", " ")
+                .replaceAll("(?:中文字幕|中文配音|国语配音|粤语配音|国语版|粤语版|原声版|高清版)(?=$|[\\s\\])】])", " ")
+                .replaceAll("(^|[\\s\\[(【])(?:国语|粤语|粤配|中配|原声|高清|更新|连载中|已完结|完结|大结局|全集|最新)(?=$|[\\s\\])】])", "$1")
+                .replaceAll("[\\[(【]\\s*[\\])】]", " ").replaceAll("\\s+", " ").trim();
+        return value.isEmpty() ? normalize(query) : value;
     }
 
     @Nullable
@@ -297,6 +369,86 @@ public final class EpisodeIdentityResolver {
         return new EpisodeIdentity(expectedId, imdb, (int) integer(selected, "season_number"), parsed.episode());
     }
 
+    @Nullable
+    private EpisodeIdentity identityFromDetail(JsonObject detail, long expectedId, ParsedEpisode parsed, String year,
+                                               boolean verifyTitle, int continuousEpisodeCount) throws IOException {
+        EpisodeIdentity direct = identityFromDetail(detail, expectedId, parsed, year, verifyTitle);
+        if (direct != null || parsed.season() != null || continuousEpisodeCount <= 0
+                || continuousEpisodeCount > 9999 || parsed.episode() > continuousEpisodeCount
+                || integer(detail, "id") != expectedId) return direct;
+        if (verifyTitle && !normalizedTitle(parsed.queryTitle()).equals(normalizedTitle(string(detail, "name")))
+                && !normalizedTitle(parsed.queryTitle()).equals(normalizedTitle(string(detail, "original_name")))) return null;
+        if (!year.isEmpty() && !year.equals(firstYear(string(detail, "first_air_date")))) return null;
+        JsonArray seasons = array(detail, "seasons");
+        if (seasons == null) return null;
+        Map<Integer, Integer> seasonCounts = new HashMap<>();
+        int maximumCount = 0;
+        for (JsonElement element : seasons) {
+            if (!element.isJsonObject()) return null;
+            JsonObject season = element.getAsJsonObject();
+            long number = integer(season, "season_number");
+            long count = integer(season, "episode_count");
+            if (number == 0) continue;
+            if (number < 0 || number > 999 || count < 0 || count > 9999) return null;
+            if (count == 0) continue;
+            if (seasonCounts.put((int) number, (int) count) != null) return null;
+            maximumCount = Math.max(maximumCount, (int) count);
+        }
+        // A playlist longer than every season establishes continuous rather than season-local numbering.
+        if (seasonCounts.size() < 2 || continuousEpisodeCount <= maximumCount) return null;
+        JsonObject episodeGroups = object(detail, "episode_groups");
+        JsonArray groups = episodeGroups == null ? null : array(episodeGroups, "results");
+        if (groups == null) return null;
+        JsonObject absolute = null;
+        for (JsonElement element : groups) {
+            if (!element.isJsonObject()) return null;
+            JsonObject group = element.getAsJsonObject();
+            if (integer(group, "type") != 2) continue;
+            if (absolute != null) return null;
+            absolute = group;
+        }
+        if (absolute == null) return null;
+        String groupId = string(absolute, "id");
+        long groupCount = integer(absolute, "episode_count");
+        if (!groupId.matches("[A-Za-z0-9_-]{1,128}") || groupCount < continuousEpisodeCount || groupCount > 9999) return null;
+        JsonObject mapping = get("tv/episode_group/" + groupId, null, false);
+        ParsedEpisode mapped = absoluteEpisode(mapping, groupId, (int) groupCount, parsed, seasonCounts);
+        return cancelled || mapped == null ? null : identityFromDetail(detail, expectedId, mapped, year, verifyTitle);
+    }
+
+    @Nullable
+    private static ParsedEpisode absoluteEpisode(JsonObject mapping, String groupId, int count, ParsedEpisode parsed,
+                                                  Map<Integer, Integer> seasonCounts) {
+        if (!groupId.equals(string(mapping, "id")) || integer(mapping, "type") != 2
+                || integer(mapping, "episode_count") != count) return null;
+        JsonArray groups = array(mapping, "groups");
+        if (groups == null) return null;
+        boolean[] orders = new boolean[count];
+        Set<String> canonical = new HashSet<>();
+        ParsedEpisode selected = null;
+        int seen = 0;
+        for (JsonElement group : groups) {
+            if (!group.isJsonObject()) return null;
+            JsonArray episodes = array(group.getAsJsonObject(), "episodes");
+            if (episodes == null) return null;
+            for (JsonElement element : episodes) {
+                if (!element.isJsonObject()) return null;
+                JsonObject episode = element.getAsJsonObject();
+                long order = integer(episode, "order");
+                long season = integer(episode, "season_number");
+                long number = integer(episode, "episode_number");
+                Integer seasonCount = season > 0 && season <= 999 ? seasonCounts.get((int) season) : null;
+                if (order < 0 || order >= count || orders[(int) order] || seasonCount == null
+                        || number <= 0 || number > seasonCount || !canonical.add(season + ":" + number)) return null;
+                orders[(int) order] = true;
+                seen++;
+                if (order == parsed.episode() - 1) selected = new ParsedEpisode(parsed.queryTitle(), (int) season, (int) number);
+            }
+        }
+        // Require the complete group to be contiguous so missing entries cannot shift later episodes.
+        return seen == count ? selected : null;
+    }
+
     private static String normalize(String value) {
         return Normalizer.normalize(Trans.t2s(false, safe(value)), Normalizer.Form.NFKC).trim();
     }
@@ -340,5 +492,6 @@ public final class EpisodeIdentityResolver {
     }
 
     record ParsedEpisode(String queryTitle, Integer season, int episode) { }
-    private record CacheEntry(JsonObject body, long expiresAt) { }
+    private record Metadata(JsonObject body, @Nullable String searchTitle) { }
+    private record CacheEntry(JsonObject body, @Nullable String searchTitle, long expiresAt) { }
 }

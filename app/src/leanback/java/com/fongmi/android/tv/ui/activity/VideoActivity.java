@@ -186,9 +186,14 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     public static void start(Activity activity, String key, Vod item, String mark, View poster) {
+        start(activity, key, item, mark, poster, null);
+    }
+
+    public static void start(Activity activity, String key, Vod item, String mark, View poster, Result detail) {
         Intent intent = createIntent(activity, key, item.getId(), item.getName(), item.getPic());
         intent.putExtra("mark", TextUtils.isEmpty(item.getPlayId()) ? mark : null);
         intent.putExtra("playId", item.getPlayId());
+        if (detail != null) intent.putExtra("sourceDetail", App.gson().toJson(detail));
         if (!item.getSourceCandidates().isEmpty()) intent.putParcelableArrayListExtra("sources", new ArrayList<>(item.getSourceCandidates()));
         launch(activity, intent, poster);
     }
@@ -718,7 +723,9 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         mContentRating = "";
         if (mSpecs != null) mSpecs.dismiss();
         beginPlaybackRequest();
-        mViewModel.detailContent(key, id);
+        String detail = getIntent().getStringExtra("sourceDetail");
+        getIntent().removeExtra("sourceDetail");
+        mViewModel.detailContent(key, id, key.equals(getKey()) && id.equals(getId()) ? detail : null);
     }
 
     @Override

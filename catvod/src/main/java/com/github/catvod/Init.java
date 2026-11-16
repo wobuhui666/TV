@@ -13,6 +13,8 @@ import java.lang.ref.WeakReference;
 
 public class Init {
 
+    private static final ThreadLocal<Supplier<Activity>> ACTIVITY_OWNER = new ThreadLocal<>();
+
     private volatile WeakReference<Context> context;
     private volatile Supplier<Activity> activity;
     private volatile Consumer<String> toast;
@@ -36,9 +38,31 @@ public class Init {
     }
 
     public static Activity activity() {
-        Supplier<Activity> supplier = get().activity;
+        Supplier<Activity> supplier = ACTIVITY_OWNER.get();
+        if (supplier == null) supplier = get().activity;
         Activity value = supplier == null ? null : supplier.get();
         return value == null || value.isFinishing() || value.isDestroyed() ? null : value;
+    }
+
+    /** Capture the calling page before work moves to another thread. A missing page stays missing. */
+    public static Supplier<Activity> activityOwner() {
+        Supplier<Activity> owner = ACTIVITY_OWNER.get();
+        if (owner != null) return owner;
+        WeakReference<Activity> reference = new WeakReference<>(activity());
+        return reference::get;
+    }
+
+    public static Supplier<Activity> currentActivityOwner() {
+        return ACTIVITY_OWNER.get();
+    }
+
+    public static Runnable enterActivity(Supplier<Activity> owner) {
+        Supplier<Activity> previous = ACTIVITY_OWNER.get();
+        ACTIVITY_OWNER.set(owner);
+        return () -> {
+            if (previous == null) ACTIVITY_OWNER.remove();
+            else ACTIVITY_OWNER.set(previous);
+        };
     }
 
     public static void setToast(Consumer<String> consumer) {

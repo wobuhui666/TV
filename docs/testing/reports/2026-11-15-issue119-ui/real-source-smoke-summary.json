@@ -1,0 +1,30 @@
+{
+  "status": "incomplete",
+  "applicationCommit": "2cccf0d4b6e6fd412a0c412262bd14d7c81c7a26",
+  "applicationSha256": "8ca26f1be76986b8aef6d7e90db5f6cb9c0bd3868f36eaf443aa8a663f8eb50b",
+  "configurationUrl": "https://9280.kstore.vip/aiwex.json",
+  "siteKey": "Wexconfig",
+  "api": "csp_PanConfigGuard",
+  "environment": {
+    "androidApi": 31,
+    "androidVersion": "12",
+    "device": "Android Emulator",
+    "abi": "x86_64",
+    "arm64Translation": "libndk_translation",
+    "package": "com.fongmi.android.tv.sourceprobe",
+    "size": "1920x1080",
+    "density": 320
+  },
+  "observed": {
+    "configurationCentreLoaded": true,
+    "legacyDetailHandler": "com.github.catvod.spider.PanConfig$55.run",
+    "dialogConstructor": "android.app.AlertDialog.Builder.show"
+  },
+  "unconfirmed": [
+    "stable visible configuration window",
+    "window ownership through a complete real-source interaction",
+    "real-source repeated clicks and return navigation"
+  ],
+  "scope": "Additional protected-source smoke attempt; excluded from passing UI and instrumentation totals. Raw logs, configuration snapshots and app data remain outside the repository.",
+  "downloadedPublicGuardJarMd5": "541366f5860ceb66e1c3005f5a299afe"
+}

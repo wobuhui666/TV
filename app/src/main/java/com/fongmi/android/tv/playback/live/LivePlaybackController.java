@@ -2,6 +2,7 @@ package com.fongmi.android.tv.playback.live;
 
 import android.text.TextUtils;
 
+import androidx.annotation.Nullable;
 import androidx.media3.common.C;
 
 import com.fongmi.android.tv.api.config.LiveConfig;
@@ -16,6 +17,7 @@ public class LivePlaybackController {
     private final LiveFallbackPolicy fallbackPolicy;
     private final LivePlaybackState state;
     private final LivePlaybackHost host;
+    private long channelGeneration;
 
     public LivePlaybackController(LivePlaybackHost host, LivePlaybackState state) {
         this.state = state;
@@ -25,6 +27,7 @@ public class LivePlaybackController {
     }
 
     public void reset() {
+        channelGeneration++;
         state.reset();
     }
 
@@ -36,6 +39,7 @@ public class LivePlaybackController {
 
     public void selectChannel(Channel channel) {
         if (channel == null) return;
+        channelGeneration++;
         state.setChannel(channel);
         host.renderChannelSelection(channel);
         refresh();
@@ -124,6 +128,26 @@ public class LivePlaybackController {
 
     public void nextLine(boolean show) {
         switchLine(true, show);
+    }
+
+    @Nullable
+    public LiveLineSelection getLineSelection() {
+        Channel channel = state.getChannel();
+        return channel == null || channel.getUrls().size() <= 1 ? null : new LiveLineSelection(channel, channelGeneration);
+    }
+
+    public boolean isCurrentLineSelection(LiveLineSelection selection) {
+        return selection != null && selection.matches(state.getChannel(), channelGeneration);
+    }
+
+    public boolean selectLine(LiveLineSelection selection, int index) {
+        if (!isCurrentLineSelection(selection) || !selection.contains(index)) return false;
+        Channel channel = state.getChannel();
+        if (channel.getIndex() == index) return false;
+        channel.setIndex(index);
+        host.renderLineSelection(channel, false);
+        refresh();
+        return true;
     }
 
     private void switchLine(boolean next, boolean show) {

@@ -5,6 +5,7 @@ import androidx.media3.common.C;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.bean.Episode;
+import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.setting.Setting;
@@ -62,7 +63,7 @@ public final class CommunitySkipRuntime {
             return;
         }
         RequestMetadata request = new RequestMetadata(media.getId(), media.getName(), media.getYear(),
-                media.getTypeName(), episode.getName(), !episode.isGeneratedLabel());
+                media.getTypeName(), episode.getName(), !episode.isGeneratedLabel(), continuousEpisodeCount(media, history));
         if (active != null && isActive(active) && active.history == history && request.equals(active.request)) {
             resolveWhenReady(active);
             return;
@@ -71,6 +72,27 @@ public final class CommunitySkipRuntime {
         Session session = new Session(history, request, resolverFactory.get(), apiFactory.get());
         active = session;
         resolveWhenReady(session);
+    }
+
+    private static int continuousEpisodeCount(Vod media, History history) {
+        for (Flag flag : media.getFlags()) {
+            if (flag.getFlag().equals(history.getVodFlag())) return continuousEpisodeCount(media.getName(), flag.getEpisodes());
+        }
+        return 0;
+    }
+
+    /** Only real source labels covering 1..N establish a continuous episode catalogue. */
+    static int continuousEpisodeCount(String title, List<Episode> episodes) {
+        int count = episodes == null ? 0 : episodes.size();
+        if (count == 0 || count > 9999) return 0;
+        boolean[] seen = new boolean[count + 1];
+        for (Episode episode : episodes) {
+            if (episode == null || episode.isGeneratedLabel()) return 0;
+            EpisodeIdentityResolver.ParsedEpisode parsed = EpisodeIdentityResolver.parseEpisode(title, episode.getName());
+            if (parsed == null || parsed.season() != null || parsed.episode() > count || seen[parsed.episode()]) return 0;
+            seen[parsed.episode()] = true;
+        }
+        return count;
     }
 
     private void resolveWhenReady(Session session) {
@@ -82,7 +104,7 @@ public final class CommunitySkipRuntime {
             EpisodeIdentity identity;
             try {
                 identity = session.resolver.resolve(request.id(), request.title(), request.year(), request.type(),
-                        request.episode(), request.reliableEpisode());
+                        request.episode(), request.reliableEpisode(), request.continuousEpisodeCount());
             } catch (IOException | RuntimeException ignored) {
                 App.post(() -> {
                     if (!isActive(session)) return;
@@ -192,7 +214,7 @@ public final class CommunitySkipRuntime {
     }
 
     private record RequestMetadata(String id, String title, String year, String type,
-                                   String episode, boolean reliableEpisode) { }
+                                   String episode, boolean reliableEpisode, int continuousEpisodeCount) { }
 
     private static final class Session {
         final History history;

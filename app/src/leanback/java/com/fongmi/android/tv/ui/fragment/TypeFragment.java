@@ -318,13 +318,16 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     public void onItemClick(Vod item, View poster) {
         if (!isInteractive() || mViewModel == null || item == null) return;
         if (item.isAction()) {
-            mViewModel.action(getKey(), item.getAction());
+            mViewModel.action(requireActivity(), getViewLifecycleOwner(), getKey(), item.getAction(), this::isInteractive);
         } else if (item.isFolder()) {
             getParent().openFolder(item.getId(), mExtends);
             headerVisible = mBinding.recycler.isHeaderVisible();
         } else {
             if (getSite().isIndex()) CollectActivity.start(requireActivity(), item.getName());
-            else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster);
+            else if (item.getStyle(getStyle()).isList()) {
+                mViewModel.openListItem(requireActivity(), getViewLifecycleOwner(), getKey(), item.getId(), this::isInteractive,
+                        result -> VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster, result));
+            } else VideoActivity.start(requireActivity(), getKey(), item, isFolder() ? item.getName() : null, poster);
         }
     }
 
@@ -353,6 +356,7 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
         super.onHiddenChanged(hidden);
         if (!mViewReady || mBinding == null) return;
         if (hidden) {
+            if (mViewModel != null) mViewModel.cancelAction();
             mBinding.recycler.showHeader();
         } else {
             if (headerVisible) mBinding.recycler.showHeader();
@@ -403,11 +407,13 @@ public class TypeFragment extends BaseFragment implements CustomScroller.Callbac
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+        if (!isVisibleToUser && mViewModel != null) mViewModel.cancelAction();
         if (mViewReady && mBinding != null) mBinding.recycler.moveToTop();
     }
 
     @Override
     public void onDestroyView() {
+        if (mViewModel != null) mViewModel.cancelAction();
         mViewReady = false;
         mFilterGeneration++;
         if (mBinding != null && mScroller != null) mBinding.recycler.removeOnScrollListener(mScroller);
