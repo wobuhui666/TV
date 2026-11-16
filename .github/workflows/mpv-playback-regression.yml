@@ -1,0 +1,227 @@
+name: Build isolated MPV playback regression APKs
+
+on:
+  push:
+    branches: [fix/issue119-mpv-replay-refresh-subtitle]
+  workflow_dispatch:
+    inputs:
+      full_validation:
+        description: Also run focused and full app JUnit, compile mobile ARM64, and compare lint against the fixed baseline
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mpv-playback-regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      TV_APPLICATION_ID: com.fongmi.android.tv.mpv119
+      LINT_BASELINE_SHA: 6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec
+      PYTHONDONTWRITEBYTECODE: '1'
+
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Android SDK and native toolchain
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+
+      - name: Checkout fixed Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Configure isolated debug package and SDK 37.0
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          test -d .media3/build-logic
+          test -d .media3/build-logic-settings
+          test -f .github/media3-stubs/test-utils/build.gradle
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          test ! -f local.properties
+          mkdir -p artifacts/commands artifacts/lint
+          cat > "$RUNNER_TEMP/tv-mpv119.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                          if (p.path == ':app' && pluginId == 'com.android.application') {
+                              dsl.defaultConfig.applicationId = 'com.fongmi.android.tv.mpv119'
+                              dsl.defaultConfig.testApplicationId = 'com.fongmi.android.tv.mpv119.test'
+                              dsl.buildTypes.getByName('debug').signingConfig = dsl.signingConfigs.getByName('debug')
+                          }
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x ./gradlew
+
+      - name: Build TV ARM64 debug app and instrumentation
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
+            :app:assembleLeanbackArm64_v8aDebug \
+            :app:assembleLeanbackArm64_v8aDebugAndroidTest \
+            --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/build-apks.log
+
+      - name: Verify APK package, instrumentation target and native MPV libraries
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
+          groups = {
+              'app': list(pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug').glob('*.apk')),
+              'test': list(pathlib.Path('app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug').glob('*.apk')),
+          }
+          app_id = 'com.fongmi.android.tv.mpv119'
+          tools = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0'
+          destination = pathlib.Path('mpv-regression-apks')
+          destination.mkdir()
+          metadata = {
+              'applicationCommit': os.environ['GITHUB_SHA'],
+              'media3Commit': subprocess.check_output(['git', '-C', '.media3', 'rev-parse', 'HEAD'], text=True).strip(),
+              'applicationId': app_id, 'abi': 'arm64-v8a', 'buildType': 'debug',
+              'instrumentationExecuted': False, 'files': [],
+          }
+          certificates = []
+          for role, candidates in groups.items():
+              if len(candidates) != 1:
+                  raise SystemExit('Expected exactly one ' + role + ' APK')
+              source = candidates[0]
+              badging = subprocess.check_output([str(tools / 'aapt'), 'dump', 'badging', str(source)], text=True)
+              expected = app_id + ('.test' if role == 'test' else '')
+              actual = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
+              if actual is None or actual.group(1) != expected:
+                  raise SystemExit('Unexpected APK application ID')
+              manifest = subprocess.check_output([str(tools / 'aapt'), 'dump', 'xmltree', str(source), 'AndroidManifest.xml'], text=True)
+              if role == 'test' and not re.search(r'android:targetPackage[^\n]*="' + re.escape(app_id) + r'"', manifest):
+                  raise SystemExit('Unexpected instrumentation target package')
+              signed = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(source)], text=True)
+              certificate = re.search(r'Signer #1 certificate SHA-256 digest: (\S+)', signed)
+              if certificate is None or 'CN=Android Debug' not in signed:
+                  raise SystemExit('Expected Android debug signing certificate')
+              certificates.append(certificate.group(1))
+              if role == 'app':
+                  with zipfile.ZipFile(source) as bundle:
+                      names = set(bundle.namelist())
+                      required = ['lib/arm64-v8a/libmpv.so', 'lib/arm64-v8a/libplayer.so']
+                      missing = [name for name in required if name not in names]
+                      if missing:
+                          raise SystemExit('Native MPV library missing: ' + ', '.join(missing))
+                      metadata['mpvNativeSha256'] = {name: hashlib.sha256(bundle.read(name)).hexdigest() for name in required}
+              output = destination / ('mpv119-' + role + '-arm64-debug.apk')
+              shutil.copyfile(source, output)
+              metadata['files'].append({'file': output.name, 'applicationId': expected,
+                                        'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
+          if certificates[0] != certificates[1]:
+              raise SystemExit('Application and instrumentation signing certificates differ')
+          metadata['signingCertificateSha256'] = certificates[0]
+          (destination / 'build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+
+      - name: Upload isolated ARM64 APK pair
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv119-arm64-debug-${{ github.run_id }}
+          path: mpv-regression-apks/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Run focused MPV and VOD unit tests
+        if: inputs.full_validation || github.event_name == 'push'
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
+            :app:testLeanbackArm64_v8aDebugUnitTest \
+            --tests 'com.fongmi.android.tv.player.mpv.*' \
+            --tests 'com.fongmi.android.tv.playback.vod.*' \
+            --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/focused-unit-tests.log
+          cp -r app/build/test-results/testLeanbackArm64_v8aDebugUnitTest artifacts/focused-unit-tests
+
+      - name: Run full app unit tests and compile mobile ARM64
+        if: inputs.full_validation || github.event_name == 'push'
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" \
+            :app:testLeanbackArm64_v8aDebugUnitTest \
+            :app:compileMobileArm64_v8aDebugJavaWithJavac \
+            --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/full-unit-tests-mobile.log
+
+      - name: Compare full lint reports against the fixed baseline
+        if: inputs.full_validation || github.event_name == 'push'
+        run: |
+          git fetch --no-tags --depth=1 origin "$LINT_BASELINE_SHA"
+          baseline_root="$RUNNER_TEMP/tv-mpv119-lint-baseline"
+          git worktree add --detach "$baseline_root" "$LINT_BASELINE_SHA"
+          printf 'toolchainVersion=21\n' > "$baseline_root/gradle/gradle-daemon-jvm.properties"
+          chmod +x "$baseline_root/gradlew"
+          cat > "$RUNNER_TEMP/tv-mpv119-lint-report.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              p.pluginManager.withPlugin('com.android.application') {
+                  p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                      dsl.lint.abortOnError = false
+                  }
+              }
+          }
+          GRADLE
+          # Both complete reports remain available. The comparison rejects new errors;
+          # this workflow does not disable or suppress any lint issue IDs.
+          ./gradlew -I "$RUNNER_TEMP/tv-mpv119.init.gradle" -I "$RUNNER_TEMP/tv-mpv119-lint-report.init.gradle" \
+            :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/lint-current.log
+          "$baseline_root/gradlew" -p "$baseline_root" \
+            -I "$RUNNER_TEMP/tv-mpv119.init.gradle" -I "$RUNNER_TEMP/tv-mpv119-lint-report.init.gradle" \
+            :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2 --console=plain \
+            | tee artifacts/commands/lint-baseline.log
+          mkdir -p artifacts/lint/baseline artifacts/lint/current
+          cp "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug."* artifacts/lint/baseline/
+          cp app/build/reports/lint-results-leanbackArm64_v8aDebug.* artifacts/lint/current/
+          python3 .github/scripts/compare-lint-reports.py \
+            --baseline-report "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug.xml" \
+            --current-report app/build/reports/lint-results-leanbackArm64_v8aDebug.xml \
+            --baseline-root "$baseline_root" --current-root "$GITHUB_WORKSPACE" \
+            --baseline-sha "$LINT_BASELINE_SHA" --current-sha "$GITHUB_SHA" \
+            --output artifacts/lint/comparison.json
+
+      - name: Upload build, unit test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpv119-validation-reports-${{ github.run_id }}
+          path: |
+            artifacts/
+            app/build/test-results/
+            app/build/reports/tests/
+            app/build/reports/lint-results-leanbackArm64_v8aDebug.*
+          if-no-files-found: warn
+          retention-days: 14
