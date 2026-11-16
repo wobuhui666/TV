@@ -126,6 +126,9 @@ public final class CompactDiscoveryIntegrationTest {
             Setting.putTmdbProxyUrl("https://compact-fixture.invalid/");
             Setting.putTmdbConnectionMode(Setting.TMDB_CUSTOM_PROXY);
             Setting.putBridgeSk("");
+            // These existing fixtures exercise the legacy Douban filter and its TMDB switch.
+            // Library mode intentionally starts with TMDB, independently of home-layout prefs.
+            ExperienceSettings.putMode(ExperienceMode.CLASSIC);
             BrowseExperienceSettings.putHomeLayout(BrowseExperienceSettings.HOME_COMPACT);
             setField(OkHttp.get(), "client", fixtureClient);
             // Use a different dispatcher to verify that query cancellation reaches TMDB too.

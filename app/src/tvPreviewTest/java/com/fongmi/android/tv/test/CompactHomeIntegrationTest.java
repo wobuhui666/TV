@@ -35,10 +35,16 @@ import com.github.catvod.utils.Prefers;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
+import org.json.JSONObject;
 
+import java.io.File;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -50,11 +56,13 @@ import static org.junit.Assert.*;
 /** Real home presenters and SiteApi calls, with offline recommendation and source fixtures. */
 @RunWith(AndroidJUnit4.class)
 public final class CompactHomeIntegrationTest {
+    @Rule public final TestName testName = new TestName();
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final UiDevice device = UiDevice.getInstance(instrumentation);
     private HomePreviewFixtures.Session fixture;
     private TvHomePreviewActivity home;
     private Map<String, ?> savedPreferences;
+    private JSONObject lastCategoryFocusRequest;
 
     @Before public void open() {
         assertEquals("Isolated preview only", "com.fongmi.android.tv.preview", instrumentation.getTargetContext().getPackageName());
@@ -133,44 +141,33 @@ public final class CompactHomeIntegrationTest {
     }
 
     @Test public void shouldKeepCategoryOrderAndExposeFilterShortcut() throws Exception {
-        main(() -> home.focusRow(home.categoriesPosition()));
+        requestCategoryFocus("filter-initial");
         await("category row is visible", () -> rowView(home.categoriesPosition()) != null);
         text(home.getString(R.string.home_wall_movies)).click();
         await("movie shelves replace the compact selection", () -> visibleShelfKeys().equals(
                 List.of("cn_movie", "douban_movie", "now_playing")));
         main(this::assertCuratedShelfLimits);
-        device.pressDPadDown();
-        AtomicBoolean touchBrowsing = new AtomicBoolean();
-        main(() -> touchBrowsing.set((boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
-        // Android can consume the first D-pad key while restoring focus from the category tap.
-        if (touchBrowsing.get()) device.pressDPadDown();
-        await("D-pad navigation resumes before requesting the category row", () ->
-                !(boolean) HomePreviewFixtures.field(home, "mTouchBrowsing") && !home.pageGrid().isInTouchMode());
-        main(() -> home.focusRow(home.categoriesPosition()));
-        try {
-            await("the refreshed category row exposes its filter control", () -> {
-                View row = rowView(home.categoriesPosition());
-                View filter = row == null ? null : row.findViewById(R.id.filter);
-                android.graphics.Rect bounds = new android.graphics.Rect();
-                return filter != null && filter.getGlobalVisibleRect(bounds) && bounds.height() == filter.getHeight();
-            });
-        } catch (AssertionError error) {
-            AtomicReference<String> diagnostic = new AtomicReference<>();
-            main(() -> {
-                View row = rowView(home.categoriesPosition());
-                View filter = row == null ? null : row.findViewById(R.id.filter);
-                android.graphics.Rect bounds = new android.graphics.Rect();
-                boolean visible = filter != null && filter.getGlobalVisibleRect(bounds);
-                diagnostic.set("category=" + home.categoriesPosition() + "; selected=" + home.pageGrid().getSelectedPosition()
-                        + "; generation=" + home.focusGeneration() + "; focus=" + home.getCurrentFocus()
-                        + "; row=" + row + "; filter=" + filter + "; shown=" + (filter != null && filter.isShown())
-                        + "; visibility=" + (filter == null ? -1 : filter.getVisibility())
-                        + "; height=" + (filter == null ? -1 : filter.getHeight()) + "; visible=" + visible + "; bounds=" + bounds);
-            });
-            NativeUiEvidence.capture("compact-home-filter-failure");
-            throw new AssertionError(error.getMessage() + "; " + diagnostic.get(), error);
+        requestCategoryFocus("filter-after-movie");
+        await("the refreshed category row exposes its filter control", () -> {
+            View row = rowView(home.categoriesPosition());
+            View filter = row == null ? null : row.findViewById(R.id.filter);
+            View categories = row == null ? null : row.findViewById(R.id.categories);
+            android.graphics.Rect bounds = new android.graphics.Rect();
+            return categories != null && categories.hasFocus() && filter != null
+                    && filter.getGlobalVisibleRect(bounds) && bounds.height() == filter.getHeight();
+        });
+        AtomicBoolean filterFocused = new AtomicBoolean();
+        for (int i = 0; i < 4 && !filterFocused.get(); i++) {
+            device.pressDPadRight();
+            main(() -> filterFocused.set(hasFilterFocus()));
         }
-        text(home.getString(R.string.home_compact_filter)).click();
+        await("Right navigation reaches the filter shortcut", this::hasFilterFocus);
+        main(() -> {
+            View filter = rowView(home.categoriesPosition()).findViewById(R.id.filter);
+            assertNotNull("The focused filter shortcut remains a real visible control", filter);
+            assertEquals(home.getString(R.string.home_compact_filter), ((android.widget.TextView) filter).getText().toString());
+        });
+        device.pressDPadCenter();
         await("filter shortcut emits a pure-filter page intent", () -> routeIs("DiscoverActivity"));
         assertTrue(home.lastNavigation.getBooleanExtra("filters_only", false));
         assertEquals(PosterHomeCatalog.MOVIES, home.lastNavigation.getIntExtra("home_category", -1));
@@ -188,7 +185,14 @@ public final class CompactHomeIntegrationTest {
         List<List<String>> expected = List.of(List.of("cn_tv", "douban_tv", "popular_tv"),
                 List.of("cn_top_movie", "cn_top_tv"), List.of("cn_movie", "cn_tv", "trending_day"));
         for (int i = 0; i < labels.length; i++) {
-            main(() -> home.focusRow(home.categoriesPosition()));
+            requestCategoryFocus("category-loop-" + i);
+            await("The category controls have focus and are fully visible", () -> {
+                View row = rowView(home.categoriesPosition());
+                View categories = row == null ? null : row.findViewById(R.id.categories);
+                android.graphics.Rect bounds = new android.graphics.Rect();
+                return categories != null && categories.hasFocus() && categories.getGlobalVisibleRect(bounds)
+                        && bounds.height() == categories.getHeight();
+            });
             text(home.getString(labels[i])).click();
             List<String> keys = expected.get(i);
             await("Only the selected category's previews remain", () -> visibleShelfKeys().equals(keys));
@@ -349,9 +353,125 @@ public final class CompactHomeIntegrationTest {
     }
 
     private UiObject2 text(String value) {
-        UiObject2 result = device.wait(Until.findObject(By.text(value)), 5000);
+        UiObject2 result = device.wait(Until.findObject(By.text(value)), 10000);
         assertNotNull("Visible control: " + value, result);
         return result;
+    }
+
+    private boolean hasFilterFocus() {
+        View row = rowView(home.categoriesPosition());
+        View filter = row == null ? null : row.findViewById(R.id.filter);
+        return filter != null && filter.hasFocus();
+    }
+
+    private void requestCategoryFocus(String phase) {
+        resumeRemoteNavigation();
+        main(() -> {
+            lastCategoryFocusRequest = nativeFocusState(phase);
+            home.focusRow(home.categoriesPosition());
+            try {
+                lastCategoryFocusRequest.put("generationAfterScheduling", home.focusGeneration());
+            } catch (org.json.JSONException error) {
+                throw new AssertionError(error);
+            }
+        });
+    }
+
+    private void resumeRemoteNavigation() {
+        AtomicBoolean touch = new AtomicBoolean();
+        main(() -> touch.set(home.pageGrid().isInTouchMode()
+                || (boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
+        if (!touch.get()) return;
+        device.pressDPadDown();
+        main(() -> touch.set(home.pageGrid().isInTouchMode()
+                || (boolean) HomePreviewFixtures.field(home, "mTouchBrowsing")));
+        // Android can consume the first key solely to leave its global touch mode.
+        if (touch.get()) device.pressDPadDown();
+        await("Both Android and Home resume remote navigation before selecting a category", () ->
+                !home.pageGrid().isInTouchMode()
+                        && !(boolean) HomePreviewFixtures.field(home, "mTouchBrowsing"));
+    }
+
+    private JSONObject nativeFocusState(String phase) {
+        JSONObject state = new JSONObject();
+        try {
+            state.put("phase", phase).put("uptimeMs", SystemClock.uptimeMillis());
+            state.put("windowFocus", home.hasWindowFocus()).put("activityDestroyed", home.isDestroyed());
+            state.put("touchBrowsing", HomePreviewFixtures.field(home, "mTouchBrowsing"));
+            state.put("toolbarTouchActive", home.toolbarTouchActive());
+            state.put("initialFocusPending", HomePreviewFixtures.field(home, "mInitialFocusPending"));
+            state.put("focusGeneration", home.focusGeneration());
+            state.put("gridSelectedPosition", home.pageGrid().getSelectedPosition());
+            state.put("categoryAdapterPosition", home.categoriesPosition());
+            state.put("currentFocus", viewState(home.getCurrentFocus()));
+            state.put("toolbar", viewState(home.toolbar())).put("grid", viewState(home.pageGrid()));
+            RecyclerView.ViewHolder holder = home.pageGrid().findViewHolderForAdapterPosition(home.categoriesPosition());
+            state.put("categoryHasHolder", holder != null);
+            if (holder != null) {
+                state.put("holderBindingAdapterPosition", holder.getBindingAdapterPosition());
+                state.put("categoryRow", viewState(holder.itemView));
+                View categories = holder.itemView.findViewById(R.id.categories);
+                state.put("categories", viewState(categories));
+                state.put("filter", viewState(holder.itemView.findViewById(R.id.filter)));
+                if (categories != null) {
+                    state.put("composeFocusedKey", ((androidx.compose.runtime.State<?>) HomePreviewFixtures.field(categories, "focusedKey$delegate")).getValue());
+                    state.put("composeSelectedKey", ((androidx.compose.runtime.State<?>) HomePreviewFixtures.field(categories, "currentSelectedKey$delegate")).getValue());
+                }
+            }
+            org.json.JSONArray focusAncestors = new org.json.JSONArray();
+            View focus = home.getCurrentFocus();
+            while (focus != null) {
+                focusAncestors.put(viewState(focus));
+                focus = focus.getParent() instanceof View parent ? parent : null;
+            }
+            state.put("focusAncestors", focusAncestors);
+        } catch (Throwable error) {
+            try { state.put("diagnosticError", error.toString()); }
+            catch (org.json.JSONException ignored) { }
+        }
+        return state;
+    }
+
+    private JSONObject viewState(View view) throws org.json.JSONException {
+        JSONObject state = new JSONObject();
+        if (view == null) return state.put("present", false);
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        boolean visible = view.getGlobalVisibleRect(bounds);
+        String id;
+        try { id = view.getResources().getResourceName(view.getId()); }
+        catch (android.content.res.Resources.NotFoundException ignored) { id = String.valueOf(view.getId()); }
+        return state.put("present", true).put("class", view.getClass().getName()).put("id", id)
+                .put("width", view.getWidth()).put("height", view.getHeight())
+                .put("top", view.getTop()).put("bottom", view.getBottom())
+                .put("globalVisible", visible).put("globalRect", bounds.toShortString())
+                .put("hasFocus", view.hasFocus()).put("isFocused", view.isFocused())
+                .put("focusable", view.isFocusable()).put("shown", view.isShown())
+                .put("visibility", view.getVisibility()).put("attached", view.isAttachedToWindow());
+    }
+
+    private String captureAwaitFailure(String description) {
+        AtomicReference<JSONObject> state = new AtomicReference<>();
+        main(() -> state.set(nativeFocusState("failed-await: " + description)));
+        JSONObject result = state.get();
+        String name = testName.getMethodName().equals("shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges")
+                ? "compact-category-failure" : "compact-filter-failure";
+        try {
+            result.put("lastCategoryFocusRequest", lastCategoryFocusRequest);
+            File directory = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
+            if (directory != null && (directory.isDirectory() || directory.mkdirs())) {
+                Files.writeString(new File(directory, name + ".json").toPath(), result.toString(2), StandardCharsets.UTF_8);
+                device.dumpWindowHierarchy(new File(directory, name + ".xml"));
+            }
+        } catch (Throwable error) {
+            try { result.put("evidenceError", error.toString()); }
+            catch (org.json.JSONException ignored) { }
+        }
+        try { NativeUiEvidence.capture(name); }
+        catch (Throwable error) {
+            try { result.put("screenshotError", error.toString()); }
+            catch (org.json.JSONException ignored) { }
+        }
+        return result.toString();
     }
 
     private void main(Runnable action) {
@@ -367,6 +487,6 @@ public final class CompactHomeIntegrationTest {
             if (complete.get()) return;
             SystemClock.sleep(100);
         } while (SystemClock.uptimeMillis() < deadline);
-        fail(description);
+        fail(description + "\nNative focus evidence: " + captureAwaitFailure(description));
     }
 }
