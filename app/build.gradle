@@ -120,6 +120,7 @@ android {
         }
         if (providers.gradleProperty('tvPreview').isPresent()) {
             androidTest.java.srcDirs += 'src/tvPreviewTest/java'
+            androidTest.assets.srcDir rootProject.file('.github/fixtures')
         }
     }
 

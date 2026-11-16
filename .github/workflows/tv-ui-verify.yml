@@ -421,9 +421,6 @@ jobs:
               subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
           PY
             (cd .github/fixtures/media-library && sha256sum -c SHA256SUMS)
-            library_fixtures=/sdcard/Android/data/com.fongmi.android.tv.preview/files/library-fixtures
-            adb shell mkdir -p "$library_fixtures"
-            adb push .github/fixtures/media-library/*.jpg .github/fixtures/media-library/*.png "$library_fixtures/"
             adb shell wm size 1920x1080
             adb shell wm density 320
             adb shell settings put secure immersive_mode_confirmations confirmed
@@ -441,20 +438,71 @@ jobs:
             adb logcat -c
             adb shell getprop ro.product.cpu.abilist > "$out/device-abis.txt"
             adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
-            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest,com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest
+            core_status=0
+            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
-              com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
-            python3 - <<'PY'
-          import json, os, pathlib, re
+              com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/core-instrumentation.txt" || core_status=$?
+            collect_compact
+            library_status=0
+            adb shell am instrument -w -r -e native_ui_evidence true \
+              -e class com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest \
+              com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/library-instrumentation.txt" || library_status=$?
+            cat "$out/core-instrumentation.txt" "$out/library-instrumentation.txt" > "$out/instrumentation.txt"
+            collect_compact
+            python3 - "$core_status" "$library_status" <<'PY'
+          import collections, json, os, pathlib, re, sys
           root = pathlib.Path('artifacts/compact-home')
-          output = (root / 'instrumentation.txt').read_text()
-          match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', output, re.M)
-          summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': bool(match),
-                     'passedTests': int(match[1]) if match else 0}
+          expected = {
+              'core': {'com.fongmi.android.tv.test.CompactHomeIntegrationTest': 8,
+                       'com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest': 6,
+                       'com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest': 1,
+                       'com.fongmi.android.tv.db.LibraryMigrationAndroidTest': 3,
+                       'com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest': 1},
+              'library': {'com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest': 48},
+          }
+          groups = []
+          for name, status in zip(expected, map(int, sys.argv[1:])):
+              output = (root / (name + '-instrumentation.txt')).read_text()
+              fields, rows = {}, []
+              for line in output.splitlines():
+                  if line.startswith('INSTRUMENTATION_STATUS: '):
+                      key, _, value = line[len('INSTRUMENTATION_STATUS: '):].partition('=')
+                      if key in ('class', 'test'):
+                          fields[key] = value
+                  elif line.startswith('INSTRUMENTATION_STATUS_CODE: '):
+                      code = int(line.partition(': ')[2])
+                      if code <= 0 and 'class' in fields and 'test' in fields:
+                          rows.append({**fields, 'code': code})
+                      fields = {}
+              counts = dict(collections.Counter(row['class'] for row in rows))
+              match = re.search(r'^OK \(([1-9][0-9]*) tests?\)', output, re.M)
+              total = sum(expected[name].values())
+              passed = status == 0 and match is not None and int(match[1]) == total \
+                  and counts == expected[name] and all(row['code'] == 0 for row in rows)
+              groups.append({'name': name, 'passed': passed, 'instrumentationExitCode': status,
+                             'expectedTests': total, 'completedTests': len(rows), 'classes': counts,
+                             'passedTests': sum(row['code'] == 0 for row in rows),
+                             'failedOrSkipped': [row for row in rows if row['code'] != 0]})
+          proof_path = root / 'native-usability-evidence/library-fixture-read.json'
+          fixture_proof = False
+          if proof_path.is_file():
+              proof = json.loads(proof_path.read_text())
+              checksums = {line.split()[1]: line.split()[0] for line in
+                           pathlib.Path('.github/fixtures/media-library/SHA256SUMS').read_text().splitlines()}
+              fixture_proof = proof.get('schema') == 'tv.library-fixture-read.v1' \
+                  and proof.get('packageName') == 'com.fongmi.android.tv.preview' \
+                  and proof.get('targetUid') == proof.get('processUid') and proof.get('targetUid', 0) > 0 \
+                  and len(proof.get('files', [])) == 8 \
+                  and {item['name']: item['sha256'] for item in proof['files']} == checksums \
+                  and all(item['readableByTargetUid'] for item in proof['files'])
+          summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': len(groups) == 2 and all(group['passed'] for group in groups) and fixture_proof,
+                     'expectedTests': 67, 'completedTests': sum(group['completedTests'] for group in groups),
+                     'passedTests': sum(group['passedTests'] for group in groups),
+                     'fixtureReadableByTargetUid': fixture_proof, 'groups': groups}
           (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           print(json.dumps(summary, indent=2))
-          if not match:
-              raise SystemExit('Compact home instrumentation failed')
+          if not summary['passed']:
+              raise SystemExit('Require all 67 compact/library cases and target-UID fixture reads to pass')
           PY
             collect_compact
             bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest

@@ -56,10 +56,16 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -107,15 +113,19 @@ public final class LibraryExperienceAndroidTest {
     private boolean series, anime, noSources, tmdbFails, holdDetails, holdSearch, summaryTypesMissing;
     private boolean directPrefetch, fallbackLogo, reorderedEpisodes, generatedEpisodes, absoluteEpisodes, holdLink;
     private boolean multipleSeasons, holdSecondSeason, multipleLines, longSeason, mixedQualities;
-    private boolean folderSearch;
+    private boolean folderSearch, snapshotTaken;
     private String failedDetailSite = "", failedPlaybackSite = "", heldDetailSite = "";
 
     @Before public void setup() throws Exception {
         assertEquals("Only an isolated preview application", "com.fongmi.android.tv.preview", instrumentation.getTargetContext().getPackageName());
-        File root = new File(instrumentation.getTargetContext().getExternalFilesDir(null), "library-fixtures");
+        File external = instrumentation.getTargetContext().getExternalFilesDir(null);
+        assertNotNull("Target external files directory is available", external);
+        File root = new File(external, "library-fixtures");
+        prepareArtworkFixtures(root);
         for (String name : new String[]{"movie-backdrop.jpg", "series-backdrop.jpg", "anime-backdrop.jpg", "movie-episode.jpg", "series-episode.jpg", "anime-episode.jpg"}) {
             File file = new File(root, name);
             assertTrue("Reference fixture exists: " + file, file.isFile());
+            assertTrue("Target application can read reference fixture: " + file, file.canRead());
             artwork.put(name, Files.readAllBytes(file.toPath()));
         }
         File[] images = root.listFiles((directory, name) -> name.endsWith(".jpg") || name.endsWith(".png"));
@@ -124,6 +134,7 @@ public final class LibraryExperienceAndroidTest {
             for (String key : KEYS) if (Prefers.getPrefers().contains(key)) saved.put(key, Prefers.getPrefers().getAll().get(key));
             original = OkHttp.client(); originalTmdb = (OkHttpClient) field(TmdbNetwork.class, "client");
             originalSites = field(VodConfig.get(), "sites"); originalHome = field(VodConfig.get(), "home"); originalConfig = field(VodConfig.get(), "config");
+            snapshotTaken = true;
             VodConfig.get().init();
             List<Site> sites = new ArrayList<>();
             for (String key : new String[]{"fixture-a", "fixture-b"}) {
@@ -199,30 +210,90 @@ public final class LibraryExperienceAndroidTest {
     }
 
     @After public void cleanup() {
-        for (Activity active : allActivities()) if (!activities.contains(active) && (active instanceof LibraryDetailActivity
-                || active instanceof LibrarySearchActivity || active instanceof LibraryImagesActivity || active instanceof VideoActivity
-                || active instanceof ExperienceModeActivity || active instanceof VodActivity)) activities.add(active);
-        main(() -> { for (int i = activities.size() - 1; i >= 0; i--) if (!activities.get(i).isDestroyed()) activities.get(i).finish(); });
-        releasePlayer.countDown();
-        releaseDetails.countDown();
-        releaseSearch.countDown();
-        releaseLink.countDown();
-        releaseSeason.countDown();
-        await("Activities close", () -> activities.stream().allMatch(Activity::isDestroyed));
-        await("Fixture calls finish", () -> fixture.dispatcher().runningCallsCount() == 0);
-        main(() -> {
-            set(OkHttp.get(), "client", original); set(TmdbNetwork.class, "client", originalTmdb);
-            set(VodConfig.get(), "sites", originalSites); set(VodConfig.get(), "home", originalHome); set(VodConfig.get(), "config", originalConfig);
-            SharedPreferences.Editor editor = Prefers.getPrefers().edit();
-            for (String key : KEYS) {
-                Object value = saved.get(key);
-                if (value instanceof String text) editor.putString(key, text);
-                else if (value instanceof Boolean flag) editor.putBoolean(key, flag);
-                else if (value instanceof Integer number) editor.putInt(key, number);
-                else editor.remove(key);
-            }
-            assertTrue(editor.commit()); TmdbLibraryApi.clearCache(); fixture.connectionPool().evictAll();
-        });
+        if (!snapshotTaken) return;
+        try {
+            for (Activity active : allActivities()) if (!activities.contains(active) && (active instanceof LibraryDetailActivity
+                    || active instanceof LibrarySearchActivity || active instanceof LibraryImagesActivity || active instanceof VideoActivity
+                    || active instanceof ExperienceModeActivity || active instanceof VodActivity)) activities.add(active);
+            main(() -> { for (int i = activities.size() - 1; i >= 0; i--) if (!activities.get(i).isDestroyed()) activities.get(i).finish(); });
+            releasePlayer.countDown();
+            releaseDetails.countDown();
+            releaseSearch.countDown();
+            releaseLink.countDown();
+            releaseSeason.countDown();
+            await("Activities close", () -> activities.stream().allMatch(Activity::isDestroyed));
+            if (fixture != null) await("Fixture calls finish", () -> fixture.dispatcher().runningCallsCount() == 0);
+        } finally {
+            releasePlayer.countDown(); releaseDetails.countDown(); releaseSearch.countDown(); releaseLink.countDown(); releaseSeason.countDown();
+            main(() -> {
+                set(OkHttp.get(), "client", original); set(TmdbNetwork.class, "client", originalTmdb);
+                set(VodConfig.get(), "sites", originalSites); set(VodConfig.get(), "home", originalHome); set(VodConfig.get(), "config", originalConfig);
+                SharedPreferences.Editor editor = Prefers.getPrefers().edit();
+                for (String key : KEYS) {
+                    Object value = saved.get(key);
+                    if (value instanceof String text) editor.putString(key, text);
+                    else if (value instanceof Boolean flag) editor.putBoolean(key, flag);
+                    else if (value instanceof Integer number) editor.putInt(key, number);
+                    else editor.remove(key);
+                }
+                assertTrue(editor.commit()); TmdbLibraryApi.clearCache();
+            });
+            if (fixture != null) fixture.connectionPool().evictAll();
+        }
+    }
+
+    private void prepareArtworkFixtures(File root) throws Exception {
+        int targetUid = instrumentation.getTargetContext().getApplicationInfo().uid;
+        assertEquals("Fixture reads run as the target application", targetUid, android.os.Process.myUid());
+        assertTrue("Target application creates the fixture directory", root.isDirectory() || root.mkdirs());
+        String manifest = new String(readArtworkAsset("SHA256SUMS"), StandardCharsets.UTF_8);
+        Map<String, String> expected = new HashMap<>();
+        for (String line : manifest.split("\\r?\\n")) {
+            if (line.trim().isEmpty()) continue;
+            assertTrue("Valid artwork checksum entry", line.matches("[a-f0-9]{64}  [a-z0-9-]+\\.(jpg|png)"));
+            String name = line.substring(66);
+            assertNull("Unique artwork checksum: " + name, expected.put(name, line.substring(0, 64)));
+        }
+        assertEquals("All eight reference fixtures are packaged in the test APK", java.util.Set.of(
+                "movie-backdrop.jpg", "series-backdrop.jpg", "anime-backdrop.jpg", "movie-episode.jpg",
+                "series-episode.jpg", "anime-episode.jpg", "series-logo.png", "anime-logo.png"), expected.keySet());
+        JSONArray files = new JSONArray();
+        for (String name : new java.util.TreeSet<>(expected.keySet())) {
+            byte[] asset = readArtworkAsset(name);
+            assertEquals("Packaged reference fixture checksum: " + name, expected.get(name), sha256(asset));
+            File file = new File(root, name);
+            Files.write(file.toPath(), asset);
+            assertTrue("Target application can read copied reference fixture: " + file, file.isFile() && file.canRead());
+            byte[] actual = Files.readAllBytes(file.toPath());
+            assertEquals("Target application reads the exact reference fixture: " + name, expected.get(name), sha256(actual));
+            files.put(new JSONObject().put("name", name).put("bytes", actual.length)
+                    .put("sha256", expected.get(name)).put("readableByTargetUid", true));
+        }
+        JSONObject proof = new JSONObject().put("schema", "tv.library-fixture-read.v1")
+                .put("source", "test-apk-assets/media-library").put("packageName", instrumentation.getTargetContext().getPackageName())
+                .put("targetUid", targetUid).put("processUid", android.os.Process.myUid()).put("pid", android.os.Process.myPid())
+                .put("fixtureDirectory", root.getCanonicalPath()).put("files", files);
+        File evidence = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
+        assertTrue("Fixture evidence directory exists", evidence != null && (evidence.isDirectory() || evidence.mkdirs()));
+        Files.write(new File(evidence, "library-fixture-read.json").toPath(), proof.toString(2).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private byte[] readArtworkAsset(String name) throws IOException {
+        try (InputStream input = instrumentation.getContext().getAssets().open("media-library/" + name);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            for (int count; (count = input.read(buffer)) != -1; ) output.write(buffer, 0, count);
+            return output.toByteArray();
+        }
+    }
+
+    private String sha256(byte[] value) throws Exception {
+        StringBuilder digest = new StringBuilder();
+        for (byte item : MessageDigest.getInstance("SHA-256").digest(value)) {
+            digest.append(Character.forDigit((item >>> 4) & 15, 16));
+            digest.append(Character.forDigit(item & 15, 16));
+        }
+        return digest.toString();
     }
 
     @Test public void movieUsesReferenceLayoutAndOnlyPlaysAfterRemoteConfirmation() {
