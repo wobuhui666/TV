@@ -70,8 +70,30 @@ public final class MpvPlaybackSemanticsAndroidTest {
     private TextureView texture;
     private PlaySpec spec;
     private boolean passed;
+    private boolean expectedEngineRebuild;
+    private boolean nativeObserverRegistered;
+    private boolean observingPositions;
+    private long expectedPosition;
+    private long minimumObservedPosition;
+    private int belowTargetEvents;
+    private JSONArray positionEvents;
     private String stage = "setup";
     private long began;
+    private final Player.Listener playerObserver = new Player.Listener() {
+        @Override public void onPlayerError(PlaybackException error) { errors.incrementAndGet(); }
+        @Override public void onEvents(Player player, Player.Events events) {
+            // A newly created engine has no media until start(); its empty timeline is valid.
+            if (!observingPositions || player.getCurrentMediaItem() == null) return;
+            long position = player.getCurrentPosition();
+            minimumObservedPosition = Math.min(minimumObservedPosition, position);
+            if (position < expectedPosition - 1000) belowTargetEvents++;
+            try {
+                if (positionEvents.length() < 300) positionEvents.put(new JSONObject()
+                        .put("positionMs", position).put("state", player.getPlaybackState())
+                        .put("playWhenReady", player.getPlayWhenReady()));
+            } catch (Exception failure) { errors.incrementAndGet(); }
+        }
+    };
     private final MPVLib.EventObserver observer = new MPVLib.EventObserver() {
         @Override public void eventProperty(String property) { }
         @Override public void eventProperty(String property, long value) { }
@@ -107,6 +129,7 @@ public final class MpvPlaybackSemanticsAndroidTest {
                 .put("mediaKind", address.endsWith(".m3u8") ? "hls" : address.startsWith("http") ? "http-mp4" : "local-mp4")
                 .put("externalNetwork", false);
         MPVLib.addObserver(observer);
+        nativeObserverRegistered = true;
         activity = (MpvRegressionActivity) instrumentation.startActivitySync(new Intent(target, MpvRegressionActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         main(() -> {
@@ -115,9 +138,7 @@ public final class MpvPlaybackSemanticsAndroidTest {
             assertTrue("Expected actual MPV player", manager.getPlayer() instanceof MpvPlayer);
             activity.getView().setPlayer(manager.getPlayer());
             manager.bindPlayerView(activity.getView());
-            manager.getPlayer().addListener(new Player.Listener() {
-                @Override public void onPlayerError(PlaybackException error) { errors.incrementAndGet(); }
-            });
+            manager.getPlayer().addListener(playerObserver);
             assertTrue(activity.getView().getVideoSurfaceView() instanceof TextureView);
             texture = (TextureView) activity.getView().getVideoSurfaceView();
             spec = PlaySpec.from("mpv-issue119-fixture", address, Map.of("User-Agent", "TV-issue119-local-fixture"),
@@ -161,26 +182,130 @@ public final class MpvPlaybackSemanticsAndroidTest {
         report.put("rounds", rounds);
         for (int round = 0; round < 3; round++) {
             stage = "refresh-" + round;
-            long desired = 12000 + round * 7000;
-            main(() -> { manager.seekTo(desired); manager.pause(); });
-            await(() -> ready() && near(desired, 750) && paused(), 15000);
-            long retained = value(manager::getPosition);
-            int loads = starts.get();
-            Player player = value(manager::getPlayer);
-            main(() -> {
-                manager.stop();
-                manager.start(spec, 30000, retained);
-                manager.pause();
-            });
-            await(() -> starts.get() > loads && ready() && near(retained, 900) && paused(), 30000);
-            assertSame("MPV refresh retains its native instance", player, value(manager::getPlayer));
-            JSONObject record = snapshot().put("savedPositionMs", retained).put("round", round);
-            rounds.put(record);
-            captureVideo(stage);
-            main(manager::play);
-            await(() -> nativePosition() > retained + 600 && value(manager::getPosition) > retained + 600, 10000);
+            refreshRound(rounds, round, 12000 + round * 7000);
         }
         passed = true;
+    }
+
+    @Test(timeout = 240000) public void exoToMpvSwitchThenRepeatedRefreshPreservesProgress() throws Exception {
+        stage = "before-exo-switch";
+        main(() -> { manager.seekTo(18000); manager.pause(); });
+        await(() -> ready() && near(18000, 750) && paused(), 15000);
+        main(() -> {
+            // Stop receiving native callbacks before destroying this MPV generation.
+            MPVLib.removeObserver(observer);
+            nativeObserverRegistered = false;
+            switchEngine(PlayerSetting.ENGINE_EXO);
+        });
+        stage = "real-exo-ready";
+        await(() -> value(() -> manager.getEngine() == PlayerSetting.ENGINE_EXO
+                && manager.getPlayer().getPlaybackState() == Player.STATE_READY
+                && !manager.getPlayer().getPlayWhenReady() && Math.abs(manager.getPosition() - 18000) <= 900), 30000);
+        // Availability reads Java lifecycle state and never touches the destroyed native handle.
+        await(MpvPlayerEngine::isAvailable, 15000);
+        captureVideo(stage);
+        report.put("realExoReady", true).put("exoPositionMs", value(manager::getPosition));
+
+        stage = "exo-to-mpv";
+        main(() -> {
+            MPVLib.addObserver(observer);
+            nativeObserverRegistered = true;
+            observePositions(18000);
+            switchEngine(PlayerSetting.ENGINE_MPV);
+            assertTrue("Switch must create the actual MPV player", manager.getPlayer() instanceof MpvPlayer);
+        });
+        await(() -> ready() && near(18000, 900) && paused(), 30000);
+        report.put("switchPositionEvents", value(this::finishPositionObservation));
+        report.put("mpvAfterExo", snapshot());
+        captureVideo(stage);
+
+        JSONArray rounds = new JSONArray();
+        report.put("rounds", rounds);
+        for (int round = 0; round < 3; round++) {
+            stage = "refresh-after-exo-" + round;
+            refreshRound(rounds, round, 20000 + round * 7000);
+        }
+        passed = true;
+    }
+
+    @Test(timeout = 120000) public void seekWhileLoadingOverridesPreviousResumeTarget() throws Exception {
+        stage = "seek-while-loading";
+        int loads = starts.get();
+        Player player = value(manager::getPlayer);
+        main(() -> {
+            manager.stop();
+            manager.start(spec, 30000, 12000);
+            manager.pause();
+            assertFalse("Seek must run before FILE_LOADED, in this same main-thread turn", fileLoaded());
+            manager.seekTo(26000);
+            observePositions(26000);
+            assertEquals("Expose the user's pending seek immediately", 26000, manager.getPosition());
+        });
+        await(() -> starts.get() > loads && ready() && near(26000, 900) && paused(), 30000);
+        assertSame("Loading seek must keep this MPV generation", player, value(manager::getPlayer));
+        report.put("seekIssuedBeforeFileLoaded", true).put("oldResumeTargetMs", 12000).put("userSeekMs", 26000)
+                .put("positionEvents", value(this::finishPositionObservation)).put("afterSeek", snapshot());
+        captureVideo(stage);
+        main(manager::play);
+        await(() -> nativePosition() > 26600 && value(manager::getPosition) > 26600, 10000);
+        passed = true;
+    }
+
+    private void refreshRound(JSONArray rounds, int round, long desired) throws Exception {
+        main(() -> { manager.seekTo(desired); manager.pause(); });
+        await(() -> ready() && near(desired, 750) && paused(), 15000);
+        long retained = value(manager::getPosition);
+        int loads = starts.get();
+        Player player = value(manager::getPlayer);
+        main(() -> {
+            observePositions(retained);
+            manager.stop();
+            manager.start(spec, 30000, retained);
+            manager.pause();
+        });
+        await(() -> starts.get() > loads && ready() && near(retained, 900) && paused(), 30000);
+        assertSame("MPV refresh retains its native instance", player, value(manager::getPlayer));
+        rounds.put(snapshot().put("savedPositionMs", retained).put("round", round)
+                .put("positionEvents", value(this::finishPositionObservation)));
+        captureVideo(stage);
+        main(manager::play);
+        await(() -> nativePosition() > retained + 600 && value(manager::getPosition) > retained + 600, 10000);
+    }
+
+    /** Invoked on the main thread; allow only these two requested engine replacements. */
+    private void switchEngine(int engine) {
+        manager.getPlayer().removeListener(playerObserver);
+        expectedEngineRebuild = true;
+        try { manager.setEngine(engine); }
+        finally { expectedEngineRebuild = false; }
+    }
+
+    private boolean fileLoaded() {
+        try {
+            java.lang.reflect.Field field = MpvPlayer.class.getDeclaredField("fileLoaded");
+            field.setAccessible(true);
+            return field.getBoolean(manager.getPlayer());
+        } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+    }
+
+    private void observePositions(long expected) {
+        expectedPosition = expected;
+        minimumObservedPosition = Long.MAX_VALUE;
+        belowTargetEvents = 0;
+        positionEvents = new JSONArray();
+        observingPositions = true;
+    }
+
+    private JSONObject finishPositionObservation() {
+        observingPositions = false;
+        try {
+            JSONObject result = new JSONObject().put("expectedPositionMs", expectedPosition).put("minimumPositionMs", minimumObservedPosition)
+                    .put("belowTargetEvents", belowTargetEvents).put("samples", positionEvents);
+            report.put("lastPositionObservation", result);
+            assertTrue("Real Player.onEvents must cover the reload transition", positionEvents.length() > 0);
+            assertEquals("Loading events must not publish zero or an older position", 0, belowTargetEvents);
+            return result;
+        } catch (Exception failure) { throw new AssertionError(failure); }
     }
 
     @Test(timeout = 180000) public void subtitleFolderCancelAndSelectionRestoreTextureVideo() throws Exception {
@@ -283,8 +408,12 @@ public final class MpvPlaybackSemanticsAndroidTest {
         return value == null ? "" : value;
     }
     private JSONObject snapshot() throws Exception {
-        return new JSONObject().put("nativePositionMs", finite(nativePosition())).put("reportedPositionMs", value(manager::getPosition))
-                .put("paused", paused()).put("vo", property("current-vo")).put("speed", finite(number("speed")))
+        boolean mpv = value(() -> manager.getPlayer() instanceof MpvPlayer);
+        return new JSONObject().put("nativePositionMs", mpv ? finite(nativePosition()) : JSONObject.NULL)
+                .put("reportedPositionMs", value(manager::getPosition)).put("engine", mpv ? "mpv" : "exo")
+                .put("paused", !value(() -> manager.getPlayer().getPlayWhenReady()))
+                .put("vo", mpv ? property("current-vo") : JSONObject.NULL)
+                .put("speed", value(() -> manager.getPlayer().getPlaybackParameters().speed))
                 .put("nativeStartEvents", starts.get());
     }
 
@@ -329,21 +458,29 @@ public final class MpvPlaybackSemanticsAndroidTest {
             if (condition.getAsBoolean()) return;
             SystemClock.sleep(80);
         } while (SystemClock.elapsedRealtime() < until);
-        fail("Timeout during " + stage + "; native position=" + nativePosition() + ", pause=" + property("pause")
-                + ", vo=" + property("current-vo") + ", reported position=" + value(manager::getPosition));
+        boolean mpv = value(() -> manager.getPlayer() instanceof MpvPlayer);
+        fail("Timeout during " + stage + (mpv ? "; native position=" + nativePosition() + ", pause=" + property("pause")
+                + ", vo=" + property("current-vo") : "; engine=exo") + ", reported position=" + value(manager::getPosition));
     }
 
     @After public void tearDown() throws Exception {
         if (saved == null) return;
         try {
             report.put("lastStage", stage).put("elapsedMs", SystemClock.elapsedRealtime() - began).put("passed", passed);
+            if (observingPositions) main(() -> {
+                observingPositions = false;
+                try { report.put("unfinishedPositionEvents", positionEvents); }
+                catch (Exception failure) { throw new AssertionError(failure); }
+            });
             if (manager != null) report.put("finalState", snapshot());
         } finally {
             try {
                 main(() -> {
+                    observingPositions = false;
                     if (picker != null) picker.finish();
-                    MPVLib.removeObserver(observer);
+                    if (nativeObserverRegistered) MPVLib.removeObserver(observer);
                     if (manager != null) {
+                        manager.getPlayer().removeListener(playerObserver);
                         manager.bindPlayerView(null);
                         if (activity != null) activity.getView().setPlayer(null);
                         manager.release();
@@ -391,7 +528,12 @@ public final class MpvPlaybackSemanticsAndroidTest {
         @Override public void onDecodeChanged() { }
         @Override public void onMediaOptionsChanged() { }
         @Override public void onError(String message) { errors.incrementAndGet(); }
-        @Override public void onPlayerRebuild(Player player) { errors.incrementAndGet(); }
+        @Override public void onPlayerRebuild(Player player) {
+            if (!expectedEngineRebuild) errors.incrementAndGet();
+            activity.getView().setPlayer(player);
+            manager.bindPlayerView(activity.getView());
+            player.addListener(playerObserver);
+        }
         @Override public void onDanmakuSourceChanged(Uri uri) { }
         @Override public void onDanmakuConfigChanged(DanmakuConfig config) { }
         @Override public void onDanmakuEnabledChanged(boolean enabled) { }
