@@ -92,7 +92,7 @@ Every release ships two package names. Pick one depending on whether you want it
 
 | Edition | Files | Package | Notes |
 | --- | --- | --- | --- |
-| Standard | `leanback-arm64_v8a.apk`, `leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | Same package as FongMi/TV; upgrades earlier builds of this project in place. |
+| Standard | `leanback-arm64_v8a.apk`, `leanback-armeabi_v7a.apk` | `com.fongmi.android.tv` | Same package as FongMi/TV, but a different signature prevents installing over it; upgrades earlier builds of this project in place only when the signatures match. |
 | Coexist | `leanback-arm64_v8a-coexist.apk`, `leanback-armeabi_v7a-coexist.apk` | `com.wobuhui666.android.tv` | Installs side by side with FongMi/TV or the standard edition; the launcher name stays the same. |
 
 About the coexist edition:
