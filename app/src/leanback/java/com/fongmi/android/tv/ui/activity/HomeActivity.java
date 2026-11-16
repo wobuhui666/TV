@@ -388,12 +388,21 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void requestRecyclerFocus(int position, BooleanSupplier current) {
+        long requestGeneration = mHistoryFocusGeneration;
         mBinding.recycler.post(() -> {
-            if (!current.getAsBoolean()) return;
+            boolean valid = current.getAsBoolean();
+            traceRecyclerFocus("begin", position, valid, requestGeneration, RecyclerView.NO_POSITION);
+            if (!valid) return;
             if (!hasFocusableRecyclerContent() || !canRequestFocus(mBinding.recycler)) {
                 requestNavFocus(current);
                 return;
             }
+            // Leanback can skip setSelection when its stored position still matches a pending D-pad move.
+            // Cancel that move before the latest request chooses its target.
+            mBinding.recycler.stopScroll();
+            valid = current.getAsBoolean();
+            traceRecyclerFocus("stopped", position, valid, requestGeneration, RecyclerView.NO_POSITION);
+            if (!valid) return;
             int target = position == RecyclerView.NO_POSITION ? mBinding.recycler.getSelectedPosition() : position;
             target = Math.max(0, Math.min(target, mAdapter.size() - 1));
             // Prefer a row that actually has focusable children when possible.
@@ -403,14 +412,26 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             }
             int focusTarget = target;
             mBinding.recycler.setSelectedPosition(focusTarget, holder -> {
-                if (!current.getAsBoolean() || holder.getBindingAdapterPosition() != focusTarget) return;
+                boolean taskValid = current.getAsBoolean();
+                int holderPosition = holder.getBindingAdapterPosition();
+                traceRecyclerFocus("task", focusTarget, taskValid, requestGeneration, holderPosition);
+                if (!taskValid || holderPosition != focusTarget) return;
                 // A missing row must finish selection/layout before focus can leave the old row.
                 View focus = findFocusable(holder.itemView);
                 if (focus != null && focus.requestFocus()) return;
                 if (canRequestFocus(mBinding.recycler) && mBinding.recycler.requestFocus() && mBinding.recycler.hasFocus()) return;
                 requestNavFocus(current);
             });
+            traceRecyclerFocus("selected", focusTarget, current.getAsBoolean(), requestGeneration, RecyclerView.NO_POSITION);
         });
+    }
+
+    private void traceRecyclerFocus(String phase, int target, boolean current, long requestGeneration, int holderPosition) {
+        if (!com.fongmi.android.tv.BuildConfig.DEBUG && !"preview".equals(com.fongmi.android.tv.BuildConfig.BUILD_TYPE)) return;
+        android.util.Log.d("TV-home-focus", "phase=" + phase + "; target=" + target + "; current=" + (current ? 1 : 0)
+                + "; requestGeneration=" + requestGeneration + "; generation=" + mHistoryFocusGeneration
+                + "; selected=" + mBinding.recycler.getSelectedPosition() + "; scrollState=" + mBinding.recycler.getScrollState()
+                + "; holderPosition=" + holderPosition);
     }
 
     /** Top JetStream nav (点播/直播/搜索/…) — host focus for empty home / Back-to-toolbar. */
