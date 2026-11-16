@@ -1,0 +1,231 @@
+{
+  "testedCommit": "b0aa1ce6e956267bb6d9b307fe3e3a06f392b2dc",
+  "branch": "fix/exo-danmaku-stutter-20261114",
+  "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+  "patchSha256": "22343b0223dc63ebffe4e2f9ba76b408356269f172784597e799a6e38b212eda",
+  "runs": [
+    {
+      "id": 43590570128,
+      "workflow": "build-validation.yml",
+      "conclusion": "success",
+      "url": "https://github.com/wobuhui666/TV/actions/runs/43590570128"
+    },
+    {
+      "id": 43590570318,
+      "workflow": "tv-ui-verify.yml",
+      "conclusion": "success",
+      "url": "https://github.com/wobuhui666/TV/actions/runs/43590570318"
+    }
+  ],
+  "gradleJUnit": {
+    "wasm": {
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "quickjs": {
+      "tests": 27,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "app": {
+      "tests": 1049,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "catvod": {
+      "tests": 237,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "android": {
+    "headSha": "b0aa1ce6e956267bb6d9b307fe3e3a06f392b2dc",
+    "passed": true,
+    "suites": [
+      {
+        "class": "com.fongmi.android.tv.playback.vod.ExplicitEpisodeSelectionAndroidTest",
+        "passed": true,
+        "tests": 7,
+        "expectedTests": 7
+      },
+      {
+        "class": "com.fongmi.android.tv.test.FolderFilterNavigationTest",
+        "passed": true,
+        "tests": 6,
+        "expectedTests": 6
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest",
+        "passed": true,
+        "tests": 7,
+        "expectedTests": 7
+      },
+      {
+        "class": "com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest",
+        "passed": true,
+        "tests": 11,
+        "expectedTests": 11
+      },
+      {
+        "class": "com.fongmi.android.tv.test.PausedDanmakuVisibilityTest",
+        "passed": true,
+        "tests": 2,
+        "expectedTests": 2
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest",
+        "passed": true,
+        "tests": 3,
+        "expectedTests": 3
+      },
+      {
+        "class": "com.fongmi.android.tv.service.PlaybackSessionPlayerAndroidTest",
+        "passed": true,
+        "tests": 5,
+        "expectedTests": 5
+      },
+      {
+        "class": "com.fongmi.android.tv.player.TimeshiftExoIntegrationTest",
+        "passed": true,
+        "tests": 2,
+        "expectedTests": 2
+      },
+      {
+        "class": "com.fongmi.android.tv.api.AssrtSubtitleSearchAndroidTest",
+        "passed": true,
+        "tests": 11,
+        "expectedTests": 11
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.EpisodeNavigationAndroidTest",
+        "passed": true,
+        "tests": 22,
+        "expectedTests": 22
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.VodContentRatingParcelTest",
+        "passed": true,
+        "tests": 2,
+        "expectedTests": 2
+      },
+      {
+        "class": "com.fongmi.android.tv.db.HistoryGeneratedLabelAndroidTest",
+        "passed": true,
+        "tests": 2,
+        "expectedTests": 2
+      },
+      {
+        "class": "com.fongmi.android.tv.api.LogvarMatchingAndroidTest",
+        "passed": true,
+        "tests": 14,
+        "expectedTests": 14
+      }
+    ],
+    "passedTests": 94
+  },
+  "lint": {
+    "baselineSha": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+    "currentSha": "b0aa1ce6e956267bb6d9b307fe3e3a06f392b2dc",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "newWarnings": [
+      {
+        "id": "LeanbackUsesWifi",
+        "severity": "Warning",
+        "message": "Requiring Wifi permissions limits app availability on TVs that support only Ethernet",
+        "locations": [
+          {
+            "file": "app/src/main/AndroidManifest.xml",
+            "line": "13"
+          }
+        ]
+      },
+      {
+        "id": "DataExtractionRules",
+        "severity": "Warning",
+        "message": "The attribute `android:allowBackup` is deprecated from Android 12 and higher and may be removed in future versions. Consider adding the attribute `android:dataExtractionRules` specifying an `@xml` resource which configures cloud backups and device transfers on Android 12 and higher.",
+        "locations": [
+          {
+            "file": "app/src/main/AndroidManifest.xml",
+            "line": "42"
+          }
+        ]
+      }
+    ],
+    "passed": true
+  },
+  "benchmarks": [
+    {
+      "case": "current_window",
+      "chunks": 80,
+      "items": 96000,
+      "queries": 20000,
+      "originalBytesPerQuery": 16888,
+      "patchedBytesPerQuery": 0,
+      "originalNsPerQuery": 18371,
+      "patchedNsPerQuery": 358
+    },
+    {
+      "case": "empty_window",
+      "chunks": 80,
+      "items": 96000,
+      "queries": 20000,
+      "originalBytesPerQuery": 16000,
+      "patchedBytesPerQuery": 0,
+      "originalNsPerQuery": 12889,
+      "patchedNsPerQuery": 310
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14111189773,
+      "name": "tv-validation-preview-arm64-43590570128",
+      "bytes": 114364648
+    },
+    {
+      "id": 14112297719,
+      "name": "tv-validation-sourceprobe-arm64-43590570128",
+      "bytes": 114364269
+    },
+    {
+      "id": 14112243097,
+      "name": "mobile-validation-arm64-43590570128",
+      "bytes": 102262124
+    },
+    {
+      "id": 14112691629,
+      "name": "tv-unit-tests-43590570128",
+      "bytes": 749050
+    },
+    {
+      "id": 14112656344,
+      "name": "tv-ui-verification-43590570318",
+      "bytes": 24934914
+    },
+    {
+      "id": 14112411882,
+      "name": "tv-preview-apk",
+      "bytes": 110402902
+    }
+  ],
+  "limits": [
+    "API 34 x86_64 emulator uses SwiftShader and -noaudio",
+    "No user-device audio or source reproduction",
+    "ARMv7 and MPV runtime not exercised",
+    "Existing lint errors remain; gate requires no new errors"
+  ]
+}

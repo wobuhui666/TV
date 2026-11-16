@@ -49,7 +49,7 @@ public class NextMediaPreloadTest {
                 PreloadSetting.putNextEpisode(true);
                 subtitles = new AdvancedSubtitleController();
                 coordinator = new PreloadCoordinator();
-                next = new NextMediaPreload(1, new Player.Listener() {
+                next = new NextMediaPreload(1, 1, new Player.Listener() {
                     @Override public void onPlayerError(PlaybackException e) { error.set(e); }
                 }, subtitles, coordinator);
                 activity.view.setPlayer(next.player);

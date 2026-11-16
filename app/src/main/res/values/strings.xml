@@ -264,6 +264,7 @@
     <string name="error_dolby_fallback">Switched to the platform Dolby Vision decoder</string>
     <string name="error_tunnel_fallback">Tunnel playback failed and was disabled</string>
     <string name="error_decode_fallback">Hardware decoding failed, switched to software decoding</string>
+    <string name="error_decode_track_fallback">Decoder failed, switched the affected track to software decoding</string>
     <string name="error_audio_track_reselect">This device cannot decode the saved audio track; switched to a playable one</string>
     <string name="error_audio_track_fallback">This device cannot decode the audio track; switched to the MPV engine</string>
     <string name="error_audio_track_undecodable">This device cannot decode the audio track. Try the MPV engine in settings</string>

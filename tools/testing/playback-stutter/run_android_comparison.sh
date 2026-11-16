@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+output=artifacts/playback-stutter
+mkdir -p "$output"
+python3 - <<'PY'
+import json
+from pathlib import Path
+import subprocess
+for name in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+             'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+    root = Path(name)
+    metadata = json.loads((root / 'output-metadata.json').read_text())
+    subprocess.run(['adb', 'install', '-r', str(root / metadata['elements'][0]['outputFile'])], check=True)
+PY
+adb shell wm size 1920x1080
+adb shell wm density 320
+tar -cf "$RUNNER_TEMP/playback-media.tar" -C "$RUNNER_TEMP/playback-media" .
+adb push "$RUNNER_TEMP/playback-media.tar" /data/local/tmp/playback-media.tar
+adb shell 'run-as com.fongmi.android.tv.preview mkdir -p files/core-fixtures'
+adb shell 'cat /data/local/tmp/playback-media.tar | run-as com.fongmi.android.tv.preview tar -xf - -C files/core-fixtures'
+adb shell getprop > "$output/device-properties.txt"
+adb shell dumpsys media.codec > "$output/codecs-before.txt"
+adb logcat -c
+collect() {
+    adb exec-out run-as com.fongmi.android.tv.preview cat files/playback-stutter-evidence/playback-summary.json > "$output/playback-summary.json" 2> "$output/report-copy-error.txt" || true
+    adb logcat -b all -d -v threadtime > "$output/logcat.txt" 2>&1 || true
+    adb shell dumpsys meminfo com.fongmi.android.tv.preview > "$output/meminfo-after.txt" 2>&1 || true
+    adb shell dumpsys media.codec > "$output/codecs-after.txt" 2>&1 || true
+}
+trap collect EXIT
+adb shell am instrument -w -r -e core_fixture_root core-fixtures \
+  -e playback_regression_only "${PLAYBACK_REGRESSION_ONLY:-false}" \
+  -e class com.fongmi.android.tv.player.exo.ExoDecodeSelectionAndroidTest,com.fongmi.android.tv.player.exo.ExoHighBitratePlaybackTest,com.fongmi.android.tv.player.subtitle.AssFrameCacheAndroidTest,com.fongmi.android.tv.test.PausedDanmakuVisibilityTest,com.fongmi.android.tv.service.PlaybackOwnershipAndroidTest,com.fongmi.android.tv.playback.vod.DanmakuPlaybackOwnershipAndroidTest \
+  com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$output/instrumentation.txt"
+collect
+python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+import re
+root = Path('artifacts/playback-stutter')
+value = (root / 'instrumentation.txt').read_text()
+assert re.search(r'^OK \(36 tests\)', value, re.M), 'Expected all decoder, text rendering, playback and ownership tests'
+assert not re.search(r'INSTRUMENTATION_STATUS_CODE: -(3|4)', value), 'No ignored or assumption-skipped tests'
+reports = list(root.rglob('playback-summary.json'))
+assert len(reports) == 1, reports
+report = json.loads(reports[0].read_text())
+regression_only = os.environ.get('PLAYBACK_REGRESSION_ONLY', 'false').lower() == 'true'
+assert report['controlsPassed'] and len(report['cases']) == (5 if regression_only else 27)
+assert all(case['ready'] and case['error'] is None for case in report['cases']), 'Every playback case must prepare without decoding errors'
+assert any(case['file'] == 'high2160p.mp4' for case in report['cases'])
+if not regression_only:
+    assert {case['danmaku'] for case in report['cases']} >= {'none', 'patched', 'legacy', 'patched_default', 'legacy_default'}
+    assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'legacy_ass']) == 2
+    assert len([case for case in report['cases'] if case['nativeAss'] and case['pipeline'] == 'production']) == 2
+log = (root / 'logcat.txt').read_text()
+assert not re.search(r'Libass.*(Initialization failed|Native renderer unavailable|Render failed)', log), 'Native ASS comparison must render successfully'
+print(json.dumps({'controlsPassed': report['controlsPassed'], 'cases': len(report['cases']),
+                  'fourKCases': [case for case in report['cases'] if case['file'] == 'high2160p.mp4']}, indent=2))
+PY
