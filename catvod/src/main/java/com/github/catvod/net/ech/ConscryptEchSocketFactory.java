@@ -30,7 +30,7 @@ import javax.net.ssl.X509TrustManager;
 /**
  * Selects Conscrypt only when ECH is enabled and the hostname has a configuration.
  * The returned socket is never wrapped, so OkHttp can recognize Conscrypt for ALPN.
- * Requires the pinned Conscrypt 2.7.0 policy contract; no global provider is installed.
+ * Requires the pinned Conscrypt 2.9.0 policy contract; no global provider is installed.
  */
 public final class ConscryptEchSocketFactory extends SSLSocketFactory {
 
@@ -144,7 +144,7 @@ public final class ConscryptEchSocketFactory extends SSLSocketFactory {
     }
 
     /**
-     * Conscrypt 2.7.0 discovers this public class's getNetworkSecurityPolicy by reflection.
+     * Conscrypt 2.9.0 discovers this public class's getNetworkSecurityPolicy by reflection.
      * Its unbundled Android policy otherwise returns UNKNOWN and ignores ECHConfigList.
      * Keep the reflection contract while delegating all certificate decisions unchanged.
      * Do not extend X509ExtendedTrustManager: Conscrypt's EngineSocket wraps extended

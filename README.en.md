@@ -20,6 +20,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 | Home and discovery | Featured artwork, continued viewing, favorites, optional poster-wall home and personal shelf, TMDB/Douban recommendations, and configurable hero rotation. |
 | Poster walls and filters | Source category and folder filters; media type, genre, year, region, and sorting where the page supplies them; consistent poster metadata and filter-panel state. |
 | Search and source selection | Cross-source search, relevance levels, grouped results, optional Smart source selection, per-configuration preferred sources, and episode-aware fallback. |
+| Media-library details | Compose TV immersive backgrounds, shared theme and fonts, playback/episode/source actions, lazy card lists, and stable focus restoration. |
 | Playback | ExoPlayer/Media3 and MPV; hardware/software options, playback speed, seek acceleration, repeat, aspect ratio, track selection, chapters, and editions when provided. |
 | Playback information | A TV specification capsule showing available input resolution, video/audio codec, dynamic range, bit depth, channel information, and explicit content ratings. |
 | Subtitles | Native ASS styles and animation, independent primary/secondary subtitles, timing/style/font controls, ASSRT search and ZIP/RAR file selection, subtitle import, local subtitle discovery, and VTT upload. |
@@ -129,6 +130,8 @@ Choose a theme, open a source, and browse or search for a title. The TV settings
 ## Home, discovery, and source selection
 
 The TV home, library, recommendations, title details, and settings share JetStream focus and touch behavior. Appearance can be dark, light, or follow Android's system setting. Theme presets, wallpaper-based accent colors, artwork backgrounds, title logos, and consistent poster year/episode rows keep those pages visually aligned.
+
+Media-library and Simple-mode details use Compose TV, with title/summary information on the left and primary playback controls on the right. Artwork tint follows the global appearance; episodes, sources, and people use lazy lists. The detail page has no clock or top back control. See [the media-library guide](docs/media-library.md) for operation and constraints.
 
 The default compact TV home combines recommendations and continued viewing, with a **Filter titles** shortcut for browsing by type, region, year, and rating. Library stays separate for source categories, folders, filters, and login/cookie actions. Source previews show up to 20 titles while source actions remain independently accessible, including actions without poster artwork. Under **Settings → Home and discovery → Home layout**, you can switch to the legacy source home or legacy poster home without resetting sources, favorites, history, or other browsing settings. A continued-viewing card can expose a long-press/menu action for resuming, finding another source, or deleting just that record. Hero rotation can keep the original automatic timing, pause while focused, or switch only with left/right input.
 

@@ -1,0 +1,445 @@
+{
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "sourceState": "base commit plus uncommitted workspace changes",
+  "apks": {
+    "debug": {
+      "bytes": 116883684,
+      "sha256": "12ca69a59f0168afcdec084c9bacf684a1322df344108001337b676aa7c9be24",
+      "signatureVerified": true,
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "rootSearchClipChildren": true,
+      "file": "TV-library-polish-20261115-arm64.apk",
+      "scope": "Final Debug only; includes root clipChildren correction, not covered by the prior Preview Android regression",
+      "nativeLibraryHashesMatchPreviousDebug": true
+    },
+    "preview": {
+      "bytes": 119890148,
+      "sha256": "6b2fa353804fc9e8324975506a5e176aff241c43cbf1bb614332147fb1bf5e51",
+      "signatureVerified": true,
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "file": "TV-library-polish-20261115-preview-arm64.apk",
+      "scope": "Prior Preview revision used for Android regression; not rebuilt for the final root clipChildren correction"
+    },
+    "test": {
+      "bytes": 1865487,
+      "sha256": "b5ad19e9a27f19495b6d7abddb3e6b95674ca09a435575453ab7295c7647bb6e",
+      "signatureVerified": true,
+      "arm64Libraries": 0,
+      "pythonAssetsRetained": false,
+      "file": "TV-library-polish-20261115-preview-test.apk",
+      "scope": "Prior Preview instrumentation with corrected test expectations and focus synchronization"
+    },
+    "previousDebug": {
+      "bytes": 119861476,
+      "sha256": "4b29b0137487dc47d7a4729bcd38ff649695e5423afa7e96baf16b0cc2e04143",
+      "signatureVerified": true,
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "file": "TV-library-polish-20261115-arm64.apk",
+      "scope": "Previously tested Debug, before the final root clipChildren correction"
+    }
+  },
+  "unit": {
+    "totals": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "classes": [
+      "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest",
+      "com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetchTest",
+      "com.fongmi.android.tv.setting.ExperienceSettingsTest",
+      "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest",
+      "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest",
+      "com.fongmi.android.tv.setting.BrowseExperienceSettingsTest",
+      "com.fongmi.android.tv.ui.home.PosterHomeCatalogTest",
+      "com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest",
+      "com.fongmi.android.tv.source.LibrarySearchIndexTest"
+    ],
+    "scope": "Focused Gradle unit tests before the final root clipChildren correction",
+    "evidence": [
+      "unit-summary.json: 61 tests, zero failures/errors/skipped",
+      "build-results.json: unit stage exit 0"
+    ]
+  },
+  "android": {
+    "uniquePassed": 61,
+    "classes": {
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest": 7,
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest": 46,
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest": 8
+    },
+    "passedCases": [
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepAccountFoldersOutOfIndexSourceSearch",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepLegacyLayoutChoicesIndependentOfOtherSettings",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepNativeSourceLibraryAndSeparateDiscoveryInNavigation",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepNoArtworkActionBeyondThePreviewLimit",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldOpenSourceAccountFolderWithoutTmdbInterception",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldPreserveSourceFolderIdentityInSharedNavigation",
+      "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldRebindSourceCardsAfterAnIdenticalRefresh",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#aCancelledLinkResponseCannotLaunchPlaybackAfterLeavingTheWork",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#animeUsesTheReferenceArtworkAndEpisodeLayout",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#automaticPlaybackFailureKeepsTheRequestedEpisodeOnTheNextSource",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#automaticSelectionSkipsAFailedSourceDetail",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#automaticSelectionStopsWaitingForUnresponsiveSourceDetails",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#browsingEpisodesWithTheRemoteKeepsTheResumeTargetAndTime",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#cancellingSourceDetailPreventsALatePlaybackLaunch",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#changingAppThemeWhileBrowsingKeepsEpisodeFocusAndScroll",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#changingSeasonRemovesOldEpisodeActionsWhileTheNewSeasonLoads",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#choosingAnotherEpisodeDoesNotReuseTheSavedEpisodesProgress",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#choosingAnotherResourceReplacesAnInFlightSelectionWithOnePress",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#classicModeKeepsTheOriginalPlayerEntryAndSmallWindow",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#detailPrefetchesTheConfirmedLinkWithoutOpeningAPlayerAndClickConsumesIt",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#emptyResourcesKeepSeriesDetailsUsableAndQuiet",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#episodeFocusPrefetchUsesTheExplicitNumberInAReorderedPlaylist",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#episodeFocusStillWorksWhenSystemAnimationsAreDisabled",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#folderOnlyResultsRemainFocusableWhenMetadataFailsAndFilterChanges",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#fullscreenEpisodePickerChangesTheEpisodeAndReturnsItsHistory",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#fullscreenLinePickerKeepsTheCurrentEpisode",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#galleryFocusFitsTheArtworkAndReturnsFromTheImageViewer",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#generatedOrAbsolutePlaylistPositionsCannotSupplyTheRequestedSeasonEpisode",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#heroBlendsIntoTheLightPageWithoutAVisibleSeam",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#leavingTheWorkPageCancelsAnUnfinishedSelection",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#manualPlaybackFailureReturnsWithoutChoosingAnotherResource",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#manualResourceChoiceUsesThatSourceAndReturnsToItsCard",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#minimalSearchSummariesAreValidatedFromDetailBeforeAutomaticPlayback",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#modeSelectionKeepsPlaybackAndSourcePreferences",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#movieUsesReferenceLayoutAndOnlyPlaysAfterRemoteConfirmation",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#nextEpisodeFollowsCoordinatesInAReorderedSourcePlaylist",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#playbackButtonOffersCancelWhileResolvingAndCancelsWithoutLeaving",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#playerSourceControlReturnsToUnifiedResourcesWithCurrentProgress",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#rapidEpisodeNavigationKeepsCaptionsStillAndRestoresTheFocusedEpisode",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#rawEpisodeSelectionReplacesAnEarlierNumberedPlaybackTarget",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#resumeHistoryKeepsItsSourceEpisodeAndProgress",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#returningQuicklyToTheWorkPageStartsAFreshPrefetch",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#scrollingUsesARealBlurredPosterAndMovesItSlowerThanTheContent",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#searchFilterRestartsAnInFlightRequestAndIgnoresItsLateResponse",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#searchRemoteMovesBetweenFiltersResultsAndSourceSupplement",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#seriesLogoFallsBackToOriginalLanguageAndShowsCurrentSeasonUpdateCount",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#seriesShowsEpisodeCardsAndResolvesTheExactSelectedEpisode",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#simpleModeLoadsExtraInformationOnlyWhenRequested",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#sourceFolderSearchOpensItsOriginalListAndReturnsToTheSameRow",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#sourceOnlySeriesKeepsOriginalEpisodesWhenTmdbIsUnavailable",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#stickyHeaderTracksTheRealTitleAndRemoteBackLeavesTheScrolledPage",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#tmdbFailurePreservesSourceResults",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#unifiedSearchShowsOneWorkWithTwoResourcesAndASourceSupplement",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldCancelHeldAndQueuedSeekKeysWhenNavigationTakesOver",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldCancelOpposingKeyBurstsWithoutCommittingOrResuming",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldCancelPendingKeysFromRealVodLiveAndCastReplacementCallbacks",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldCombineSuccessiveTouchSwipesAsBefore",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldIgnoreOldHeldKeysAndPendingCommitAfterResetAndFullscreenExit",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldKeepLiveLineSwitchingAndDropOldSeekReleases",
+      "com.fongmi.android.tv.ui.custom.SeekKeyOwnershipAndroidTest#shouldRejectForeignRepeatsAndCanceledReleaseWithoutChangingLongPressSteps"
+    ],
+    "initialFailures": "Device SystemUI ANR, absent test artwork, stale home expectations and an episode-dialog focus race in the driver; repaired and rerun.",
+    "scope": "61 unique passing cases across prior Preview class runs and targeted reruns; does not cover the final root clipChildren correction",
+    "evidence": [
+      {
+        "log": "CompactHomeIntegrationTest.log",
+        "passed": 7,
+        "failed": 1
+      },
+      {
+        "log": "LibraryExperienceAndroidTest.log",
+        "passed": 44,
+        "failed": 2
+      },
+      {
+        "log": "SeekKeyOwnershipAndroidTest.log",
+        "passed": 7,
+        "failed": 0
+      },
+      {
+        "log": "final-rerun.log",
+        "passed": 4,
+        "failed": 1
+      },
+      {
+        "log": "final-home-rerun.log",
+        "passed": 1,
+        "failed": 0
+      }
+    ]
+  },
+  "lint": {
+    "rawTaskPassed": false,
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 379,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "comparisonPassed": true
+  },
+  "runtime": {
+    "configuration": "https://9280.kstore.vip/aiwex.json",
+    "androidApi": 31,
+    "nativeBridge": "x86_64 with libndk_translation; full ARM64 app with native libraries and Python",
+    "physicalArmDevice": false,
+    "onlineFixtureReplacement": false,
+    "observedSearchResults": 77,
+    "directoryNavigation": [
+      "观影 search folder",
+      "cloud provider list (夸克、百度、迅雷等)",
+      "夸克 source versions"
+    ],
+    "playback": {
+      "source": "文才",
+      "title": "庆余年1",
+      "selectedEpisode": "3",
+      "mediaSessionState": 3,
+      "observedPositionMs": 826662,
+      "observedVideo": "1080P SDR H.264 8bit AAC 2.0"
+    },
+    "limits": [
+      "No physical TV decoding/performance acceptance",
+      "No real Cookie/login submission",
+      "Not all providers or resources tested",
+      "Only the Quark resource-version branch was opened; other providers were listed only"
+    ],
+    "apkSha256": "4b29b0137487dc47d7a4729bcd38ff649695e5423afa7e96baf16b0cc2e04143",
+    "scope": "Online playback and resource-version observations from the previous Debug revision",
+    "rootViewportCorrectionIncluded": false
+  },
+  "status": "Final Debug build, focused resolver tests and real-network search viewport acceptance passed",
+  "testedSourceManifestSha256": "ee86c3d9b73417abfa722c38de07e493b8b8f88b74bb72da85d4fa998590d74c",
+  "images": [
+    {
+      "path": "images/fullscreen-episodes.png",
+      "sourceFile": "live-episode-picker.png",
+      "sha256": "fcc55de3a42d61e68ceeb677bbf950d2edc97b6fc837120741a6f60a0de665ff",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "4b29b0137487dc47d7a4729bcd38ff649695e5423afa7e96baf16b0cc2e04143",
+      "revision": "Before the final root clipChildren correction",
+      "review": "Visually checked; no account details, Cookie, credentials or playback URLs visible"
+    },
+    {
+      "path": "images/playback-episode-3.png",
+      "sourceFile": "live-episode-three-controls.png",
+      "sha256": "d1c99cb147280163bc3158b642423542b0e1f32628a78c09bfbb382ae94ab0a6",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "4b29b0137487dc47d7a4729bcd38ff649695e5423afa7e96baf16b0cc2e04143",
+      "revision": "Before the final root clipChildren correction",
+      "review": "Visually checked; no account details, Cookie, credentials or playback URLs visible"
+    },
+    {
+      "path": "images/guanying-search.png",
+      "sourceFile": "accepted-guanying-search.png",
+      "sha256": "fb6c539516393e2b6f489ccd873dd0ebadd38a60b758954bcf43b94d22867c0e",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "12ca69a59f0168afcdec084c9bacf684a1322df344108001337b676aa7c9be24",
+      "revision": "Final root clipChildren correction",
+      "review": "Visually checked; no account details, Cookie, credentials or playback URLs visible"
+    },
+    {
+      "path": "images/guanying-providers.png",
+      "sourceFile": "accepted-guanying-providers.png",
+      "sha256": "6359d6db5310e7fbce2aed6c377612af0bdc2f7bb8477f6f293789dbc1003abe",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "12ca69a59f0168afcdec084c9bacf684a1322df344108001337b676aa7c9be24",
+      "revision": "Final root clipChildren correction",
+      "review": "Visually checked; no account details, Cookie, credentials or playback URLs visible"
+    }
+  ],
+  "finalSourceManifestSha256": "9c45de4c2ca2087cb481da8f07311996fc3df9ac3caeb8a7419aa0510ff7bb59",
+  "finalBuild": {
+    "results": [
+      {
+        "stage": "final-debug-apk",
+        "exit": 0,
+        "seconds": 839,
+        "tasks": [
+          ":app:assembleLeanbackArm64_v8aDebug"
+        ]
+      },
+      {
+        "stage": "final-resolver-tests",
+        "exit": 0,
+        "seconds": 71,
+        "tasks": [
+          ":app:testLeanbackArm64_v8aDebugUnitTest",
+          "--tests",
+          "com.fongmi.android.tv.player.skip.EpisodeIdentityResolverTest"
+        ]
+      }
+    ],
+    "sourceManifestSha256": "9c45de4c2ca2087cb481da8f07311996fc3df9ac3caeb8a7419aa0510ff7bb59",
+    "sourceManifestFile": "final-build-source.sha256",
+    "evidence": "final-remote-evidence/final-remote-build-results.json"
+  },
+  "finalAdditionalUnit": {
+    "totals": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "class": "com.fongmi.android.tv.player.skip.EpisodeIdentityResolverTest",
+    "scope": "Episode identity changes present in the final build workspace",
+    "evidence": "final-remote-evidence/project/app/build/test-results/testLeanbackArm64_v8aDebugUnitTest/TEST-com.fongmi.android.tv.player.skip.EpisodeIdentityResolverTest.xml"
+  },
+  "finalRevision": {
+    "change": "Root clipChildren correction for the library search viewport",
+    "debugBuild": "passed",
+    "manualViewportAcceptance": "passed",
+    "previewAndInstrumentationRebuilt": false,
+    "finalApkSha256": "12ca69a59f0168afcdec084c9bacf684a1322df344108001337b676aa7c9be24",
+    "sourceManifestSha256": "9c45de4c2ca2087cb481da8f07311996fc3df9ac3caeb8a7419aa0510ff7bb59"
+  },
+  "finalRuntime": {
+    "verifiedAtUtc": "2026-11-15T13:21:17.873504+00:00",
+    "apkSha256": "12ca69a59f0168afcdec084c9bacf684a1322df344108001337b676aa7c9be24",
+    "configuration": "https://9280.kstore.vip/aiwex.json",
+    "realNetworkResponses": true,
+    "query": "庆余年",
+    "resultCountObserved": 284,
+    "device": {
+      "api": 31,
+      "architecture": "x86_64 with libndk_translation ARM64 bridge",
+      "width": 1920,
+      "height": 1080,
+      "densityDpi": 320
+    },
+    "checks": {
+      "titleAndStatusAndFiltersUnobscuredAfterSourceJump": true,
+      "titleAndStatusAndFiltersUnobscuredAtGuanyingFolders": true,
+      "offscreenPostersClippedAtResultsTopPx": 228,
+      "guanyingFirstSeasonOpenedWithDpadCenter": true,
+      "originalFolderFocusRestoredOnBack": true,
+      "dpadUpReturnedToTopPostersThenAllFilter": true
+    },
+    "providersObserved": [
+      {
+        "name": "夸克网盘",
+        "count": 70
+      },
+      {
+        "name": "迅雷网盘",
+        "count": 30
+      },
+      {
+        "name": "百度网盘",
+        "count": 34
+      },
+      {
+        "name": "光鸭网盘",
+        "count": 11
+      }
+    ],
+    "coverageLimits": [
+      "No real Cookie or login submitted",
+      "Provider list opened in this final pass; provider resource-version branches were not retested",
+      "No playback retest in this final pass",
+      "Physical ARM television not tested"
+    ],
+    "evidence": [
+      {
+        "screenshot": "accepted-guanying-search.png",
+        "xml": "accepted-guanying-search.xml",
+        "screenshotSha256": "fb6c539516393e2b6f489ccd873dd0ebadd38a60b758954bcf43b94d22867c0e",
+        "focused": [
+          {
+            "text": "",
+            "content-desc": "庆余年 第一季 · 💓‍观影┃4K💓‍ · 46集 / 大陆 / 剧情 / 古装",
+            "resource-id": "",
+            "bounds": "[96,478][1824,638]"
+          }
+        ],
+        "status": [
+          "共 284 项结果"
+        ]
+      },
+      {
+        "screenshot": "accepted-guanying-providers.png",
+        "xml": "accepted-guanying-providers.xml",
+        "screenshotSha256": "6359d6db5310e7fbce2aed6c377612af0bdc2f7bb8477f6f293789dbc1003abe",
+        "focused": [
+          {
+            "text": "庆余年 第一季",
+            "content-desc": "",
+            "resource-id": "com.fongmi.android.tv:id/text",
+            "bounds": "[96,218][328,298]"
+          }
+        ],
+        "status": []
+      },
+      {
+        "screenshot": "accepted-guanying-return.png",
+        "xml": "accepted-guanying-return.xml",
+        "screenshotSha256": "fb6c539516393e2b6f489ccd873dd0ebadd38a60b758954bcf43b94d22867c0e",
+        "focused": [
+          {
+            "text": "",
+            "content-desc": "庆余年 第一季 · 💓‍观影┃4K💓‍ · 46集 / 大陆 / 剧情 / 古装",
+            "resource-id": "",
+            "bounds": "[96,478][1824,638]"
+          }
+        ],
+        "status": [
+          "共 284 项结果"
+        ]
+      },
+      {
+        "screenshot": "accepted-search-top.png",
+        "xml": "accepted-search-top.xml",
+        "screenshotSha256": "70b7cf8499d0099ef9d5c2e82a9a8ee9e278ccb791ead8397ec68d7e443d02f0",
+        "focused": [
+          {
+            "text": "",
+            "content-desc": "庆余年 · 2019 · 42 个资源",
+            "resource-id": "",
+            "bounds": "[90,232][422,844]"
+          }
+        ],
+        "status": [
+          "共 284 项结果"
+        ]
+      },
+      {
+        "screenshot": "accepted-search-top-filter.png",
+        "xml": "accepted-search-top-filter.xml",
+        "screenshotSha256": "9fb01679493a5f7624812ccf6a25e1036515f368d3977ab2b0e49a5b309ce5eb",
+        "focused": [
+          {
+            "text": "全部",
+            "content-desc": "",
+            "resource-id": "com.fongmi.android.tv:id/filter",
+            "bounds": "[1224,51][1353,141]"
+          }
+        ],
+        "status": [
+          "共 284 项结果"
+        ]
+      },
+      {
+        "screenshot": "accepted-source-jump.png",
+        "xml": "accepted-source-jump.xml",
+        "screenshotSha256": "c61c860f66c0dd252b9554136b54c0fac13602c067f8434232734a15a06c1678",
+        "focused": [
+          {
+            "text": "",
+            "content-desc": "庆余年第二季 · 💓花卷┃4K💓‍ · 全36集",
+            "resource-id": "",
+            "bounds": "[90,388][422,954]"
+          }
+        ],
+        "status": [
+          "共 284 项结果"
+        ]
+      }
+    ]
+  }
+}

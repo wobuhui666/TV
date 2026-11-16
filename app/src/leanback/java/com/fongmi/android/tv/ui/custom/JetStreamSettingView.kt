@@ -529,17 +529,10 @@ class JetStreamSettingView @JvmOverloads constructor(
                 key = SECTION_BROWSE,
                 label = context.getString(R.string.browse_section),
                 rows = listOf(
-                    RowSpec(KEY_BROWSE_HOME, context.getString(R.string.browse_home)),
-                    RowSpec(KEY_BROWSE_KEEP_SHELF, context.getString(R.string.browse_keep_shelf), toggle = true),
-                    RowSpec(KEY_BROWSE_HISTORY_ACTIONS, context.getString(R.string.browse_history_actions), toggle = true),
-                    RowSpec(KEY_BROWSE_HERO_ROTATION, context.getString(R.string.browse_hero_rotation)),
-                    RowSpec(KEY_BROWSE_FILTER, context.getString(R.string.browse_search_filter)),
-                    RowSpec(KEY_BROWSE_SOURCES, context.getString(R.string.browse_detail_sources), toggle = true),
+                    RowSpec(KEY_EXPERIENCE_MODE, context.getString(R.string.library_mode)),
                     RowSpec(KEY_BROWSE_PRIORITY, context.getString(R.string.poster_source_priority_title)),
-                    RowSpec(KEY_BROWSE_SMART, context.getString(R.string.browse_smart_sources), toggle = true),
                     RowSpec(KEY_BROWSE_BRIDGE_BASE, context.getString(R.string.browse_bridge_base)),
-                    RowSpec(KEY_BROWSE_BRIDGE_SK, context.getString(R.string.browse_bridge_sk)),
-                    RowSpec(KEY_BROWSE_RESTORE, context.getString(R.string.browse_restore))
+                    RowSpec(KEY_BROWSE_BRIDGE_SK, context.getString(R.string.browse_bridge_sk))
                 )
             ),
             SectionSpec(
@@ -605,8 +598,6 @@ class JetStreamSettingView @JvmOverloads constructor(
                 label = context.getString(R.string.setting_section_app),
                 rows = listOf(
                     RowSpec(KEY_INCOGNITO, context.getString(R.string.setting_incognito), toggle = true),
-                    RowSpec(KEY_SOURCE_MODE, context.getString(R.string.setting_source_mode)),
-                    RowSpec(KEY_SOURCE_CROSS_SITE, context.getString(R.string.setting_source_cross_site), toggle = true),
                     RowSpec(KEY_SOURCE_CLEAR, context.getString(R.string.setting_source_clear)),
                     RowSpec(KEY_DETAIL_FILTER, context.getString(R.string.setting_detail_filter)),
                     RowSpec(KEY_FLAG_FILTER, context.getString(R.string.setting_flag_filter)),
@@ -676,6 +667,7 @@ class JetStreamSettingView @JvmOverloads constructor(
         const val KEY_RENDER = "render"
         const val KEY_SCALE = "scale"
         const val KEY_SPEED = "speed"
+        const val KEY_EXPERIENCE_MODE = "experience_mode"
         const val KEY_SEEK_ACCELERATE = "seek_accelerate"
         const val KEY_CAPTION = "caption"
         const val KEY_BACKGROUND = "background"

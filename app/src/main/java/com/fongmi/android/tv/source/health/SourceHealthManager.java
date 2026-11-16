@@ -24,11 +24,22 @@ public final class SourceHealthManager {
     public enum Phase { SEARCH, DETAIL }
     private static final SourceHealthStore STORE = new SourceHealthStore();
     private static final AtomicLong EPOCH = new AtomicLong();
+    private record Scope(String url, long epoch, String value) { }
+    private static volatile Scope cachedScope;
     private static final String SORT = "source_health_sort";
     private SourceHealthManager() {}
 
-    public static String currentScope() { return hash(VodConfig.getUrl()) + ":" + EPOCH.get(); }
-    public static void clear() { EPOCH.incrementAndGet(); STORE.clear(); }
+    public static String currentScope() { return scopeFor(VodConfig.getUrl()); }
+    static String scopeFor(String url) {
+        String value = url == null ? "" : url;
+        long epoch = EPOCH.get();
+        Scope previous = cachedScope;
+        if (previous != null && previous.epoch == epoch && previous.url.equals(value)) return previous.value;
+        Scope prepared = new Scope(value, epoch, hash(value) + ":" + epoch);
+        cachedScope = prepared;
+        return prepared.value;
+    }
+    public static void clear() { EPOCH.incrementAndGet(); cachedScope = null; STORE.clear(); }
     public static boolean isSortEnabled() { return Prefers.getBoolean(SORT, false); }
     public static void setSortEnabled(boolean enabled) { Prefers.put(SORT, enabled); }
 

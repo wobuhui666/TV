@@ -184,6 +184,10 @@ public class DiscoverResultActivity extends BaseActivity implements VodPresenter
     }
 
     private void openDetail(Vod item, View poster) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            LibraryNavigation.open(this, item, poster);
+            return;
+        }
         if (com.fongmi.android.tv.setting.BrowseExperienceSettings.isDetailSourcesEnabled()) {
             DiscoverDetailActivity.start(this, item, poster);
             return;

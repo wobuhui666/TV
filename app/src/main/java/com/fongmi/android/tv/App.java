@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.core.os.HandlerCompat;
 
 import com.fongmi.android.tv.utils.Notify;
+import com.fongmi.android.tv.utils.GlideWarmup;
 import com.fongmi.android.tv.utils.ToastFilter;
 import com.fongmi.android.tv.sync.WebDavSyncManager;
 import com.fongmi.hook.Hook;
@@ -96,6 +97,7 @@ public class App extends Application implements Application.ActivityLifecycleCal
     @Override
     public void onCreate() {
         super.onCreate();
+        GlideWarmup.start();
         com.fongmi.android.tv.player.skip.LegacySkipMigration.clearPreferences();
         // Only schedules Pine when toast filter is already enabled in settings.
         ToastFilter.install();

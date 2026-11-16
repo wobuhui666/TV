@@ -1,0 +1,308 @@
+{
+  "testedCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "auditedSourceManifestSha256": "077504c13f279c9a11c398ce817625a2d98b627ee74cca3ca3b93912367a59da",
+  "unitTests": {
+    "testedTests": 91,
+    "suites": [
+      {
+        "name": "com.fongmi.android.tv.api.TmdbLibraryApiTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.model.BoundedSearchBatchTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.model.DiscoverSourceSearchTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.setting.ExperienceSettingsTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.LibrarySearchIndexTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.SearchRelevanceTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.health.SourceHealthScopeTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.source.health.SourceHealthStoreTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0
+      },
+      {
+        "name": "com.fongmi.android.tv.ui.search.SearchInputParserTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0
+      }
+    ],
+    "preservedAfterUiAndBuildOnlyChanges": true
+  },
+  "androidTests": {
+    "finalApkDirectlyTested": false,
+    "preservedAfterLintAnnotationOnlyRepack": true,
+    "testedFullSourceApkSha256": "1af86b358a9a0e0162051242be194d50c570ee473535c353ef29addd23337f8a",
+    "testedSourceManifestSha256": "06ee29b5d90d445d79d03ea2b5b8588e7797c380da49246ed93882be78adcec6",
+    "repackEntryComparison": {
+      "retainedCodeAndResourceEntryCount": 1629,
+      "identicalEntrySet": true,
+      "changedEntries": [
+        "classes18.dex",
+        "classes26.dex"
+      ],
+      "allCodeResourceEntriesIdentical": false,
+      "annotationOnlySourceChange": true,
+      "androidTestsRerun": false
+    },
+    "repackSemanticReview": {
+      "review": "Read-only method and symbolic subscriber comparison",
+      "classes18": {
+        "identicalRuntimeMethods": 4680,
+        "differences": [
+          "annotation metadata",
+          "source/debug maps",
+          "DEX checksums"
+        ]
+      },
+      "classes26": {
+        "identicalOtherRuntimeMethods": 2907,
+        "changedMethod": "EventIndex.<clinit>",
+        "equivalentGeneratedInitialization": true,
+        "subscriberEntries": 16,
+        "subscriberEntriesCanonicalSha256": "7ab2d4f7247c2c87d56d226563340b179675e578e25f77103f3a64d545055f52"
+      },
+      "resourceAndManifestEntriesIdentical": true,
+      "dexByteIdentical": false,
+      "supportsPreservingPreviousAndroidOutcomes": true,
+      "finalApkAndroidRerun": false
+    },
+    "mandatoryTests": 6,
+    "functionalTests": 3,
+    "responsivenessTests": 3,
+    "mandatoryFailures": 1,
+    "performanceSummary": {
+      "completedTests": 3,
+      "passed": 2,
+      "failed": 1,
+      "tests": [
+        {
+          "test": "largeSourceResultsKeepMainResponsiveAndOnlyCreateVisiblePosters",
+          "class": "com.fongmi.android.tv.ui.activity.SearchResponsivenessAndroidTest",
+          "status": "failed",
+          "instrumentationCode": -2
+        },
+        {
+          "test": "tmdbNetworkAndCachedCallbacksUseMainAndCancelledCacheDoesNotDeliver",
+          "class": "com.fongmi.android.tv.ui.activity.SearchResponsivenessAndroidTest",
+          "status": "passed",
+          "instrumentationCode": 0
+        },
+        {
+          "test": "heartbeatProbeDetectsAControlledMainThreadBlock",
+          "class": "com.fongmi.android.tv.ui.activity.SearchResponsivenessAndroidTest",
+          "status": "passed",
+          "instrumentationCode": 0
+        }
+      ]
+    },
+    "functionalSummary": {
+      "completedTests": 3,
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "test": "manualResourceChoiceUsesThatSourceAndReturnsToItsCard",
+          "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest",
+          "status": "passed",
+          "instrumentationCode": 0
+        },
+        {
+          "test": "unifiedSearchShowsOneWorkWithTwoResourcesAndASourceSupplement",
+          "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest",
+          "status": "passed",
+          "instrumentationCode": 0
+        },
+        {
+          "test": "detailPrefetchesTheConfirmedLinkWithoutOpeningAPlayerAndClickConsumesIt",
+          "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest",
+          "status": "passed",
+          "instrumentationCode": 0
+        }
+      ]
+    },
+    "optionalInput": {
+      "tested": true,
+      "status": "failed",
+      "mainHandlerBudgetMs": 250
+    },
+    "priorFunctionalValidation": {
+      "tests": 13,
+      "sameScopeRerun": false
+    },
+    "initialHarnessFailure": {
+      "totalTests": 17,
+      "launchFailuresBeforeStress": 2,
+      "reason": "Synchronous global UI idle barrier prevented performance scenarios from starting"
+    }
+  },
+  "performance": {
+    "cached-input": {
+      "maxMainHandlerDelayMs": 515,
+      "mainHandlerSamples": 65,
+      "frameCount": 24,
+      "fixtureWorks": 240,
+      "fixtureSources": 8,
+      "inputStartupMsIncludingLayoutAndRendering": 10095,
+      "remainingOverBudgetSampledPaths": [
+        "View draw and RenderNode operations",
+        "Native theme attachment and preference reads"
+      ]
+    },
+    "large-results": {
+      "maxMainHandlerDelayMs": 791,
+      "mainHandlerSamples": 608,
+      "frameCount": 21,
+      "fixtureWorks": 240,
+      "fixtureSources": 8,
+      "inputStartupMsIncludingLayoutAndRendering": 6930,
+      "settledState": {
+        "sourceLoading": false,
+        "tmdbLoading": false,
+        "matching": false,
+        "matchScheduled": false,
+        "renderPending": false,
+        "publishedWorks": 240,
+        "publishedResources": 1920,
+        "worksCount": 240,
+        "sourcesCount": 1920,
+        "preparedSourcesCount": 240
+      },
+      "observedSettlementMs": 29537,
+      "remainingOverBudgetSampledPaths": [
+        "TextView style resolution and text measurement",
+        "View/focus/theme attachment",
+        "Neutral theme preference reads"
+      ],
+      "attributionLimit": "Samples do not assign the entire delay to software GPU, preferences, or any single path",
+      "createdCards": {
+        "assertionBeforePerformanceCheck": "<64",
+        "upperExclusive": 64
+      },
+      "budgetPassed": false,
+      "attachedCards": {
+        "assertionBeforePerformanceCheck": "<40",
+        "upperExclusive": 40
+      }
+    },
+    "probe-control": {
+      "maxMainHandlerDelayMs": 301,
+      "mainHandlerSamples": 14,
+      "frameCount": 0,
+      "fixtureWorks": 240,
+      "fixtureSources": 8,
+      "inputStartupMsIncludingLayoutAndRendering": 0
+    },
+    "result-navigation": {
+      "maxMainHandlerDelayMs": 3572,
+      "mainHandlerSamples": 109,
+      "frameCount": 7,
+      "fixtureWorks": 240,
+      "fixtureSources": 8,
+      "inputStartupMsIncludingLayoutAndRendering": 6930,
+      "phaseElapsedMs": 5451
+    },
+    "journeyMaxMainHandlerDelayMs": 3572,
+    "apiDelivery": {
+      "networkCallbacksOnMain": true,
+      "cachedCallbacksOnMain": true,
+      "cancelledCachedCallbacks": 0,
+      "verifiedBy": "tmdbNetworkAndCachedCallbacksUseMainAndCancelledCacheDoesNotDeliver"
+    }
+  },
+  "lint": {
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 375,
+      "Hint": 6
+    },
+    "newErrorCount": 0,
+    "newWarningCount": 30
+  },
+  "apk": {
+    "file": "TV-library-search-fix-20261114-arm64.apk",
+    "applicationId": "com.fongmi.android.tv.preview",
+    "versionName": "5.8.7-library-search-fix-20261114-preview",
+    "bytes": 116711495,
+    "sha256": "cea0fe43cc1825447af9e44944d0915b74f11e3b723838557fb84b8b8ab090c3",
+    "arm64Libraries": 35,
+    "tmdbConfigured": true,
+    "signerSha256": "b5cf6e7277905216f31d1d2ef0e44d71351b490c04fb180edf379a7964405cc4"
+  },
+  "environment": {
+    "jdk": 21,
+    "androidSdk": 37,
+    "gradle": "9.1.0",
+    "emulator": "API24 x86_64 960x540 density160 software acceleration",
+    "applicationId": "com.fongmi.android.tv.preview",
+    "mainHandlerBudgetMs": 250
+  },
+  "coverageLimits": [
+    "Performance uses synthetic 240-work/eight-source responses and an isolated software emulator",
+    "Frame rendering timings include software GPU overhead and are not a 60fps guarantee",
+    "Measured response does not establish the exact cause on the user TV",
+    "Full ARM64 delivery retains native libraries and online TMDB configuration",
+    "Related playback checks use held media requests and do not verify real-media decoding",
+    "Optional input performance failure can prevent subsequent cursor/backspace/clear assertions",
+    "Final APK was repacked after lint annotation/comment changes; Android outcomes are preserved through runtime-method/resource comparison and equivalent generated EventIndex entries, not a new direct run"
+  ],
+  "screenshots": {
+    "search-results.png": "Final APK-equivalent code; small offline work/source fixture, not stress screenshot",
+    "detail.png": "Prior 13-test UI validation; unchanged hero/header/layout implementation"
+  }
+}

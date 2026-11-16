@@ -73,6 +73,12 @@ public class History implements Diffable<History> {
     private int scale;
     @SerializedName("cid")
     private int cid;
+    @SerializedName("mediaRef")
+    private String mediaRef;
+    @SerializedName("mediaSeason")
+    private Integer mediaSeason;
+    @SerializedName("mediaEpisode")
+    private Integer mediaEpisode;
 
     private transient long updateTime;
 
@@ -108,6 +114,9 @@ public class History implements Diffable<History> {
         copy.speed = speed;
         copy.scale = scale;
         copy.cid = cid;
+        copy.mediaRef = mediaRef;
+        copy.mediaSeason = mediaSeason;
+        copy.mediaEpisode = mediaEpisode;
         copy.updateTime = updateTime;
         return copy;
     }
@@ -134,6 +143,17 @@ public class History implements Diffable<History> {
         return AppDatabase.get().getHistoryDao().find(VodConfig.getCid(), key);
     }
 
+    public String getMediaRef() { return mediaRef == null ? "" : mediaRef; }
+    public void setMediaRef(String value) { mediaRef = value; }
+    public Integer getMediaSeason() { return mediaSeason; }
+    public void setMediaSeason(Integer value) { mediaSeason = value; }
+    public Integer getMediaEpisode() { return mediaEpisode; }
+    public void setMediaEpisode(Integer value) { mediaEpisode = value; }
+
+    public static History findByMedia(String reference) {
+        return reference == null || reference.isEmpty() ? null : AppDatabase.get().getHistoryDao().findByMedia(VodConfig.getCid(), reference);
+    }
+
     public static List<History> findByName(String name) {
         try {
             return AppDatabase.get().getHistoryDao().findByName(VodConfig.getCid(), name);
@@ -148,7 +168,8 @@ public class History implements Diffable<History> {
 
     public static void sync(List<History> targets) {
         targets.forEach(target -> {
-            List<History> items = findByName(target.getVodName());
+            target.cid(VodConfig.getCid());
+            List<History> items = target.relatedRecords().stream().filter(target::sameMediaContext).toList();
             if (items.isEmpty()) target.cid(VodConfig.getCid()).save();
             else {
                 long latestTime = items.stream().mapToLong(History::getCreateTime).max().orElse(0L);
@@ -354,12 +375,26 @@ public class History implements Diffable<History> {
     }
 
     private boolean shouldMerge(History item, boolean force) {
+        if (getCid() != item.getCid()) return false;
+        if (!sameMediaContext(item)) return false;
         if (!force && getKey().equals(item.getKey())) return false;
         if (getDuration() <= 0 || item.getDuration() <= 0) return true;
         return Math.abs(getDuration() - item.getDuration()) <= TimeUnit.MINUTES.toMillis(10);
     }
 
+    public boolean sameMediaContext(History item) {
+        if (item == null) return false;
+        if (getMediaRef().isEmpty() && item.getMediaRef().isEmpty()) return true;
+        return getMediaRef().equals(item.getMediaRef()) && Objects.equals(mediaSeason, item.mediaSeason)
+                && Objects.equals(mediaEpisode, item.mediaEpisode);
+    }
+
     private History copyTo(History item) {
+        if (item.getMediaRef().isEmpty() && !getMediaRef().isEmpty()) {
+            item.setMediaRef(mediaRef);
+            item.setMediaSeason(mediaSeason);
+            item.setMediaEpisode(mediaEpisode);
+        }
         com.fongmi.android.tv.player.skip.LegacySkipMigration.clearBoundaries(this);
         if (item.getOpening() <= 0 && !"manual".equalsIgnoreCase(item.getOpeningSource())
                 && (getOpening() > 0 || "manual".equalsIgnoreCase(getOpeningSource()))) {
@@ -389,7 +424,14 @@ public class History implements Diffable<History> {
     }
 
     private History merge(boolean force) {
-        return merge(findByName(getVodName()), force);
+        return merge(relatedRecords(), force);
+    }
+
+    private List<History> relatedRecords() {
+        try {
+            return getMediaRef().isEmpty() ? AppDatabase.get().getHistoryDao().findByName(getCid(), getVodName())
+                    : AppDatabase.get().getHistoryDao().findByMediaContext(getCid(), getMediaRef(), mediaSeason, mediaEpisode);
+        } catch (Exception error) { return Collections.emptyList(); }
     }
 
     private History merge(List<History> items, boolean force) {
@@ -413,7 +455,7 @@ public class History implements Diffable<History> {
     }
 
     public History delete() {
-        AppDatabase.get().getHistoryDao().delete(VodConfig.getCid(), getKey());
+        AppDatabase.get().getHistoryDao().delete(getCid(), getKey());
         AppDatabase.get().getTrackDao().delete(getKey());
         return this;
     }
@@ -427,7 +469,8 @@ public class History implements Diffable<History> {
             setEpisodeUrl(first.getUrl());
             setEpisodeLabelGenerated(first.isGeneratedLabel());
         }
-        for (History item : findByName(getVodName())) {
+        for (History item : relatedRecords()) {
+            if (!sameMediaContext(item)) continue;
             if (getPosition() > 0) break;
             EpisodeTarget target = EpisodeTarget.of(item.getEpisode(), EpisodeLabelParser.parse(item.getVodName()).season());
             for (Flag flag : flags) {

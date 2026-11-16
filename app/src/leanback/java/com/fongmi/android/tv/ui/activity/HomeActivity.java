@@ -134,6 +134,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private HistoryActionsDialog mHistoryActions;
     private Runnable mHistoryActionFocus;
     private int mHistoryCid;
+    private com.fongmi.android.tv.setting.ExperienceMode mExperienceMode;
     private long mHistoryFocusGeneration;
 
     private Site getHome() {
@@ -165,9 +166,10 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void initView(Bundle savedInstanceState) {
         mInitialFocusPending = savedInstanceState == null;
         mResult = Result.empty();
-        mHomeLayout = BrowseExperienceSettings.getHomeLayout();
+        mExperienceMode = com.fongmi.android.tv.setting.ExperienceSettings.getMode();
+        mHomeLayout = com.fongmi.android.tv.setting.ExperienceSettings.homeLayout();
         mTmdbEndpoints = currentTmdbEndpoints();
-        if (BrowseExperienceSettings.isPosterHomeEnabled()) {
+        if (mHomeLayout != BrowseExperienceSettings.HOME_SOURCE) {
             mPosterHome = new PosterHomeController(this, visible -> {
                 if (mPosterHeroVisible == visible) return;
                 mPosterHeroVisible = visible;
@@ -729,7 +731,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         List<JetStreamHomeNavView.NavItem> items = new ArrayList<>();
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_home), getString(R.string.home_tab_home), R.drawable.ic_home_vod));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_vod), getString(R.string.home_tab_library), R.drawable.ic_home_vod));
-        if (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
+        items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
         if (LiveConfig.hasUrl()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_live), getString(R.string.home_live), R.drawable.ic_home_live));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_search), getString(R.string.home_search), R.drawable.ic_home_search));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_my), getString(R.string.home_tab_my), R.drawable.ic_home_setting));
@@ -937,14 +939,14 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (item.isAction()) {
             mActionSourceRequest = mHomeSource.getRequest();
             mViewModel.action(getHome().getKey(), item.getAction());
-        } else if (getHome().isIndex()) CollectActivity.start(this, item.getName());
-        else VideoActivity.start(this, getHome().getKey(), item.getId(), item.getName(), item.getPic(), poster);
+        } else if (!item.isFolder() && getHome().isIndex()) CollectActivity.start(this, item.getName());
+        else LibraryNavigation.source(this, getHome().getKey(), item, poster);
     }
 
     @Override
     public boolean onLongClick(Vod item) {
         if (!isCurrentSourceItem(item)) return false;
-        if (item.isAction()) return false;
+        if (item.isAction() || item.isFolder()) return false;
         CollectActivity.start(this, item.getName());
         return true;
     }
@@ -958,7 +960,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public void onItemClick(History item) {
         if (item.getCid() != VodConfig.getCid()) return;
-        VideoActivity.start(this, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        LibraryNavigation.history(this, item);
     }
 
     @Override
@@ -1194,7 +1196,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     protected void onResume() {
         super.onResume();
-        if (mHomeLayout != BrowseExperienceSettings.getHomeLayout()) {
+        if (mExperienceMode != com.fongmi.android.tv.setting.ExperienceSettings.getMode()) {
             recreate();
             return;
         }

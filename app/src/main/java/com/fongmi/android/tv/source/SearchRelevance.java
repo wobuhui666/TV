@@ -17,7 +17,7 @@ public final class SearchRelevance {
     private static final Pattern YEAR = Pattern.compile("(?<!\\d)(?:19|20)\\d{2}(?!\\d)");
     private static final Pattern TITLE_YEAR = Pattern.compile("(?:[\\[(【]\\s*((?:19|20)\\d{2})\\s*[\\])】]|\\s+((?:19|20)\\d{2})\\s*$)");
     private static final Pattern SEASON = Pattern.compile("(?i)(?:\\bseason\\s*|(?<![a-z])s\\s*)0*(\\d{1,2})(?!\\d)|第\\s*([零〇一二两三四五六七八九十百0-9]+)\\s*[季部]");
-    private static final Pattern TRAILING_NUMBER = Pattern.compile("(?:(?<=[\\p{IsHan}])|(?<=\\s))([1-9][0-9]?)\\s*$");
+    private static final Pattern TRAILING_NUMBER = Pattern.compile("(?:(?<=[\\p{sc=Han}])|(?<=\\s))([1-9][0-9]?)\\s*$");
     private static final Pattern TRAILING_ROMAN = Pattern.compile("(?i)\\s+(VIII|VII|VI|IV|III|II|IX|X|V|I)\\s*$");
     // English tags must be separate words: stripping 'IT', 'Dark' or the 'x' in Matrix corrupts titles.
     private static final Pattern NOISE = Pattern.compile("(?i)(?<![a-z0-9])(?:4k|8k|16k|2160p|1080p|720p|480p|uhd|hdr10?\\+?|dolby|blu[ .-]?ray|web[ .-]?dl)(?![a-z0-9])|中文字幕|中字|国语|粤语|高清|超清|蓝光|完结|全集|全\\d+集|无删减|纯净版|修复版|导演剪辑版");
@@ -54,19 +54,44 @@ public final class SearchRelevance {
         if (query == null || query.title().isBlank()) return none();
         Title expected = parse(query.title(), query.year(), query.season());
         Title actual = parse(resultTitle, firstYear(resultYear), null);
+        // Ordinary search can reject incompatible metadata before parsing aliases or clip evidence.
         if (conflicts(expected.year, actual.year) || conflicts(expected.season, actual.season)) return none();
+        return evaluatePrepared(new PreparedResult(actual, null, resultTitle),
+                new PreparedQuery(expected, wanted(query, expected), null, query));
+    }
 
+    /** Session-owned parsing preserves every key, including bracketed aliases and title markers. */
+    static PreparedResult prepareResult(String title, String year) {
+        return new PreparedResult(parse(title, firstYear(year), null), supplementWords(title), null);
+    }
+
+    static PreparedQuery prepareQuery(Query query) {
+        if (query == null || query.title().isBlank()) return new PreparedQuery(null, List.of(), Set.of(), null);
+        Title expected = parse(query.title(), query.year(), query.season());
+        return new PreparedQuery(expected, wanted(query, expected),
+                supplementWords(query.title() + " " + String.join(" ", query.aliases())), null);
+    }
+
+    private static List<Title> wanted(Query query, Title expected) {
         List<Title> wanted = new ArrayList<>();
         wanted.add(expected);
         for (String alias : query.aliases()) wanted.add(parse(alias, expected.year, expected.season));
+        return List.copyOf(wanted);
+    }
+
+    static Match evaluatePrepared(PreparedResult result, PreparedQuery query) {
+        if (result == null || query == null || query.expected == null) return none();
+        Title expected = query.expected;
+        Title actual = result.actual;
+        if (conflicts(expected.year, actual.year) || conflicts(expected.season, actual.season)) return none();
         int score = 0;
         boolean exact = false;
-        for (Title title : wanted) {
+        for (Title title : query.wanted) {
             if (conflicts(title.year, actual.year) || conflicts(title.season, actual.season)) continue;
-            for (String key : title.keys) {
-                for (String candidate : actual.keys) {
-                    if (key.isEmpty() || candidate.isEmpty()) continue;
-                    if (compact(key).equals(compact(candidate))) {
+            for (TitleKey key : title.keys) {
+                for (TitleKey candidate : actual.keys) {
+                    if (key.value.isEmpty() || candidate.value.isEmpty()) continue;
+                    if (key.compact.equals(candidate.compact)) {
                         exact = true;
                         score = Math.max(score, title == expected ? 80 : 76);
                     } else if (containsTitle(candidate, key)) {
@@ -76,7 +101,8 @@ public final class SearchRelevance {
             }
         }
         if (score == 0) return none();
-        boolean supplement = hasExtraSupplement(resultTitle, query);
+        boolean supplement = result.supplementWords != null && query.supplementWords != null
+                ? !query.supplementWords.containsAll(result.supplementWords) : hasExtraSupplement(result.rawTitle, query.rawQuery);
         if (supplement) exact = false;
         if (!expected.year.isEmpty() && expected.year.equals(actual.year)) score += 10;
         if (expected.season != null && expected.season.equals(actual.season)) score += 10;
@@ -88,12 +114,19 @@ public final class SearchRelevance {
         return new Match(score, true, strict, strict && confirmedYear && confirmedSeason);
     }
 
-    private static boolean containsTitle(String candidate, String query) {
+    private static boolean containsTitle(TitleKey candidate, TitleKey query) {
         // One-character searches must not turn into every title containing that character.
-        if (query.codePointCount(0, query.length()) < 2) return false;
-        if (hasHan(query)) return compact(candidate).contains(compact(query));
+        if (query.characters < 2) return false;
+        if (query.han) return candidate.compact.contains(query.compact);
         // Latin queries require word boundaries; 'it' must not match 'Titanic'.
-        return (" " + candidate + " ").contains(" " + query + " ");
+        return candidate.bounded.contains(query.bounded);
+    }
+
+    private static Set<String> supplementWords(String value) {
+        Set<String> words = new LinkedHashSet<>();
+        Matcher matcher = SUPPLEMENT.matcher(normalize(value));
+        while (matcher.find()) words.add(matcher.group());
+        return Set.copyOf(words);
     }
 
     private static boolean hasExtraSupplement(String actual, Query query) {
@@ -151,7 +184,7 @@ public final class SearchRelevance {
         }
         if (hasAlias) addKey(keys, outside);
         keys.remove("");
-        return new Title(keys, year, season);
+        return new Title(keys.stream().map(TitleKey::new).toList(), year, season);
     }
 
     private static void addKey(Set<String> keys, String text) {
@@ -166,7 +199,29 @@ public final class SearchRelevance {
     private static boolean conflicts(String expected, String actual) { return !expected.isEmpty() && !actual.isEmpty() && !expected.equals(actual); }
     private static boolean conflicts(Integer expected, Integer actual) { return expected != null && actual != null && !expected.equals(actual); }
     private static Match none() { return new Match(0, false, false, false); }
-    private record Title(Set<String> keys, String year, Integer season) { }
+    private record Title(List<TitleKey> keys, String year, Integer season) { }
+    private record TitleKey(String value, String compact, String bounded, boolean han, int characters) {
+        private TitleKey(String value) { this(value, SearchRelevance.compact(value), " " + value + " ", hasHan(value), value.codePointCount(0, value.length())); }
+    }
+
+    static final class PreparedResult {
+        private final Title actual;
+        private final Set<String> supplementWords;
+        private final String rawTitle;
+        private PreparedResult(Title actual, Set<String> supplementWords, String rawTitle) {
+            this.actual = actual; this.supplementWords = supplementWords; this.rawTitle = rawTitle;
+        }
+    }
+
+    static final class PreparedQuery {
+        private final Title expected;
+        private final List<Title> wanted;
+        private final Set<String> supplementWords;
+        private final Query rawQuery;
+        private PreparedQuery(Title expected, List<Title> wanted, Set<String> supplementWords, Query rawQuery) {
+            this.expected = expected; this.wanted = wanted; this.supplementWords = supplementWords; this.rawQuery = rawQuery;
+        }
+    }
 
     private static String normalize(String value) {
         return Normalizer.normalize(Trans.t2s(false, safe(value)), Normalizer.Form.NFKC)

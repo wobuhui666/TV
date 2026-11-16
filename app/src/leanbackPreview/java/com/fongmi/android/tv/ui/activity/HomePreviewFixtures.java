@@ -205,6 +205,7 @@ public final class HomePreviewFixtures {
             for (int i = 0; i < 25; i++) items.add(sourcePoster(i, "source-preview-" + i));
             // The 26th entry has no image or ID, just like a source's login/configuration action.
             items.add(Vod.objectFrom("{\"vod_name\":\"配置 CK\",\"action\":\"" + ACTION_URL + "\"}"));
+            items.add(Vod.objectFrom("{\"vod_id\":\"source-settings\",\"vod_name\":\"账号设置\",\"vod_tag\":\"folder\"}"));
             result.setList(items);
             return App.gson().toJson(result);
         }

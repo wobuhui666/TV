@@ -40,6 +40,14 @@ public final class PosterHomeCatalog {
     }
 
     public static List<String> compactKeys(int category) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            return switch (category) {
+                case MOVIES -> List.of("now_playing", "popular_movie", "top_movie");
+                case TV -> List.of("popular_tv", "top_tv");
+                case TOP -> List.of("top_movie", "top_tv");
+                default -> List.of("trending_day", "popular_movie", "popular_tv");
+            };
+        }
         return switch (category) {
             case MOVIES -> List.of("douban_movie", "now_playing", "popular_movie", "top_movie");
             case TV -> List.of("douban_tv", "popular_tv");
@@ -97,7 +105,7 @@ public final class PosterHomeCatalog {
 
     public static List<Vod> sourceActions(List<Vod> items) {
         List<Vod> result = new ArrayList<>();
-        if (items != null) for (Vod item : items) if (item != null && item.isAction()) result.add(item);
+        if (items != null) for (Vod item : items) if (item != null && (item.isAction() || item.isFolder())) result.add(item);
         return result;
     }
 

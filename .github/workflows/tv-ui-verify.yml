@@ -405,18 +405,25 @@ jobs:
               assert data['applicationId'] in ('com.fongmi.android.tv.preview', 'com.fongmi.android.tv.preview.test')
               subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
           PY
+            (cd .github/fixtures/media-library && sha256sum -c SHA256SUMS)
+            library_fixtures=/sdcard/Android/data/com.fongmi.android.tv.preview/files/library-fixtures
+            adb shell mkdir -p "$library_fixtures"
+            adb push .github/fixtures/media-library/*.jpg .github/fixtures/media-library/*.png "$library_fixtures/"
             adb shell wm size 1920x1080
             adb shell wm density 320
             adb shell settings put secure immersive_mode_confirmations confirmed
             adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS || true
             collect_compact() {
               adb pull /sdcard/Android/data/com.fongmi.android.tv.preview/files/native-usability-evidence "$out/" >/dev/null 2>&1 || true
+              adb pull /sdcard/Android/data/com.fongmi.android.tv.preview/files/ech-validation "$out/" >/dev/null 2>&1 || true
               adb logcat -b all -d -v threadtime > "$out/logcat.txt" 2>&1 || true
               adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
             }
             trap collect_compact EXIT
             adb logcat -c
-            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest
+            adb shell getprop ro.product.cpu.abilist > "$out/device-abis.txt"
+            adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
+            classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest,com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/instrumentation.txt"
             python3 - <<'PY'

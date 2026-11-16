@@ -162,6 +162,8 @@ class JetStreamVodControlView @JvmOverloads constructor(
     private var previousVisible by mutableStateOf(true)
     private var nextVisible by mutableStateOf(true)
     private var repeatVisible by mutableStateOf(true)
+    private var episodePickerVisible by mutableStateOf(false)
+    private var preferredControl by mutableStateOf<String?>(null)
     private var danmakuToggleVisible by mutableStateOf(false)
     private var danmakuEnabled by mutableStateOf(false)
     private var controlPanelVisible by mutableStateOf(false)
@@ -251,6 +253,16 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
     fun setControlsVisible(visible: Boolean) {
         controlPanelVisible = visible
+        if (!visible) preferredControl = null
+    }
+
+    fun setEpisodeSelectionVisible(visible: Boolean) {
+        episodePickerVisible = visible
+    }
+
+    fun restoreEpisodeSelectionFocus() {
+        activeGroup = null
+        preferredControl = if (episodePickerVisible) "episodes" else null
     }
 
     fun isSettingsDrawerOpen(): Boolean = activeGroup != null
@@ -534,6 +546,12 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
     @Composable
     private fun HeaderRow(isPlaying: Boolean) {
+        val episodeFocusRequester = remember { FocusRequester() }
+        LaunchedEffect(controlPanelVisible, controlFocused, preferredControl, episodePickerVisible) {
+            if (controlPanelVisible && controlFocused && preferredControl == "episodes" && episodePickerVisible) {
+                runCatching { episodeFocusRequester.requestFocus() }
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -566,6 +584,12 @@ class JetStreamVodControlView @JvmOverloads constructor(
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (episodePickerVisible) {
+                    ControlIcon(
+                        R.drawable.msr_auto_awesome_motion, isPlaying, true, false,
+                        stringResource(R.string.vod_control_episodes), episodeFocusRequester, showLabel = true
+                    ) { listener?.onCommand("episodes") }
+                }
                 if (danmakuToggleVisible) {
                     ControlIcon(
                         icon = if (danmakuEnabled) R.drawable.ic_control_danmaku_on else R.drawable.ic_control_danmaku_off,
@@ -619,7 +643,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
         var seekActive by remember { mutableStateOf(false) }
         var seekFraction by remember { mutableStateOf(0f) }
         LaunchedEffect(controlPanelVisible, controlFocused, activeGroup) {
-            if (controlPanelVisible && controlFocused && activeGroup == null) runCatching { playFocusRequester.requestFocus() }
+            if (controlPanelVisible && controlFocused && activeGroup == null && preferredControl != "episodes") runCatching { playFocusRequester.requestFocus() }
         }
         LaunchedEffect(settingsCloseFocus) {
             if (settingsCloseFocus > 0L) runCatching { playFocusRequester.requestFocus() }
@@ -1164,7 +1188,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
         const val ACTION_FORWARD = "forward"
         const val ACTION_REWIND = "rewind"
 
-        private val PLAYLIST_COMMANDS = listOf("prev", "next", "change", "parse", "replay", "reset")
+        private val PLAYLIST_COMMANDS = listOf("episodes", "line", "quality", "prev", "next", "change", "parse", "replay", "reset")
         private val CAPTION_COMMANDS = listOf("subtitle", "text", "audio", "video", "ai", "ai_language", "danmaku")
         private val SETTINGS_COMMANDS = listOf("syncplay_toggle", "syncplay", "speed", "scale", "player", "decode", "opening", "ending", "edition", "chapter")
     }
