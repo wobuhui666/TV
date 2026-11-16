@@ -80,3 +80,5 @@ Room 数据库从 38 增至 39，仅增加 `History.mediaRef/mediaSeason/mediaEp
 2026-11-15 操作与布局修订：61 项专项 JVM 回归、61 个独立 Android 用例（首页 8、媒体库 46、进度条 7）经复测全部通过，TV ARM64 Debug、Preview 与 Preview AndroidTest 构建通过。最终 Debug 补充搜索根布局裁剪，并通过 36 项集数识别测试；使用真实 `aiwex.json` 复核片源跳转、深滚动、观影目录往返和回顶，顶部无遮挡且焦点恢复正确。TV lint 仍有 108 个既有错误，无新增错误。验证在 API 31 x86_64 与 ARM64 转译桥上使用完整 APK，保留 35 个原生库和 Python；Preview 回归及播放截图对应裁剪修订前版本，具体版本与覆盖范围见[新版验收报告](testing/reports/2026-11-15-library-polish/README.md#新版验收)。
 
 同日恢复首页「片库」的原生片源路由与账号文件夹入口，TMDB 使用独立的「推荐」入口。真实 `aiwex.json` 验证确认观影搜索目录可打开网盘分类，并进入夸克资源版本分支；其他网盘仅看到列表入口。文才源可从观看记录续播第 1 集，再用全屏选集切换到第 3 集并持续播放。目录与账号操作不计为直接可播放资源，Cookie 操作沿用 `SiteApi.action`；网盘账号登录、真实 Cookie 提交及全部源可播放未验证。
+
+原生 ABI 对照可在 TV appearance and touch verification 工作流中同时选择 `compact_home=true`、`library_native_probe=true`，使用 API 31 原生 x86_64 JNI。它先运行 TLS／两种证书 Provider 释放压力，再运行离线交互；不加载真实片源。此对照尚未执行，不能作为崩溃修复或电视稳定性的证明。

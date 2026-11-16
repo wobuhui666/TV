@@ -49,6 +49,10 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
+      library_native_probe:
+        description: Run the isolated library native TLS probe on API 31
+        type: boolean
+        default: false
       live_lines_touch_scroll:
         description: Verify issue 119 live lines, home touch scrolling and source dialogs at two display sizes
         type: boolean
@@ -74,31 +78,41 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.live_lines_touch_scroll && 'live-lines-touch-scroll' || inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.library_native_probe && 'library-native-api31' || inputs.live_lines_touch_scroll && 'live-lines-touch-scroll' || inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
   guarded-source:
-    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll
+    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe
     uses: ./.github/workflows/guarded-source-verify.yml
     with:
       preload: ${{ inputs.preload }}
   responsiveness:
-    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll
+    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
       compare_baseline: ${{ inputs.compare_baseline }}
       polish: ${{ inputs.polish }}
   verify:
-    if: ${{ inputs.live_lines_touch_scroll || inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
+    if: ${{ inputs.library_native_probe || inputs.live_lines_touch_scroll || inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        api: ${{ fromJSON(!inputs.live_lines_touch_scroll && inputs.wasm && '[24,34]' || '[34]') }}
+        api: ${{ fromJSON(inputs.compact_home && inputs.library_native_probe && '[31]' || !inputs.live_lines_touch_scroll && inputs.wasm && '[24,34]' || '[34]') }}
     steps:
+      - name: Validate isolated library native probe options
+        if: inputs.library_native_probe
+        env:
+          NATIVE_PROBE_COMPACT_HOME: ${{ inputs.compact_home }}
+          NATIVE_PROBE_OTHER_MODE: ${{ inputs.playback_clock || inputs.guarded_source || inputs.preload || inputs.episode_navigation || inputs.variety_episodes || inputs.assrt_subtitles || inputs.upstream_stability || inputs.wasm || inputs.responsiveness || inputs.polish || inputs.live_lines_touch_scroll || inputs.home_background || inputs.live_home }}
+        run: |
+          if [ "$NATIVE_PROBE_COMPACT_HOME" != 'true' ] || [ "$NATIVE_PROBE_OTHER_MODE" != 'false' ]; then
+            echo 'library_native_probe requires compact_home=true and all other feature flags=false' >&2
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -213,6 +227,7 @@ jobs:
       - name: Prepare emulator checks
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIBRARY_NATIVE_PROBE: ${{ inputs.library_native_probe }}
           TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
@@ -420,6 +435,9 @@ jobs:
               adb exec-out screencap -p > "$out/last-screen.png" 2>/dev/null || true
             }
             trap collect_compact EXIT
+            if [ "$TV_LIBRARY_NATIVE_PROBE" = 'true' ]; then
+              bash .github/scripts/verify-library-native-probe.sh
+            fi
             adb logcat -c
             adb shell getprop ro.product.cpu.abilist > "$out/device-abis.txt"
             adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
@@ -502,6 +520,7 @@ jobs:
         timeout-minutes: ${{ inputs.home_background && 20 || 40 }}
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
+          TV_LIBRARY_NATIVE_PROBE: ${{ inputs.library_native_probe }}
           TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
