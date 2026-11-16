@@ -49,10 +49,6 @@ on:
         description: Verify compact home, filter-only discovery, source actions and library navigation
         type: boolean
         default: false
-      compact_focus_only:
-        description: Run only the three compact/library focus regressions; exhaustive compact_home remains separate
-        type: boolean
-        default: false
       library_native_probe:
         description: Run the isolated library native TLS probe on API 31
         type: boolean
@@ -232,7 +228,6 @@ jobs:
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIBRARY_NATIVE_PROBE: ${{ inputs.library_native_probe }}
-          TV_COMPACT_FOCUS_ONLY: ${{ inputs.compact_focus_only }}
           TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}
@@ -445,19 +440,12 @@ jobs:
             adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
             core_status=0
             classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest
-            if [ "$TV_COMPACT_FOCUS_ONLY" = 'true' ]; then
-              classes=com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut
-            fi
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/core-instrumentation.txt" || core_status=$?
             collect_compact
             library_status=0
-            library_classes=com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest
-            if [ "$TV_COMPACT_FOCUS_ONLY" = 'true' ]; then
-              library_classes=com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#rawEpisodeSelectionReplacesAnEarlierNumberedPlaybackTarget,com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#browsingEpisodesWithTheRemoteKeepsTheResumeTargetAndTime
-            fi
             adb shell am instrument -w -r -e native_ui_evidence true \
-              -e class "$library_classes" \
+              -e class com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/library-instrumentation.txt" || library_status=$?
             cat "$out/core-instrumentation.txt" "$out/library-instrumentation.txt" > "$out/instrumentation.txt"
             collect_compact
@@ -469,14 +457,9 @@ jobs:
                        'com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest': 6,
                        'com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest': 1,
                        'com.fongmi.android.tv.db.LibraryMigrationAndroidTest': 3,
-                       'com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest': 1},
+                       'com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest': 2},
               'library': {'com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest': 48},
           }
-          focus_only = os.environ.get('TV_COMPACT_FOCUS_ONLY') == 'true'
-          if focus_only:
-              expected = {'core': {'com.fongmi.android.tv.test.CompactHomeIntegrationTest': 1},
-                          'library': {'com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest': 2}}
-          expected_total = sum(sum(classes.values()) for classes in expected.values())
           groups = []
           for name, status in zip(expected, map(int, sys.argv[1:])):
               output = (root / (name + '-instrumentation.txt')).read_text()
@@ -513,13 +496,13 @@ jobs:
                   and {item['name']: item['sha256'] for item in proof['files']} == checksums \
                   and all(item['readableByTargetUid'] for item in proof['files'])
           summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': len(groups) == 2 and all(group['passed'] for group in groups) and fixture_proof,
-                     'focusOnly': focus_only, 'expectedTests': expected_total, 'completedTests': sum(group['completedTests'] for group in groups),
+                     'expectedTests': 68, 'completedTests': sum(group['completedTests'] for group in groups),
                      'passedTests': sum(group['passedTests'] for group in groups),
                      'fixtureReadableByTargetUid': fixture_proof, 'groups': groups}
           (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           print(json.dumps(summary, indent=2))
           if not summary['passed']:
-              raise SystemExit(f'Require all {expected_total} selected compact/library cases and target-UID fixture reads to pass')
+              raise SystemExit('Require all 68 compact/library cases and target-UID fixture reads to pass')
           PY
             collect_compact
             bash .github/scripts/verify-upstream-features.sh com.fongmi.android.tv.test.FolderFilterNavigationTest,com.fongmi.android.tv.test.SpiderDialogTest
@@ -586,7 +569,6 @@ jobs:
         env:
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
           TV_LIBRARY_NATIVE_PROBE: ${{ inputs.library_native_probe }}
-          TV_COMPACT_FOCUS_ONLY: ${{ inputs.compact_focus_only }}
           TV_LIVE_LINES_TOUCH_SCROLL: ${{ inputs.live_lines_touch_scroll }}
           TV_HOME_BACKGROUND: ${{ inputs.home_background }}
           TV_LIVE_HOME: ${{ inputs.live_home }}

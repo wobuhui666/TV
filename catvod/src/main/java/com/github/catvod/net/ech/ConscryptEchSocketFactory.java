@@ -28,7 +28,8 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 
 /**
- * Selects Conscrypt only when ECH is enabled and the hostname has a configuration.
+ * Selects the ECH policy context only when enabled and the hostname has a configuration.
+ * Ordinary TLS keeps the supplied factory, which also uses updated Conscrypt in shared clients.
  * The returned socket is never wrapped, so OkHttp can recognize Conscrypt for ALPN.
  * Requires the pinned Conscrypt 2.9.0 policy contract; no global provider is installed.
  */

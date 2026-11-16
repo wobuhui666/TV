@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.test;
 
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -9,6 +10,9 @@ import android.os.Process;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+
+import com.github.catvod.net.OkHttp;
+import com.github.catvod.net.ech.ConscryptEchSocketFactory;
 
 import org.conscrypt.Conscrypt;
 import org.json.JSONObject;
@@ -21,6 +25,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.security.Provider;
+import java.security.Security;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import okhttp3.OkHttpClient;
 
 /** Offline coverage for the NativeSsl close/read synchronization added upstream in #1551. */
 @RunWith(AndroidJUnit4.class)
@@ -39,6 +49,51 @@ public final class ConscryptLifecycleAndroidTest {
             "getSessionId", "getPeerCertificates", "getCipherSuite", "getVersion",
             "getApplicationProtocol", "getEchNameOverride", "getEchRetryConfigs"
     };
+
+    @Test
+    public void shouldKeepUpdatedTlsProviderWithoutEchConfiguration() throws Exception {
+        Provider installed = Security.getProvider("Conscrypt");
+        for (OkHttpClient client : new OkHttpClient[]{OkHttp.client(), OkHttp.trustedClient()}) {
+            ConscryptEchSocketFactory production = (ConscryptEchSocketFactory) client.sslSocketFactory();
+            Field ordinaryField = ConscryptEchSocketFactory.class.getDeclaredField("legacyFactory");
+            ordinaryField.setAccessible(true);
+            SSLSocketFactory ordinary = (SSLSocketFactory) ordinaryField.get(production);
+            Field trustField = ConscryptEchSocketFactory.class.getDeclaredField("trustManager");
+            trustField.setAccessible(true);
+            assertSame(client.x509TrustManager(), trustField.get(production));
+            assertOrdinarySocket(production);
+            for (boolean enabled : new boolean[]{false, true}) {
+                ConscryptEchSocketFactory withoutConfiguration = new ConscryptEchSocketFactory(
+                        ordinary, client.x509TrustManager(), new ConscryptEchSocketFactory.ConfigProvider() {
+                    @Override public boolean isEnabled() { return enabled; }
+                    @Override public byte[] resolve(String hostname) { return null; }
+                });
+                Method configuration = ConscryptEchSocketFactory.class.getDeclaredMethod(
+                        "configuration", String.class, int.class);
+                configuration.setAccessible(true);
+                assertNull(configuration.invoke(withoutConfiguration, "no-ech.invalid", 443));
+                Method select = ConscryptEchSocketFactory.class.getDeclaredMethod("factory", byte[].class);
+                select.setAccessible(true);
+                assertSame(ordinary, select.invoke(withoutConfiguration, new Object[]{null}));
+                assertOrdinarySocket(withoutConfiguration);
+            }
+        }
+        assertSame("Creating shared clients must not install a global provider",
+                installed, Security.getProvider("Conscrypt"));
+    }
+
+    private static void assertOrdinarySocket(SSLSocketFactory factory) throws Exception {
+        SSLSocket socket = (SSLSocket) factory.createSocket();
+        try {
+            assertTrue("Ordinary shared TLS must use updated Conscrypt", Conscrypt.isConscrypt(socket));
+            assertTrue(Arrays.asList(socket.getEnabledProtocols()).contains("TLSv1.2"));
+            assertTrue(Arrays.asList(socket.getEnabledProtocols()).contains("TLSv1.3"));
+        } finally {
+            socket.close();
+        }
+        assertNull(Conscrypt.getTlsUnique(socket));
+        assertNull(Conscrypt.getApplicationProtocol(socket));
+    }
 
     @Test(timeout = 60_000L)
     public void shouldKeepNativeSessionReadsSafeDuringAndAfterClose() throws Exception {
