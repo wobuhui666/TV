@@ -465,6 +465,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         setToolbarVisible(true);
         mBinding.toolbar.post(() -> {
             if (!current.getAsBoolean()) return;
+            mBinding.recycler.stopScroll();
+            if (!current.getAsBoolean()) return;
             // Adapter insertions while a permission window owns focus can preserve
             // the old history row at the top. Restore selection as well as scroll.
             mBinding.recycler.setSelectedPosition(0);
@@ -1184,7 +1186,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (KeyUtil.isActionDown(event)) {
             if (KeyUtil.isEnterKey(event) || KeyUtil.isUpKey(event) || KeyUtil.isDownKey(event)
                     || KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event)
-                    || event.getKeyCode() == KeyEvent.KEYCODE_BACK || event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE
                     || event.getKeyCode() == KeyEvent.KEYCODE_MENU || event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
                 setTouchBrowsing(false);
             }
@@ -1260,6 +1261,16 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onBackInvoked() {
+        // Preserve Back's intent before restoring ALIGNED can change the touch-scrolled viewport.
+        boolean restoreTop = isContentFocused() || mBinding.recycler.getSelectedPosition() > 0
+                || !mToolbarVisible || isHomeScrolled();
+        if (com.fongmi.android.tv.BuildConfig.DEBUG || "preview".equals(com.fongmi.android.tv.BuildConfig.BUILD_TYPE)) {
+            android.util.Log.d("TV-home-back", "restoreTop=" + (restoreTop ? 1 : 0)
+                    + "; selected=" + mBinding.recycler.getSelectedPosition()
+                    + "; scrollState=" + mBinding.recycler.getScrollState()
+                    + "; navFocus=" + (mBinding.nav.hasFocus() ? 1 : 0)
+                    + "; touchBrowsing=" + (mTouchBrowsing ? 1 : 0));
+        }
         setTouchBrowsing(false);
         if (mBinding.progressLayout.isProgress()) {
             showContent();
@@ -1276,8 +1287,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             return;
         }
         // 2) List scrolled down while toolbar hidden → scroll top + show toolbar + focus nav.
-        if (mBinding.recycler.getSelectedPosition() > 0 || !mToolbarVisible
-                || isHomeScrolled()) {
+        if (restoreTop) {
             mBinding.recycler.scrollToPosition(0);
             requestNavFocus();
             return;

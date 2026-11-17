@@ -1078,6 +1078,7 @@ public final class LibraryExperienceAndroidTest {
         assertEquals("second", requestedMedia.get(0)); assertFalse(video.getIntent().hasExtra("mediaEpisode"));
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
         await("Original episode returns to its work", () -> video.isDestroyed() && detail.hasWindowFocus());
+        awaitRestoredPlaybackFocus(detail, "original:线路一:second");
         click(detail, "play");
         awaitPlayer(); await("The source-only work resumes its exact original episode", () -> plays.get() == 2);
         assertEquals(List.of("second", "second"), requestedMedia);

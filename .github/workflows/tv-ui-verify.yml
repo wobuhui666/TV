@@ -441,9 +441,14 @@ jobs:
             adb shell getprop ro.product.cpu.abilist > "$out/device-abis.txt"
             adb shell getprop ro.dalvik.vm.native.bridge > "$out/native-bridge.txt"
             core_status=0
+            # Keep early Back/focus evidence even if later UI/system logs fill the device ring.
+            adb logcat -v threadtime HomeTouchScrollTest:I TV-home-focus:D TV-home-back:D '*:S' > "$out/home-focus-logcat.txt" &
+            home_focus_logger=$!
             classes=com.fongmi.android.tv.test.HomeTouchScrollTest,com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.test.ExperienceModePreviewTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest,com.fongmi.android.tv.db.LibraryMigrationAndroidTest,com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest
             adb shell am instrument -w -r -e native_ui_evidence true -e class "$classes" \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/core-instrumentation.txt" || core_status=$?
+            kill "$home_focus_logger" 2>/dev/null || true
+            wait "$home_focus_logger" 2>/dev/null || true
             collect_compact
             adb logcat -b all -d -v threadtime > "$out/core-logcat.txt" 2>&1 || true
             library_status=0
