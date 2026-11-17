@@ -11,7 +11,7 @@ import android.os.Bundle;
 import android.os.Process;
 import android.os.SystemClock;
 
-import androidx.annotation.RequiresApi;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
@@ -73,7 +73,7 @@ import okhttp3.TlsVersion;
 
 /** Opt-in, public-network TLS diagnostic. It never launches UI or invokes a source. */
 @RunWith(AndroidJUnit4.class)
-@RequiresApi(31)
+@SdkSuppress(minSdkVersion = 31)
 public final class PreviewConscryptNativeProbeAndroidTest {
     private static final String[] HOSTS = {"crypto.cloudflare.com", "www.cloudflare.com"};
     private static final String VERSION = "2.9.0";
