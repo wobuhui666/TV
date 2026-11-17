@@ -255,7 +255,7 @@ ECH is enabled by default for the integrated shared-client path, including condi
 
 ### TMDB proxy repositories
 
-[The public reference project, wobuhui666/tttt](https://github.com/wobuhui666/tttt), supports Vercel Serverless and Cloudflare Workers. It proxies TMDB metadata and images, with caching and movie/series search-title normalization. The app's default service is `https://t.coolmarket.eu.org/`; its deployment is maintained in [zhhshss/tttt](https://github.com/zhhshss/tttt), a private repository requiring access, which may differ from the public reference version.
+[The proxy source, wobuhui666/tttt](https://github.com/wobuhui666/tttt), supports Vercel Serverless and Cloudflare Workers. It proxies TMDB metadata and images, with caching and movie/series search-title normalization. The app's default service is `https://t.coolmarket.eu.org/`; its deployment is linked to [zhhshss/tttt](https://github.com/zhhshss/tttt), a private repository requiring access. The public repository was synchronized with the current deployment source on November 17, 2026.
 
 After deploying your own service, choose **Settings → Sources → TMDB connection → Custom proxy** and enter its root URL, such as `https://tmdb.example.com/`. It must expose both `/3/` API and `/t/p/` image routes and return image data directly. The same setting also offers the default proxy and direct official endpoints. See the public repository's README for deployment and [TMDB routing](docs/native-discovery.md#tmdb-网络兼容) for app behavior.
 
