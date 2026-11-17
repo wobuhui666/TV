@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vod_control_episodes">選集</string>
+    <string name="vod_control_line">線路</string>
+    <string name="vod_control_quality">畫質</string>
+</resources>

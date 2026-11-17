@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_sources_action">換源</string>
+    <string name="library_all_episodes">全部劇集</string>
+    <string name="library_episodes_loading">正在載入劇集…</string>
+    <string name="library_episodes_empty">暫無劇集資料</string>
+    <string name="library_cancel_playback">取消載入</string>
+    <string name="library_play_episode">播放 第 %1$d 集</string>
+    <string name="library_resume_episode">繼續 第 %1$d 集 · %2$s</string>
+    <string name="library_resume_position">繼續播放 · %1$s</string>
+    <string name="library_detail_other_quality">其他</string>
+    <string name="library_detail_media_information">展開媒體資訊</string>
+    <string name="library_detail_episode_hint">%1$s · 第 %2$d 集</string>
+    <string name="library_detail_resume_episode_hint">%1$s · 第 %2$d 集 · %3$s</string>
+    <string name="library_detail_save">加入收藏</string>
+    <string name="library_detail_kept">已收藏</string>
+</resources>

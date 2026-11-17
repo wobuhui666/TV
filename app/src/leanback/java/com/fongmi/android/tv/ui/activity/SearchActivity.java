@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
-import android.text.TextUtils;
+import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -25,15 +25,22 @@ import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomKeyboard;
 import com.fongmi.android.tv.ui.custom.CustomTextListener;
 import com.fongmi.android.tv.ui.dialog.SiteDialog;
+import com.fongmi.android.tv.ui.search.SearchInputParser;
 import com.fongmi.android.tv.utils.KeyUtil;
 import com.fongmi.android.tv.utils.Util;
 import com.fongmi.android.tv.utils.ZhuToPin;
 import com.github.catvod.net.OkHttp;
+import com.github.catvod.utils.Trans;
 import com.google.android.flexbox.FlexDirection;
 import com.google.android.flexbox.FlexboxLayoutManager;
 
-import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import okhttp3.Call;
 import okhttp3.Response;
@@ -45,7 +52,17 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     private WordAdapter mWordAdapter;
     private Call suggestionCall;
     private Runnable suggestionRequest;
-    private long suggestionGeneration;
+    private volatile long suggestionGeneration;
+    private final ExecutorService wordWorker = Executors.newSingleThreadExecutor();
+    private Future<?> cachedWordTask, suggestionPreparation;
+    private Runnable wordUiUpdate;
+    private String pendingWordQuery;
+    private long pendingWordGeneration;
+    private int shownWordHeader = R.string.search_hot;
+    private boolean wordListCleared = true;
+    private static final int WORDS_PER_FRAME = 6;
+    private Runnable wordChunk;
+    private long wordPublicationGeneration;
     private View savedFocus;
     private boolean returnToRecord;
     private final SearchFocusGuard focus = new SearchFocusGuard(this);
@@ -78,9 +95,13 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        // Search keywords use the app's suggestions, not Android's prose spell checker.
+        mBinding.keyword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         CustomKeyboard.init(this, mBinding);
         setRecyclerView();
         checkKeyword();
+        mBinding.keyword.setShowSoftInputOnFocus(false);
+        mBinding.keyword.requestFocus();
     }
 
     @Override
@@ -121,24 +142,61 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     }
 
     private void setKeyword(String text) {
-        mBinding.keyword.setText(text);
-        mBinding.keyword.setSelection(text.length());
+        mBinding.keyword.beginBatchEdit();
+        try {
+            Editable editable = mBinding.keyword.getText();
+            if (editable == null) mBinding.keyword.setText(text);
+            else if (!editable.toString().equals(text)) editable.replace(0, editable.length(), text);
+            mBinding.keyword.setSelection(mBinding.keyword.length());
+        } finally {
+            mBinding.keyword.endBatchEdit();
+        }
     }
 
     private void getWord(String text) {
         focus.invalidate();
-        long generation = ++suggestionGeneration;
+        pendingWordGeneration = ++suggestionGeneration;
+        pendingWordQuery = text;
         if (suggestionRequest != null) App.removeCallbacks(suggestionRequest);
-        if (suggestionCall != null) suggestionCall.cancel();
-        mBinding.word.setText(text.isEmpty() ? R.string.search_hot : R.string.search_suggest);
-        if (text.isEmpty()) mWordAdapter.setItems(Word.objectFrom(Setting.getHot()).getData());
-        else mWordAdapter.setItems(java.util.List.of());
+        if (suggestionCall != null) { suggestionCall.cancel(); suggestionCall = null; }
+        cancelWordWork();
+        // Several edits in one frame share one header/list update. TextWatcher remains cheap.
+        if (wordUiUpdate != null) return;
+        wordUiUpdate = () -> {
+            wordUiUpdate = null;
+            String query = pendingWordQuery;
+            long generation = pendingWordGeneration;
+            if (currentSuggestion(query, generation)) updateWords(query, generation);
+        };
+        mBinding.keyword.postOnAnimation(wordUiUpdate);
+    }
+
+    private void updateWords(String text, long generation) {
+        int header = text.isEmpty() ? R.string.search_hot : R.string.search_suggest;
+        if (header != shownWordHeader) { shownWordHeader = header; mBinding.word.setText(header); }
+        if (!wordListCleared) { wordListCleared = true; mWordAdapter.setItems(List.of()); }
+        if (text.isEmpty()) {
+            cachedWordTask = wordWorker.submit(() -> {
+                List<Word.Data> words = wordItems(SearchInputParser.words(Setting.getHot()));
+                if (Thread.currentThread().isInterrupted()) return;
+                App.post(() -> {
+                    if (!currentSuggestion(text, generation)) return;
+                    publishWords(words, text, generation, () -> { });
+                });
+            });
+        }
         suggestionRequest = () -> {
             if (isFinishing() || isDestroyed() || generation != suggestionGeneration) return;
-            String url = text.isEmpty() ? "https://hot.api.coolmarket.eu.org/api/douban-hot-mixed"
-                    : "https://suggest.video.iqiyi.com/?if=mobile&key=" + URLEncoder.encode(ZhuToPin.get(text));
-            suggestionCall = OkHttp.newCall(url);
-            suggestionCall.enqueue(getCallback(text, generation));
+            suggestionPreparation = wordWorker.submit(() -> {
+                String url = text.isEmpty() ? "https://hot.api.coolmarket.eu.org/api/douban-hot-mixed"
+                        : "https://suggest.video.iqiyi.com/?if=mobile&key=" + URLEncoder.encode(ZhuToPin.get(text));
+                if (Thread.currentThread().isInterrupted()) return;
+                App.post(() -> {
+                    if (!currentSuggestion(text, generation)) return;
+                    suggestionCall = OkHttp.newCall(url);
+                    suggestionCall.enqueue(getCallback(text, generation));
+                });
+            });
         };
         App.post(suggestionRequest, text.isEmpty() ? 0 : 250);
     }
@@ -146,29 +204,91 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
     private Callback getCallback(String query, long generation) {
         return new Callback() {
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (response) {
-                    String result = response.body().string();
-                    if (TextUtils.isEmpty(result) || call.isCanceled()) return;
+                    if (response.body() == null || call.isCanceled()) return;
+                    List<Word.Data> words = wordItems(SearchInputParser.words(response.body().charStream()));
+                    if (call.isCanceled()) return;
+                    String cache = query.isEmpty() ? App.gson().toJson(Map.of("data", words)) : "";
                     App.post(() -> {
-                        if (isFinishing() || isDestroyed() || generation != suggestionGeneration) return;
-                        if (!query.equals(mBinding.keyword.getText().toString())) return;
-                        setAdapter(result, query.isEmpty());
+                        if (!currentSuggestion(query, generation)) return;
+                        if (query.isEmpty()) Setting.putHot(cache);
+                        setAdapter(words, query.isEmpty());
                     });
                 }
             }
         };
     }
 
-    private void setAdapter(String result, boolean save) {
+    private boolean currentSuggestion(String query, long generation) {
+        return !isFinishing() && !isDestroyed() && generation == suggestionGeneration
+                && query.equals(mBinding.keyword.getText().toString());
+    }
+
+    private List<Word.Data> wordItems(List<String> labels) {
+        return labels.stream().map(label -> Word.Data.fromTitle(Trans.s2t(label))).toList();
+    }
+
+    private void cancelWordWork() {
+        if (cachedWordTask != null && !cachedWordTask.isDone()) cachedWordTask.cancel(true);
+        if (suggestionPreparation != null && !suggestionPreparation.isDone()) suggestionPreparation.cancel(true);
+        cachedWordTask = suggestionPreparation = null;
+        cancelWordPublication();
+    }
+
+    private void cancelWordUiUpdate() {
+        if (wordUiUpdate != null) mBinding.keyword.removeCallbacks(wordUiUpdate);
+        wordUiUpdate = null;
+    }
+
+    private void cancelWordPublication() {
+        wordPublicationGeneration++;
+        if (wordChunk != null) mBinding.wordRecycler.removeCallbacks(wordChunk);
+        wordChunk = null;
+    }
+
+    private void publishWords(List<Word.Data> items, String query, long generation, Runnable complete) {
+        cancelWordPublication();
+        wordListCleared = items.isEmpty();
+        submitWordChunk(items, query, generation, wordPublicationGeneration, Math.min(WORDS_PER_FRAME, items.size()), complete);
+    }
+
+    private boolean currentWordPublication(String query, long generation, long publication) {
+        return publication == wordPublicationGeneration && currentSuggestion(query, generation);
+    }
+
+    private void submitWordChunk(List<Word.Data> items, String query, long generation, long publication, int end, Runnable complete) {
+        if (!currentWordPublication(query, generation, publication)) return;
+        mWordAdapter.setItems(new ArrayList<>(items.subList(0, end)), () -> {
+            if (!currentWordPublication(query, generation, publication)) return;
+            if (end == items.size()) { complete.run(); return; }
+            scheduleWordChunk(items, query, generation, publication, end, complete);
+        });
+    }
+
+    private void scheduleWordChunk(List<Word.Data> items, String query, long generation, long publication, int end, Runnable complete) {
+        wordChunk = () -> {
+            if (!currentWordPublication(query, generation, publication)) return;
+            wordChunk = null;
+            // Let the preceding six chips measure and draw before adding the next six.
+            if (mBinding.wordRecycler.isLayoutRequested() || mBinding.wordRecycler.isComputingLayout()) {
+                scheduleWordChunk(items, query, generation, publication, end, complete);
+                return;
+            }
+            submitWordChunk(items, query, generation, publication, Math.min(end + WORDS_PER_FRAME, items.size()), complete);
+        };
+        mBinding.wordRecycler.postOnAnimation(wordChunk);
+    }
+
+    private void setAdapter(List<Word.Data> items, boolean save) {
         if (!save && empty()) return;
-        if (save) Setting.putHot(result);
         View current = getCurrentFocus();
         View item = current == null ? null : mBinding.wordRecycler.findContainingItemView(current);
         boolean restoreFocus = current == mBinding.wordRecycler || item != null;
         int position = item == null ? 0 : mBinding.wordRecycler.getChildAdapterPosition(item);
         long generation = focus.snapshot();
-        mWordAdapter.setItems(Word.objectFrom(result).getData(), () -> restoreWordFocus(restoreFocus, position, generation));
+        publishWords(items, mBinding.keyword.getText().toString(), suggestionGeneration,
+                () -> restoreWordFocus(restoreFocus, position, generation));
     }
 
     @Override
@@ -208,6 +328,8 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         suggestionGeneration++;
         if (suggestionRequest != null) App.removeCallbacks(suggestionRequest);
         if (suggestionCall != null) suggestionCall.cancel();
+        cancelWordWork();
+        cancelWordUiUpdate();
         mRecordAdapter.add(keyword);
         Util.hideKeyboard(mBinding.keyword);
         // Keep the input and suggestion list intact so Back restores the chosen item.
@@ -454,6 +576,10 @@ public class SearchActivity extends BaseActivity implements WordAdapter.OnClickL
         suggestionGeneration++;
         if (suggestionRequest != null) App.removeCallbacks(suggestionRequest);
         if (suggestionCall != null) suggestionCall.cancel();
+        cancelWordWork();
+        cancelWordUiUpdate();
+        wordWorker.shutdownNow();
+        if (mRecordAdapter != null) mRecordAdapter.close();
         mBinding.mic.destroy();
         super.onDestroy();
     }

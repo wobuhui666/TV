@@ -6,6 +6,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 public class Migrations {
 
+    public static final Migration MIGRATION_38_39 = new Migration(38, 39) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE History ADD COLUMN mediaRef TEXT");
+            database.execSQL("ALTER TABLE History ADD COLUMN mediaSeason INTEGER");
+            database.execSQL("ALTER TABLE History ADD COLUMN mediaEpisode INTEGER");
+            database.execSQL("ALTER TABLE Keep ADD COLUMN mediaRef TEXT");
+        }
+    };
+
     public static final Migration MIGRATION_30_31 = new Migration(30, 31) {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {

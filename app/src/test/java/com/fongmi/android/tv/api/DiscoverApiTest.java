@@ -117,7 +117,7 @@ public class DiscoverApiTest {
     }
 
     @Test
-    public void shouldParseTmdbResultsAndSkipPersonAndMissingPoster() {
+    public void shouldKeepWorksWithoutPostersAndExcludePeople() {
         String json = "{\"results\":[" +
                 "{\"id\":693134,\"media_type\":\"movie\",\"title\":\"沙丘2\",\"poster_path\":\"/abc.jpg\",\"release_date\":\"2024-02-27\",\"vote_average\":8.16,\"overview\":\"简介\"}," +
                 "{\"id\":1,\"media_type\":\"person\",\"name\":\"某演员\",\"poster_path\":\"/p.jpg\"}," +
@@ -126,7 +126,9 @@ public class DiscoverApiTest {
 
         List<Vod> items = DiscoverApi.parseTmdbResults(json);
 
-        assertEquals(1, items.size());
+        assertEquals(2, items.size());
+        assertEquals("tmdb:tv:2", items.get(1).getId());
+        assertEquals("", items.get(1).getPic());
     }
 
     @Test

@@ -110,6 +110,8 @@ android {
         // so a partial flavor/build-type directory cannot silently be ignored.
         preview {
             java.srcDirs += ['src/leanbackPreview/java', 'src/debug/java', 'src/leanbackDebug/java']
+            // Built-in Kotlin does not inherit foreign Java directories in this build type.
+            kotlin.srcDirs += 'src/debug/java'
             manifest.srcFile 'src/leanbackPreview/AndroidManifest.xml'
         }
         // Both flavor dimensions are required for a variant-specific TV debug source set.
@@ -120,6 +122,7 @@ android {
         }
         if (providers.gradleProperty('tvPreview').isPresent()) {
             androidTest.java.srcDirs += 'src/tvPreviewTest/java'
+            androidTest.assets.srcDir rootProject.file('.github/fixtures')
         }
     }
 

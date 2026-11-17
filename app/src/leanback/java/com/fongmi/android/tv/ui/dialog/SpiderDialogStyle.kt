@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.ColorFilter
+import android.graphics.Rect
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
@@ -13,6 +14,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.Window
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -39,13 +42,86 @@ object SpiderDialogStyle {
         val decor = window.decorView
         window.setWindowAnimations(R.style.JetStreamDialogAnim)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        window.setLayout((decor.resources.displayMetrics.widthPixels * 0.68f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        val dialogWidth = (decor.resources.displayMetrics.widthPixels * 0.68f).toInt()
         val background = GradientDrawable().apply { cornerRadius = decor.jetStreamDp(28) }
         decor.bindJetStreamTheme { background.setColor(decor.jetStreamColor(R.color.jetstream_surface)) }
         window.setBackgroundDrawable(background)
         style(decor)
         addScrollHints(decor)
         JetStreamDialogDecor.tintButtons(dialog)
+        reserveNativeButtons(dialog, dialogWidth)
+        window.setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT)
+        constrainVisibleViewport(window, decor, dialogWidth)
+    }
+
+    private fun constrainVisibleViewport(window: Window, decor: View, width: Int) {
+        val listener = object : ViewTreeObserver.OnGlobalLayoutListener, View.OnAttachStateChangeListener {
+            private val previousFrame = Rect()
+            private var constrained = false
+
+            override fun onGlobalLayout() {
+                val frame = Rect()
+                decor.getWindowVisibleDisplayFrame(frame)
+                if (previousFrame.isEmpty) previousFrame.set(frame)
+                else if (previousFrame != frame) {
+                    previousFrame.set(frame)
+                    if (constrained) {
+                        constrained = false
+                        trace("frame-changed", frame)
+                        window.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        return
+                    }
+                }
+                // Floating-window layout may clip a larger measured Decor without remeasuring its children.
+                if (!constrained && decor.height > 0 && decor.measuredHeight > decor.height) {
+                    constrained = true
+                    trace("clamp", frame)
+                    window.setLayout(width, decor.height)
+                }
+            }
+
+            private fun trace(phase: String, frame: Rect) {
+                if (com.fongmi.android.tv.BuildConfig.DEBUG || com.fongmi.android.tv.BuildConfig.BUILD_TYPE == "preview") {
+                    android.util.Log.d("TV-dialog-viewport", "phase=$phase; frame=$frame; measured=${decor.measuredHeight}; actual=${decor.height}; requested=${window.attributes.height}")
+                }
+            }
+
+            override fun onViewAttachedToWindow(view: View) = Unit
+            override fun onViewDetachedFromWindow(view: View) {
+                view.viewTreeObserver.takeIf { it.isAlive }?.removeOnGlobalLayoutListener(this)
+                view.removeOnAttachStateChangeListener(this)
+            }
+        }
+        decor.viewTreeObserver.addOnGlobalLayoutListener(listener)
+        decor.addOnAttachStateChangeListener(listener)
+    }
+
+    private fun reserveNativeButtons(dialog: AlertDialog, dialogWidth: Int) {
+        val buttons = listOf(AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL)
+            .mapNotNull { dialog.getButton(it)?.takeIf { button -> button.visibility == View.VISIBLE } }
+        val bar = buttons.firstOrNull()?.parent as? ViewGroup ?: return
+        val panel = (bar.parent as? ScrollView) ?: bar
+        val naturalHeights = buttons.map { button ->
+            button.measure(
+                View.MeasureSpec.makeMeasureSpec(dialogWidth, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            button to maxOf(button.minimumHeight, button.measuredHeight)
+        }
+        bar.measure(
+            View.MeasureSpec.makeMeasureSpec(dialogWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val heights = naturalHeights.map { (button, naturalHeight) ->
+            val margins = button.layoutParams as? ViewGroup.MarginLayoutParams
+            maxOf(naturalHeight, button.measuredHeight) + (margins?.topMargin ?: 0) + (margins?.bottomMargin ?: 0)
+        }
+        val buttonHeight = if (bar is LinearLayout && bar.orientation == LinearLayout.VERTICAL) heights.sum()
+            else heights.maxOrNull() ?: 0
+        val barHeight = maxOf(bar.measuredHeight, bar.paddingTop + bar.paddingBottom + buttonHeight)
+        val panelPadding = if (panel === bar) 0 else panel.paddingTop + panel.paddingBottom
+        // The custom form can consume spare space only after the original native actions fit.
+        panel.minimumHeight = maxOf(panel.minimumHeight, barHeight + panelPadding)
     }
 
     private fun addScrollHints(view: View) {

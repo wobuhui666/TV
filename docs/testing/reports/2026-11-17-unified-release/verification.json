@@ -1,0 +1,193 @@
+{
+  "testedCommit": "b69ff09f049743af4279a57572fcae4c957514ce",
+  "repository": "wobuhui666/TV",
+  "verificationDate": "2026-11-17",
+  "runs": {
+    "build": {
+      "id": 43996953582,
+      "url": "https://github.com/wobuhui666/TV/actions/runs/43996953582",
+      "headSha": "b69ff09f049743af4279a57572fcae4c957514ce",
+      "conclusion": "success"
+    },
+    "api31": {
+      "id": 43996955968,
+      "url": "https://github.com/wobuhui666/TV/actions/runs/43996955968",
+      "headSha": "b69ff09f049743af4279a57572fcae4c957514ce",
+      "conclusion": "success"
+    },
+    "api34": {
+      "id": 43996958609,
+      "url": "https://github.com/wobuhui666/TV/actions/runs/43996958609",
+      "headSha": "b69ff09f049743af4279a57572fcae4c957514ce",
+      "conclusion": "success"
+    }
+  },
+  "junit": {
+    "app/build/test-results/testLeanbackArm64_v8aDebugUnitTest": {
+      "suites": 161,
+      "tests": 1190,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": 1190
+    },
+    "catvod/build/test-results/testDebugUnitTest": {
+      "suites": 29,
+      "tests": 244,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": 244
+    },
+    "quickjs/build/test-results/testDebugUnitTest": {
+      "suites": 8,
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": 28
+    },
+    "wasm/build/test-results/testDebugUnitTest": {
+      "suites": 1,
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": 19
+    }
+  },
+  "lint": {
+    "baselineSha": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+    "currentSha": "b69ff09f049743af4279a57572fcae4c957514ce",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 348,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 388,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "passed": true
+  },
+  "api31": {
+    "sdk": 31,
+    "display": "1920x1080",
+    "densityDpi": 320,
+    "nativeAbi": "x86_64",
+    "tests": 89,
+    "groups": {
+      "core": 29,
+      "library": 48,
+      "folder": 6,
+      "spider": 5,
+      "nativeTls": 1
+    },
+    "failures": 0,
+    "skipped": 0,
+    "fixtures": {
+      "files": 8,
+      "bytes": 352927,
+      "targetUid": 10145,
+      "processUid": 10145,
+      "allReadable": true,
+      "sha256MatchesTestedCommit": true
+    },
+    "nativeTls": {
+      "pid": 2879,
+      "requests": 34,
+      "certificateGroups": [
+        {
+          "kind": "PLATFORM",
+          "provider": "AndroidOpenSSL",
+          "providerClass": "com.android.org.conscrypt.OpenSSLProvider",
+          "actualClasses": [
+            "com.android.org.conscrypt.OpenSSLX509Certificate"
+          ],
+          "allocated": 1536,
+          "collected": 1536,
+          "distinctNativeContextsVerified": 1536,
+          "nativeContextReadUnavailable": 0
+        },
+        {
+          "kind": "BUNDLED",
+          "provider": "Conscrypt",
+          "providerClass": "org.conscrypt.OpenSSLProvider",
+          "actualClasses": [
+            "org.conscrypt.OpenSSLX509Certificate"
+          ],
+          "allocated": 1536,
+          "collected": 1536,
+          "distinctNativeContextsVerified": 1536,
+          "nativeContextReadUnavailable": 0
+        }
+      ],
+      "explicitGcCalls": 12,
+      "closedTlsSockets": 34,
+      "registryPathCovered": false,
+      "gcConclusion": "EXPLICIT_GC_AND_FINALIZER_WITNESSES_DO_NOT_PROVE_EACH_NATIVE_FREE",
+      "coverageLimit": "FINITE_TLS_AND_EXPLICIT_GC; NOT_REAL_SOURCE_OR_NATURAL_RECLAIM_ACCEPTANCE"
+    }
+  },
+  "api34": {
+    "instrumentedExecutions": 44,
+    "uniqueMethods": 22,
+    "displays": [
+      {
+        "display": "1280x720-density-240",
+        "tests": 22,
+        "failures": 0,
+        "skipped": 0,
+        "suites": {
+          "com.fongmi.android.tv.model.SourceActionDialogTest": 8,
+          "com.fongmi.android.tv.model.SourceDetailDialogTest": 3,
+          "com.fongmi.android.tv.test.HomeTouchScrollTest": 3,
+          "com.fongmi.android.tv.test.LiveLineDialogTest": 3,
+          "com.fongmi.android.tv.test.SpiderDialogTest": 5
+        }
+      },
+      {
+        "display": "1920x1080-density-320",
+        "tests": 22,
+        "failures": 0,
+        "skipped": 0,
+        "suites": {
+          "com.fongmi.android.tv.model.SourceActionDialogTest": 8,
+          "com.fongmi.android.tv.model.SourceDetailDialogTest": 3,
+          "com.fongmi.android.tv.test.HomeTouchScrollTest": 3,
+          "com.fongmi.android.tv.test.LiveLineDialogTest": 3,
+          "com.fongmi.android.tv.test.SpiderDialogTest": 5
+        }
+      }
+    ]
+  },
+  "otherHostChecks": {
+    "pythonCompatibilityTests": 51,
+    "media3PatchTests": 10,
+    "playbackHostJUnitTests": 17,
+    "quickjsFacade": "PASS",
+    "dialogFacade": "PASS",
+    "wasmRealEngineFacade": "PASS"
+  },
+  "mpvAuthor": {
+    "pr": 125,
+    "device": "ARM64 Android X20/API29",
+    "mainMatrixPassed": 30,
+    "mainMatrixTotal": 30,
+    "additionalAdbHttpPassed": 5,
+    "additionalAdbHttpTotal": 6,
+    "additionalFailure": "Exo preparation timed out before entering MPV"
+  },
+  "coverageLimits": [
+    "Selected test cases have no failures or skips; unselected workflow jobs and conditional steps are skipped by design.",
+    "Isolated Preview emulator UI tests are not physical TV acceptance or real source/live playback acceptance.",
+    "Finite TLS and explicit GC pressure does not prove every native free or natural NativeAllocationRegistry reclamation; nativeTls and UI run in separate PIDs.",
+    "Lint comparison passed with zero new Errors, retaining 108 Errors. Warning counts are 348 baseline and 388 current; warning identity additions number 44.",
+    "Library64 and home39 JVM subsets are included within app1190; they must not be added again to the app total.",
+    "The ARM-translated online source Go extension did not load directory content; directory/account routing and empty states were checked separately.",
+    "Physical Hisense MT5873, actual Vulkan rendering and all real providers/accounts are not covered."
+  ],
+  "productionRelease": "Not dispatched at report time; release assets and signatures are verified after publication separately."
+}

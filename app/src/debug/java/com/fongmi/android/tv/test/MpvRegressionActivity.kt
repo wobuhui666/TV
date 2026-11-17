@@ -9,7 +9,7 @@ import com.fongmi.android.tv.player.PlayerManager
 import com.fongmi.android.tv.ui.dialog.SubtitleDialog
 import com.fongmi.android.tv.ui.dialog.TrackDialog
 
-/** Real texture and file-picker owner, available only in debug APKs. */
+/** Real texture and file-picker owner, available only in debug and isolated preview APKs. */
 class MpvRegressionActivity : FragmentActivity(), TrackDialog.Listener {
     lateinit var view: PlayerView
     lateinit var manager: PlayerManager

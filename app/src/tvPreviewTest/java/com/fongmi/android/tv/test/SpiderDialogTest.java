@@ -19,6 +19,8 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.BySelector;
+import androidx.test.uiautomator.Direction;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import com.fongmi.android.tv.App;
@@ -105,6 +107,7 @@ public final class SpiderDialogTest {
         }, 500);
         calls.add(call);
         text("Java fixture login");
+        recordNativeGeometry("java-login-form", "Code");
         capture("java-login-form");
         SystemClock.sleep(750);
         assertFalse("Human input must not consume the source timeout", call.isDone());
@@ -113,8 +116,10 @@ public final class SpiderDialogTest {
         assertEquals("Required field stops callback", 0, callbacks.get());
         field("Code").setText("1234");
         text("Verify").click();
+        scrollToDialogControl(By.text("Code accepted"), Direction.UP, "Code accepted");
         text("Code accepted");
         assertEquals(1, callbacks.get());
+        scrollToDialogControl(By.desc("Code"), Direction.DOWN, "Code input");
         assertFalse(field("Code").isEnabled());
         capture("java-login-validated");
         text("Done").click();
@@ -217,6 +222,7 @@ public final class SpiderDialogTest {
             assertFalse("At the bottom the downward scroll hint must disappear", scroll[0].canScrollVertically(1));
             assertTrue("The final input must remain fully visible inside the dialog", focused.getGlobalVisibleRect(fieldBounds)
                     && fieldBounds.height() + 1 >= focused.getHeight());
+            recordNativeGeometry("long-form-footer", "Field 1");
             View finish = currentDialogRoot().findViewById(android.R.id.button1);
             Rect buttonBounds = new Rect();
             assertNotNull("The original dialog action must remain attached", finish);
@@ -414,6 +420,19 @@ public final class SpiderDialogTest {
         return found;
     }
 
+    private void scrollToDialogControl(BySelector selector, Direction direction, String label) {
+        long until = SystemClock.uptimeMillis() + 8000;
+        do {
+            instrumentation.waitForIdleSync();
+            refresh();
+            if (device.hasObject(selector)) return;
+            UiObject2 form = device.findObject(By.scrollable(true));
+            if (form != null) form.scroll(direction, 0.8f);
+            SystemClock.sleep(100);
+        } while (SystemClock.uptimeMillis() < until);
+        fail("Dialog scrolling did not reveal " + label);
+    }
+
     private void focused(String label) {
         long until = SystemClock.uptimeMillis() + 4000;
         do {
@@ -447,6 +466,72 @@ public final class SpiderDialogTest {
         }
         bitmap.recycle();
         device.dumpWindowHierarchy(new File(directory, name + ".xml"));
+    }
+
+    private void recordNativeGeometry(String name, String fieldLabel) {
+        if (Build.VERSION.SDK_INT < 29) return;
+        Runnable record = () -> {
+            try {
+                View root = null;
+                for (View candidate : WindowInspector.getGlobalWindowViews()) {
+                    if (findDescription(candidate, fieldLabel) != null) { root = candidate; break; }
+                }
+                assertNotNull("The fixture dialog is attached for native geometry", root);
+                View first = root.findViewById(android.R.id.button1);
+                assertNotNull("The fixture retains its native positive button", first);
+                ViewGroup bar = (ViewGroup) first.getParent();
+                View panel = bar.getParent() instanceof ScrollView scroll ? scroll : bar;
+                JSONArray buttons = new JSONArray();
+                for (int id : new int[]{android.R.id.button1, android.R.id.button2, android.R.id.button3}) {
+                    View button = root.findViewById(id);
+                    if (button != null) buttons.put(nativeGeometry(button));
+                }
+                JSONArray ancestors = new JSONArray();
+                for (android.view.ViewParent parent = panel.getParent(); parent instanceof View ancestor; parent = parent.getParent()) {
+                    JSONObject details = nativeGeometry(ancestor);
+                    if (ancestor instanceof ViewGroup group) {
+                        JSONArray children = new JSONArray();
+                        for (int index = 0; index < group.getChildCount(); index++) children.put(nativeGeometry(group.getChildAt(index)));
+                        details.put("children", children);
+                    }
+                    ancestors.put(details);
+                }
+                JSONObject ids = new JSONObject().put("topPanel", androidx.appcompat.R.id.topPanel)
+                        .put("contentPanel", androidx.appcompat.R.id.contentPanel).put("customPanel", androidx.appcompat.R.id.customPanel)
+                        .put("buttonPanel", androidx.appcompat.R.id.buttonPanel);
+                JSONObject geometry = new JSONObject().put("schema", "tv.source-dialog-native-geometry.v1")
+                        .put("panel", nativeGeometry(panel)).put("bar", nativeGeometry(bar)).put("buttons", buttons)
+                        .put("ancestors", ancestors).put("appcompatIds", ids);
+                File directory = new File(activity.getExternalFilesDir(null), "spider-dialog-verification");
+                assertTrue(directory.isDirectory() || directory.mkdirs());
+                try (FileOutputStream output = new FileOutputStream(new File(directory, name + "-geometry.json"))) {
+                    output.write(geometry.toString(2).getBytes(StandardCharsets.UTF_8));
+                }
+            } catch (Exception error) { throw new AssertionError("Cannot record native fixture dialog geometry", error); }
+        };
+        if (Looper.myLooper() == Looper.getMainLooper()) record.run();
+        else instrumentation.runOnMainSync(record);
+    }
+
+    private JSONObject nativeGeometry(View view) throws Exception {
+        Rect bounds = new Rect();
+        boolean visibleBounds = view.getGlobalVisibleRect(bounds);
+        JSONObject geometry = new JSONObject().put("id", view.getId()).put("class", view.getClass().getName())
+                .put("measuredWidth", view.getMeasuredWidth()).put("measuredHeight", view.getMeasuredHeight())
+                .put("width", view.getWidth()).put("height", view.getHeight()).put("minimumHeight", view.getMinimumHeight())
+                .put("visibility", view.getVisibility()).put("shown", view.isShown()).put("clickable", view.isClickable())
+                .put("visibleBounds", visibleBounds)
+                .put("bounds", new JSONArray().put(bounds.left).put(bounds.top).put(bounds.right).put(bounds.bottom))
+                .put("padding", new JSONArray().put(view.getPaddingLeft()).put(view.getPaddingTop()).put(view.getPaddingRight()).put(view.getPaddingBottom()));
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        if (params != null) {
+            geometry.put("layoutParamsClass", params.getClass().getName()).put("layoutWidth", params.width).put("layoutHeight", params.height);
+            if (params instanceof ViewGroup.MarginLayoutParams margins) geometry.put("margins", new JSONArray()
+                    .put(margins.leftMargin).put(margins.topMargin).put(margins.rightMargin).put(margins.bottomMargin));
+            if (params instanceof androidx.appcompat.widget.LinearLayoutCompat.LayoutParams compat) geometry.put("weight", compat.weight);
+            else if (params instanceof android.widget.LinearLayout.LayoutParams linear) geometry.put("weight", linear.weight);
+        }
+        return geometry;
     }
 
     private static final class Fixture extends NanoHTTPD {

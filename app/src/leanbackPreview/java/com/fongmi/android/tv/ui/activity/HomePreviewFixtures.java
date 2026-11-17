@@ -147,19 +147,20 @@ public final class HomePreviewFixtures {
             Map<String, List<Vod>> feeds = new HashMap<>();
             for (RexFeedResult feed : RexPreviewFixtures.feeds()) feeds.put(feed.getSection().getKey(), feed.getItems());
             if (compact) {
-                for (com.fongmi.android.tv.bean.RexSection section : RexSections.home()) {
+                for (com.fongmi.android.tv.bean.RexSection section : RexSections.compactHome()) {
                     String type = section.getKey().contains("tv") || section.isShelf() ? "tv" : "movie";
                     List<Vod> items = new ArrayList<>();
-                    for (int i = 0; i < 12; i++) {
+                    for (int i = 0; i < 30; i++) {
                         Vod item = sourcePoster(i, "tmdb:" + type + ":" + (30000 + Math.abs(section.getKey().hashCode() % 10000) + i));
                         item.setTypeName(type);
-                        item.setName(("tv".equals(type) ? "精选剧集 " : "精选电影 ") + (i + 1));
+                        item.setName((section.getKey().startsWith("cn_") ? "国产" : "精选")
+                                + ("tv".equals(type) ? "剧集 " : "电影 ") + (i + 1));
                         items.add(item);
                     }
                     feeds.put(section.getKey(), items);
                 }
             }
-            for (com.fongmi.android.tv.bean.RexSection section : RexSections.home()) {
+            for (com.fongmi.android.tv.bean.RexSection section : compact ? RexSections.compactHome() : RexSections.home()) {
                 rex.put(section.getKey(), entry(RexFeedLoader.class, feeds.getOrDefault(section.getKey(), List.of())));
             }
             for (int index = 0; index < 3; index++) {
@@ -205,6 +206,7 @@ public final class HomePreviewFixtures {
             for (int i = 0; i < 25; i++) items.add(sourcePoster(i, "source-preview-" + i));
             // The 26th entry has no image or ID, just like a source's login/configuration action.
             items.add(Vod.objectFrom("{\"vod_name\":\"配置 CK\",\"action\":\"" + ACTION_URL + "\"}"));
+            items.add(Vod.objectFrom("{\"vod_id\":\"source-settings\",\"vod_name\":\"账号设置\",\"vod_tag\":\"folder\"}"));
             result.setList(items);
             return App.gson().toJson(result);
         }

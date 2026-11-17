@@ -17,6 +17,9 @@ public class HistorySnapshotTest {
         source.setPosition(120_000);
         source.setDuration(1_800_000);
         source.setSpeed(1.25f);
+        source.setMediaRef("tmdb:tv:45");
+        source.setMediaSeason(2);
+        source.setMediaEpisode(4);
         History dispatched = source.copy();
         source.setPosition(130_000);
         source.setEpisodeUrl("episode-5");
@@ -29,6 +32,9 @@ public class HistorySnapshotTest {
         assertEquals("04", dispatched.getVodRemarks());
         assertEquals(1_800_000, dispatched.getDuration());
         assertEquals(1.25f, dispatched.getSpeed(), 0.001f);
+        assertEquals("tmdb:tv:45", dispatched.getMediaRef());
+        assertEquals(Integer.valueOf(2), dispatched.getMediaSeason());
+        assertEquals(Integer.valueOf(4), dispatched.getMediaEpisode());
         assertEquals("site@@@video@@@1", source.getKey());
         assertEquals(1, source.getCid());
     }

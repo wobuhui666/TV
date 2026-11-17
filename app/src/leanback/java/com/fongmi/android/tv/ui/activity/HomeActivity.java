@@ -58,6 +58,7 @@ import com.fongmi.android.tv.server.Server;
 import com.fongmi.android.tv.service.DLNARendererService;
 import com.fongmi.android.tv.service.PlaybackService;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.ui.adapter.BaseDiffCallback;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.custom.CustomRowPresenter;
@@ -134,6 +135,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private HistoryActionsDialog mHistoryActions;
     private Runnable mHistoryActionFocus;
     private int mHistoryCid;
+    private com.fongmi.android.tv.setting.ExperienceMode mExperienceMode;
     private long mHistoryFocusGeneration;
 
     private Site getHome() {
@@ -165,9 +167,10 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     protected void initView(Bundle savedInstanceState) {
         mInitialFocusPending = savedInstanceState == null;
         mResult = Result.empty();
-        mHomeLayout = BrowseExperienceSettings.getHomeLayout();
+        mExperienceMode = com.fongmi.android.tv.setting.ExperienceSettings.getMode();
+        mHomeLayout = com.fongmi.android.tv.setting.ExperienceSettings.homeLayout();
         mTmdbEndpoints = currentTmdbEndpoints();
-        if (BrowseExperienceSettings.isPosterHomeEnabled()) {
+        if (mHomeLayout != BrowseExperienceSettings.HOME_SOURCE) {
             mPosterHome = new PosterHomeController(this, visible -> {
                 if (mPosterHeroVisible == visible) return;
                 mPosterHeroVisible = visible;
@@ -386,12 +389,26 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void requestRecyclerFocus(int position, BooleanSupplier current) {
+        long requestGeneration = mHistoryFocusGeneration;
         mBinding.recycler.post(() -> {
-            if (!current.getAsBoolean()) return;
+            boolean valid = current.getAsBoolean();
+            traceRecyclerFocus("begin", position, valid, requestGeneration, RecyclerView.NO_POSITION);
+            if (!valid) return;
             if (!hasFocusableRecyclerContent() || !canRequestFocus(mBinding.recycler)) {
                 requestNavFocus(current);
                 return;
             }
+            // Move focus into content before selection so hero updates cannot retain toolbar focus.
+            if (!mBinding.recycler.hasFocus() && (!mBinding.recycler.requestFocus() || !mBinding.recycler.hasFocus())) {
+                requestNavFocus(current);
+                return;
+            }
+            // Leanback can skip setSelection when its stored position still matches a pending D-pad move.
+            // Cancel that move before the latest request chooses its target.
+            mBinding.recycler.stopScroll();
+            valid = current.getAsBoolean();
+            traceRecyclerFocus("stopped", position, valid, requestGeneration, RecyclerView.NO_POSITION);
+            if (!valid) return;
             int target = position == RecyclerView.NO_POSITION ? mBinding.recycler.getSelectedPosition() : position;
             target = Math.max(0, Math.min(target, mAdapter.size() - 1));
             // Prefer a row that actually has focusable children when possible.
@@ -399,17 +416,36 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 int better = firstFocusableRowIndex();
                 if (better >= 0) target = better;
             }
-            mBinding.recycler.setSelectedPosition(target);
             int focusTarget = target;
-            mBinding.recycler.postDelayed(() -> {
-                if (!current.getAsBoolean()) return;
-                RecyclerView.ViewHolder holder = mBinding.recycler.findViewHolderForAdapterPosition(focusTarget);
-                View focus = holder == null ? null : findFocusable(holder.itemView);
+            Object focusRow = mAdapter.get(focusTarget);
+            mBinding.recycler.setSelectedPosition(focusTarget, holder -> {
+                boolean taskValid = current.getAsBoolean();
+                int holderPosition = holder == null ? RecyclerView.NO_POSITION : holder.getBindingAdapterPosition();
+                traceRecyclerFocus("task", focusTarget, taskValid, requestGeneration, holderPosition);
+                if (!taskValid) return;
+                if (holderPosition != focusTarget || holderPosition < 0 || holderPosition >= mAdapter.size()
+                        || mAdapter.get(holderPosition) != focusRow || !canRequestFocus(mBinding.recycler)) {
+                    requestNavFocus(current);
+                    return;
+                }
+                // Selection may already have focused a native control or Compose host in this row.
+                if (holder.itemView.hasFocus()) return;
+                // A missing row must finish selection/layout before focus can leave the old row.
+                View focus = findFocusable(holder.itemView);
                 if (focus != null && focus.requestFocus()) return;
-                if (canRequestFocus(mBinding.recycler) && mBinding.recycler.requestFocus() && mBinding.recycler.hasFocus()) return;
                 requestNavFocus(current);
-            }, 50);
+            });
+            traceRecyclerFocus("selected", focusTarget, current.getAsBoolean(), requestGeneration, RecyclerView.NO_POSITION);
         });
+    }
+
+    private void traceRecyclerFocus(String phase, int target, boolean current, long requestGeneration, int holderPosition) {
+        if (!com.fongmi.android.tv.BuildConfig.DEBUG && !"preview".equals(com.fongmi.android.tv.BuildConfig.BUILD_TYPE)) return;
+        android.util.Log.d("TV-home-focus", "phase=" + phase + "; target=" + target + "; current=" + (current ? 1 : 0)
+                + "; requestGeneration=" + requestGeneration + "; generation=" + mHistoryFocusGeneration
+                + "; selected=" + mBinding.recycler.getSelectedPosition() + "; scrollState=" + mBinding.recycler.getScrollState()
+                + "; holderPosition=" + holderPosition + "; windowFocus=" + (hasWindowFocus() ? 1 : 0)
+                + "; lifecycle=" + getLifecycle().getCurrentState().ordinal() + "; touchBrowsing=" + (mTouchBrowsing ? 1 : 0));
     }
 
     /** Top JetStream nav (点播/直播/搜索/…) — host focus for empty home / Back-to-toolbar. */
@@ -428,6 +464,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (mTouchBrowsing) return;
         setToolbarVisible(true);
         mBinding.toolbar.post(() -> {
+            if (!current.getAsBoolean()) return;
+            mBinding.recycler.stopScroll();
             if (!current.getAsBoolean()) return;
             // Adapter insertions while a permission window owns focus can preserve
             // the old history row at the top. Restore selection as well as scroll.
@@ -547,6 +585,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (view.isFocusable()) return view;
         if (!(view instanceof ViewGroup)) return null;
         ViewGroup group = (ViewGroup) view;
+        if (group.getDescendantFocusability() == ViewGroup.FOCUS_BLOCK_DESCENDANTS) return null;
         for (int i = 0; i < group.getChildCount(); i++) {
             View target = findFocusable(group.getChildAt(i));
             if (target != null) return target;
@@ -729,7 +768,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         List<JetStreamHomeNavView.NavItem> items = new ArrayList<>();
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_home), getString(R.string.home_tab_home), R.drawable.ic_home_vod));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_vod), getString(R.string.home_tab_library), R.drawable.ic_home_vod));
-        if (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
+        if (!ExperienceSettings.usesLibrary()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
         if (LiveConfig.hasUrl()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_live), getString(R.string.home_live), R.drawable.ic_home_live));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_search), getString(R.string.home_search), R.drawable.ic_home_search));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_my), getString(R.string.home_tab_my), R.drawable.ic_home_setting));
@@ -937,14 +976,14 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (item.isAction()) {
             mActionSourceRequest = mHomeSource.getRequest();
             mViewModel.action(getHome().getKey(), item.getAction());
-        } else if (getHome().isIndex()) CollectActivity.start(this, item.getName());
-        else VideoActivity.start(this, getHome().getKey(), item.getId(), item.getName(), item.getPic(), poster);
+        } else if (!item.isFolder() && getHome().isIndex()) CollectActivity.start(this, item.getName());
+        else LibraryNavigation.source(this, getHome().getKey(), item, poster);
     }
 
     @Override
     public boolean onLongClick(Vod item) {
         if (!isCurrentSourceItem(item)) return false;
-        if (item.isAction()) return false;
+        if (item.isAction() || item.isFolder()) return false;
         CollectActivity.start(this, item.getName());
         return true;
     }
@@ -958,7 +997,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     public void onItemClick(History item) {
         if (item.getCid() != VodConfig.getCid()) return;
-        VideoActivity.start(this, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        LibraryNavigation.history(this, item);
     }
 
     @Override
@@ -1147,7 +1186,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (KeyUtil.isActionDown(event)) {
             if (KeyUtil.isEnterKey(event) || KeyUtil.isUpKey(event) || KeyUtil.isDownKey(event)
                     || KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event)
-                    || event.getKeyCode() == KeyEvent.KEYCODE_BACK || event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE
+                    || event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE
                     || event.getKeyCode() == KeyEvent.KEYCODE_MENU || event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
                 setTouchBrowsing(false);
             }
@@ -1194,7 +1233,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     @Override
     protected void onResume() {
         super.onResume();
-        if (mHomeLayout != BrowseExperienceSettings.getHomeLayout()) {
+        if (mExperienceMode != com.fongmi.android.tv.setting.ExperienceSettings.getMode()) {
             recreate();
             return;
         }
@@ -1223,6 +1262,16 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onBackInvoked() {
+        // Preserve Back's intent before restoring ALIGNED can change the touch-scrolled viewport.
+        boolean restoreTop = isContentFocused() || mBinding.recycler.getSelectedPosition() > 0
+                || !mToolbarVisible || isHomeScrolled();
+        if (com.fongmi.android.tv.BuildConfig.DEBUG || "preview".equals(com.fongmi.android.tv.BuildConfig.BUILD_TYPE)) {
+            android.util.Log.d("TV-home-back", "restoreTop=" + (restoreTop ? 1 : 0)
+                    + "; selected=" + mBinding.recycler.getSelectedPosition()
+                    + "; scrollState=" + mBinding.recycler.getScrollState()
+                    + "; navFocus=" + (mBinding.nav.hasFocus() ? 1 : 0)
+                    + "; touchBrowsing=" + (mTouchBrowsing ? 1 : 0));
+        }
         setTouchBrowsing(false);
         if (mBinding.progressLayout.isProgress()) {
             showContent();
@@ -1239,8 +1288,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             return;
         }
         // 2) List scrolled down while toolbar hidden → scroll top + show toolbar + focus nav.
-        if (mBinding.recycler.getSelectedPosition() > 0 || !mToolbarVisible
-                || isHomeScrolled()) {
+        if (restoreTop) {
             mBinding.recycler.scrollToPosition(0);
             requestNavFocus();
             return;

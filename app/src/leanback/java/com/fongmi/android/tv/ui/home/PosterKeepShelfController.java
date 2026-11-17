@@ -182,7 +182,8 @@ final class PosterKeepShelfController implements PosterKeepPresenter.Listener {
     }
 
     private boolean isEnabled() {
-        return BrowseExperienceSettings.isPosterHomeEnabled() && BrowseExperienceSettings.isPosterKeepShelfEnabled();
+        return com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()
+                || BrowseExperienceSettings.isPosterHomeEnabled() && BrowseExperienceSettings.isPosterKeepShelfEnabled();
     }
 
     private void cancelRead() {
@@ -256,7 +257,7 @@ final class PosterKeepShelfController implements PosterKeepPresenter.Listener {
             DiscoverMediaKey key = DiscoverMediaKey.parse(item.getKey());
             if (key != null) DiscoverDetailActivity.start(activity, key, item.getVodName(), item.getVodPic(), "", "", "", "", poster);
         } else {
-            VideoActivity.start(activity, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic(), poster);
+            com.fongmi.android.tv.ui.activity.LibraryNavigation.keep(activity, item, poster);
         }
     }
 

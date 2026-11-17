@@ -7,6 +7,7 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.utils.Task;
+import com.fongmi.android.tv.utils.UrlUtil;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -47,6 +48,16 @@ public class Source {
 
     private Extractor getExtractor(Uri uri) {
         return extractors.stream().filter(extractor -> extractor.match(uri)).findFirst().orElse(null);
+    }
+
+    /** Read-only eligibility check using the same extractor registry as a confirmed playback request. */
+    public boolean isDirectPlaybackUrl(String url) {
+        try {
+            Uri uri = UrlUtil.uri(url);
+            String scheme = UrlUtil.scheme(uri);
+            return (scheme.equals("https") || scheme.equals("http")) && !UrlUtil.host(uri).isEmpty()
+                    && getExtractor(uri) == null;
+        } catch (Exception invalid) { return false; }
     }
 
     private void addCallable(Iterator<Episode> iterator, List<Callable<List<Episode>>> items) {
