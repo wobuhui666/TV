@@ -167,7 +167,7 @@ Forward Widget 仅支持 [配置说明](docs/CONFIG.md) 所列的适配范围，
 
 ### TMDB 反代仓库
 
-公开参考项目：[wobuhui666/tttt](https://github.com/wobuhui666/tttt)，支持 Vercel Serverless 和 Cloudflare Worker，代理 TMDB 资料接口与图片，并提供缓存和影视搜索名称清理。当前默认服务为 `https://t.coolmarket.eu.org/`；部署维护使用 [zhhshss/tttt](https://github.com/zhhshss/tttt)（私有仓库，需要访问权限），与公开参考版本的更新进度不同。
+反代源码：[wobuhui666/tttt](https://github.com/wobuhui666/tttt)，支持 Vercel Serverless 和 Cloudflare Worker，代理 TMDB 资料接口与图片，并提供缓存和影视搜索名称清理。当前默认服务为 `https://t.coolmarket.eu.org/`；部署关联 [zhhshss/tttt](https://github.com/zhhshss/tttt)（私有仓库，需要访问权限）。公开仓库已于 2026-11-17 同步当前部署源码。
 
 自建服务后，在 **设置 → 来源 → TMDB 连接方式 → 自定义反代** 填写部署根地址，例如 `https://tmdb.example.com/`。服务须同时提供 `/3/` API 和 `/t/p/` 图片路径，图片请求直接返回图片数据；也可在同一入口选择默认反代或直连官方。部署配置见公开仓库 README，应用侧行为见 [TMDB 网络兼容](docs/native-discovery.md#tmdb-网络兼容)。
 
