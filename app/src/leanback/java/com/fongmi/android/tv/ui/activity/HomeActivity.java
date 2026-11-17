@@ -1186,6 +1186,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         if (KeyUtil.isActionDown(event)) {
             if (KeyUtil.isEnterKey(event) || KeyUtil.isUpKey(event) || KeyUtil.isDownKey(event)
                     || KeyUtil.isLeftKey(event) || KeyUtil.isRightKey(event)
+                    || event.getKeyCode() == KeyEvent.KEYCODE_ESCAPE
                     || event.getKeyCode() == KeyEvent.KEYCODE_MENU || event.getKeyCode() == KeyEvent.KEYCODE_TAB) {
                 setTouchBrowsing(false);
             }
