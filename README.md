@@ -165,6 +165,12 @@ Forward Widget 仅支持 [配置说明](docs/CONFIG.md) 所列的适配范围，
 - **诊断与工具**：默认关闭的统一诊断日志、问题时间窗口、脱敏诊断包、局域网扫码下载／分享；查看来源最近状态和耗时，按需开启健康排序；匿名检查 115／夸克／阿里云盘分享链接状态，结果供参考。完整范围见 [诊断与工具](docs/practical-improvements.md)。
 - **OTA 更新**：手动检查后确认下载；镜像回退、大小／SHA-256 校验及包名／版本／签名／ABI 校验，通过后交给 Android 安装器。兼容性不符时停止重复下载；普通更新不在启动时强制弹窗，重要版本提醒也可取消。
 
+### TMDB 反代仓库
+
+公开参考项目：[wobuhui666/tttt](https://github.com/wobuhui666/tttt)，支持 Vercel Serverless 和 Cloudflare Worker，代理 TMDB 资料接口与图片，并提供缓存和影视搜索名称清理。当前默认服务为 `https://t.coolmarket.eu.org/`；部署维护使用 [zhhshss/tttt](https://github.com/zhhshss/tttt)（私有仓库，需要访问权限），与公开参考版本的更新进度不同。
+
+自建服务后，在 **设置 → 来源 → TMDB 连接方式 → 自定义反代** 填写部署根地址，例如 `https://tmdb.example.com/`。服务须同时提供 `/3/` API 和 `/t/p/` 图片路径，图片请求直接返回图片数据；也可在同一入口选择默认反代或直连官方。部署配置见公开仓库 README，应用侧行为见 [TMDB 网络兼容](docs/native-discovery.md#tmdb-网络兼容)。
+
 ## 近期已合入功能
 
 这些是已进入默认分支的功能与改进，早期已有能力也包含在上面的功能目录中；上游候选评估不等于已经合入。
