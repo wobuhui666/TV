@@ -24,6 +24,9 @@ public interface PlayerEngine {
 
     boolean setDecode(int decode);
 
+    /** Clears temporary decoder recovery when a new playback request starts. */
+    default boolean resetDecodeFallback() { return false; }
+
     void start(PlaySpec spec, long startPositionMs);
 
     default boolean preload(PlaySpec spec, long position) { return false; }
@@ -62,6 +65,7 @@ public interface PlayerEngine {
         TUNNEL,
         PLATFORM,
         DECODE,
+        DECODE_TRACK,
         FATAL
     }
 

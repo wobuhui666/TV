@@ -112,7 +112,7 @@ public class KeepActivity extends BaseActivity implements KeepAdapter.OnClickLis
         VodConfig.load(config, new Callback() {
             @Override
             public void success() {
-                VideoActivity.start(getActivity(), item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+                LibraryNavigation.keep(getActivity(), item, null);
             }
 
             @Override
@@ -139,7 +139,7 @@ public class KeepActivity extends BaseActivity implements KeepAdapter.OnClickLis
         Config config = Config.find(item.getCid());
         if (config == null) CollectActivity.start(this, item.getVodName());
         else if (item.getCid() != VodConfig.getCid()) loadConfig(config, item);
-        else VideoActivity.start(this, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        else LibraryNavigation.keep(this, item, null);
     }
 
     @Override

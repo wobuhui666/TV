@@ -57,6 +57,7 @@ public final class HistoryActionsDialog {
 
     private HistoryActionsDialog(FragmentActivity activity, History item, KeyEvent openingKey, Listener listener) {
         this.activity = activity;
+        History snapshot = item.copy();
         openingKeyCode = openingKey == null ? KeyEvent.KEYCODE_UNKNOWN : openingKey.getKeyCode();
         openingKeyDownTime = openingKey == null ? 0 : openingKey.getDownTime();
         // Do not retain a mutable adapter item: refreshes and configuration switches can replace it.
@@ -79,7 +80,7 @@ public final class HistoryActionsDialog {
         TouchFocus.bind(binding.historyActionsContinue, binding.historyActionsSearch,
                 binding.historyActionsDelete, binding.historyActionsCancel);
         binding.historyActionsContinue.setOnClickListener(view -> select(() ->
-                VideoActivity.start(activity, siteKey, vodId, title, picture), false));
+                com.fongmi.android.tv.ui.activity.LibraryNavigation.history(activity, snapshot), false));
         binding.historyActionsSearch.setOnClickListener(view -> select(() ->
                 CollectActivity.start(activity, title), false));
         binding.historyActionsDelete.setOnClickListener(view -> select(() -> listener.onDelete(cid, key), true));

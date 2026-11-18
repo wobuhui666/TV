@@ -32,11 +32,15 @@ public final class GaussianBlurTransformation extends BitmapTransformation {
         Canvas canvas = new Canvas(result);
         canvas.drawBitmap(source, null, new Rect(0, 0, width, height), paint);
         canvas.setBitmap(null);
-        blur(result, width, height);
+        blurBitmap(result);
         return result;
     }
 
-    private void blur(Bitmap bitmap, int width, int height) {
+    /** Blurs an owned, mutable software bitmap in place; run on a worker after downsampling. */
+    @NonNull
+    public static Bitmap blurBitmap(@NonNull Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
         int[] pixels = new int[width * height];
         int[] output = new int[pixels.length];
         int[] scratch = new int[pixels.length];
@@ -44,9 +48,10 @@ public final class GaussianBlurTransformation extends BitmapTransformation {
         boxBlur(pixels, output, scratch, width, height);
         boxBlur(output, pixels, scratch, width, height);
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height);
+        return bitmap;
     }
 
-    private void boxBlur(int[] input, int[] output, int[] scratch, int width, int height) {
+    private static void boxBlur(int[] input, int[] output, int[] scratch, int width, int height) {
         int diameter = RADIUS * 2 + 1;
         for (int y = 0; y < height; y++) {
             int offset = y * width;
@@ -95,11 +100,11 @@ public final class GaussianBlurTransformation extends BitmapTransformation {
         }
     }
 
-    private int color(int alpha, int red, int green, int blue) {
+    private static int color(int alpha, int red, int green, int blue) {
         return alpha << 24 | red << 16 | green << 8 | blue;
     }
 
-    private int clamp(int value, int min, int max) {
+    private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
     }
 

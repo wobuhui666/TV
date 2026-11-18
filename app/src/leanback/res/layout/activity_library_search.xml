@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:background="@color/jetstream_background" android:paddingStart="40dp" android:paddingEnd="40dp" android:paddingTop="24dp" android:paddingBottom="20dp" android:clipChildren="true" android:clipToPadding="false">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginStart="8dp" android:layout_marginEnd="8dp" android:gravity="center_vertical" android:clipChildren="false" android:clipToPadding="false">
+        <com.fongmi.android.tv.ui.custom.JetStreamStrongLabelTextView android:id="@+id/title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="16dp" android:textSize="24sp" android:singleLine="true" android:ellipsize="end" />
+        <LinearLayout android:id="@+id/filters" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center_vertical" android:clipChildren="false" android:clipToPadding="false">
+            <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/filter" android:layout_width="64dp" android:layout_height="44dp" android:gravity="center" android:text="@string/library_search_all" android:focusable="true" android:focusableInTouchMode="true" />
+            <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/filterMovies" android:layout_width="64dp" android:layout_height="44dp" android:layout_marginStart="8dp" android:gravity="center" android:text="@string/library_search_movies" android:focusable="true" android:focusableInTouchMode="true" />
+            <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/filterSeries" android:layout_width="64dp" android:layout_height="44dp" android:layout_marginStart="8dp" android:gravity="center" android:text="@string/library_search_series" android:focusable="true" android:focusableInTouchMode="true" />
+            <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/sources" android:layout_width="76dp" android:layout_height="44dp" android:layout_marginStart="16dp" android:gravity="center" android:text="@string/library_search_sources" android:focusable="true" android:focusableInTouchMode="true" android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+    <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="20dp" android:layout_marginStart="8dp" android:layout_marginEnd="8dp" android:layout_marginTop="10dp" android:text="@string/library_search_pending" android:textSize="13sp" android:singleLine="true" android:ellipsize="end" />
+    <com.fongmi.android.tv.ui.custom.JetStreamPageRecyclerView android:id="@+id/results" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="12dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:paddingStart="8dp" android:paddingEnd="8dp" android:clipToPadding="false" android:overScrollMode="never" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_marginEnd="8dp" android:orientation="horizontal" android:clipChildren="false" android:clipToPadding="false">
+        <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView android:id="@+id/more" android:layout_width="wrap_content" android:layout_height="48dp" android:paddingStart="18dp" android:paddingEnd="18dp" android:gravity="center" android:text="@string/library_search_more" android:focusable="true" android:focusableInTouchMode="true" android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

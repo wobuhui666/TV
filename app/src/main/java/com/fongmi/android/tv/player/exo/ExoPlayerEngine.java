@@ -6,6 +6,7 @@ import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.ExoPlaybackException;
 
 import com.fongmi.android.tv.player.engine.PlayerEngine;
 import com.fongmi.android.tv.player.PlaybackSpecs;
@@ -13,6 +14,7 @@ import com.fongmi.android.tv.ai.subtitle.AiSubtitleRuntime;
 import com.fongmi.android.tv.player.media.MediaItemFactory;
 import com.fongmi.android.tv.player.media.PlaySpec;
 import com.fongmi.android.tv.setting.PlayerSetting;
+import com.github.catvod.crawler.diagnostics.DiagnosticLog;
 
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +24,7 @@ public class ExoPlayerEngine implements PlayerEngine {
     private final Player.Listener listener;
     private final PreCache preCache;
     private final PreloadCoordinator preloadCoordinator;
+    private final ExoDecodeFallback decodeFallback;
     private ExoPlayer player;
     private PlaySpec spec;
     private int decode;
@@ -31,7 +34,8 @@ public class ExoPlayerEngine implements PlayerEngine {
     public ExoPlayerEngine(int decode, Player.Listener listener) {
         this.subtitles = new com.fongmi.android.tv.player.subtitle.AdvancedSubtitleController();
         this.preloadCoordinator = new PreloadCoordinator();
-        this.next = new NextMediaPreload(decode, listener, subtitles, preloadCoordinator);
+        this.decodeFallback = new ExoDecodeFallback(decode);
+        this.next = new NextMediaPreload(decode, decode, listener, subtitles, preloadCoordinator);
         this.player = next.player;
         this.provider = new ErrorMsgProvider();
         this.preCache = new PreCache(preloadCoordinator);
@@ -75,7 +79,8 @@ public class ExoPlayerEngine implements PlayerEngine {
         player.release();
         subtitles.release();
         subtitles = new com.fongmi.android.tv.player.subtitle.AdvancedSubtitleController();
-        next = new NextMediaPreload(decode, listener, subtitles, preloadCoordinator);
+        next = new NextMediaPreload(decodeFallback.getAudioDecode(), decodeFallback.getVideoDecode(),
+                listener, subtitles, preloadCoordinator);
         player = next.player;
         return player;
     }
@@ -83,7 +88,13 @@ public class ExoPlayerEngine implements PlayerEngine {
     @Override
     public boolean setDecode(int decode) {
         this.decode = decode;
+        decodeFallback.setDecode(decode);
         return true;
+    }
+
+    @Override
+    public boolean resetDecodeFallback() {
+        return decodeFallback.reset();
     }
 
     @Override
@@ -123,10 +134,27 @@ public class ExoPlayerEngine implements PlayerEngine {
         }
         return switch (e.errorCode) {
             case PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> seekToDefaultPosition();
-            case PlaybackException.ERROR_CODE_DECODER_INIT_FAILED, PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED, PlaybackException.ERROR_CODE_DECODING_FAILED -> ErrorAction.DECODE;
+            case PlaybackException.ERROR_CODE_DECODER_INIT_FAILED, PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED, PlaybackException.ERROR_CODE_DECODING_FAILED -> retryDecoder(e);
             case PlaybackException.ERROR_CODE_UNSPECIFIED, PlaybackException.ERROR_CODE_IO_UNSPECIFIED, PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED, PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED -> retryFormat(e.errorCode);
             default -> ErrorAction.FATAL;
         };
+    }
+
+    private ErrorAction retryDecoder(PlaybackException error) {
+        // Explicit software mode and unidentified failures retain the existing mode retry.
+        if (decode != HARD || !(error instanceof ExoPlaybackException rendererError)
+                || rendererError.type != ExoPlaybackException.TYPE_RENDERER) return ErrorAction.DECODE;
+        int type = rendererError.rendererFormat == null ? C.TRACK_TYPE_UNKNOWN
+                : MimeTypes.getTrackType(rendererError.rendererFormat.sampleMimeType);
+        if (type == C.TRACK_TYPE_UNKNOWN && rendererError.rendererIndex >= 0
+                && rendererError.rendererIndex < player.getRendererCount()) {
+            type = player.getRendererType(rendererError.rendererIndex);
+        }
+        if (type != C.TRACK_TYPE_AUDIO && type != C.TRACK_TYPE_VIDEO) return ErrorAction.DECODE;
+        if (!decodeFallback.tryFallback(type)) return ErrorAction.FATAL;
+        DiagnosticLog.record("playback", "decoderFallback track="
+                + (type == C.TRACK_TYPE_AUDIO ? "audio" : "video"));
+        return ErrorAction.DECODE_TRACK;
     }
 
     private void startInternal(long position) {

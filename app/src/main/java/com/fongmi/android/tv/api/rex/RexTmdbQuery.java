@@ -133,6 +133,17 @@ public final class RexTmdbQuery {
         return new Query(type + "/top_rated", type, new LinkedHashMap<>());
     }
 
+    /** Home's domestic selection uses production country, independent of translated titles. */
+    public static Query chinese(String mediaType, boolean topRated) {
+        String type = TV.equals(mediaType) ? TV : MOVIE;
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("with_origin_country", "CN");
+        params.put("include_adult", "false");
+        params.put("sort_by", topRated ? "vote_average.desc" : "popularity.desc");
+        if (topRated) params.put("vote_count.gte", "100");
+        return new Query("discover/" + type, type, params);
+    }
+
     public static Query nowPlaying() {
         return new Query("movie/now_playing", MOVIE, new LinkedHashMap<>());
     }

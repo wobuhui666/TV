@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calendar_title">Airing calendar</string>
+    <string name="calendar_nav">Calendar</string>
+    <string name="calendar_public">Public schedule</string>
+    <string name="calendar_following">Following</string>
+    <string name="calendar_previous_week">Previous week</string>
+    <string name="calendar_next_week">Next week</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_all_keeps">All favorites</string>
+    <string name="calendar_retry">Retry</string>
+    <string name="calendar_load_more">Load more</string>
+    <string name="calendar_loading">Loading schedule…</string>
+    <string name="calendar_empty_day">Nothing scheduled for this day</string>
+    <string name="calendar_empty_following">No followed series</string>
+    <string name="calendar_load_failed">Unable to load the schedule</string>
+    <string name="calendar_partial_failed">Some schedules could not be loaded</string>
+    <string name="calendar_monday">Mon</string>
+    <string name="calendar_tuesday">Tue</string>
+    <string name="calendar_wednesday">Wed</string>
+    <string name="calendar_thursday">Thu</string>
+    <string name="calendar_friday">Fri</string>
+    <string name="calendar_saturday">Sat</string>
+    <string name="calendar_sunday">Sun</string>
+</resources>

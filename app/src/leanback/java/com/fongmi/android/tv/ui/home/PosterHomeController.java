@@ -99,8 +99,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         rexLoader = new RexFeedLoader(compact);
         keepShelf = new PosterKeepShelfController(activity);
         if (compact) {
-            for (RexSection section : RexSections.home()) {
-                if (section.isShelf()) continue;
+            for (RexSection section : RexSections.compactHome()) {
                 Shelf shelf = new Shelf(section.getLabelRes(), null);
                 shelf.key = section.getKey();
                 shelf.section = section;
@@ -159,7 +158,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             }
         }, PosterHomeController.this));
         rexSpotlightRow = new ListRow(rexSpotlightAdapter);
-        page.add(rexSpotlightRow);
+        if (!compact) page.add(rexSpotlightRow);
         if (compact) page.add(source);
         page.add(footer);
         updateHistoryOrder();
@@ -265,6 +264,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         category = value;
         notifyRow(categories);
         render();
+        if (compact) refreshRex();
     }
 
     private void render() {
@@ -326,7 +326,11 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     private void refreshRex() {
-        rexLoader.load(RexSections.home(), results -> {
+        if (compact) {
+            footer.loading = true;
+            notifyRow(footer);
+        }
+        rexLoader.load(compact ? PosterHomeCatalog.compactSections(category) : RexSections.home(), results -> {
             if (closed || rexSpotlightAdapter == null) return;
             applyRexResults(results);
         });
@@ -426,23 +430,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
                 }
             }
         }
-        List<RexFeedResult> specialty = new ArrayList<>();
-        if (category == PosterHomeCatalog.ALL || category == PosterHomeCatalog.TV) {
-            for (RexSection section : RexSections.home()) {
-                RexFeedResult feed = compactFeeds.get(section.getKey());
-                if (!section.isShelf() || feed == null) continue;
-                List<Vod> items = PosterHomeCatalog.compactItems(feed.getItems(), category);
-                if (!items.isEmpty()) specialty.add(new RexFeedResult(section, items));
-            }
-        }
-        if (rexSpotlightAdapter != null) {
-            rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(specialty), new BaseDiffCallback<RexFeedResult>());
-            if (page != null) {
-                if (specialty.isEmpty()) page.remove(rexSpotlightRow);
-                else if (page.indexOf(rexSpotlightRow) < 0) page.add(page.indexOf(source), rexSpotlightRow);
-            }
-        }
-        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && specialty.isEmpty();
+        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty());
         notifyRow(footer);
         listener.onHeroChanged(!hero.value.isEmpty());
     }

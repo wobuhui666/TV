@@ -252,6 +252,8 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     }
 
     private void refreshBrowseRows() {
+        int[] experiences = {R.string.library_mode_full, R.string.library_mode_simple, R.string.library_mode_classic};
+        setRowValue(JetStreamSettingView.KEY_EXPERIENCE_MODE, getString(experiences[com.fongmi.android.tv.setting.ExperienceSettings.getMode().ordinal()]));
         int priorityCount = PosterSourcePrioritySetting.getOrderedKeys().size();
         setRowValue(JetStreamSettingView.KEY_BROWSE_PRIORITY, priorityCount == 0 ? getString(R.string.poster_source_priority_default)
                 : getString(R.string.poster_source_priority_count, priorityCount));
@@ -306,7 +308,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
         int label = mode == SourceSelectionMode.SMART ? R.string.setting_source_mode_smart : mode == SourceSelectionMode.GROUP_ONLY ? R.string.setting_source_mode_group : R.string.setting_source_mode_legacy;
         setRowValue(JetStreamSettingView.KEY_SOURCE_MODE, getString(label));
         setRowValue(JetStreamSettingView.KEY_SOURCE_CROSS_SITE, Setting.getSwitch(SourceSelectionSetting.isCrossSiteEnabled()));
-        setRowVisible(JetStreamSettingView.KEY_SOURCE_CROSS_SITE, mode == SourceSelectionMode.SMART);
+        setRowVisible(JetStreamSettingView.KEY_SOURCE_CROSS_SITE, false);
     }
 
     private String getWebDavStatus() {
@@ -417,6 +419,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
             case JetStreamSettingView.KEY_DANMAKU_SPIDER -> setDanmakuSpider();
             case JetStreamSettingView.KEY_INCOGNITO -> setIncognito();
             case JetStreamSettingView.KEY_TMDB_RECOVERY -> { TmdbNetwork.setRouteRecoveryEnabled(!TmdbNetwork.isRouteRecoveryEnabled()); refreshBrowseRows(); }
+            case JetStreamSettingView.KEY_EXPERIENCE_MODE -> ExperienceModeActivity.start(this);
             case JetStreamSettingView.KEY_BROWSE_HOME -> setHomeLayout();
             case JetStreamSettingView.KEY_BROWSE_PRIORITY -> PosterSourcePriorityDialog.show(this, this::refreshBrowseRows);
             case JetStreamSettingView.KEY_BROWSE_FILTER -> setBrowseFilter();
@@ -1109,6 +1112,7 @@ public class SettingActivity extends BaseActivity implements ConfigListener, Sit
     @Override
     protected void onStart() {
         super.onStart();
+        refreshBrowseRows();
         SyncplaySession.get().observe(mSyncplayObserver);
     }
 

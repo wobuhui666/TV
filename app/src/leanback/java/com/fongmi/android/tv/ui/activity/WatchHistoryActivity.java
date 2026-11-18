@@ -149,7 +149,7 @@ public class WatchHistoryActivity extends BaseActivity implements HistoryPresent
 
     @Override
     public void onItemClick(History item) {
-        if (item.getCid() == VodConfig.getCid()) VideoActivity.start(this, item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        if (item.getCid() == VodConfig.getCid()) LibraryNavigation.history(this, item);
     }
 
     @Override
