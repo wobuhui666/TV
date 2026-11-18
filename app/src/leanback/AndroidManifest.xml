@@ -33,6 +33,7 @@
 
         <activity
             android:name=".ui.activity.HomeActivity"
+            android:banner="@mipmap/ic_banner"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:exported="true"
             android:launchMode="singleTop"
