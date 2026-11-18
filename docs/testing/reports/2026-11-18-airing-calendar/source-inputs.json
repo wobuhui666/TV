@@ -1,4 +1,5 @@
 {
+  "app/src/androidTest/java/com/fongmi/android/tv/test/NativeUiEvidence.java": "73420005c7c523f027cc127cc8f34c9909c7c7ec56ca10234369eeebb80b92e0",
   "app/src/leanback/AndroidManifest.xml": "89e28f66f18f3bd5aa51028a333a181ff5ae49a92fcf1434157e2c805e222410",
   "app/src/leanback/java/com/fongmi/android/tv/ui/activity/AiringCalendarActivity.kt": "ad2f272c82758f404a09a3ece9a1705814e6a26317bae6302029f1d718d07b0e",
   "app/src/leanback/java/com/fongmi/android/tv/ui/activity/HomeActivity.java": "d2fcfee0a4e32179a30b7883e3f3bca24f50f005bb3594fb4b5fe9b3bc39860c",
@@ -22,6 +23,6 @@
   "app/src/test/java/com/fongmi/android/tv/api/TmdbLibraryApiTest.java": "683b9e7bbb24531e0946372cd296c2f2b3e5179d83f8d92d4f4b5a0ae290b35d",
   "app/src/test/java/com/fongmi/android/tv/calendar/AiringCalendarIndexTest.kt": "62f2eb10b1f1ae6c3942250fa48d6956debd07dcdf8230c2878e85017a027721",
   "app/src/test/java/com/fongmi/android/tv/calendar/AiringCalendarRepositoryTest.kt": "472e0fd5216a26d86ed06577549e8e535a7ff83a294d33b55a925c615c3f9db9",
-  "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/AiringCalendarAndroidTest.java": "3a70c7fa259b5935404d41fce9d0c75d7fbc8d228414239e2ecabb3e30a15016",
-  "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryFollowAndroidTest.java": "0475eda69d7ef09407918cc881ba3953b5631ddd97d839f6e886907b3eaef977"
+  "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/AiringCalendarAndroidTest.java": "062be3b2674131b1f6a1d2505bd3f26a49cb29682c90778ba593130b98f26f96",
+  "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryFollowAndroidTest.java": "883a183fba4f67f79025f62bfd4bbc899bb862b4e13550136e6fb4d96d60f50a"
 }

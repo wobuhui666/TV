@@ -4,6 +4,7 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-18 | [追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md) | 当前静态检查通过，API 24／34 GHA 编译与交互验证运行中 |
 | 2026-11-16 | [首页精选与模式选择](reports/2026-11-16-home-modes/README.md) | 39 项专项 JVM、24 项最终 Android 回归通过；保留初期焦点失败及修订证据，主包交付核验与 lint 限制见报告 |
 | 2026-11-16 | [媒体库详情对齐与原生稳定性](reports/2026-11-16-library-alignment-stability/README.md) | 当前 12 项单测、2 项离线、4 项交互、十轮详情与两组证书压力有限回归通过；最终三张画面及完整下载校验通过，旧失败与硬件限制保留 |
 | 2026-11-15 | [Compose TV 媒体库详情重做](reports/2026-11-15-library-detail-redesign/README.md) | 46 项 JVM、48 项 Android 与 3 项既有方法复测通过；最终主包模拟器掉帧及原生退出保留，性能与稳定性验收未通过 |
@@ -30,5 +31,3 @@
 UI 历史验收见 [UI 改版](../ui-redesign/README.md)，复杂字幕等内核证据见 [播放器同步说明](../player-core-sync.md)。Cloudflare 优选和触屏研究位于 [研究目录](../research/README.md)，不计为完整验收通过。
 
 每份导出报告的 JSON、文本证据与所需图片位于同目录。原 `SHA256SUMS` 是历史原件清单，可能包含未上传的 APK；整理后文件的哈希以 [导入清单](../archive/local-notes-20261006/IMPORTS.json)为准。私有配置、访问票据及原始私有日志没有复制进来。
-
-- [2026-11-18 追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md)：当前静态检查通过，完整编译与设备回归待验证。

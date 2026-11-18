@@ -39,6 +39,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -68,6 +69,10 @@ import static org.junit.Assert.*;
 /** Real calendar activity and remote focus, with generated artwork and an offline TMDB transport. */
 @RunWith(AndroidJUnit4.class)
 public final class AiringCalendarAndroidTest {
+    @BeforeClass public static void clearPreviousEvidence() {
+        NativeUiEvidence.clear();
+    }
+
     private static final String HOST = "calendar-fixture.invalid";
     private static final List<String> PREF_KEYS = List.of("tv_experience_mode_v1", "tmdb_connection_mode",
             "tmdb_proxy_url", "tv_theme_mode", "tv_light_theme");

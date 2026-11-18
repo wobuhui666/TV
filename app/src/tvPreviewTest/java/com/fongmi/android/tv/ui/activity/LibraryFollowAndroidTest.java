@@ -12,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
+import androidx.test.uiautomator.StaleObjectException;
 import androidx.test.uiautomator.Until;
 
 import com.fongmi.android.tv.R;
@@ -146,12 +147,12 @@ public final class LibraryFollowAndroidTest {
         LibraryDetailActivity detail = open(work(TV_KEY));
         await("No source leaves playback unavailable", () -> !state(detail).getPlayEnabled());
         assertTrue(state(detail).getFollowable()); assertFalse(state(detail).getKept());
-        assertEquals(detail.getString(R.string.library_detail_follow), keepButton().getContentDescription());
+        awaitKeepLabel(detail, R.string.library_detail_follow);
         keepButton().click();
         await("Follow state updates", () -> state(detail).getKept());
         Keep saved = Keep.findDiscover(TV_KEY);
         assertNotNull(saved); assertEquals(TV_KEY, saved.getMediaRef()); assertEquals(Keep.TYPE_DISCOVER, saved.getType());
-        await("Following is visible", () -> detail.getString(R.string.library_detail_following).equals(keepButton().getContentDescription()));
+        awaitKeepLabel(detail, R.string.library_detail_following);
         NativeUiEvidence.capture("library-follow-no-source");
         keepButton().click();
         await("Unfollow clears the calendar identity", () -> !state(detail).getKept() && Keep.findDiscover(TV_KEY) == null);
@@ -268,6 +269,28 @@ public final class LibraryFollowAndroidTest {
         UiObject2 button = device.wait(Until.findObject(By.res("keep")), 10000);
         assertNotNull("The library follow/bookmark action is visible", button);
         return button;
+    }
+
+    private void awaitKeepLabel(LibraryDetailActivity detail, int labelResource) {
+        String expected = detail.getString(labelResource);
+        // currentState changes before Compose publishes its replacement action node.
+        // TV Button exposes the same label as description or merged text across SDKs.
+        await("The rendered follow action exposes " + expected, () -> expected.equals(keepLabel()));
+        assertEquals("The action retains its exact accessible label", expected, keepLabel());
+    }
+
+    private String keepLabel() {
+        UiObject2 button = device.findObject(By.res("keep"));
+        if (button == null) return "";
+        try {
+            String description = button.getContentDescription();
+            if (description != null && !description.isEmpty()) return description;
+            String text = button.getText();
+            return text == null ? "" : text;
+        } catch (StaleObjectException ignored) {
+            // A state update can replace the semantic node between lookup and access.
+            return "";
+        }
     }
 
     private LibraryDetailState state(LibraryDetailActivity detail) {

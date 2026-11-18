@@ -643,7 +643,8 @@ jobs:
           # A normal AOSP image keeps real HWUI rendering without Google startup services.
           target: ${{ (inputs.airing_calendar || inputs.home_background) && 'default' || 'google_apis' }}
           arch: x86_64
-          profile: pixel_2
+          # API 24 captures the physical framebuffer, ignoring a wm-size override.
+          profile: ${{ inputs.airing_calendar && 'tv_1080p' || 'pixel_2' }}
           # Official Android Emulator 36.3.10 stable archive.
           emulator-build: ${{ (inputs.airing_calendar || inputs.home_background) && '14472402' || '' }}
           ram-size: ${{ (inputs.airing_calendar || inputs.home_background) && '2048M' || '' }}

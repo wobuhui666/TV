@@ -59,8 +59,7 @@ adb shell settings put secure immersive_mode_confirmations confirmed
 if [ "$api" -ge 33 ]; then
     adb shell pm grant com.fongmi.android.tv.preview android.permission.POST_NOTIFICATIONS
 fi
-# Evidence must come from this run, including when a cached APK is installed again.
-adb shell run-as com.fongmi.android.tv.preview rm -rf /sdcard/Android/data/com.fongmi.android.tv.preview/files/native-usability-evidence
+# Calendar's BeforeClass clears old evidence inside the app; the following suite keeps it.
 run_status=0
 if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$out" '8,4'; then
     run_status=0
