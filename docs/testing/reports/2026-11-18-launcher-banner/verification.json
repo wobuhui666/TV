@@ -1,0 +1,53 @@
+{
+  "testedCommit": "e8ae2007fd57f3abaea5cdea52c32377366480f2",
+  "discussion": "https://github.com/wobuhui666/TV/discussions/105#discussioncomment-19704383",
+  "runs": {
+    "launcher": 44323417351,
+    "build": 44323423560
+  },
+  "runtime": {
+    "api24": {
+      "tests": 2,
+      "failures": 0,
+      "skipped": 0
+    },
+    "api34": {
+      "tests": 2,
+      "failures": 0,
+      "skipped": 0
+    },
+    "bannerSize": [
+      320,
+      180
+    ],
+    "locales": [
+      "en",
+      "zh-CN",
+      "zh-TW"
+    ],
+    "opaque": true,
+    "localizedLabelsDistinct": true,
+    "brandPixelsIdentical": true,
+    "sourceAndApi24AndApi34PixelsEqual": true
+  },
+  "junit": {
+    "app": 1190,
+    "catvod": 244,
+    "quickjs": 28,
+    "wasm": 19,
+    "total": 1481,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "baselineCommit": "854727a4a4255413e9a598bda37471f3177004f5",
+    "baselineErrors": 108,
+    "candidateErrors": 108,
+    "baselineWarnings": 388,
+    "candidateWarnings": 385,
+    "newErrors": 0,
+    "newWarnings": 0
+  },
+  "coverageLimit": "x86_64 isolated emulator PackageManager and localized resource rendering; no real Lingdong launcher APK/version, physical TV or release build acceptance"
+}
