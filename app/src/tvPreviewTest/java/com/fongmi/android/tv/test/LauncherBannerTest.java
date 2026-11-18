@@ -11,6 +11,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 
@@ -96,18 +97,29 @@ public final class LauncherBannerTest {
         banner.draw(new Canvas(bitmap));
         int logoPixels = 0;
         int labelPixels = 0;
+        Rect logoBounds = new Rect();
+        Rect labelBounds = new Rect();
         for (int y = 0; y < bitmap.getHeight(); y++) {
             for (int x = 0; x < bitmap.getWidth(); x++) {
                 int pixel = bitmap.getPixel(x, y);
                 assertEquals("The artwork fills the entire launcher card", 255, Color.alpha(pixel));
                 if (Color.red(pixel) < 120 && Color.green(pixel) < 120 && Color.blue(pixel) < 120) {
-                    if (y < 105) logoPixels++;
-                    else labelPixels++;
+                    if (y < 105) {
+                        logoPixels++;
+                        logoBounds.union(x, y, x + 1, y + 1);
+                    } else {
+                        labelPixels++;
+                        labelBounds.union(x, y, x + 1, y + 1);
+                    }
                 }
             }
         }
         assertTrue("The brand mark is visible: " + source, logoPixels > 1000);
         assertTrue("The app name is rendered below the mark: " + source, labelPixels > 200);
+        assertEquals("The visible brand is horizontally centered: " + source, 160d, logoBounds.exactCenterX(), 1d);
+        assertEquals("The visible name is horizontally centered: " + source, 160d, labelBounds.exactCenterX(), 1d);
+        assertEquals("The brand and name have balanced top and bottom space: " + source,
+                90d, (logoBounds.top + labelBounds.bottom) / 2d, 1d);
         return bitmap;
     }
 }
