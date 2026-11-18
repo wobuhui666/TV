@@ -23,6 +23,9 @@ import org.junit.runner.RunWith;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Locale;
 
 import static org.junit.Assert.*;
@@ -52,6 +55,8 @@ public final class LauncherBannerTest {
 
     @Test public void shouldLoadLocalizedFullCardsWithoutAnAdaptiveMask() throws Exception {
         ApplicationInfo application = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+        Set<Integer> labelHashes = new HashSet<>();
+        Integer expectedLogoHash = null;
         for (String language : List.of("en", "zh-CN", "zh-TW")) {
             Configuration configuration = new Configuration(context.getResources().getConfiguration());
             configuration.setLocale(Locale.forLanguageTag(language));
@@ -59,6 +64,14 @@ public final class LauncherBannerTest {
             Drawable banner = localized.getResources().getDrawable(application.banner, localized.getTheme());
             Bitmap bitmap = verifyBanner(banner, language);
             try {
+                int[] logo = new int[320 * 105];
+                bitmap.getPixels(logo, 0, 320, 0, 0, 320, 105);
+                int logoHash = Arrays.hashCode(logo);
+                if (expectedLogoHash == null) expectedLogoHash = logoHash;
+                assertEquals("The same brand mark is used in every locale", expectedLogoHash.intValue(), logoHash);
+                int[] label = new int[320 * 75];
+                bitmap.getPixels(label, 0, 320, 0, 105, 320, 75);
+                assertTrue("Each locale loads its own name artwork: " + language, labelHashes.add(Arrays.hashCode(label)));
                 File directory = context.getExternalFilesDir("native-usability-evidence");
                 assertNotNull(directory);
                 assertTrue(directory.isDirectory() || directory.mkdirs());
