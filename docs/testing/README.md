@@ -4,7 +4,7 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
-| 2026-11-18 | [追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md) | 当前静态检查通过，API 24／34 GHA 编译与交互验证运行中 |
+| 2026-11-18 | [追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md) | 32 项专项 JUnit、API 24／34 各 12 项交互与 9 张截图通过；完整 lint 仍有 121 项工作区错误，改动范围无新增 |
 | 2026-11-16 | [首页精选与模式选择](reports/2026-11-16-home-modes/README.md) | 39 项专项 JVM、24 项最终 Android 回归通过；保留初期焦点失败及修订证据，主包交付核验与 lint 限制见报告 |
 | 2026-11-16 | [媒体库详情对齐与原生稳定性](reports/2026-11-16-library-alignment-stability/README.md) | 当前 12 项单测、2 项离线、4 项交互、十轮详情与两组证书压力有限回归通过；最终三张画面及完整下载校验通过，旧失败与硬件限制保留 |
 | 2026-11-15 | [Compose TV 媒体库详情重做](reports/2026-11-15-library-detail-redesign/README.md) | 46 项 JVM、48 项 Android 与 3 项既有方法复测通过；最终主包模拟器掉帧及原生退出保留，性能与稳定性验收未通过 |
