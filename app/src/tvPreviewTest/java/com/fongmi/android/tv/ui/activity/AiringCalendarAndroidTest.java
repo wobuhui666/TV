@@ -4,15 +4,19 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.ImageView;
 
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
@@ -45,6 +49,7 @@ import org.junit.runner.RunWith;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.File;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -286,6 +291,12 @@ public final class AiringCalendarAndroidTest {
         failDiscover = false;
         click("retry");
         await("Retry restores results", () -> !state().getFailed() && !state().getLoading() && !state().getItems().isEmpty());
+        Log.i("CalendarFocus", "Retry results ready; last focus=" + focused());
+        await("Removing retry restores an actual valid focus target", () -> {
+            String key = focused();
+            return (key.startsWith("item:") || key.startsWith("date:")) && nodeFocused(key);
+        });
+        Log.i("CalendarFocus", "Retry focus restored=" + focused());
         assertTrue("Removing retry restores a valid focus target", focused().startsWith("item:") || focused().startsWith("date:"));
     }
 
@@ -299,7 +310,12 @@ public final class AiringCalendarAndroidTest {
             String title = state().getPreview().getTitle();
             assertFalse(title.isEmpty());
             assertNotNull("Plain title remains readable", device.findObject(By.text(title)));
-            NativeUiEvidence.capture(light ? "calendar-artwork-light" : "calendar-artwork-dark");
+            String evidence = light ? "calendar-artwork-light" : "calendar-artwork-dark";
+            NativeUiEvidence.capture(evidence);
+            if ("true".equals(InstrumentationRegistry.getArguments().getString("native_ui_evidence"))) {
+                assertRenderedTextContrast(evidence, light, "calendarTitle");
+                assertRenderedTextContrast(evidence, light, "calendarPreviewTitle");
+            }
         }
     }
 
@@ -387,6 +403,37 @@ public final class AiringCalendarAndroidTest {
         Bitmap[] result = new Bitmap[1];
         main(() -> result[0] = loadedArtwork(host(), expectedUrl));
         return result[0];
+    }
+
+    private void assertRenderedTextContrast(String evidence, boolean light, String tag) {
+        File directory = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
+        assertNotNull("Screenshot directory exists", directory);
+        Bitmap screenshot = BitmapFactory.decodeFile(new File(directory, evidence + ".png").getPath());
+        assertNotNull("Decode the actual native screenshot", screenshot);
+        try {
+            UiObject2 title = device.wait(Until.findObject(By.res(tag)), 10_000);
+            assertNotNull("The rendered title is exposed", title);
+            Rect bounds = title.getVisibleBounds();
+            assertTrue("The title has screenshot bounds", bounds.intersect(0, 0, screenshot.getWidth(), screenshot.getHeight()));
+            int background = screenshot.getPixel(bounds.centerX(), Math.min(screenshot.getHeight() - 1, bounds.bottom + 3)) | 0xff000000;
+            double backgroundLuminance = ColorUtils.calculateLuminance(background);
+            assertTrue("Screenshot background matches the selected theme", light ? backgroundLuminance > .5 : backgroundLuminance < .2);
+            int contrastedPixels = 0;
+            for (int y = bounds.top; y < bounds.bottom; y++) {
+                for (int x = bounds.left; x < bounds.right; x++) {
+                    int pixel = screenshot.getPixel(x, y) | 0xff000000;
+                    double luminance = ColorUtils.calculateLuminance(pixel);
+                    boolean direction = light ? luminance < backgroundLuminance - .2 : luminance > backgroundLuminance + .2;
+                    if (direction && ColorUtils.calculateContrast(pixel, background) >= 4.5) contrastedPixels++;
+                }
+            }
+            Log.i("CalendarContrast", tag + " light=" + light + " background=" + backgroundLuminance
+                    + " contrastedPixels=" + contrastedPixels + " bounds=" + bounds);
+            assertTrue("Actual " + tag + " glyph pixels contrast with the " + (light ? "light" : "dark") + " background",
+                    contrastedPixels >= Math.max(20, bounds.width() * bounds.height() / 1000));
+        } finally {
+            screenshot.recycle();
+        }
     }
 
     private Bitmap loadedArtwork(View view, String expectedUrl) {

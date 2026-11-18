@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
@@ -275,7 +276,12 @@ public final class LibraryFollowAndroidTest {
         String expected = detail.getString(labelResource);
         // currentState changes before Compose publishes its replacement action node.
         // TV Button exposes the same label as description or merged text across SDKs.
-        await("The rendered follow action exposes " + expected, () -> expected.equals(keepLabel()));
+        try {
+            await("The rendered follow action exposes " + expected, () -> expected.equals(keepLabel()));
+        } catch (AssertionError error) {
+            captureLabelFailure();
+            throw error;
+        }
         assertEquals("The action retains its exact accessible label", expected, keepLabel());
     }
 
@@ -283,14 +289,37 @@ public final class LibraryFollowAndroidTest {
         UiObject2 button = device.findObject(By.res("keep"));
         if (button == null) return "";
         try {
-            String description = button.getContentDescription();
-            if (description != null && !description.isEmpty()) return description;
-            String text = button.getText();
-            return text == null ? "" : text;
+            return actionLabel(button);
         } catch (StaleObjectException ignored) {
             // A state update can replace the semantic node between lookup and access.
             return "";
         }
+    }
+
+    /** Resolve only the tagged action's own subtree, never the separate empty-resource action. */
+    private String actionLabel(UiObject2 node) {
+        String description = node.getContentDescription();
+        if (description != null && !description.isEmpty()) return description;
+        String text = node.getText();
+        if (text != null && !text.isEmpty()) return text;
+        for (UiObject2 child : node.getChildren()) {
+            String label = actionLabel(child);
+            if (!label.isEmpty()) return label;
+        }
+        return "";
+    }
+
+    private void captureLabelFailure() {
+        File directory = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
+        try {
+            if (directory != null && (directory.isDirectory() || directory.mkdirs())) {
+                device.dumpWindowHierarchy(new File(directory, "library-follow-label-failure.xml"));
+            }
+        } catch (IOException error) {
+            android.util.Log.e("LibraryFollowTest", "Cannot record the follow action hierarchy", error);
+        }
+        try { NativeUiEvidence.capture("library-follow-label-failure"); }
+        catch (AssertionError error) { android.util.Log.e("LibraryFollowTest", "Cannot capture the follow action", error); }
     }
 
     private LibraryDetailState state(LibraryDetailActivity detail) {

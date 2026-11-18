@@ -522,11 +522,15 @@ private fun DetailIconAction(key: String, label: String, icon: Int, modifier: Mo
 private fun DetailFollowAction(selected: Boolean, modifier: Modifier, onAction: (String, String) -> Unit) {
     val label = stringResource(if (selected) R.string.library_detail_following else R.string.library_detail_follow)
     TvActionButton(onClick = { onAction("keep", "keep") },
-        modifier = modifier.width(116.dp).height(44.dp).semantics { contentDescription = label; this.selected = selected },
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = label
+            this.selected = selected
+        }.width(116.dp).height(44.dp),
         selected = selected, shape = CircleShape, contentPadding = PaddingValues(horizontal = 12.dp), focusedScale = 1.04f) {
         Icon(painterResource(if (selected) R.drawable.msr_favorite else R.drawable.msr_favorite_border), null, Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, modifier = Modifier.testTag("followLabel"), style = MaterialTheme.typography.labelMedium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

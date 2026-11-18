@@ -23,9 +23,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -234,94 +236,96 @@ internal fun AiringCalendarScreen(
     val themeToken = JetStreamThemeController.version + themeVersion
     val background = remember(themeToken) { JetStreamPalette.colorScheme().background }
     JetStreamTheme {
-        Column(
-            Modifier.fillMaxSize().background(background)
-                .padding(horizontal = 32.dp, vertical = 20.dp)
-                .semantics { testTagsAsResourceId = true }
-                .pointerInput(focusRequest.token) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (event.changes.any { it.pressed && !it.previousPressed }) {
-                                registry.touch = true
-                                registry.cancelledToken = focusRequest.token
-                                registry.pendingGridDate = null
-                                registry.focusJob?.cancel()
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
+            Column(
+                Modifier.fillMaxSize().background(background)
+                    .padding(horizontal = 32.dp, vertical = 20.dp)
+                    .semantics { testTagsAsResourceId = true }
+                    .pointerInput(focusRequest.token) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.changes.any { it.pressed && !it.previousPressed }) {
+                                    registry.touch = true
+                                    registry.cancelledToken = focusRequest.token
+                                    registry.pendingGridDate = null
+                                    registry.focusJob?.cancel()
+                                }
+                            }
+                        }
+                    },
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(stringResource(R.string.calendar_title), Modifier.testTag("calendarTitle"), style = MaterialTheme.typography.headlineSmall)
+                Row(Modifier.fillMaxWidth().focusGroup(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CalendarButton(stringResource(R.string.calendar_public), focus("mode:public"), state.mode == "public") {
+                        registry.pendingGridDate = null
+                        onAction("mode", "public")
+                    }
+                    CalendarButton(stringResource(R.string.calendar_following), focus("mode:following"), state.mode == "following") {
+                        registry.pendingGridDate = null
+                        onAction("mode", "following")
+                    }
+                    if (state.mode == "following") {
+                        CalendarButton(stringResource(R.string.calendar_all_keeps), focus("keeps")) { onAction("keeps", "") }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    CalendarButton("‹", focus("week:previous").semantics {
+                        contentDescription = host.context.getString(R.string.calendar_previous_week)
+                    }) { registry.pendingGridDate = null; onAction("week", "previous") }
+                    Text(state.weekLabel, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    CalendarButton("›", focus("week:next").semantics {
+                        contentDescription = host.context.getString(R.string.calendar_next_week)
+                    }) { registry.pendingGridDate = null; onAction("week", "next") }
+                    CalendarButton(stringResource(R.string.calendar_today), focus("today")) {
+                        registry.pendingGridDate = null
+                        onAction("today", "")
+                    }
+                }
+                Row(Modifier.fillMaxWidth().focusGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    state.days.forEach { day ->
+                        TvFocusableSurface(onClick = {
+                            onAction("date", day.date)
+                            registry.pendingGridDate = day.date
+                        }, selected = day.date == state.selectedDate,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f).height(52.dp).then(focus("date:${day.date}"))) {
+                            Column(Modifier.fillMaxSize().padding(vertical = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(day.label, fontSize = 13.sp, fontWeight = if (day.today) FontWeight.SemiBold else FontWeight.Medium)
+                                Text(calendarShortDate(day.date), fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = .72f))
                             }
                         }
                     }
-                },
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(stringResource(R.string.calendar_title), style = MaterialTheme.typography.headlineSmall)
-            Row(Modifier.fillMaxWidth().focusGroup(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CalendarButton(stringResource(R.string.calendar_public), focus("mode:public"), state.mode == "public") {
-                    registry.pendingGridDate = null
-                    onAction("mode", "public")
                 }
-                CalendarButton(stringResource(R.string.calendar_following), focus("mode:following"), state.mode == "following") {
-                    registry.pendingGridDate = null
-                    onAction("mode", "following")
-                }
-                if (state.mode == "following") {
-                    CalendarButton(stringResource(R.string.calendar_all_keeps), focus("keeps")) { onAction("keeps", "") }
-                }
-                Spacer(Modifier.weight(1f))
-                CalendarButton("‹", focus("week:previous").semantics {
-                    contentDescription = host.context.getString(R.string.calendar_previous_week)
-                }) { registry.pendingGridDate = null; onAction("week", "previous") }
-                Text(state.weekLabel, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                CalendarButton("›", focus("week:next").semantics {
-                    contentDescription = host.context.getString(R.string.calendar_next_week)
-                }) { registry.pendingGridDate = null; onAction("week", "next") }
-                CalendarButton(stringResource(R.string.calendar_today), focus("today")) {
-                    registry.pendingGridDate = null
-                    onAction("today", "")
-                }
-            }
-            Row(Modifier.fillMaxWidth().focusGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                state.days.forEach { day ->
-                    TvFocusableSurface(onClick = {
-                        onAction("date", day.date)
-                        registry.pendingGridDate = day.date
-                    }, selected = day.date == state.selectedDate,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).height(52.dp).then(focus("date:${day.date}"))) {
-                        Column(Modifier.fillMaxSize().padding(vertical = 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(day.label, fontSize = 13.sp, fontWeight = if (day.today) FontWeight.SemiBold else FontWeight.Medium)
-                            Text(calendarShortDate(day.date), fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = .72f))
-                        }
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                CalendarPreview(state.preview, Modifier.weight(.28f).fillMaxHeight()) { onAction("logoFailed", state.preview.key) }
-                Box(Modifier.weight(.72f).fillMaxHeight()) {
-                    if (state.items.isEmpty()) {
-                        CalendarEmpty(state, focus, onAction, Modifier.fillMaxSize())
-                    } else {
-                        LazyVerticalGrid(columns = GridCells.Fixed(COLUMNS), state = grid,
-                            modifier = Modifier.fillMaxSize().testTag("calendarGrid"),
-                            contentPadding = PaddingValues(6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(state.items, key = { it.key }) { item ->
-                                CalendarPoster(item, focus("item:${item.key}")) { onAction("open", item.key) }
-                            }
-                            if (state.loading || state.failed || state.hasMore) {
-                                item(key = "calendarFooter", span = { GridItemSpan(COLUMNS) }) {
-                                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if (state.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                                        if (state.failed) Text(stringResource(R.string.calendar_partial_failed), fontSize = 13.sp)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            if (state.failed) CalendarButton(stringResource(R.string.calendar_retry), focus("retry")) { onAction("retry", "") }
-                                            if (state.hasMore) CalendarButton(stringResource(R.string.calendar_load_more), focus("loadMore")) {
-                                                if (!state.loading) onAction("loadMore", "")
+                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    CalendarPreview(state.preview, Modifier.weight(.28f).fillMaxHeight()) { onAction("logoFailed", state.preview.key) }
+                    Box(Modifier.weight(.72f).fillMaxHeight()) {
+                        if (state.items.isEmpty()) {
+                            CalendarEmpty(state, focus, onAction, Modifier.fillMaxSize())
+                        } else {
+                            LazyVerticalGrid(columns = GridCells.Fixed(COLUMNS), state = grid,
+                                modifier = Modifier.fillMaxSize().testTag("calendarGrid"),
+                                contentPadding = PaddingValues(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(state.items, key = { it.key }) { item ->
+                                    CalendarPoster(item, focus("item:${item.key}")) { onAction("open", item.key) }
+                                }
+                                if (state.loading || state.failed || state.hasMore) {
+                                    item(key = "calendarFooter", span = { GridItemSpan(COLUMNS) }) {
+                                        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            if (state.loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                            if (state.failed) Text(stringResource(R.string.calendar_partial_failed), fontSize = 13.sp)
+                                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                if (state.failed) CalendarButton(stringResource(R.string.calendar_retry), focus("retry")) { onAction("retry", "") }
+                                                if (state.hasMore) CalendarButton(stringResource(R.string.calendar_load_more), focus("loadMore")) {
+                                                    if (!state.loading) onAction("loadMore", "")
+                                                }
                                             }
                                         }
                                     }
@@ -379,7 +383,7 @@ private fun CalendarPreview(preview: AiringCalendarPreview, modifier: Modifier, 
                         })
                 }
                 if (logoStatus != "loaded") {
-                    Text(preview.title, style = MaterialTheme.typography.headlineSmall,
+                    Text(preview.title, Modifier.testTag("calendarPreviewTitle"), style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
