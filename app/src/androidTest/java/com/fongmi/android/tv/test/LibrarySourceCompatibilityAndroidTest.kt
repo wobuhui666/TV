@@ -73,7 +73,7 @@ class LibrarySourceCompatibilityAndroidTest {
             val loaded = AtomicBoolean()
             val began = SystemClock.elapsedRealtime()
             configExecutor.submit {
-                VodConfig.load(Config.find(CONFIG_URL, 0), object : Callback {
+                VodConfig.load(Config.find(CONFIG_URL, 0), object : Callback() {
                     override fun success() { loaded.set(true); signal.countDown() }
                     override fun error(message: String?) { signal.countDown() }
                 })
