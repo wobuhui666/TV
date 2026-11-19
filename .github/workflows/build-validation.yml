@@ -1,95 +1,93 @@
-name: Build isolated TV validation APKs
+name: Library source compatibility
 
 on:
   workflow_dispatch:
     inputs:
-      playback_regression_only:
-        description: Run focused playback regression without repeating the performance matrix
-        type: boolean
-        default: false
-      playback_performance:
-        description: Compare Android 11 high bitrate playback, renderers and danmaku load
-        type: boolean
-        default: false
-      lint_baseline_ref:
-        description: Compare lint errors against this existing commit; blank requires a clean full lint report
+      baseline_ref:
+        description: Full baseline commit SHA; blank uses the dispatch commit's parent
         type: string
         default: ''
-      python_live_native:
-        description: Execute actual Java, Python and new/legacy QuickJS SDK tests in an x86_64 emulator and build TV ARMv7
-        type: boolean
-        default: false
-
-      h5e_playback:
-        description: Execute synthetic H5E HTTP and Exo video decoding tests and build TV ARMv7
-        type: boolean
-        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: validation-${{ github.ref }}
+  group: library-source-compatibility-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  playback-performance:
-    if: inputs.playback_performance
-    uses: ./.github/workflows/exo-playback-performance.yml
-    with:
-      regression_only: ${{ inputs.playback_regression_only }}
   build:
-    if: ${{ !inputs.playback_performance }}
+    name: TV ARM64 ${{ matrix.stage }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        package: [sourceprobe, preview]
+        stage: [baseline, fixed]
     env:
-      VALIDATION_PACKAGE: ${{ matrix.package }}
+      COMPATIBILITY_STAGE: ${{ matrix.stage }}
+      DISPATCH_COMMIT: ${{ github.sha }}
+      INPUT_BASELINE_REF: ${{ inputs.baseline_ref }}
+      TV_BUILD_APPLICATION_ID: com.fongmi.android.tv.sourceprobe
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
       TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
-      TV_LIVE_PYTHON_FIXTURES: ${{ github.workspace }}/.live-python-fixtures/packs/live-python-20261107-a09dd575
       PYTHONDONTWRITEBYTECODE: '1'
 
     steps:
-      - name: Checkout application
+      - name: Checkout dispatch commit
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
           persist-credentials: false
+
+      - name: Select immutable baseline or fixed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_BASELINE_REF" ]; then
+            [[ "$INPUT_BASELINE_REF" =~ ^[0-9a-fA-F]{40}$ ]] || { echo 'baseline_ref must be a full commit SHA'; exit 1; }
+            git fetch --no-tags --depth=1 origin "$INPUT_BASELINE_REF"
+            baseline_sha=$(git rev-parse FETCH_HEAD)
+          else
+            baseline_sha=$(git rev-parse "${DISPATCH_COMMIT}^")
+          fi
+          printf 'BASELINE_COMMIT=%s\n' "$baseline_sha" >> "$GITHUB_ENV"
+          if [ "$COMPATIBILITY_STAGE" = baseline ]; then
+            probe_dir="$RUNNER_TEMP/library-source-probes"
+            mkdir -p "$probe_dir"
+            for probe in LibrarySourceCompatibilityAndroidTest.kt LibrarySourcePlaybackAndroidTest.kt; do
+              cp "app/src/androidTest/java/com/fongmi/android/tv/test/$probe" "$probe_dir/$probe"
+            done
+            git checkout --detach "$baseline_sha"
+            for probe in LibrarySourceCompatibilityAndroidTest.kt LibrarySourcePlaybackAndroidTest.kt; do
+              cp "$probe_dir/$probe" "app/src/androidTest/java/com/fongmi/android/tv/test/$probe"
+            done
+          fi
+          printf 'APPLICATION_COMMIT=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: "21"
+          java-version: '21'
           distribution: temurin
           cache: gradle
-
-      - name: Checkout the immutable live Python regression fixtures
-        if: matrix.package == 'sourceprobe'
-        uses: actions/checkout@v4
-        with:
-          repository: zhhshss/tv-python-sources
-          ref: 25ff7031e94b14c94ce7e8894394f04f3c1a0907
-          path: .live-python-fixtures
-          fetch-depth: 1
-          persist-credentials: false
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.10'
 
-      - name: Set up Android SDK 37.0
+      - name: Set up Android SDK 37.0 and native toolchain
         uses: android-actions/setup-android@v3
         with:
-          cmdline-tools-version: "13114758"
-          packages: "platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1"
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
 
-      - name: Checkout Media3 fork
+      - name: Checkout fixed Media3 fork
         uses: actions/checkout@v4
         with:
           repository: wobuhui666/media
@@ -98,26 +96,29 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Configure isolated debug build
+      - name: Configure SDK, composite build and debug signing
+        shell: bash
         run: |
-          # setup-java already supplied Java 21; keep the local JBR preference out of CI.
+          set -euo pipefail
           printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
           test -d .media3/build-logic
           test -d .media3/build-logic-settings
           test -f .media3/libraries/ui_danmaku/build.gradle.kts
           cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
           test ! -f local.properties
-          cat > "$RUNNER_TEMP/tv-validation.init.gradle" <<'GRADLE'
-          def suffix = System.getenv('VALIDATION_PACKAGE')
-          if (!(suffix in ['sourceprobe', 'preview'])) throw new GradleException('Invalid validation package')
+          cat > "$RUNNER_TEMP/tv-library-source.init.gradle" <<'GRADLE'
+          def appId = System.getenv('TV_BUILD_APPLICATION_ID')
+          if (!(appId in ['com.fongmi.android.tv.sourceprobe', 'com.fongmi.android.tv'])) {
+              throw new GradleException('Unexpected library source build application ID')
+          }
           gradle.beforeProject { p ->
               ['com.android.application', 'com.android.library'].each { pluginId ->
                   p.pluginManager.withPlugin(pluginId) {
                       p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
                           if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
                           if (p.path == ':app' && pluginId == 'com.android.application') {
-                              dsl.defaultConfig.applicationId = "com.fongmi.android.tv.${suffix}"
-                              dsl.defaultConfig.testApplicationId = "com.fongmi.android.tv.${suffix}.test"
+                              dsl.defaultConfig.applicationId = appId
+                              dsl.defaultConfig.testApplicationId = "${appId}.test"
                               dsl.buildTypes.getByName('debug').signingConfig = dsl.signingConfigs.getByName('debug')
                           }
                       }
@@ -126,382 +127,172 @@ jobs:
           }
           GRADLE
           chmod +x ./gradlew
+          mkdir -p "artifacts/$COMPATIBILITY_STAGE"
 
-      - name: Check shared tests and build the mobile debug app
-        if: matrix.package == 'sourceprobe'
-        run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
-            :wasm:testDebugUnitTest \
-            :catvod:testDebugUnitTest \
-            :quickjs:testDebugUnitTest \
-            :app:assembleMobileArm64_v8aDebug \
-            --no-daemon --build-cache --max-workers=2
-
-      - name: Check Python and JavaScript source API compatibility
-        if: matrix.package == 'sourceprobe'
-        run: |
-          python -m pip install lxml pycryptodome pywasm==1.0.8 numpy==1.26.2
-          test -f "$TV_LIVE_PYTHON_FIXTURES/live/yangshipin.py"
-          test -f "$TV_LIVE_PYTHON_FIXTURES/vod/game_live_protocol.py"
-          python -m unittest discover -s chaquo/src/test/python -v
-          node quickjs/src/test/js/net.test.cjs
-          node quickjs/src/test/js/spider.test.cjs
-          node quickjs/src/test/js/dialog.test.cjs
-          node quickjs/src/test/js/wasm.test.cjs
-
-      - name: Check application regression tests
-        if: matrix.package == 'sourceprobe'
-        run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
-            :app:testLeanbackArm64_v8aDebugUnitTest \
-            --no-daemon --build-cache --max-workers=2
-
-      - name: Check pinned playback patches and query allocations
-        if: matrix.package == 'sourceprobe'
+      - name: Build isolated TV application and AndroidTest APKs
+        shell: bash
         run: |
           set -euo pipefail
-          python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
-          mkdir -p artifacts/playback-stutter
-          python3 tools/testing/playback-stutter/verify.py | tee artifacts/playback-stutter/host-checks.txt
-
-      - name: Build application and instrumentation APKs
-        run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
+          ./gradlew -I "$RUNNER_TEMP/tv-library-source.init.gradle" \
             :app:assembleLeanbackArm64_v8aDebug \
             :app:assembleLeanbackArm64_v8aDebugAndroidTest \
-            --no-daemon --build-cache --max-workers=2
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.parallel=false \
+            '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8 --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED' \
+            --no-daemon --build-cache --max-workers=2 --console=plain
 
-      - name: Build the TV ARMv7 package with the Python runtime dependencies
-        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.h5e_playback)
+      - name: Collect isolated APKs and immutable build metadata
+        shell: bash
         run: |
-          ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
-            :app:assembleLeanbackArmeabi_v7aDebug \
-            --no-daemon --build-cache --max-workers=2
-
-      - name: Run TV Android lint
-        if: matrix.package == 'sourceprobe'
-        env:
-          LINT_BASELINE_REF: ${{ inputs.lint_baseline_ref }}
-        run: |
-          if [ -z "$LINT_BASELINE_REF" ]; then
-            ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
-              :app:lintLeanbackArm64_v8aDebug \
-              --no-daemon --build-cache --max-workers=2
-          else
-            # Collect both complete reports, then reject only errors introduced by this branch.
-            # The report comparison is the failure gate; no lint issue IDs are disabled.
-            [[ "$LINT_BASELINE_REF" =~ ^[0-9a-fA-F]{40}$ ]] || { echo 'Pass a full baseline commit SHA'; exit 1; }
-            git fetch --no-tags --depth=1 origin "$LINT_BASELINE_REF"
-            baseline_sha=$(git rev-parse FETCH_HEAD)
-            baseline_root="$RUNNER_TEMP/tv-lint-baseline"
-            git worktree add --detach "$baseline_root" "$baseline_sha"
-            printf 'toolchainVersion=21\n' > "$baseline_root/gradle/gradle-daemon-jvm.properties"
-            chmod +x "$baseline_root/gradlew"
-            cat > "$RUNNER_TEMP/tv-lint-report.init.gradle" <<'GRADLE'
-          gradle.beforeProject { p ->
-              p.pluginManager.withPlugin('com.android.application') {
-                  p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
-                      dsl.lint.abortOnError = false
-                  }
-              }
-          }
-          GRADLE
-            ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" -I "$RUNNER_TEMP/tv-lint-report.init.gradle" \
-              :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2
-            "$baseline_root/gradlew" -p "$baseline_root" \
-              -I "$RUNNER_TEMP/tv-validation.init.gradle" -I "$RUNNER_TEMP/tv-lint-report.init.gradle" \
-              :app:lintLeanbackArm64_v8aDebug --no-daemon --build-cache --max-workers=2
-            mkdir -p artifacts/lint
-            cp "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug."* artifacts/lint/
-            python3 .github/scripts/compare-lint-reports.py \
-              --baseline-report "$baseline_root/app/build/reports/lint-results-leanbackArm64_v8aDebug.xml" \
-              --current-report app/build/reports/lint-results-leanbackArm64_v8aDebug.xml \
-              --baseline-root "$baseline_root" --current-root "$GITHUB_WORKSPACE" \
-              --baseline-sha "$baseline_sha" --current-sha "$GITHUB_SHA" \
-              --output artifacts/lint/comparison.json
-          fi
-
-      - name: Verify packages and collect APKs
-        run: |
-          python - <<'PY'
-          import hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
-          groups = {
-              'app': list(pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug').glob('*.apk')),
-              'test': list(pathlib.Path('app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug').glob('*.apk')),
-          }
-          package = os.environ['VALIDATION_PACKAGE']
-          app_id = 'com.fongmi.android.tv.' + package
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, shutil, subprocess
+          stage = os.environ['COMPATIBILITY_STAGE']
+          destination = pathlib.Path('artifacts') / stage
+          app_id = 'com.fongmi.android.tv.sourceprobe'
           aapt = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0/aapt'
-          destination = pathlib.Path('validation-apks')
-          destination.mkdir()
+          groups = {
+              'app': pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug'),
+              'test': pathlib.Path('app/build/outputs/apk/androidTest/leanbackArm64_v8a/debug'),
+          }
           metadata = {
-              'applicationCommit': os.environ['GITHUB_SHA'],
+              'stage': stage,
+              'applicationCommit': os.environ['APPLICATION_COMMIT'],
+              'baselineCommit': os.environ['BASELINE_COMMIT'],
+              'dispatchCommit': os.environ['DISPATCH_COMMIT'],
+              'androidTestProbeCommit': os.environ['DISPATCH_COMMIT'],
               'media3Commit': subprocess.check_output(['git', '-C', '.media3', 'rev-parse', 'HEAD'], text=True).strip(),
-              'abi': 'arm64-v8a', 'buildType': 'debug',
+              'abi': 'arm64-v8a', 'buildType': 'debug', 'signing': 'debug',
+              'jdk': 21, 'python': '3.10', 'compileSdk': '37.0',
               'instrumentationExecuted': False, 'files': [],
           }
-          for role, candidates in groups.items():
+          for role, directory in groups.items():
+              candidates = list(directory.glob('*.apk'))
               if len(candidates) != 1:
-                  raise SystemExit('Expected exactly one ' + role + ' APK')
+                  raise SystemExit(f'Expected one {role} APK, found {len(candidates)}')
               source = candidates[0]
-              badging = subprocess.check_output([str(aapt), 'dump', 'badging', str(source)], text=True)
               expected = app_id + ('.test' if role == 'test' else '')
+              badging = subprocess.check_output([str(aapt), 'dump', 'badging', str(source)], text=True)
               actual = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
               if actual is None or actual.group(1) != expected:
                   raise SystemExit('Unexpected APK application ID')
               if role == 'test':
                   manifest = subprocess.check_output([str(aapt), 'dump', 'xmltree', str(source), 'AndroidManifest.xml'], text=True)
                   if not re.search(r'android:targetPackage[^\n]*="' + re.escape(app_id) + r'"', manifest):
-                      raise SystemExit('Unexpected instrumentation target package')
-              output = destination / (package + '-' + role + '-debug.apk')
-              shutil.copyfile(source, output)
-              if role == 'app':
-                  required = ['lib/arm64-v8a/libffmpegJNI.so', 'lib/arm64-v8a/libavcodec.so',
-                              'lib/arm64-v8a/libavutil.so', 'lib/arm64-v8a/libavformat.so',
-                              'lib/arm64-v8a/libswresample.so']
-                  with zipfile.ZipFile(source) as bundle:
-                      names = set(bundle.namelist())
-                      missing = [name for name in required if name not in names]
-                      if missing:
-                          raise SystemExit('FFmpeg extension missing from APK: ' + ', '.join(missing))
-                      metadata['media3FfmpegJniSha256'] = hashlib.sha256(bundle.read('lib/arm64-v8a/libffmpegJNI.so')).hexdigest()
-                      budget = 'lib/arm64-v8a/libtv-quickjs-budget.so'
-                      if budget not in names:
-                          raise SystemExit('QuickJS execution budget JNI missing from APK')
-                      metadata['quickJsBudgetJniSha256'] = hashlib.sha256(bundle.read(budget)).hexdigest()
-              metadata['files'].append({'file': output.name, 'applicationId': expected,
+                      raise SystemExit('Unexpected AndroidTest target package')
+              output = destination / f'sourceprobe-{stage}-{role}-arm64-debug.apk'
+              shutil.copy2(source, output)
+              metadata['files'].append({'file': output.name, 'role': role, 'applicationId': expected,
+                                        'bytes': output.stat().st_size,
                                         'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
           (destination / 'build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
           PY
 
-      - name: Upload debug APK pair
-        uses: actions/upload-artifact@v4
-        with:
-          name: tv-validation-${{ matrix.package }}-arm64-${{ github.run_id }}
-          path: validation-apks/
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload mobile debug APK
-        if: matrix.package == 'sourceprobe'
-        uses: actions/upload-artifact@v4
-        with:
-          name: mobile-validation-arm64-${{ github.run_id }}
-          path: app/build/outputs/apk/mobileArm64_v8a/debug/*.apk
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload the TV ARMv7 debug APK
-        if: matrix.package == 'sourceprobe' && (inputs.python_live_native || inputs.h5e_playback)
-        uses: actions/upload-artifact@v4
-        with:
-          name: tv-validation-sourceprobe-armv7-${{ github.run_id }}
-          path: app/build/outputs/apk/leanbackArmeabi_v7a/debug/*.apk
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Upload unit test reports
-        if: always() && matrix.package == 'sourceprobe'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tv-unit-tests-${{ github.run_id }}
-          path: |
-            app/build/test-results/
-            app/build/reports/tests/
-            app/build/reports/lint-results-leanbackArm64_v8aDebug.*
-            app/schemas/
-            artifacts/lint/
-            artifacts/playback-stutter/
-            catvod/build/test-results/
-            quickjs/build/test-results/
-            wasm/build/test-results/
-          if-no-files-found: warn
-          retention-days: 7
-
-  python-live-native:
-    if: inputs.python_live_native
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-    steps:
-      - name: Checkout application
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: temurin
-          cache: gradle
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Set up Android SDK and native toolchain
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: '13114758'
-          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
-
-      - name: Checkout the fixed Media3 fork
-        uses: actions/checkout@v4
-        with:
-          repository: wobuhui666/media
-          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
-          path: .media3
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Configure isolated library runtime tests
+      - name: Run focused fixed-source regression tests
+        if: matrix.stage == 'fixed'
+        shell: bash
         run: |
-          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
-          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
-          cat > "$RUNNER_TEMP/tv-python-native.init.gradle" <<'GRADLE'
-          gradle.beforeProject { p ->
-              ['com.android.application', 'com.android.library'].each { pluginId ->
-                  p.pluginManager.withPlugin(pluginId) {
-                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
-                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
-                          if (p.path == ':chaquo') {
-                              dsl.productFlavors.create('x86_64') {
-                                  dimension = 'abi'
-                                  ndk.abiFilters.add('x86_64')
-                              }
-                          }
-                      }
-                  }
-              }
+          set -euo pipefail
+          ./gradlew -I "$RUNNER_TEMP/tv-library-source.init.gradle" \
+            :app:testLeanbackArm64_v8aDebugUnitTest \
+            --tests '*LibrarySourceMatcher*' \
+            --tests '*LibrarySearchIndexTest' \
+            --tests '*ExplicitEpisodeSelectionTest' \
+            --tests '*LibraryPlaybackPrefetchTest' \
+            --tests '*MovieSelectionTest' \
+            --tests '*LibraryEpisodeSelectionTest' \
+            --tests '*LibraryEpisodeNavigationTest' \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.parallel=false \
+            '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8 --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED' \
+            --no-daemon --build-cache --max-workers=2 --console=plain
+
+      - name: Build fixed TV ARM64 user APK
+        if: matrix.stage == 'fixed'
+        shell: bash
+        env:
+          TV_BUILD_APPLICATION_ID: com.fongmi.android.tv
+        run: |
+          set -euo pipefail
+          ./gradlew -I "$RUNNER_TEMP/tv-library-source.init.gradle" \
+            :app:assembleLeanbackArm64_v8aDebug \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.parallel=false \
+            '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8 --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED' \
+            --no-daemon --build-cache --max-workers=2 --console=plain
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, shutil, subprocess
+          directory = pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug')
+          candidates = list(directory.glob('*.apk'))
+          if len(candidates) != 1:
+              raise SystemExit('Expected one fixed TV APK')
+          source = candidates[0]
+          aapt = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0/aapt'
+          badging = subprocess.check_output([str(aapt), 'dump', 'badging', str(source)], text=True)
+          actual = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
+          if actual is None or actual.group(1) != 'com.fongmi.android.tv':
+              raise SystemExit('Unexpected fixed user APK application ID')
+          destination = pathlib.Path('artifacts/fixed')
+          output = destination / 'TV-library-source-fix-arm64-debug.apk'
+          shutil.copy2(source, output)
+          metadata_file = destination / 'build-metadata.json'
+          metadata = json.loads(metadata_file.read_text())
+          metadata['files'].append({'file': output.name, 'role': 'user-app',
+                                    'applicationId': 'com.fongmi.android.tv',
+                                    'bytes': output.stat().st_size,
+                                    'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
+          metadata_file.write_text(json.dumps(metadata, indent=2) + '\n')
+          PY
+
+      - name: Collect focused unit test summary
+        if: always() && matrix.stage == 'fixed'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, xml.etree.ElementTree as ET
+          destination = pathlib.Path('artifacts/fixed')
+          destination.mkdir(parents=True, exist_ok=True)
+          source = pathlib.Path('app/build/test-results/testLeanbackArm64_v8aDebugUnitTest')
+          suites = []
+          for report in sorted(source.glob('TEST-*.xml')):
+              suite = ET.parse(report).getroot()
+              suites.append({'class': suite.get('name'),
+                             **{field: int(suite.get(field, 0)) for field in ('tests', 'failures', 'errors', 'skipped')}})
+          totals = {field: sum(suite[field] for suite in suites) for field in ('tests', 'failures', 'errors', 'skipped')}
+          expected = {
+              'com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest',
+              'com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest',
+              'com.fongmi.android.tv.source.LibrarySearchIndexTest',
+              'com.fongmi.android.tv.source.ExplicitEpisodeSelectionTest',
+              'com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetchTest',
+              'com.fongmi.android.tv.source.MovieSelectionTest',
+              'com.fongmi.android.tv.source.LibraryEpisodeSelectionTest',
+              'com.fongmi.android.tv.source.LibraryEpisodeNavigationTest',
           }
-          GRADLE
-          chmod +x gradlew
+          missing = sorted(expected - {suite['class'] for suite in suites if suite['tests'] > 0})
+          summary = {'applicationCommit': os.environ.get('APPLICATION_COMMIT', ''),
+                     'passed': not missing and totals['failures'] == 0 and totals['errors'] == 0 and totals['skipped'] == 0,
+                     **totals, 'missingSuites': missing, 'suites': suites}
+          (destination / 'unit-test-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          if not summary['passed']:
+              raise SystemExit('Focused library source regressions did not all complete successfully')
+          PY
 
-      - name: Enable KVM for the disposable test device
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Run actual Java, CPython and new/legacy QuickJS SDK instrumentation
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          emulator-boot-timeout: 300
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: ./gradlew -I "$RUNNER_TEMP/tv-python-native.init.gradle" :quickjs:connectedDebugAndroidTest :chaquo:connectedX86_64DebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
-
-      - name: Upload native runtime test reports
+      - name: Upload stage APKs and metadata
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: python-live-native-tests-${{ github.run_id }}
-          path: |
-            quickjs/build/reports/androidTests/
-            quickjs/build/outputs/androidTest-results/
-            chaquo/build/reports/androidTests/
-            chaquo/build/outputs/androidTest-results/
+          name: tv-library-source-${{ matrix.stage }}-arm64-${{ github.run_id }}
+          path: artifacts/${{ matrix.stage }}/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7
 
-  h5e-native:
-    if: inputs.h5e_playback
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
-    steps:
-      - name: Checkout application
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: temurin
-          cache: gradle
-
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Set up Android SDK and native toolchain
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: '13114758'
-          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
-
-      - name: Checkout the fixed Media3 fork
-        uses: actions/checkout@v4
-        with:
-          repository: wobuhui666/media
-          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
-          path: .media3
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Configure isolated library runtime tests
-        run: |
-          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
-          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
-          cat > "$RUNNER_TEMP/tv-h5e-native.init.gradle" <<'GRADLE'
-          gradle.beforeProject { p ->
-              ['com.android.application', 'com.android.library'].each { pluginId ->
-                  p.pluginManager.withPlugin(pluginId) {
-                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
-                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
-                      }
-                  }
-              }
-          }
-          GRADLE
-          chmod +x gradlew
-
-      - name: Generate and verify synthetic encrypted HLS media
-        run: |
-          if ! command -v ffmpeg >/dev/null; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
-          python3 tools/testing/generate_h5e_fixture.py --output-dir tools/testing/h5e-verification/build/generated/h5e-fixtures
-
-      - name: Enable KVM for the disposable test device
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Decode H5E and ordinary HLS through actual Android ExoPlayer
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          emulator-boot-timeout: 300
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: ./gradlew -I "$RUNNER_TEMP/tv-h5e-native.init.gradle" -Ph5eVerification=true :h5e-verification:connectedDebugAndroidTest --no-daemon --build-cache --max-workers=2 --console=plain
-
-      - name: Upload native runtime test reports
-        if: always()
+      - name: Upload focused unit test reports
+        if: always() && matrix.stage == 'fixed'
         uses: actions/upload-artifact@v4
         with:
-          name: h5e-native-tests-${{ github.run_id }}
+          name: tv-library-source-fixed-unit-tests-${{ github.run_id }}
           path: |
-            tools/testing/h5e-verification/build/reports/androidTests/
-            tools/testing/h5e-verification/build/outputs/androidTest-results/
-            tools/testing/h5e-verification/build/generated/h5e-fixtures/manifest.json
-            tools/testing/h5e-verification/build/generated/h5e-fixtures/*.framemd5
+            app/build/test-results/testLeanbackArm64_v8aDebugUnitTest/
+            app/build/reports/tests/testLeanbackArm64_v8aDebugUnitTest/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7

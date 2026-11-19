@@ -9,6 +9,7 @@ import android.view.SoundEffectConstants;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.lifecycle.Lifecycle;
 import androidx.viewbinding.ViewBinding;
 
 import com.fongmi.android.tv.App;
@@ -74,6 +75,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
     private final LibraryPlaybackPrefetch linkPrefetch = new LibraryPlaybackPrefetch();
     private final Runnable warmSelection = this::preparePlayback;
     private final Runnable renderFrame = this::renderState;
+    private final Runnable sourceDetailRequest = this::requestSourceDetail;
     private ActivityLibraryDetailBinding binding;
     private LibraryResourcesController resources;
     private Vod work, originalSource, preparedSource, playingSource;
@@ -92,6 +94,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
     private boolean extrasRequested, extrasDemanded, showMore, resumeRequested, sourceSearching, pendingAutoplay, metadataError;
     private boolean identityLocked, playbackActive, manualPlayback, originalEpisodeSelection;
     private boolean focusRestorePending, restoreResourceFocus, fallbackPending, fallbackSeasonChanged, logoFallback;
+    private boolean sourceDetailRequested;
 
 
     private final ActivityResultLauncher<Intent> player = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -185,7 +188,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
             @Override public void onAction(String action, String itemKey) { handleAction(action, itemKey); }
             @Override public void onFocused(String itemKey) { handleFocus(itemKey); }
         });
-        bindWork(); configureResources(); resources.start(); loadMetadata(); resources.browse(originalSource);
+        bindWork(); configureResources(); resources.start(); loadMetadata();
         focusAfterRender(restoreFocusKey);
     }
 
@@ -885,6 +888,21 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
         if (work != null && !isInactive()) updateKeep();
     }
 
+    @Override protected void onPostResume() {
+        super.onPostResume();
+        if (resources == null || originalSource == null || isInactive() || sourceDetailRequested) return;
+        // Lifecycle dispatch finishes after onPostResume on older Android versions.
+        binding.libraryRoot.removeCallbacks(sourceDetailRequest);
+        binding.libraryRoot.post(sourceDetailRequest);
+    }
+
+    private void requestSourceDetail() {
+        if (sourceDetailRequested || resources == null || originalSource == null || isInactive()
+                || App.activity() != this || !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED)) return;
+        sourceDetailRequested = true;
+        resources.browse(originalSource);
+    }
+
     @Override protected void onPause() {
         App.removeCallbacks(warmSelection); linkPrefetch.clear();
         if (!playbackActive && resources != null) {
@@ -909,6 +927,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
 
     @Override protected void onDestroy() {
         binding.libraryRoot.removeCallbacks(renderFrame);
+        binding.libraryRoot.removeCallbacks(sourceDetailRequest);
         binding.libraryRoot.setListener(null);
         App.removeCallbacks(warmSelection); linkPrefetch.clear();
         TmdbLibraryApi.cancel(logoTag);

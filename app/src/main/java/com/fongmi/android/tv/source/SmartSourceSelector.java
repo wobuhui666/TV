@@ -131,6 +131,36 @@ public final class SmartSourceSelector {
         return selected;
     }
 
+    /** Keeps an explicit library choice when a source refreshes its signed playback parameters. */
+    public static FlagSelection selectLibraryEpisode(Vod source, String url, String name, String preferredFlag) {
+        if (source == null) return null;
+        boolean selectedLine = preferredFlag != null && !preferredFlag.isEmpty();
+        List<Flag> flags = source.getFlags();
+        if (selectedLine) flags = flags.stream().filter(flag -> flag.getFlag().equals(preferredFlag)).toList();
+        // A removed or renamed selected line cannot transfer the choice to another line.
+        if (url != null && !url.isEmpty()) {
+            FlagSelection exact = null, named = null;
+            boolean differentNames = false;
+            for (Flag flag : flags) for (Episode episode : flag.getEpisodes()) {
+                if (!url.equals(episode.getUrl())) continue;
+                FlagSelection match = new FlagSelection(flag, episode, 1000, flag.getEpisodes().size());
+                if (exact == null) exact = match;
+                else if (!episode.getName().equals(exact.episode().getName())) differentNames = true;
+                if (name != null && name.equals(episode.getName()) && named == null) named = match;
+            }
+            if (named != null) return named;
+            if (exact != null) return differentNames ? null : exact;
+        }
+        if (!selectedLine || name == null || name.isEmpty()) return null;
+        FlagSelection selected = null;
+        for (Flag flag : flags) for (Episode episode : flag.getEpisodes()) {
+            if (!name.equals(episode.getName()) || episode.getUrl().isEmpty()) continue;
+            if (selected != null && !episode.getUrl().equals(selected.episode().getUrl())) return null;
+            if (selected == null) selected = new FlagSelection(flag, episode, 600, flag.getEpisodes().size());
+        }
+        return selected;
+    }
+
     /** Explicit list selections never fall back to a saved position or an unrelated episode. */
     public static FlagSelection selectExplicitEpisode(Vod source, String value, String preferredFlag) {
         if (source == null || value == null || value.isEmpty()) return null;

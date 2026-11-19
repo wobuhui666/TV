@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.ui.activity;
 
+import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -21,10 +22,15 @@ import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.test.SeekInputActivity;
+import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.github.catvod.Init;
 import com.github.catvod.crawler.Spider;
+import com.github.catvod.net.OkHttp;
 import com.github.catvod.utils.CallTimeout;
+import com.github.catvod.utils.Prefers;
 import com.github.catvod.utils.Util;
 
 import org.json.JSONArray;
@@ -36,6 +42,7 @@ import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +54,8 @@ import java.util.function.BooleanSupplier;
 
 import static org.junit.Assert.*;
 
+import okhttp3.OkHttpClient;
+
 /** Source-card details can open dialogs; automatic preparation must remain noninteractive. */
 @RunWith(AndroidJUnit4.class)
 public final class LibrarySourceDialogAndroidTest {
@@ -57,6 +66,7 @@ public final class LibrarySourceDialogAndroidTest {
     private final DetailListener listener = new DetailListener();
     private final FixtureSpider spider = new FixtureSpider();
     private SeekInputActivity activity;
+    private LibraryDetailActivity openedDetail;
     private LibraryResourcesController resources;
     private Vod source;
     private Object originalSites, originalRecent, jarLoader;
@@ -64,6 +74,9 @@ public final class LibrarySourceDialogAndroidTest {
     private Spider originalSpider;
     private String cacheKey;
     private boolean cacheInjected, sitesInjected, recentCaptured;
+    private OkHttpClient originalClient, originalTmdbClient, offlineClient;
+    private String originalMode;
+    private boolean modePresent, navigationConfigured;
 
     @Before public void setup() throws Exception {
         String target = instrumentation.getTargetContext().getPackageName();
@@ -99,9 +112,20 @@ public final class LibrarySourceDialogAndroidTest {
     }
 
     @After public void cleanup() throws Exception {
+        if (openedDetail != null) main(openedDetail::finish);
         if (resources != null) main(resources::close);
         spider.dialog.close();
         if (spider.calls.get() > 0) spider.finished.await(5, TimeUnit.SECONDS);
+        instrumentation.waitForIdleSync();
+        if (navigationConfigured) {
+            field(OkHttp.get(), "client").set(OkHttp.get(), originalClient);
+            Field tmdbClient = TmdbNetwork.class.getDeclaredField("client");
+            tmdbClient.setAccessible(true); tmdbClient.set(null, originalTmdbClient);
+            if (modePresent) Prefers.put("tv_experience_mode_v1", originalMode);
+            else Prefers.remove("tv_experience_mode_v1");
+            offlineClient.dispatcher().cancelAll();
+            offlineClient.connectionPool().evictAll();
+        }
         if (cacheInjected) {
             if (originalSpider == null) spiders.remove(cacheKey, spider);
             else spiders.put(cacheKey, originalSpider);
@@ -155,15 +179,60 @@ public final class LibrarySourceDialogAndroidTest {
         assertEquals(0, listener.selected.get());
     }
 
+    @Test public void sourceNavigationStartsItsDetailAfterTheNewActivityResumes() throws Exception {
+        originalClient = OkHttp.client();
+        Field tmdbClient = TmdbNetwork.class.getDeclaredField("client");
+        tmdbClient.setAccessible(true); originalTmdbClient = (OkHttpClient) tmdbClient.get(null);
+        modePresent = Prefers.getPrefers().contains("tv_experience_mode_v1");
+        originalMode = Prefers.getString("tv_experience_mode_v1", "");
+        offlineClient = new OkHttpClient.Builder().addInterceptor(chain -> {
+            throw new IOException("Offline source navigation fixture");
+        }).build();
+        navigationConfigured = true;
+        field(OkHttp.get(), "client").set(OkHttp.get(), offlineClient);
+        tmdbClient.set(null, offlineClient);
+        ExperienceSettings.putMode(ExperienceMode.LIBRARY);
+        Init.setActivity(App::activity);
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+                LibraryDetailActivity.class.getName(), null, false);
+        try {
+            main(() -> LibraryNavigation.source(activity, SITE_KEY, source, null));
+            openedDetail = (LibraryDetailActivity) instrumentation.waitForMonitorWithTimeout(monitor, 8_000);
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+        assertNotNull("The source card opens the real library detail Activity", openedDetail);
+        text(TITLE);
+        assertSame("The source receives the new Activity rather than the paused previous page",
+                openedDetail, spider.dialogOwner.get());
+        assertTrue("The source is invoked after its host reaches RESUMED", spider.ownerResumed);
+        capture("source-navigation-resumed-host");
+        text("Apply source settings").click();
+        assertTrue(spider.finished.await(8, TimeUnit.SECONDS));
+        await("The real detail Activity receives the source response", () -> onMain(() -> {
+            try { return !((Vod) field(openedDetail, "work").get(openedDetail)).getFlags().isEmpty(); }
+            catch (Exception error) { throw new AssertionError(error); }
+        }));
+        assertEquals(1, spider.callbacks.get());
+        assertEquals(1, spider.calls.get());
+        absent(TITLE);
+    }
+
     private static final class FixtureSpider extends Spider {
         final AtomicInteger calls = new AtomicInteger(), callbacks = new AtomicInteger();
         final AtomicReference<String> selected = new AtomicReference<>();
+        final AtomicReference<Activity> dialogOwner = new AtomicReference<>();
         final CountDownLatch finished = new CountDownLatch(1);
-        volatile boolean denied;
+        volatile boolean denied, ownerResumed;
 
         @Override public String detailContent(List<String> ids) throws Exception {
             calls.incrementAndGet();
             try {
+                Activity owner = Init.activity();
+                dialogOwner.set(owner);
+                InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> ownerResumed =
+                        owner instanceof androidx.fragment.app.FragmentActivity fragment
+                                && fragment.getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED));
                 JSONObject result = dialog.show(new JSONObject().put("title", TITLE)
                         .put("buttons", new JSONArray().put(new JSONObject()
                                 .put("id", "apply").put("label", "Apply source settings"))), event -> {

@@ -1,6 +1,8 @@
 package com.fongmi.android.tv.source;
 
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.bean.Episode;
+import com.fongmi.android.tv.bean.Flag;
 
 import org.junit.Test;
 
@@ -71,6 +73,28 @@ public class LibrarySourceMatcherPreparedTest {
                 LibrarySourceMatcher.prepareSource(source("The Matrix / Trailer", "1999", "电影")), work));
         assertEquals(new LibrarySourceMatcher.Match(false, false, 0), LibrarySourceMatcher.match(
                 LibrarySourceMatcher.prepareSource(source("The Matrix", "1999", "电视剧")), work));
+    }
+
+    @Test public void shouldPreserveMissingMetadataAndPlaybackEvidenceWhenPrepared() {
+        List<Target> targets = List.of(
+                new Target("星际穿越", List.of("Interstellar"), "2014", true, null),
+                new Target("庆余年", List.of("Joy of Life"), "2019", false, 1),
+                new Target("庆余年", List.of("Joy of Life"), "2019", false, 2));
+        for (String title : List.of("星际穿越", "Interstellar", "庆余年", "庆余年 第一季", "庆余年 第二季")) {
+            for (String year : List.of("", "2014", "2019", "2024")) for (String type : List.of("", "剧情,国产", "电影", "电视剧")) {
+                for (String url : List.of("", "   ", "dynamic-episode-token")) {
+                    Vod source = source(title, year, type);
+                    Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("1", url)); source.getFlags().add(flag);
+                    var preparedSource = LibrarySourceMatcher.prepareSource(source);
+                    for (Target target : targets) {
+                        assertEquals(title + " / " + year + " / " + type + " / " + url + " -> " + target,
+                                LibrarySourceMatcher.match(source, target.title, target.aliases, target.year, target.movie, target.season),
+                                LibrarySourceMatcher.match(preparedSource, LibrarySourceMatcher.prepareWork(
+                                        target.title, target.aliases, target.year, target.movie, target.season)));
+                    }
+                }
+            }
+        }
     }
 
     @Test public void shouldExtractTheSameSeasonWithoutPreparingUnusedMediaIdentityFields() {

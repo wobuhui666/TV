@@ -37,8 +37,8 @@ public final class LibrarySearchIndex {
                     // Keep it reachable without claiming it is a playable resource of a TMDB work.
                     LibrarySourceMatcher.PreparedSource prepared = null;
                     if (!item.isFolder() && !item.isAction()) {
-                        // Matching uses only these raw fields; site and item IDs still own distinct resources.
-                        SourceText text = new SourceText(item.getName(), item.getYear(), item.getTypeName());
+                        // Share prepared evidence while preserving whether a source already has playback details.
+                        SourceText text = new SourceText(item.getName(), item.getYear(), item.getTypeName(), LibrarySourceMatcher.hasPlayback(item));
                         prepared = preparedSources.computeIfAbsent(text, unused -> LibrarySourceMatcher.prepareSource(item));
                     }
                     sources.put(key, new Attachment(item, prepared)); cached = null;
@@ -79,7 +79,7 @@ public final class LibrarySearchIndex {
     }
 
     private record CatalogEntry(Vod item, LibrarySourceMatcher.PreparedWork prepared) { }
-    private record SourceText(String title, String year, String type) { }
+    private record SourceText(String title, String year, String type, boolean hasPlayback) { }
 
     private static final class Attachment {
         final Vod item;

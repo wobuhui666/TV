@@ -127,6 +127,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         intent.putExtra("playId", episode.getUrl());
         intent.putExtra("libraryEpisodeName", episode.getName());
         intent.putExtra("libraryFlag", flag.getFlag());
+        String detailToken = com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetch.handoffDetail(reference, source, flag, episode);
+        if (!detailToken.isEmpty()) intent.putExtra("libraryDetail", detailToken);
         if (progress != null) intent.putExtra("libraryProgress", progress.toString());
         return intent;
     }
@@ -135,6 +137,23 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
 
     @Override public boolean strictLibraryEpisodeNavigation() {
         return isLibraryPlayback() && getIntent().hasExtra("mediaSeason") && getIntent().hasExtra("mediaEpisode");
+    }
+
+    @Override public String getVodPlayName() {
+        return isLibraryPlayback() ? Objects.toString(getIntent().getStringExtra("libraryEpisodeName"), "") : "";
+    }
+
+    @Override public Vod takePreparedDetail() {
+        if (!isLibraryPlayback()) return null;
+        String token = getIntent().getStringExtra("libraryDetail");
+        getIntent().removeExtra("libraryDetail");
+        Flag flag = new Flag(Objects.toString(getIntent().getStringExtra("libraryFlag"), ""));
+        Episode episode = Episode.create(getVodPlayName(), getVodPlayId());
+        VodPlayRequest request = VodPlayRequest.create(getVodKey(), flag, episode);
+        Vod prepared = com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetch.consumeDetail(token,
+                getIntent().getStringExtra("mediaRef"), VodConfig.getCid(), getVodId(), request);
+        if (prepared != null) mViewModel.init();
+        return prepared;
     }
 
     @Override public Result takePrefetchedPlayer(com.fongmi.android.tv.playback.vod.VodPlayRequest request) {
@@ -693,17 +712,17 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
     }
 
     private void onDetailObserved(Result result) {
-        if (!canApplyPlaybackResult()) return;
+        if (result == null || !canApplyPlaybackResult()) return;
         mVod.onDetailResult(result);
     }
 
     private void onPlayerObserved(Result result) {
-        if (!canApplyPlaybackResult()) return;
+        if (result == null || !canApplyPlaybackResult()) return;
         mVod.onPlayerResult(result);
     }
 
     private void onSearchObserved(Result result) {
-        if (!canApplyPlaybackResult()) return;
+        if (result == null || !canApplyPlaybackResult()) return;
         mVod.onSearchResult(result);
     }
 
