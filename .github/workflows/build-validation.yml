@@ -15,6 +15,10 @@ on:
         description: Build the corrected AndroidTest probe only against the fixed source
         type: boolean
         default: false
+      release_only:
+        description: Rebuild and collect only the signed user APK after completed checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -32,7 +36,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        stage: ${{ (inputs.probe_only || inputs.fixed_only) && fromJSON('["fixed"]') || fromJSON('["baseline","fixed"]') }}
+        stage: ${{ (inputs.release_only || inputs.probe_only || inputs.fixed_only) && fromJSON('["fixed"]') || fromJSON('["baseline","fixed"]') }}
     env:
       COMPATIBILITY_STAGE: ${{ matrix.stage }}
       DISPATCH_COMMIT: ${{ github.sha }}
@@ -138,6 +142,7 @@ jobs:
           mkdir -p "artifacts/$COMPATIBILITY_STAGE"
 
       - name: Build isolated TV application and AndroidTest APKs
+        if: '!inputs.release_only'
         shell: bash
         run: |
           set -euo pipefail
@@ -150,6 +155,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2 --console=plain
 
       - name: Collect isolated APKs and immutable build metadata
+        if: '!inputs.release_only'
         shell: bash
         run: |
           python3 - <<'PY'
@@ -196,7 +202,7 @@ jobs:
           PY
 
       - name: Run focused fixed-source regression tests
-        if: matrix.stage == 'fixed' && !inputs.probe_only
+        if: matrix.stage == 'fixed' && !inputs.probe_only && !inputs.release_only
         shell: bash
         run: |
           set -euo pipefail
@@ -216,7 +222,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2 --console=plain
 
       - name: Build fixed TV ARM64 user APK
-        if: matrix.stage == 'fixed' && !inputs.probe_only
+        if: matrix.stage == 'fixed' && (inputs.release_only || !inputs.probe_only)
         shell: bash
         env:
           TV_BUILD_APPLICATION_ID: com.fongmi.android.tv
@@ -287,6 +293,31 @@ jobs:
           if len(candidates) != 1:
               raise SystemExit('Expected one fixed TV APK')
           source = candidates[0]
+          destination = pathlib.Path('artifacts/fixed')
+          destination.mkdir(parents=True, exist_ok=True)
+          output = destination / 'TV-library-source-fix-arm64-release.apk'
+          shutil.copy2(source, output)
+          metadata_file = destination / 'build-metadata.json'
+          if metadata_file.is_file():
+              metadata = json.loads(metadata_file.read_text())
+          else:
+              metadata = {
+                  'stage': 'fixed', 'applicationCommit': os.environ['APPLICATION_COMMIT'],
+                  'baselineCommit': os.environ['BASELINE_COMMIT'], 'dispatchCommit': os.environ['DISPATCH_COMMIT'],
+                  'media3Commit': subprocess.check_output(['git', '-C', '.media3', 'rev-parse', 'HEAD'], text=True).strip(),
+                  'abi': 'arm64-v8a', 'buildType': 'release', 'signing': 'release',
+                  'jdk': 21, 'python': '3.10', 'compileSdk': '37.0',
+                  'instrumentationExecuted': False, 'unitTestsExecuted': False, 'files': [],
+              }
+          metadata['ghaRun'] = int(os.environ['GITHUB_RUN_ID'])
+          metadata['runAttempt'] = int(os.environ['GITHUB_RUN_ATTEMPT'])
+          entry = {'file': output.name, 'role': 'user-app', 'applicationId': 'com.fongmi.android.tv',
+                   'abi': 'arm64-v8a', 'buildType': 'release', 'signing': 'release',
+                   'signatureVerified': False, 'signingCertificateSha256': None,
+                   'versionCode': int(os.environ['TV_VERSION_CODE']), 'versionName': os.environ['TV_VERSION_NAME'],
+                   'bytes': output.stat().st_size, 'sha256': hashlib.sha256(output.read_bytes()).hexdigest()}
+          metadata['files'].append(entry)
+          metadata_file.write_text(json.dumps(metadata, indent=2) + '\n')
           aapt = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0/aapt'
           badging = subprocess.check_output([str(aapt), 'dump', 'badging', str(source)], text=True)
           actual = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
@@ -300,27 +331,15 @@ jobs:
           verified = subprocess.run([str(apksigner), 'verify', '--verbose', '--print-certs', str(source)], capture_output=True, text=True)
           if verified.returncode != 0:
               raise SystemExit('Release APK signing verification failed')
-          certificate = re.search(r'^Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})$', verified.stdout, re.MULTILINE)
-          if certificate is None:
-              raise SystemExit('Release signing certificate digest was not reported')
-          destination = pathlib.Path('artifacts/fixed')
-          output = destination / 'TV-library-source-fix-arm64-release.apk'
-          shutil.copy2(source, output)
-          metadata_file = destination / 'build-metadata.json'
-          metadata = json.loads(metadata_file.read_text())
-          metadata['files'].append({'file': output.name, 'role': 'user-app',
-                                    'applicationId': 'com.fongmi.android.tv',
-                                    'abi': 'arm64-v8a', 'buildType': 'release', 'signing': 'release',
-                                    'signingCertificateSha256': certificate.group(1).lower(),
-                                    'versionCode': int(os.environ['TV_VERSION_CODE']),
-                                    'versionName': os.environ['TV_VERSION_NAME'],
-                                    'bytes': output.stat().st_size,
-                                    'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
+          certificate = re.search(r'(?:certificate )?SHA-256 digest\s*:\s*([0-9a-fA-F]{64})',
+                                  verified.stdout + '\n' + verified.stderr, re.IGNORECASE)
+          entry['signatureVerified'] = True
+          entry['signingCertificateSha256'] = certificate.group(1).lower() if certificate else None
           metadata_file.write_text(json.dumps(metadata, indent=2) + '\n')
           PY
 
       - name: Collect focused unit test summary
-        if: always() && matrix.stage == 'fixed' && !inputs.probe_only
+        if: always() && matrix.stage == 'fixed' && !inputs.probe_only && !inputs.release_only
         shell: bash
         run: |
           python3 - <<'PY'
@@ -364,7 +383,7 @@ jobs:
           retention-days: 7
 
       - name: Upload focused unit test reports
-        if: always() && matrix.stage == 'fixed' && !inputs.probe_only
+        if: always() && matrix.stage == 'fixed' && !inputs.probe_only && !inputs.release_only
         uses: actions/upload-artifact@v4
         with:
           name: tv-library-source-fixed-unit-tests-${{ github.run_id }}
