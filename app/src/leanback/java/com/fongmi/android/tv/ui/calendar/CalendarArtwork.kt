@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,11 +110,11 @@ internal fun CalendarHero(preview: AiringCalendarPreview, motion: Boolean, modif
     val chips = (listOf(status) + preview.metadata).filter(String::isNotBlank).distinct()
     Column(modifier.testTag("calendarPreview"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (preview.title.isNotBlank()) {
-            Box(Modifier.fillMaxWidth().height(if (motion) 42.dp else 58.dp).testTag("calendarLogo").semantics {
+            Box(Modifier.fillMaxWidth().heightIn(min = 42.dp).testTag("calendarLogo").semantics {
                 stateDescription = logoStatus
             }) {
                 if (preview.logo.isNotBlank() && logoStatus != "unavailable") {
-                    DetailArtwork(preview.logo, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
+                    DetailArtwork(preview.logo, null, Modifier.fillMaxWidth().height(42.dp), contentScale = ContentScale.Fit,
                         alignment = Alignment.CenterStart, alphaRim = true, onLoadResult = { loaded ->
                             logoStatus = if (loaded) "loaded" else "unavailable"
                             if (!loaded) onLogoFailed()
@@ -143,17 +145,27 @@ internal fun CalendarHero(preview: AiringCalendarPreview, motion: Boolean, modif
 private fun CalendarHeroTitle(title: String, motion: Boolean) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
+    val style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp, fontWeight = FontWeight.SemiBold,
+        platformStyle = PlatformTextStyle(includeFontPadding = false))
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val available = with(density) { maxWidth.toPx() }
-        val measured = remember(title, style) { measurer.measure(AnnotatedString(title), style, maxLines = 1).size.width }
-        val font = (32f * (available / measured.coerceAtLeast(1)).coerceAtMost(1f)).coerceAtLeast(24f).sp
+        // Do not remember fallback-font metrics: the resolver can finish loading MiSans later.
+        val measured = measurer.measure(AnnotatedString(title), style, softWrap = false,
+            maxLines = 1, overflow = TextOverflow.Visible).multiParagraph.maxIntrinsicWidth
+        val fitted = (32f * (available / measured.coerceAtLeast(1f)).coerceAtMost(1f)).coerceAtLeast(24f)
+        var corrected by remember(title, maxWidth, density.fontScale, motion) { mutableStateOf(32f) }
+        val font = minOf(fitted, corrected).sp
         Text(title,
             Modifier.fillMaxWidth().testTag("calendarPreviewTitle").then(if (motion) Modifier.basicMarquee(
                 iterations = Int.MAX_VALUE, initialDelayMillis = 2500, repeatDelayMillis = 2500, velocity = 18.dp
             ) else Modifier),
             color = Color.White, style = style.copy(fontSize = font, lineHeight = (font.value * 1.13f).sp),
-            maxLines = if (motion) 1 else 2, overflow = TextOverflow.Clip)
+            maxLines = if (motion) 1 else 2, softWrap = !motion, overflow = TextOverflow.Clip,
+            onTextLayout = { result ->
+                if (!motion && (result.hasVisualOverflow || result.lineCount > 1) && font.value > 24f) {
+                    corrected = (font.value - 1f).coerceAtLeast(24f)
+                }
+            })
     }
 }
 
@@ -167,14 +179,12 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
     Column(Modifier.width(width), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         TvFocusableSurface(onClick = onClick, focusedScale = scale,
             modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+                .semantics { contentDescription = item.title + if (item.subtitle.isBlank()) "" else " · ${item.subtitle}" }
                 .graphicsLayer { shadowElevation = if (focused) 16.dp.toPx() else 0f; shape = RoundedCornerShape(12.dp) },
             shape = RoundedCornerShape(12.dp), containerColor = Color.Transparent) {
             Box(Modifier.fillMaxWidth().aspectRatio(if (landscape) 16f / 9f else 2f / 3f)) {
                 DetailArtwork(image, null, Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
-                    .testTag("calendarArtwork:${item.key}").semantics {
-                        contentDescription = image
-                        stateDescription = "aspect=${if (landscape) "16:9" else "2:3"};focusedScale=${if (focused) scale else 1f}"
-                    }, placeholderColor = Color(0xFF20232A))
+                    .testTag("calendarArtwork:${item.key}"), placeholderColor = Color(0xFF20232A))
                 if (focused) Box(Modifier.fillMaxSize().border(2.dp, Color.White, RoundedCornerShape(12.dp)))
                 if (item.subtitle.isNotBlank()) Text(item.subtitle,
                     Modifier.align(Alignment.BottomStart).padding(8.dp)

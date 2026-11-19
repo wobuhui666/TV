@@ -314,10 +314,10 @@ private fun CalendarGlassButton(label: String, modifier: Modifier, selected: Boo
 private fun CalendarDateCell(day: AiringCalendarDay, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val number = runCatching { LocalDate.parse(day.date).dayOfMonth.toString() }.getOrDefault(day.date)
     CalendarNavigationSurface(onClick, selected, RoundedCornerShape(12.dp), modifier.height(56.dp)
-        .semantics { contentDescription = "${day.label} ${day.date}" }) {
+        .semantics { contentDescription = "${day.label} ${day.date}"; text = AnnotatedString(number) }) {
         Column(Modifier.fillMaxSize().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(day.label, Modifier.clearAndSetSemantics { }, color = Color.White, fontSize = 13.sp, lineHeight = 17.sp)
-            Text(number, Modifier.testTag("daynumber:${day.date}").clearAndSetSemantics { text = AnnotatedString(number) },
+            Text(number, Modifier.testTag("daynumber:${day.date}").clearAndSetSemantics { },
                 color = Color.White, fontSize = 20.sp, lineHeight = 25.sp,
                 fontWeight = FontWeight.SemiBold)
             Box(Modifier.size(4.dp).background(if (day.hasUpdates) Color.White else Color.Transparent, CircleShape))
