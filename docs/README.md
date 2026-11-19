@@ -29,6 +29,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| 媒体库首页大卡与新剧数据 | [Rex 当前榜单、栏目导航与回退验证](testing/reports/2026-11-19-library-home/README.md) |
 | Instabox Android | [ARM64 APK 安装、界面导航与实例兼容范围](testing/reports/2026-11-15-instabox-android/README.md) |
 | 直播线路与首页触摸滚动 | [专项测试、构建结果与设备覆盖限制](testing/reports/2026-11-15-live-lines-touch-scroll/README.md) |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |

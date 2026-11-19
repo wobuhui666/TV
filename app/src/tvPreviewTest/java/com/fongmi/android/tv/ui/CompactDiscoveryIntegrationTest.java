@@ -17,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.DiscoverApi;
+import com.fongmi.android.tv.api.rex.RexFeedDate;
 import com.fongmi.android.tv.bean.DiscoverFilterPanel;
 import com.fongmi.android.tv.bean.DiscoverQuery;
 import com.fongmi.android.tv.bean.DiscoverRequestState;
@@ -86,6 +87,9 @@ public final class CompactDiscoveryIntegrationTest {
     private volatile boolean holdDirect;
     private volatile boolean emptyQuery;
     private volatile boolean oversizedTmdb;
+    private volatile boolean regionalFixtures;
+    private volatile boolean regionalEmpty;
+    private volatile int regionalStatus = 200;
     private volatile boolean prepared;
 
     @Before public void setup() {
@@ -115,8 +119,10 @@ public final class CompactDiscoveryIntegrationTest {
                 }
                 if (url.encodedPath().endsWith("/new_search_subjects") && queryFails) throw new IOException("Synthetic query error");
                 String body = response(url);
+                int code = regionalFixtures && url.encodedPath().endsWith("/chinese_series.json")
+                        ? regionalStatus : 200;
                 return new Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
-                        .code(200).message("Synthetic discovery fixture")
+                        .code(code).message("Synthetic discovery fixture")
                         .body(ResponseBody.create(body, MediaType.get("application/json"))).build();
             }).build();
             saveCache(DiscoverApi.class);
@@ -277,6 +283,98 @@ public final class CompactDiscoveryIntegrationTest {
         assertEquals(1, requests.size());
     }
 
+    @Test public void regionalShelfAndSpotlightShareOneRequestAndKeepTheirCacheLimits() {
+        regionalFixtures = true;
+        AtomicReference<List<RexFeedResult>> compact = new AtomicReference<>();
+        main(() -> {
+            loader = new RexFeedLoader();
+            loader.load(regionalSections(12), compact::set);
+        });
+        await("Both regional keys finish the shared request", () -> compact.get() != null
+                && compact.get().size() == 2 && !loader.isLoading());
+        assertEquals(List.of("cn_tv", "cn_series"), compact.get().stream()
+                .map(result -> result.getSection().getKey()).toList());
+        assertEquals("Each requested key decrements the pending count", 0, value(() -> (int) field(loader, "pending")).intValue());
+        assertEquals(12, compact.get().get(0).getItems().size());
+        assertTrue(RexFeedResult.sameItems(compact.get().get(0).getItems(), compact.get().get(1).getItems()));
+        assertEquals("One manifest and one dated feed serve both keys", 2, requests.size());
+        assertEquals(1, requests.stream().filter(url -> url.encodedPath().endsWith("/chinese_series.json")).count());
+
+        AtomicReference<List<RexFeedResult>> regular = new AtomicReference<>();
+        main(() -> loader.load(regionalSections(RexSection.DEFAULT_LIMIT), regular::set));
+        await("Both regular pages reuse the shared feed cache", () -> regular.get() != null && !loader.isLoading());
+        assertEquals(2, regular.get().size());
+        for (RexFeedResult result : regular.get()) assertEquals(20, result.getItems().size());
+        assertTrue(RexFeedResult.sameItems(regular.get().get(0).getItems(), regular.get().get(1).getItems()));
+
+        AtomicReference<List<RexFeedResult>> compactAgain = new AtomicReference<>();
+        main(() -> loader.load(regionalSections(12), compactAgain::set));
+        await("A repeated compact preview finishes from cache", () -> compactAgain.get() != null && !loader.isLoading());
+        for (RexFeedResult result : compactAgain.get()) assertEquals(12, result.getItems().size());
+        assertEquals("Switching page limits does not fetch the feed again", 2, requests.size());
+    }
+
+    @Test public void regionalFailuresUseCurrentDomesticTmdbAndClosureSuppressesFallback() {
+        assertFalse("Synthetic TMDB key required", BuildConfig.TMDB_API_KEY.isEmpty());
+        regionalFixtures = true;
+        for (int status : new int[]{200, 503}) {
+            main(() -> {
+                if (loader != null) loader.close();
+                RexFeedLoader.clearCache();
+            });
+            requests.clear();
+            regionalStatus = status;
+            regionalEmpty = true;
+            AtomicReference<List<RexFeedResult>> results = new AtomicReference<>();
+            main(() -> {
+                loader = new RexFeedLoader();
+                loader.load(regionalSections(12), results::set);
+            });
+            await("Empty or unavailable regional data completes both TMDB fallbacks", () -> results.get() != null
+                    && results.get().size() == 2 && !loader.isLoading());
+            assertTrue(RexFeedResult.sameItems(results.get().get(0).getItems(), results.get().get(1).getItems()));
+            assertEquals("tmdb:tv:401", results.get().get(0).getItems().get(0).getId());
+            List<HttpUrl> fallbacks = requests.stream().filter(url -> url.encodedPath().endsWith("/discover/tv")).toList();
+            assertEquals("The two keys share one fallback query", 1, fallbacks.size());
+            HttpUrl query = fallbacks.get(0);
+            assertEquals("CN", query.queryParameter("with_origin_country"));
+            assertEquals("popularity.desc", query.queryParameter("sort_by"));
+            assertEquals(RexFeedDate.dashed(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000), query.queryParameter("air_date.gte"));
+            assertEquals(RexFeedDate.dashed(System.currentTimeMillis()), query.queryParameter("air_date.lte"));
+            assertNull("Returning seasons must remain eligible", query.queryParameter("first_air_date.gte"));
+            assertEquals("10764,10767", query.queryParameter("without_genres"));
+            assertEquals(status == 503 ? 1 : RexFeedDate.MAX_BACKTRACK_DAYS,
+                    requests.stream().filter(url -> url.encodedPath().endsWith("/chinese_series.json")).count());
+            await("Fallback transports finish before the next run", () -> fixtureClient.dispatcher().runningCallsCount() == 0
+                    && ((OkHttpClient) field(TmdbNetwork.class, "client")).dispatcher().runningCallsCount() == 0);
+        }
+
+        main(() -> {
+            loader.close();
+            RexFeedLoader.clearCache();
+        });
+        requests.clear();
+        holdFeed = true;
+        AtomicReference<List<RexFeedResult>> closedResults = new AtomicReference<>();
+        main(() -> {
+            loader = new RexFeedLoader();
+            loader.load(regionalSections(12), closedResults::set);
+        });
+        await("The shared regional manifest is held before a failing response", () -> heldCall.get() != null);
+        main(loader::close);
+        assertTrue(heldCall.get().isCanceled());
+        release.countDown();
+        await("Cancelled regional transport settles", () -> fixtureClient.dispatcher().runningCallsCount() == 0);
+        instrumentation.waitForIdleSync();
+        assertNull("A closed generation cannot deliver regional results", closedResults.get());
+        assertEquals("Closure suppresses both dated requests and the TMDB fallback", 1, requests.size());
+        assertTrue(requests.get(0).encodedPath().endsWith("/regional-tv/latest.json"));
+    }
+
+    private List<RexSection> regionalSections(int limit) {
+        return List.of(RexSections.byKey("cn_tv").limit(limit), RexSections.byKey("cn_series").limit(limit));
+    }
+
     @Test public void closingLoaderCancelsTheFeedAndDoesNotStartFallback() {
         holdFeed = true;
         AtomicReference<List<RexFeedResult>> results = new AtomicReference<>();
@@ -312,7 +410,20 @@ public final class CompactDiscoveryIntegrationTest {
 
     private String response(HttpUrl url) {
         String path = url.encodedPath();
-        if (url.host().equals("assets.rexnow.tv")) return "[]";
+        if (url.host().equals("assets.rexnow.tv")) {
+            if (regionalFixtures && path.endsWith("/regional-tv/latest.json")) {
+                return "{\"schemaVersion\":1,\"date\":\"" + RexFeedDate.compact(System.currentTimeMillis()) + "\"}";
+            }
+            if (regionalFixtures && path.endsWith("/chinese_series.json")) {
+                List<String> items = new ArrayList<>();
+                if (!regionalEmpty) for (int i = 0; i < 30; i++) {
+                    items.add("{\"id\":" + (2000 + i) + ",\"title\":\"Current regional fixture " + i
+                            + "\",\"mediaType\":\"tv\",\"posterPath\":\"/poster.jpg\",\"backdropPath\":\"/backdrop.jpg\"}");
+                }
+                return "{\"schemaVersion\":1,\"region\":\"chinese\",\"category\":\"series\",\"items\":[" + String.join(",", items) + "]}";
+            }
+            return "[]";
+        }
         if (path.endsWith("/search_subjects")) return "{\"subjects\":[{\"id\":\"701\",\"title\":\"Fallback fixture\",\"cover\":\"android.resource://" + instrumentation.getTargetContext().getPackageName() + "/" + R.drawable.wallpaper_1 + "\",\"rate\":\"8.1\"}]}";
         if (path.endsWith("/new_search_subjects")) return emptyQuery ? "{\"data\":[]}" : "{\"data\":[{\"id\":\"101\",\"title\":\"Query fixture\",\"cover\":\"android.resource://" + instrumentation.getTargetContext().getPackageName() + "/" + R.drawable.wallpaper_1 + "\",\"rate\":\"8.2\"}]}";
         if (path.contains("/genre/")) return "{\"genres\":[]}";
@@ -325,6 +436,9 @@ public final class CompactDiscoveryIntegrationTest {
         if (path.endsWith("/discover/movie")) {
             int id = "vote_average.desc".equals(url.queryParameter("sort_by")) ? 202 : "primary_release_date.desc".equals(url.queryParameter("sort_by")) ? 303 : 201;
             return "{\"page\":1,\"total_pages\":1,\"results\":[{\"id\":" + id + ",\"title\":\"TMDB fixture\",\"poster_path\":\"/poster.jpg\",\"media_type\":\"movie\"}]}";
+        }
+        if (regionalFixtures && path.endsWith("/discover/tv")) {
+            return "{\"page\":1,\"total_pages\":1,\"results\":[{\"id\":401,\"name\":\"Current domestic fallback\",\"poster_path\":\"/poster.jpg\",\"media_type\":\"tv\"}]}";
         }
         return "{}";
     }

@@ -128,10 +128,18 @@ public class RexNowMappingTest {
         assertEquals(7, dates.size());
         assertEquals("20261024", dates.get(1));
         List<String> olderManifest = RexNowClient.dates("20261018", epoch(2026, 10, 25, 4, 0));
-        assertEquals("20261018", olderManifest.get(0));
-        assertEquals("20261025", olderManifest.get(1));
-        assertEquals(8, olderManifest.size());
+        assertEquals("20261025", olderManifest.get(0));
+        assertEquals(7, olderManifest.size());
         assertEquals("", RexNowClient.manifestDate("{\"schemaVersion\":2,\"date\":\"20261018\"}"));
         assertEquals("20261018", RexNowClient.manifestDate("{\"schemaVersion\":1,\"date\":\"20261018\"}"));
+    }
+
+    @Test
+    public void shouldIgnoreFutureOrInvalidManifestDates() {
+        long now = epoch(2026, 10, 25, 4, 0);
+        List<String> recent = RexFeedDate.recentFrom(now, RexFeedDate.MAX_BACKTRACK_DAYS);
+        assertEquals(recent, RexNowClient.dates("20261026", now));
+        assertEquals(recent, RexNowClient.dates("2026-10-25", now));
+        assertEquals(recent, RexNowClient.dates(null, now));
     }
 }

@@ -88,7 +88,8 @@ final class LibraryResourcesController {
     void browse(Vod source) {
         if (source == null || closed) return;
         if (browsing != null) browsing.cancel(true);
-        ListenableFuture<Vod> request = Task.submit(() -> hydrate(source), Constant.TIMEOUT_VOD, false);
+        // Opening a source card is explicit: its detail may be a settings or login dialog.
+        ListenableFuture<Vod> request = Task.submit(() -> hydrate(source), Constant.TIMEOUT_VOD);
         browsing = request;
         Futures.addCallback(request, Task.callback(value -> App.post(() -> {
             if (closed || browsing != request) return;

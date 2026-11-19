@@ -9,6 +9,7 @@ import com.fongmi.android.tv.bean.RexSection;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,8 +53,20 @@ public final class PosterHomeCatalog {
     }
 
     public static List<RexSection> compactSections(int category) {
+        return compactSections(category, false);
+    }
+
+    public static List<String> librarySpotlightKeys(int category) {
+        return category == ALL || category == TV
+                ? List.of("cn_series", "kr_series", "cn_variety", "anime_daily")
+                : compactKeys(category);
+    }
+
+    public static List<RexSection> compactSections(int category, boolean librarySpotlights) {
         List<RexSection> result = new ArrayList<>();
-        for (String key : compactKeys(category)) {
+        Set<String> keys = new LinkedHashSet<>(compactKeys(category));
+        if (librarySpotlights) keys.addAll(librarySpotlightKeys(category));
+        for (String key : keys) {
             RexSection section = RexSections.byKey(key);
             if (section != null) result.add(section.limit(COMPACT_SHELF_LIMIT));
         }

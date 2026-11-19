@@ -93,8 +93,17 @@ public class PosterHomeCatalogTest {
             assertTrue(sections.size() <= 3);
             assertTrue(sections.stream().allMatch(section -> section.getLimit() == 12));
         }
-        assertTrue(PosterHomeCatalog.compactSections(PosterHomeCatalog.ALL).subList(0, 2).stream()
-                .allMatch(section -> "CN".equals(section.getQuery().params.get("with_origin_country"))));
+        List<com.fongmi.android.tv.bean.RexSection> domestic = PosterHomeCatalog.compactSections(PosterHomeCatalog.ALL);
+        assertEquals("CN", domestic.get(0).getQuery().params.get("with_origin_country"));
+        assertEquals(com.fongmi.android.tv.bean.RexSection.Source.REXNOW_REGIONAL, domestic.get(1).getSource());
+        assertEquals("chinese", domestic.get(1).getRegion());
+        assertEquals("series", domestic.get(1).getCategory());
+        List<com.fongmi.android.tv.bean.RexSection> library = PosterHomeCatalog.compactSections(PosterHomeCatalog.ALL, true);
+        assertEquals(List.of("cn_movie", "cn_tv", "trending_day", "cn_series", "kr_series", "cn_variety", "anime_daily"),
+                library.stream().map(com.fongmi.android.tv.bean.RexSection::getKey).toList());
+        assertEquals(PosterHomeCatalog.compactKeys(PosterHomeCatalog.MOVIES),
+                PosterHomeCatalog.compactSections(PosterHomeCatalog.MOVIES, true).stream().map(com.fongmi.android.tv.bean.RexSection::getKey).toList());
+        assertTrue(library.stream().allMatch(section -> section.getLimit() == 12));
     }
 
     @Test

@@ -27,6 +27,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
+import androidx.test.uiautomator.StaleObjectException;
 import androidx.test.uiautomator.Until;
 
 import com.fongmi.android.tv.R;
@@ -393,8 +394,7 @@ public final class AiringCalendarAndroidTest {
         for (com.fongmi.android.tv.ui.calendar.AiringCalendarDay day : state().getDays()) {
             UiObject2 number = device.wait(Until.findObject(By.res("date:" + day.getDate())), 10_000);
             assertNotNull("Each date has a visible numeric day", number);
-            assertTrue("The visible date action retains its full accessible date", number.getContentDescription() != null
-                    && number.getContentDescription().contains(day.getDate()));
+            assertTrue("The visible date action retains its full accessible date", renderedDateDescription(day.getDate()).contains(day.getDate()));
             assertEquals("The date strip exposes its actual rendered numeric label", String.valueOf(LocalDate.parse(day.getDate()).getDayOfMonth()), renderedDayNumber(number, day.getDate()));
         }
         assertEquals(fixtureDate.toString(), state().getSelectedDate());
@@ -418,20 +418,23 @@ public final class AiringCalendarAndroidTest {
                 String first = state().getItems().get(0).getKey();
                 String second = state().getItems().get(1).getKey();
                 focus("date:" + state().getSelectedDate());
-                Rect before = nodeBounds("item:" + first);
+                Rect before = renderedImageBounds(first);
                 Rect neighbor = nodeBounds("item:" + second);
+                Rect neighborImage = renderedImageBounds(second);
                 double aspect = (double) before.width() / before.height();
                 assertEquals("Genuine still or backdrop art selects landscape slots; poster fallback stays portrait", stills ? 16d / 9d : 2d / 3d, aspect, .04);
                 assertEquals("Every image in the row uses the same aspect", aspect,
-                        (double) neighbor.width() / neighbor.height(), .02);
+                        (double) neighborImage.width() / neighborImage.height(), .02);
                 focus("item:" + first);
-                await("Focus paints a 1.06 image scale", () -> Math.abs((double) nodeBounds("item:" + first).width() / before.width() - 1.06) <= .025);
+                String scaledEvidence = stills ? "calendar-landscape-focus-scale" : "calendar-poster-focus-scale";
+                NativeUiEvidence.capture(scaledEvidence);
+                await("Focus paints a 1.06 image scale", () -> Math.abs((double) renderedImageBounds(first).width() / before.width() - 1.06) <= .025);
                 assertEquals("Focusing does not move the neighboring image", neighbor, nodeBounds("item:" + second));
-                Rect focusedImage = nodeBounds("item:" + first);
+                Rect focusedImage = renderedImageBounds(first);
                 Rect window = hostBounds();
                 assertTrue("The scaled focused image stays within safe screen margins", focusedImage.left >= window.left + dp(48)
                         && focusedImage.right <= window.right - dp(48));
-                NativeUiEvidence.capture(stills ? "calendar-landscape-focus-scale" : "calendar-poster-focus-scale");
+                if (evidenceEnabled()) assertPaintedFocusScale(scaledEvidence, before, focusedImage, 1.06);
                 shell("settings put global animator_duration_scale 0");
                 await("The existing window observes disabled system motion", () -> !LibraryMotion.enabled(host()));
                 main(activity::finish); await("Enabled-motion page closes", activity::isDestroyed);
@@ -440,10 +443,13 @@ public final class AiringCalendarAndroidTest {
                 await("Disabled motion has dated content", () -> !state().getLoading() && state().getItems().size() >= 2 && !LibraryMotion.enabled(host()));
                 String key = state().getItems().get(0).getKey();
                 focus("date:" + state().getSelectedDate());
-                Rect resting = nodeBounds("item:" + key);
+                Rect resting = renderedImageBounds(key);
                 focus("item:" + key);
-                assertEquals("Disabling animation leaves focused image geometry unchanged", resting, nodeBounds("item:" + key));
-                NativeUiEvidence.capture(stills ? "calendar-landscape-motion-disabled" : "calendar-poster-motion-disabled");
+                String disabledEvidence = stills ? "calendar-landscape-motion-disabled" : "calendar-poster-motion-disabled";
+                NativeUiEvidence.capture(disabledEvidence);
+                Rect disabledFocus = renderedImageBounds(key);
+                assertEquals("Disabling animation leaves focused image geometry unchanged", resting, disabledFocus);
+                if (evidenceEnabled()) assertPaintedFocusScale(disabledEvidence, resting, disabledFocus, 1.0);
                 main(activity::finish); await("Disabled-motion page closes", activity::isDestroyed);
             }
         } finally {
@@ -511,6 +517,7 @@ public final class AiringCalendarAndroidTest {
         try {
             for (boolean light : new boolean[]{false, true}) {
                 main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+                settleThemeFrame();
                 String evidence = light ? "calendar-full-background-light" : "calendar-full-background-dark";
                 NativeUiEvidence.capture(evidence);
                 if (evidenceEnabled()) {
@@ -679,11 +686,117 @@ public final class AiringCalendarAndroidTest {
     }
 
     private Rect nodeBounds(String tag) {
-        UiObject2 node = device.wait(Until.findObject(By.res(tag)), 10_000);
-        assertNotNull("Rendered node exists: " + tag, node);
-        Rect bounds = node.getVisibleBounds();
-        assertTrue("Rendered node has actual pixel bounds: " + tag, bounds.width() > 0 && bounds.height() > 0);
-        return bounds;
+        StaleObjectException stale = null;
+        for (int attempt = 0; attempt < 4; attempt++) {
+            try {
+                UiObject2 node = device.wait(Until.findObject(By.res(tag)), 2000);
+                if (node != null) {
+                    Rect bounds = node.getVisibleBounds();
+                    if (bounds.width() > 0 && bounds.height() > 0) return bounds;
+                }
+            } catch (StaleObjectException error) { stale = error; }
+            SystemClock.sleep(50);
+        }
+        if (stale != null) throw new AssertionError("Rendered node remains stale after four lookups: " + tag, stale);
+        throw new AssertionError("Rendered node has no stable visible bounds after four lookups: " + tag);
+    }
+
+    private Rect renderedImageBounds(String key) {
+        String tag = "calendarArtwork:" + key;
+        for (int attempt = 0; attempt < 4; attempt++) {
+            Rect[] measured = new Rect[1];
+            main(() -> {
+                SemanticsNode image = semanticNode(semanticsRoot(), tag);
+                if (image != null && image.getLayoutNode$ui_release().isPlaced() && !image.isTransparent$ui_release()) {
+                    Rect bounds = semanticsBounds(image);
+                    if (bounds.width() > 0 && bounds.height() > 0) measured[0] = bounds;
+                }
+            });
+            if (measured[0] != null) return measured[0];
+            SystemClock.sleep(50);
+        }
+        throw new AssertionError("The actual unmerged image node has no placed visible bounds: " + tag);
+    }
+
+    private SemanticsNode semanticsRoot() {
+        View compose = findComposeView(host());
+        assertNotNull("The rendered calendar owns its semantics tree", compose);
+        try { return (SemanticsNode) invoke(invoke(compose, "getSemanticsOwner"), "getUnmergedRootSemanticsNode"); }
+        catch (ReflectiveOperationException error) { throw new AssertionError("Cannot read the rendered semantics tree", error); }
+    }
+
+    private SemanticsNode semanticNode(SemanticsNode node, String tag) {
+        var config = node.getConfig();
+        if (config.contains(SemanticsProperties.INSTANCE.getTestTag()) && tag.equals(config.get(SemanticsProperties.INSTANCE.getTestTag()))) return node;
+        for (SemanticsNode child : node.getChildren$ui_release(true, false, false)) {
+            SemanticsNode result = semanticNode(child, tag);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    private Rect semanticsBounds(SemanticsNode node) {
+        int[] screen = new int[2], window = new int[2];
+        host().getLocationOnScreen(screen); host().getLocationInWindow(window);
+        var bounds = node.getBoundsInWindow();
+        return new Rect((int) Math.floor(bounds.getLeft()) + screen[0] - window[0], (int) Math.floor(bounds.getTop()) + screen[1] - window[1],
+                (int) Math.ceil(bounds.getRight()) + screen[0] - window[0], (int) Math.ceil(bounds.getBottom()) + screen[1] - window[1]);
+    }
+
+    private String renderedDateDescription(String isoDate) {
+        Rect cell = nodeBounds("date:" + isoDate);
+        for (int attempt = 0; attempt < 4; attempt++) {
+            try {
+                UiObject2 date = device.findObject(By.res("date:" + isoDate));
+                if (date != null) {
+                    String observed = accessibleDescription(date, isoDate);
+                    if (!observed.isEmpty()) return observed;
+                }
+            } catch (StaleObjectException ignored) { }
+            String[] observed = new String[1];
+            main(() -> observed[0] = dateDescription(semanticsRoot(), isoDate, cell));
+            if (observed[0] != null) return observed[0];
+            SystemClock.sleep(50);
+        }
+        throw new AssertionError("The rendered date cell exposes no actual full-date description: " + isoDate);
+    }
+
+    private String accessibleDescription(UiObject2 node, String isoDate) {
+        String description = node.getContentDescription();
+        if (description != null && description.contains(isoDate)) return description;
+        for (UiObject2 child : node.getChildren()) {
+            description = accessibleDescription(child, isoDate);
+            if (!description.isEmpty()) return description;
+        }
+        return "";
+    }
+
+    private String dateDescription(SemanticsNode node, String isoDate, Rect cell) {
+        var config = node.getConfig();
+        if (config.contains(SemanticsProperties.INSTANCE.getContentDescription()) && node.getLayoutNode$ui_release().isPlaced()
+                && !node.isTransparent$ui_release()) {
+            Rect safeCell = new Rect(cell); safeCell.inset(-2, -2);
+            Rect bounds = semanticsBounds(node);
+            if (bounds.width() > 0 && bounds.height() > 0 && safeCell.contains(bounds)) {
+                for (String label : config.get(SemanticsProperties.INSTANCE.getContentDescription())) if (label.contains(isoDate)) return label;
+            }
+        }
+        for (SemanticsNode child : node.getChildren$ui_release(true, false, false)) {
+            String label = dateDescription(child, isoDate, cell);
+            if (label != null) return label;
+        }
+        return null;
+    }
+
+    private void settleThemeFrame() {
+        CountDownLatch frames = new CountDownLatch(1);
+        main(() -> host().postOnAnimation(() -> host().postOnAnimation(frames::countDown)));
+        try { assertTrue("Theme has two actual rendering frames", frames.await(3, TimeUnit.SECONDS)); }
+        catch (InterruptedException error) { Thread.currentThread().interrupt(); throw new AssertionError(error); }
+        instrumentation.waitForIdleSync();
+        nodeBounds("calendarPreviewTitle");
+        for (int index = 0; index < heroChips().size(); index++) nodeBounds("calendarPreviewMetadataText:" + index);
+        nodeBounds("calendarPreviewOverview");
     }
 
     private String renderedDayNumber(UiObject2 date, String isoDate) {
@@ -872,15 +985,43 @@ public final class AiringCalendarAndroidTest {
         } finally { sample.recycle(); }
     }
 
+    private void assertPaintedFocusScale(String evidence, Rect resting, Rect focused, double expectedScale) {
+        Bitmap frame = evidenceBitmap(evidence);
+        int matched = 0;
+        List<Integer> paintedWidths = new ArrayList<>();
+        try {
+            int radius = dp(10);
+            for (float fraction : new float[]{.30f, .50f, .70f}) {
+                int y = focused.top + Math.round(focused.height() * fraction);
+                int left = -1, right = -1;
+                for (int x = Math.max(0, resting.left - radius); x < Math.min(frame.getWidth(), resting.left + radius); x++) {
+                    if (isFocusWhite(frame.getPixel(x, y))) { left = x; break; }
+                }
+                for (int x = Math.max(0, resting.right - radius); x < Math.min(frame.getWidth(), resting.right + radius); x++) {
+                    if (isFocusWhite(frame.getPixel(x, y))) right = x;
+                }
+                if (left >= 0 && right > left) {
+                    int width = right - left + 1;
+                    paintedWidths.add(width);
+                    if (Math.abs((double) width / resting.width() - expectedScale) <= .025) matched++;
+                }
+            }
+            Log.i("CalendarFocusPixels", evidence + " resting=" + resting.width() + " actualWhiteBorders=" + paintedWidths + " expected=" + expectedScale);
+            assertTrue("Actual PNG focus borders paint the expected " + expectedScale + " image scale on multiple rows", matched >= 2);
+        } finally { frame.recycle(); }
+    }
+
+    private boolean isFocusWhite(int color) {
+        return Color.red(color) >= 235 && Color.green(color) >= 235 && Color.blue(color) >= 235;
+    }
+
     private void assertRenderedTextContrast(String evidence, boolean light, String tag) {
         File directory = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
         assertNotNull("Screenshot directory exists", directory);
         Bitmap screenshot = BitmapFactory.decodeFile(new File(directory, evidence + ".png").getPath());
         assertNotNull("Decode the actual native screenshot", screenshot);
         try {
-            UiObject2 title = device.wait(Until.findObject(By.res(tag)), 10_000);
-            assertNotNull("The rendered title is exposed", title);
-            Rect bounds = title.getVisibleBounds();
+            Rect bounds = nodeBounds(tag);
             assertTrue("The title has screenshot bounds", bounds.intersect(0, 0, screenshot.getWidth(), screenshot.getHeight()));
             int background = screenshot.getPixel(bounds.centerX(), Math.min(screenshot.getHeight() - 1, bounds.bottom + 3)) | 0xff000000;
             double backgroundLuminance = ColorUtils.calculateLuminance(background);

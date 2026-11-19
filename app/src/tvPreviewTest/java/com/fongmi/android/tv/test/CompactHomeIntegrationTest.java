@@ -7,6 +7,7 @@ import android.view.View;
 
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HorizontalGridView;
+import androidx.leanback.widget.ListRow;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -30,6 +31,7 @@ import com.fongmi.android.tv.ui.activity.LibraryNavigation;
 import com.fongmi.android.tv.ui.activity.TvHomePreviewActivity;
 import com.fongmi.android.tv.ui.custom.JetStreamHomeNavView;
 import com.fongmi.android.tv.ui.home.PosterHomeCatalog;
+import com.fongmi.android.tv.ui.rex.RexFeedResult;
 
 import com.github.catvod.utils.Prefers;
 
@@ -46,6 +48,8 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -110,6 +114,64 @@ public final class CompactHomeIntegrationTest {
         Result source = home.lastNavigation.getParcelableExtra("result");
         assertNotNull(source);
         assertEquals("The source's own categories remain available", 2, source.getTypes().size());
+    }
+
+    @Test public void shouldRestoreLibrarySectionCardsAndTheirIndependentPreviewNavigation() {
+        await("Library loads the regional section cards", () -> spotlightKeys().equals(
+                List.of("cn_series", "kr_series", "cn_variety", "anime_daily")));
+        AtomicReference<List<RexFeedResult>> snapshot = new AtomicReference<>();
+        main(() -> {
+            @SuppressWarnings("unchecked") Map<String, RexFeedResult> feeds =
+                    (Map<String, RexFeedResult>) HomePreviewFixtures.field(home.controller(), "compactFeeds");
+            snapshot.set(new ArrayList<>(feeds.values()));
+            applyEmptySnapshot();
+        });
+        requestCategoryFocus("restore-large-cards");
+        await("Categories own focus before recommendations arrive", () -> {
+            View row = rowView(home.categoriesPosition());
+            return row != null && row.findViewById(R.id.categories).hasFocus();
+        });
+        AtomicReference<View> focus = new AtomicReference<>();
+        main(() -> {
+            focus.set(home.getCurrentFocus());
+            applySnapshot(snapshot.get());
+        });
+        await("Reinserting the large cards preserves category focus", () -> home.getCurrentFocus() == focus.get());
+        main(this::assertCuratedShelfLimits);
+        main(() -> home.focusRow(spotlightPosition()));
+        await("The existing section-card layout owns focus", () -> {
+            View row = rowView(spotlightPosition());
+            return row != null && row.findViewById(R.id.rexSectionCard) != null && row.hasFocus();
+        });
+        main(() -> rowView(spotlightPosition()).findViewById(R.id.rexSectionCard).findViewById(R.id.hero).requestFocus());
+        boolean light = com.fongmi.android.tv.ui.rex.RexTheme.isLight();
+        try {
+            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(false));
+            NativeUiEvidence.capture("library-home-section-cards-dark");
+            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(true));
+            NativeUiEvidence.capture("library-home-section-cards-light");
+        } finally {
+            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+        }
+        device.pressDPadDown();
+        await("Down enters the independent preview rail", () -> rowView(spotlightPosition())
+                .findViewById(R.id.rexSectionCard).findViewById(R.id.posters).hasFocus());
+        device.pressDPadUp();
+        await("Up returns to the large artwork", () -> rowView(spotlightPosition())
+                .findViewById(R.id.rexSectionCard).findViewById(R.id.hero).hasFocus());
+        device.pressDPadCenter();
+        await("Regional section keeps its production destination", () -> routeIs("RexSectionActivity"));
+        assertEquals("cn_series", home.lastNavigation.getStringExtra("section_key"));
+        device.pressDPadDown();
+        await("Preview remains reachable after opening a section", () -> rowView(spotlightPosition())
+                .findViewById(R.id.rexSectionCard).findViewById(R.id.posters).hasFocus());
+        device.pressDPadCenter();
+        await("A small preview opens the library work detail", () -> routeIs("LibraryDetailActivity"));
+        main(this::applyEmptySnapshot);
+        main(() -> {
+            assertEquals("An empty response removes the old section row", -1, spotlightPosition());
+            assertTrue("An empty response clears stale section cards", spotlightKeys().isEmpty());
+        });
     }
 
     @Test public void shouldKeepTheSameCuratedHomeInSimpleMode() {
@@ -315,10 +377,38 @@ public final class CompactHomeIntegrationTest {
         assertTrue("Home does not expand into the entire recommendation catalog", visible <= 3);
         Object loader = HomePreviewFixtures.field(home.controller(), "rexLoader");
         @SuppressWarnings("unchecked") List<RexSection> requested = (List<RexSection>) HomePreviewFixtures.field(loader, "sections");
-        assertEquals("Only the selected home shelves are requested", visibleShelfKeys(),
+        int category = (int) HomePreviewFixtures.field(home.controller(), "category");
+        LinkedHashSet<String> expected = new LinkedHashSet<>(visibleShelfKeys());
+        if (ExperienceSettings.getMode() == ExperienceMode.LIBRARY) {
+            expected.addAll(PosterHomeCatalog.librarySpotlightKeys(category));
+            assertEquals("Large section cards follow the selected category", PosterHomeCatalog.librarySpotlightKeys(category), spotlightKeys());
+            assertTrue("Library keeps its section cards before the source content", spotlightPosition() < home.sourcePosition());
+            assertTrue("Large section cards appear before the standalone poster shelves", spotlightPosition() <
+                    java.util.stream.IntStream.range(0, home.pageAdapter().size()).filter(i -> shelves.contains(home.pageAdapter().get(i))).findFirst().orElseThrow());
+            ArrayObjectAdapter adapter = spotlightAdapter();
+            for (int i = 0; i < adapter.size(); i++) {
+                assertTrue("Each section card keeps a bounded preview", ((RexFeedResult) adapter.get(i)).getItems().size() <= 12);
+            }
+        } else {
+            assertEquals("Simple mode keeps its current compact layout", -1, spotlightPosition());
+            assertTrue(spotlightKeys().isEmpty());
+        }
+        assertEquals("Requests cover the visible shelves and section cards", new ArrayList<>(expected),
                 requested.stream().map(RexSection::getKey).toList());
-        Object spotlight = HomePreviewFixtures.field(home.controller(), "rexSpotlightRow");
-        assertEquals("Specialty recommendations do not add another home rail", -1, home.pageAdapter().indexOf(spotlight));
+    }
+
+    private int spotlightPosition() {
+        return home.pageAdapter().indexOf(HomePreviewFixtures.field(home.controller(), "rexSpotlightRow"));
+    }
+
+    private ArrayObjectAdapter spotlightAdapter() {
+        return (ArrayObjectAdapter) ((ListRow) HomePreviewFixtures.field(home.controller(), "rexSpotlightRow")).getAdapter();
+    }
+
+    private List<String> spotlightKeys() {
+        ArrayObjectAdapter adapter = spotlightAdapter();
+        return java.util.stream.IntStream.range(0, adapter.size()).mapToObj(i ->
+                ((RexFeedResult) adapter.get(i)).getSection().getKey()).toList();
     }
 
     private View rowView(int position) {
@@ -340,10 +430,14 @@ public final class CompactHomeIntegrationTest {
     }
 
     private void applyEmptySnapshot() {
+        applySnapshot(List.of());
+    }
+
+    private void applySnapshot(List<RexFeedResult> feeds) {
         try {
             Method method = home.controller().getClass().getDeclaredMethod("applyRexResults", List.class);
             method.setAccessible(true);
-            method.invoke(home.controller(), List.of());
+            method.invoke(home.controller(), feeds);
         } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 
