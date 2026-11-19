@@ -7,6 +7,10 @@ on:
         description: Full baseline commit SHA; blank uses the dispatch commit's parent
         type: string
         default: ''
+      fixed_only:
+        description: Build only the fixed source and the normal user APK
+        type: boolean
+        default: false
       probe_only:
         description: Build the corrected AndroidTest probe only against the fixed source
         type: boolean
@@ -28,7 +32,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        stage: ${{ inputs.probe_only && fromJSON('["fixed"]') || fromJSON('["baseline","fixed"]') }}
+        stage: ${{ (inputs.probe_only || inputs.fixed_only) && fromJSON('["fixed"]') || fromJSON('["baseline","fixed"]') }}
     env:
       COMPATIBILITY_STAGE: ${{ matrix.stage }}
       DISPATCH_COMMIT: ${{ github.sha }}
@@ -192,7 +196,7 @@ jobs:
           PY
 
       - name: Run focused fixed-source regression tests
-        if: matrix.stage == 'fixed'
+        if: matrix.stage == 'fixed' && !inputs.probe_only
         shell: bash
         run: |
           set -euo pipefail
@@ -205,6 +209,7 @@ jobs:
             --tests '*MovieSelectionTest' \
             --tests '*LibraryEpisodeSelectionTest' \
             --tests '*LibraryEpisodeNavigationTest' \
+            --tests '*EpisodeLabelParserTest' \
             -Pkotlin.compiler.execution.strategy=in-process \
             -Dorg.gradle.parallel=false \
             '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8 --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED' \
@@ -215,17 +220,69 @@ jobs:
         shell: bash
         env:
           TV_BUILD_APPLICATION_ID: com.fongmi.android.tv
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          trap 'rm -f local.properties "$RUNNER_TEMP/tv-library-release.jks" "$RUNNER_TEMP/tv-library-release-version.env"' EXIT
+          python3 - <<'PY'
+          import base64, binascii, datetime, os, pathlib, time
+          names = ('SIGNING_KEYSTORE_BASE64', 'SIGNING_KEYSTORE_PASSWORD', 'SIGNING_KEY_ALIAS', 'SIGNING_KEY_PASSWORD')
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Missing required repository signing secrets: ' + ', '.join(missing))
+          try:
+              data = base64.b64decode(''.join(os.environ['SIGNING_KEYSTORE_BASE64'].split()), validate=True)
+          except (ValueError, binascii.Error):
+              raise SystemExit('Invalid SIGNING_KEYSTORE_BASE64')
+          if not data:
+              raise SystemExit('Empty signing keystore')
+          os.umask(0o077)
+          temporary = pathlib.Path(os.environ['RUNNER_TEMP'])
+          keystore = temporary / 'tv-library-release.jks'
+          keystore.write_bytes(data)
+          keystore.chmod(0o600)
+          def property_value(value):
+              result = []
+              for character in value:
+                  if character in '\\:=#! ':
+                      result.append('\\' + character)
+                  elif character in '\n\r\t':
+                      result.append({'\n': '\\n', '\r': '\\r', '\t': '\\t'}[character])
+                  elif ord(character) < 32 or ord(character) > 126:
+                      encoded = character.encode('utf-16-be')
+                      result.extend('\\u' + encoded[index:index + 2].hex() for index in range(0, len(encoded), 2))
+                  else:
+                      result.append(character)
+              return ''.join(result)
+          properties = {
+              'storeFile': str(keystore),
+              'storePassword': os.environ['SIGNING_KEYSTORE_PASSWORD'],
+              'keyAlias': os.environ['SIGNING_KEY_ALIAS'],
+              'keyPassword': os.environ['SIGNING_KEY_PASSWORD'],
+          }
+          local = pathlib.Path('local.properties')
+          if local.exists():
+              raise SystemExit('Refusing to replace an existing local.properties')
+          local.write_text(''.join(key + '=' + property_value(value) + '\n' for key, value in properties.items()), encoding='ascii')
+          local.chmod(0o600)
+          version_code = int(time.time())
+          version_name = '5.8.7.' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+          (temporary / 'tv-library-release-version.env').write_text(
+              'export TV_VERSION_CODE=' + str(version_code) + '\nexport TV_VERSION_NAME=' + version_name + '\n', encoding='ascii')
+          PY
+          source "$RUNNER_TEMP/tv-library-release-version.env"
           ./gradlew -I "$RUNNER_TEMP/tv-library-source.init.gradle" \
-            :app:assembleLeanbackArm64_v8aDebug \
+            :app:assembleLeanbackArm64_v8aRelease \
             -Pkotlin.compiler.execution.strategy=in-process \
             -Dorg.gradle.parallel=false \
             '-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8 --add-exports jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED' \
             --no-daemon --build-cache --max-workers=2 --console=plain
           python3 - <<'PY'
-          import hashlib, json, os, pathlib, re, shutil, subprocess
-          directory = pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/debug')
+          import hashlib, json, os, pathlib, re, shutil, subprocess, zipfile
+          directory = pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/release')
           candidates = list(directory.glob('*.apk'))
           if len(candidates) != 1:
               raise SystemExit('Expected one fixed TV APK')
@@ -235,20 +292,35 @@ jobs:
           actual = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
           if actual is None or actual.group(1) != 'com.fongmi.android.tv':
               raise SystemExit('Unexpected fixed user APK application ID')
+          with zipfile.ZipFile(source) as bundle:
+              abis = {name.split('/')[1] for name in bundle.namelist() if name.startswith('lib/') and name.endswith('.so')}
+          if abis != {'arm64-v8a'}:
+              raise SystemExit('Unexpected fixed user APK native ABI')
+          apksigner = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0/apksigner'
+          verified = subprocess.run([str(apksigner), 'verify', '--verbose', '--print-certs', str(source)], capture_output=True, text=True)
+          if verified.returncode != 0:
+              raise SystemExit('Release APK signing verification failed')
+          certificate = re.search(r'^Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]{64})$', verified.stdout, re.MULTILINE)
+          if certificate is None:
+              raise SystemExit('Release signing certificate digest was not reported')
           destination = pathlib.Path('artifacts/fixed')
-          output = destination / 'TV-library-source-fix-arm64-debug.apk'
+          output = destination / 'TV-library-source-fix-arm64-release.apk'
           shutil.copy2(source, output)
           metadata_file = destination / 'build-metadata.json'
           metadata = json.loads(metadata_file.read_text())
           metadata['files'].append({'file': output.name, 'role': 'user-app',
                                     'applicationId': 'com.fongmi.android.tv',
+                                    'abi': 'arm64-v8a', 'buildType': 'release', 'signing': 'release',
+                                    'signingCertificateSha256': certificate.group(1).lower(),
+                                    'versionCode': int(os.environ['TV_VERSION_CODE']),
+                                    'versionName': os.environ['TV_VERSION_NAME'],
                                     'bytes': output.stat().st_size,
                                     'sha256': hashlib.sha256(output.read_bytes()).hexdigest()})
           metadata_file.write_text(json.dumps(metadata, indent=2) + '\n')
           PY
 
       - name: Collect focused unit test summary
-        if: always() && matrix.stage == 'fixed'
+        if: always() && matrix.stage == 'fixed' && !inputs.probe_only
         shell: bash
         run: |
           python3 - <<'PY'
@@ -271,6 +343,7 @@ jobs:
               'com.fongmi.android.tv.source.MovieSelectionTest',
               'com.fongmi.android.tv.source.LibraryEpisodeSelectionTest',
               'com.fongmi.android.tv.source.LibraryEpisodeNavigationTest',
+              'com.fongmi.android.tv.source.EpisodeLabelParserTest',
           }
           missing = sorted(expected - {suite['class'] for suite in suites if suite['tests'] > 0})
           summary = {'applicationCommit': os.environ.get('APPLICATION_COMMIT', ''),
@@ -291,7 +364,7 @@ jobs:
           retention-days: 7
 
       - name: Upload focused unit test reports
-        if: always() && matrix.stage == 'fixed'
+        if: always() && matrix.stage == 'fixed' && !inputs.probe_only
         uses: actions/upload-artifact@v4
         with:
           name: tv-library-source-fixed-unit-tests-${{ github.run_id }}

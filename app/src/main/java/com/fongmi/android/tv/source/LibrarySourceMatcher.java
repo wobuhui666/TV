@@ -5,28 +5,17 @@ import com.fongmi.android.tv.bean.Episode;
 import com.fongmi.android.tv.bean.Flag;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /** Match complete titles while allowing sources to omit year and media type. */
 public final class LibrarySourceMatcher {
     public record Match(boolean matches, boolean automatic, int score) { }
+    private static final Pattern RELEASE_YEAR = Pattern.compile("(?:19|20)[0-9]{2}");
 
     private LibrarySourceMatcher() { }
 
     public static Match match(Vod source, String title, List<String> aliases, String year, boolean movie, Integer season) {
-        if (source == null || source.isFolder() || source.isAction()) return new Match(false, false, 0);
-        MediaIdentity.Kind kind = MediaMatcher.kind(source.getTypeName());
-        MediaIdentity.Kind expected = movie ? MediaIdentity.Kind.MOVIE : MediaIdentity.Kind.SERIES;
-        if (kind != MediaIdentity.Kind.UNKNOWN && kind != expected) return new Match(false, false, 0);
-        Integer sourceSeason = MediaMatcher.identity(source).getSeason();
-        String expectedYear = movie || (season == null || season <= 1) && (sourceSeason == null || sourceSeason <= 1) ? year : "";
-        SearchRelevance.Match titleMatch = SearchRelevance.evaluate(source,
-                new SearchRelevance.Query(title, aliases, expectedYear, season));
-        boolean matches = titleMatch.titleMatch() && (!movie || titleMatch.strict());
-        boolean knownSeason = !movie && season != null && season == 1 && MediaMatcher.identity(source).getSeason() == null;
-        boolean implicitFirst = knownSeason && SearchRelevance.evaluate(source,
-                new SearchRelevance.Query(title, aliases, "", null)).strict();
-        boolean automatic = matches && (kind == expected || hasPlayback(source)) && (titleMatch.strict() || implicitFirst);
-        return new Match(matches, automatic, titleMatch.score());
+        return match(prepareSource(source), prepareWork(title, aliases, year, movie, season));
     }
 
     public static Match match(Vod source, Vod work) {
@@ -38,7 +27,13 @@ public final class LibrarySourceMatcher {
         if (source == null || source.isFolder() || source.isAction()) return new PreparedSource(false, MediaIdentity.Kind.UNKNOWN, false, null, null);
         // These two season parsers intentionally remain separate: title safety uses SearchRelevance.
         return new PreparedSource(true, MediaMatcher.kind(source.getTypeName()), hasPlayback(source), MediaMatcher.extractSeason(source.getName()),
-                SearchRelevance.prepareResult(source.getName(), source.getYear()));
+                SearchRelevance.prepareResult(source.getName(), releaseYear(source.getYear())));
+    }
+
+    /** Full dates often record when a source added an item, rather than its release year. */
+    private static String releaseYear(String value) {
+        String year = value == null ? "" : value.trim();
+        return RELEASE_YEAR.matcher(year).matches() ? year : "";
     }
 
     static boolean hasPlayback(Vod source) {
@@ -57,6 +52,7 @@ public final class LibrarySourceMatcher {
     }
 
     static PreparedWork prepareWork(String title, List<String> aliases, String year, boolean movie, Integer season) {
+        year = releaseYear(year);
         SearchRelevance.PreparedQuery withYear = SearchRelevance.prepareQuery(new SearchRelevance.Query(title, aliases, year, season));
         SearchRelevance.PreparedQuery withoutYear = movie ? withYear
                 : SearchRelevance.prepareQuery(new SearchRelevance.Query(title, aliases, "", season));

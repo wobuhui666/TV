@@ -109,6 +109,18 @@ public class LibraryEpisodeSelectionTest {
         assertFalse(EpisodeTarget.coordinate(2, 3).offset(1).sameSelection(EpisodeTarget.coordinate(1, 3).offset(1)));
     }
 
+    @Test public void shouldSelectRealDecoratedFileCoordinatesWithoutCrossingSeasons() {
+        Episode first = Episode.create("[1.4GB]01.4k.mp4【S01/4k】", "first");
+        Episode second = Episode.create("[1.5GB]02.4k.mp4【S01/4k】", "second");
+        Episode later = Episode.create("[1.5GB]01.4k.mp4【S02/4k】", "later-first");
+        Flag multiSeason = flag("line", later, second, first);
+        assertSame(first, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(1, 1)));
+        assertSame(second, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(1, 2)));
+        assertSame(later, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(2, 1)));
+        Episode laBi = Episode.create("[5.3GB]Joy.of.Life.2019.S01.EP01.WEB-DL.4K.HEVC.AAC-LeagueWEB.mp4【Q 庆余年 (2019) 4K 高码率 单集5G 国语中字 全46集】", "labi-first");
+        assertSame(laBi, SmartSourceSelector.findEpisode(flag("labi", laBi), EpisodeTarget.coordinate(1, 1)));
+    }
+
     private Flag flag(String name, Episode... episodes) {
         Flag flag = new Flag(name); flag.getEpisodes().addAll(List.of(episodes)); return flag;
     }

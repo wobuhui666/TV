@@ -107,4 +107,21 @@ public class LibrarySourceMatcherPreparedTest {
             }
         }
     }
+
+    @Test public void shouldPreserveDateYearNormalizationAndExplicitTitleYearsWhenPrepared() {
+        for (String title : List.of("流浪地球", "流浪地球 (2019)", "流浪地球 (2020)", "庆余年 第一季")) {
+            for (String year : List.of("2019", "2020", "2019-11-26", "2020-11-26", "上映：2020", "")) {
+                Vod source = source(title, year, "");
+                Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("1", "playback-token")); source.getFlags().add(flag);
+                for (boolean movie : List.of(true, false)) {
+                    String expected = movie ? "流浪地球" : "庆余年";
+                    Integer season = movie ? null : 1;
+                    assertEquals(title + " / " + year + " / " + movie,
+                            LibrarySourceMatcher.match(source, expected, List.of(), "2019", movie, season),
+                            LibrarySourceMatcher.match(LibrarySourceMatcher.prepareSource(source),
+                                    LibrarySourceMatcher.prepareWork(expected, List.of(), "2019", movie, season)));
+                }
+            }
+        }
+    }
 }

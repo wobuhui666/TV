@@ -103,6 +103,17 @@ public class LibrarySearchIndexTest {
         assertEquals(List.of(remake), index.works().get(1).resources());
     }
 
+    @Test public void shouldKeepCatalogDatesFromAssigningAResourceToTheWrongRemake() {
+        LibrarySearchIndex index = new LibrarySearchIndex();
+        index.addWorks(List.of(work("tmdb:movie:1", "沙丘", "1984", "movie"), work("tmdb:movie:2", "沙丘", "2021", "movie")));
+        Vod dated = source("a", "date", "沙丘", "2021-11-26", "电影");
+        Vod titled = source("a", "title", "沙丘 (2021)", "1984-11-26", "电影");
+        index.addSources(List.of(dated, titled));
+        assertEquals(List.of(dated), index.supplements());
+        assertTrue(index.works().get(0).resources().isEmpty());
+        assertEquals(List.of(titled), index.works().get(1).resources());
+    }
+
     @Test public void shouldDistinguishMovieAndSeriesAndKeepSourceOnlyContent() {
         LibrarySearchIndex index = new LibrarySearchIndex();
         index.addWorks(List.of(work("tmdb:movie:1", "三体", "2023", "movie"), work("tmdb:tv:2", "三体", "2023", "tv")));

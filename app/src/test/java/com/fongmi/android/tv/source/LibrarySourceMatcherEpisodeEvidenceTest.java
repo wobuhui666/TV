@@ -89,6 +89,27 @@ public class LibrarySourceMatcherEpisodeEvidenceTest {
         assertFalse(mismatch.automatic());
     }
 
+    @Test public void shouldTreatCatalogDatesAsUnknownYearsForMoviesAndSeries() {
+        for (String year : List.of("2019-11-26", "2020-11-26", "2020/11/26", "更新日期：2020-11-26", "2019年")) {
+            Vod movie = source("", "高清"); movie.setName("流浪地球"); movie.setYear(year);
+            LibrarySourceMatcher.Match movieMatch = LibrarySourceMatcher.match(movie, "流浪地球", List.of(), "2019", true, null);
+            assertTrue(year, movieMatch.matches());
+            assertTrue(year, movieMatch.automatic());
+            Vod series = source("", "1", "2", "3"); series.setYear(year);
+            assertTrue(year, match(series, false, 1).matches());
+            assertTrue(year, match(series, false, 1).automatic());
+        }
+    }
+
+    @Test public void shouldRetainExplicitTitleYearsWhenCatalogYearContainsADate() {
+        Vod movie = source("", "高清"); movie.setName("沙丘 (1984)"); movie.setYear("2020-11-26");
+        assertFalse(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).matches());
+        movie.setName("沙丘 (2021)"); movie.setYear("1984-11-26");
+        assertTrue(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).automatic());
+        movie.setName("沙丘"); movie.setYear(" 1984 ");
+        assertFalse(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).matches());
+    }
+
     private LibrarySourceMatcher.Match match(Vod source, boolean movie, Integer season) {
         return LibrarySourceMatcher.match(source, "庆余年", List.of(), "2019", movie, season);
     }

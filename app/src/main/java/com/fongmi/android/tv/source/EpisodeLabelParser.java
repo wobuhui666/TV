@@ -46,7 +46,8 @@ public final class EpisodeLabelParser {
     private static final Pattern HASH = Pattern.compile("(?i)(?<![a-z0-9])(?=[a-f0-9]{8,64}(?![a-z0-9]))(?=[a-f0-9]*[a-f])[a-f0-9]{8,64}(?![a-z0-9])");
     private static final Pattern AUDIO_CHANNELS = Pattern.compile("(?i)(?<![a-z0-9])(aac|flac|dts(?:[- .]?hd)?(?:[- .]?ma)?|e?ac3|ddp?|opus)[ ._-]*([1-9]\\.[0-9])(?:ch)?(?![a-z0-9])");
     private static final Pattern BRACKET = Pattern.compile("\\[([^\\]]*)\\]|\\(([^)]*)\\)");
-    private static final Pattern EXTENSION = Pattern.compile("(?i)\\.(?:mkv|mp4|m4v|avi|mov|wmv|ts|m2ts|webm|strm|srt|ass|torrent)\\s*$");
+    private static final Pattern EXTENSION = Pattern.compile("(?i)\\.(?:mkv|mp4|m4v|avi|mov|wmv|ts|m2ts|webm|strm|srt|ass|torrent)(?=\\s*(?:\\[[^\\]]*\\]|\\([^)]*\\))*\\s*$)");
+    private static final Pattern CATALOG_TOTAL = Pattern.compile("(?<![\\p{L}\\p{Nd}])全\\s*" + NUMBER + "\\s*[集话](?![\\p{L}\\p{Nd}])");
     private static final Pattern REVISION = Pattern.compile("(?i)(?<![a-z])v([0-9]{1,2})(?![a-z0-9])");
     private static final Pattern PROPERTY = Pattern.compile("(?i)(?<![a-z0-9])(?:[0-9]{3,4}[pi]|4k|8k|16k|uhd|fhd|web[- .]?dl|webrip|blu[- .]?ray|bdrip|brrip|dvdrip|h[ .]?26[45]|x26[45]|avc|hevc|av1|aac|flac|dts(?:-hd)?|e?ac3|opus|(?:10|8)[ -]?bit|hdr10\\+?|hdr|dolby[ .-]?vision|dv|chs|cht|jpn|eng|简体|繁体|简日|繁日|简繁|中文字幕|中字|国语|粤语)(?![a-z0-9])");
     private static final Pattern PLATFORM = Pattern.compile("^(?:baha|bilibili|netflix|amzn|dsnp|hulu|atvp|crunchyroll)$");
@@ -63,7 +64,18 @@ public final class EpisodeLabelParser {
         Set<String> editionTags = new TreeSet<>();
         List<BracketTag> bracketTags = new ArrayList<>();
         Set<Integer> seasons = new LinkedHashSet<>();
-        boolean file = mask(EXTENSION, value, remaining);
+        Matcher extension = EXTENSION.matcher(value);
+        boolean file = extension.find();
+        int extensionStart = file ? extension.start() : value.length();
+        int extensionEnd = file ? extension.end() : value.length();
+        mask(EXTENSION, value, remaining);
+        if (file) {
+            // Sources append the parent catalogue's total after a complete filename.
+            // Keep its season, preview and range markers, but do not read "全46集" as episode 46.
+            Matcher total = CATALOG_TOTAL.matcher(value);
+            total.region(extensionEnd, value.length());
+            while (total.find()) consume(remaining, total.start(), total.end());
+        }
         int directory = file ? lastDirectorySeparator(value) : -1;
         Set<String> airDates = new TreeSet<>();
         Set<String> variants = new TreeSet<>();
@@ -119,9 +131,11 @@ public final class EpisodeLabelParser {
             consume(remaining, revisions.start(), revisions.end());
         }
         Matcher brackets = BRACKET.matcher(value);
+        boolean bracketRange = false;
         while (brackets.find()) {
             String content = brackets.group(1) != null ? brackets.group(1) : brackets.group(2);
             String visible = new String(remaining, brackets.start() + 1, content.length()).trim();
+            bracketRange |= RANGE.matcher(visible).find() || DECIMAL.matcher(visible).find();
             if (visible.isEmpty()) {
                 consume(remaining, brackets.start(), brackets.end());
             } else if (isSemanticBracket(visible)) {
@@ -146,7 +160,7 @@ public final class EpisodeLabelParser {
         mask(PREVIEW, working, remaining);
         mask(SPECIAL, working, remaining);
         working = new String(remaining);
-        boolean ambiguous = invalidDate || airDates.size() > 1 || COLLECTION.matcher(working).find()
+        boolean ambiguous = invalidDate || airDates.size() > 1 || bracketRange || COLLECTION.matcher(working).find()
                 || COMBINED_PART.matcher(working).find();
         Set<String> parts = new LinkedHashSet<>();
         Matcher partMarkers = PART.matcher(working);
@@ -158,6 +172,11 @@ public final class EpisodeLabelParser {
         if (parts.size() > 1) ambiguous = true;
         working = new String(remaining);
         if (RANGE.matcher(working).find() || DECIMAL.matcher(working).find()) ambiguous = true;
+        if (file) for (Pattern pattern : new Pattern[]{RANGE, DECIMAL}) {
+            Matcher marker = pattern.matcher(working);
+            marker.region(directory + 1, extensionStart);
+            if (marker.find()) ambiguous = true;
+        }
         Integer episode = null;
         boolean issue = false;
         int episodeMarkers = 0;
@@ -181,12 +200,18 @@ public final class EpisodeLabelParser {
             consume(remaining, markers.start(), markers.end());
         }
         if (episodeMarkers > 1) ambiguous = true;
+        Matcher filename = FILE_NUMBER.matcher(new String(remaining));
+        if (file) filename.region(directory + 1, extensionStart);
+        boolean filenameNumber = filename.find();
+        if (file && filenameNumber && episodeMarkers > 0 && episodeStart >= extensionEnd) {
+            int candidate = number(filename.group(1));
+            if ((candidate < 1900 || candidate > 2099) && !Integer.valueOf(candidate).equals(episode)) ambiguous = true;
+        }
         if (episodeMarkers == 0 && !ambiguous) {
             Matcher bare = BARE.matcher(new String(remaining));
             Matcher release = RELEASE_NUMBER.matcher(new String(remaining));
-            Matcher filename = FILE_NUMBER.matcher(new String(remaining));
             Matcher selected = bare.matches() ? bare : release.find() ? release
-                    : (file || !editionTags.isEmpty() || hasLeadingGroup(bracketTags)) && filename.find() ? filename : null;
+                    : (file || !editionTags.isEmpty() || hasLeadingGroup(bracketTags)) && filenameNumber ? filename : null;
             if (selected != null) {
                 int candidate = number(selected.group(1));
                 if (candidate < 1900 || candidate > 2099) {
@@ -260,7 +285,8 @@ public final class EpisodeLabelParser {
     private static boolean isSemanticBracket(String value) {
         return BARE.matcher(value).matches() || SE.matcher(value).find() || CROSS.matcher(value).find()
                 || SEASON.matcher(value).find() || EPISODE.matcher(value).find() || PART.matcher(value).find()
-                || SPECIAL.matcher(value).find() || PREVIEW.matcher(value).find() || RANGE.matcher(value).find();
+                || SPECIAL.matcher(value).find() || PREVIEW.matcher(value).find() || RANGE.matcher(value).find()
+                || DECIMAL.matcher(value).find() || COLLECTION.matcher(value).find();
     }
 
     private static boolean hasLeadingGroup(List<BracketTag> tags) {
@@ -296,6 +322,7 @@ public final class EpisodeLabelParser {
 
     private static String normalize(String value) {
         return Normalizer.normalize(value, Normalizer.Form.NFKC).trim()
+                .replace('【', '[').replace('】', ']')
                 .replace('兩', '两').replace('話', '话').replace('預', '预')
                 .replace('別', '别').replace('輯', '辑').replace('體', '体')
                 .replace('語', '语').replace('國', '国').replace('會', '会')
