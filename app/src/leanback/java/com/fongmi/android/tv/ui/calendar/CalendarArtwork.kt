@@ -5,6 +5,8 @@ package com.fongmi.android.tv.ui.calendar
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -70,6 +72,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
 import com.fongmi.android.tv.ui.library.DetailArtwork
+import com.fongmi.android.tv.ui.theme.JetStreamAnimations
 import com.fongmi.android.tv.utils.ImgUtil
 import kotlin.math.roundToInt
 
@@ -190,14 +193,24 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
     modifier: Modifier, onClick: () -> Unit) {
     val interactions = remember(item.key) { MutableInteractionSource() }
     val focused by interactions.collectIsFocusedAsState()
-    val scale = if (motion) 1.06f else 1f
+    val scale by animateFloatAsState(
+        targetValue = if (focused && motion) 1.06f else 1f,
+        animationSpec = if (motion) JetStreamAnimations.ScaleSpring else snap(),
+        label = "calendarCardScale"
+    )
     val image = if (landscape) item.episodeStill.ifBlank { item.backdrop.ifBlank { item.poster } } else item.poster
     val width = if (landscape) 232.dp else 96.dp
     Column(Modifier.width(width), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        TvFocusableSurface(onClick = onClick, focusedScale = scale, interactionSource = interactions,
+        TvFocusableSurface(onClick = onClick, focusedScale = 1f, interactionSource = interactions,
             modifier = modifier.fillMaxWidth()
                 .semantics { contentDescription = item.title + if (item.subtitle.isBlank()) "" else " · ${item.subtitle}" }
-                .graphicsLayer { shadowElevation = if (focused) 16.dp.toPx() else 0f; shape = RoundedCornerShape(12.dp) },
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    shadowElevation = if (focused) 16.dp.toPx() else 0f
+                    shape = RoundedCornerShape(12.dp)
+                    clip = false
+                },
             shape = RoundedCornerShape(12.dp), containerColor = Color.Transparent) {
             Box(Modifier.fillMaxWidth().aspectRatio(if (landscape) 16f / 9f else 2f / 3f).drawWithCache {
                 val strokeWidth = 2.dp.toPx()
@@ -205,7 +218,7 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
                 val radius = (12.dp.toPx() - inset).coerceAtLeast(0f)
                 onDrawWithContent {
                     drawContent()
-                    // Draw after the AndroidView artwork using the Surface's actual interaction.
+                    // Draw after the artwork using the Surface's actual interaction.
                     if (focused) drawRoundRect(Color.White, topLeft = Offset(inset, inset),
                         size = Size((size.width - strokeWidth).coerceAtLeast(0f), (size.height - strokeWidth).coerceAtLeast(0f)),
                         cornerRadius = CornerRadius(radius, radius), style = Stroke(strokeWidth))
