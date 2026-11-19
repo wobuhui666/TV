@@ -144,7 +144,11 @@ public final class AiwexConfigDialogAndroidTest {
                 }
             }
             report.put("dialogShown", shown);
-            if (shown) report.put("dismissedWithBack", dismissWithBack());
+            if (shown) {
+                boolean dismissed = dismissWithBack();
+                report.put("dismissedWithBack", dismissed);
+                assertTrue("The source configuration dialog must close with Back", dismissed);
+            }
             assertTrue("The real configuration card must be reached", report.optBoolean("configurationCardFound"));
             assertTrue("No real configuration dialog appeared; inspect the safe report", shown);
             report.put("passed", true);

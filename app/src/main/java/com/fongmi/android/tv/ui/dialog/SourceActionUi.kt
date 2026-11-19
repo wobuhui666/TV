@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Build
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -16,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.fongmi.android.tv.App
-import com.fongmi.android.tv.BuildConfig
 import com.fongmi.android.tv.Constant
 import com.github.catvod.Init
 import com.github.catvod.crawler.Spider
@@ -45,11 +43,7 @@ class SourceActionUi private constructor(
     private var actionFinished = false
     @Volatile private var awaitingLegacyWindow = false
     private var pendingWindows = 0
-    private val windowDeadline = Runnable {
-        trace("event=window-deadline")
-        awaitingLegacyWindow = false
-        releaseIfFinished()
-    }
+    private val windowDeadline = Runnable { awaitingLegacyWindow = false; releaseIfFinished() }
     private val retireLegacyBindings = Runnable {
         removeSourceBindings()
         retiredConstructors.entries.toList().forEach { (name, request) ->
@@ -57,30 +51,15 @@ class SourceActionUi private constructor(
         }
     }
 
-    private fun trace(event: String) {
-        if (!BuildConfig.DEBUG) return
-        Log.d("SourceDialogTrace", "request=${System.identityHashCode(this)} $event" +
-            " closed=${closed.get()} finished=$actionFinished awaiting=$awaitingLegacyWindow" +
-            " pending=$pendingWindows owned=${windows.size}" +
-            " activityState=${activity.get()?.lifecycle?.currentState}" +
-            " pageState=${page.get()?.lifecycle?.currentState}" +
-            " activityFinishing=${activity.get()?.isFinishing}" +
-            " activityDestroyed=${activity.get()?.isDestroyed}")
-    }
-
     private fun removeSourceBindings() {
         sourceNames.forEach { name -> sources.remove(name, this) }
     }
 
     private fun bindSource(name: String) {
-        if (closed.get() && SystemClock.uptimeMillis() - closedAt >= Constant.TIMEOUT_VOD) {
-            trace("event=bind decision=expired")
-            return
-        }
+        if (closed.get() && SystemClock.uptimeMillis() - closedAt >= Constant.TIMEOUT_VOD) return
         sourceNames.add(name)
         awaitingLegacyWindow = true
         sources[name] = this
-        trace("event=bind decision=bound")
         if (closed.get()) App.post {
             App.removeCallbacks(retireLegacyBindings)
             App.post(retireLegacyBindings, (closedAt + Constant.TIMEOUT_VOD - SystemClock.uptimeMillis()).coerceAtLeast(0))
@@ -104,7 +83,6 @@ class SourceActionUi private constructor(
         page.get()?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true
 
     fun finishAction(hasFeedback: Boolean) {
-        trace("event=finish-action feedback=$hasFeedback")
         actionFinished = true
         if (hasFeedback) awaitingLegacyWindow = false
         if (awaitingLegacyWindow) App.post(windowDeadline, Constant.TIMEOUT_VOD.toLong())
@@ -114,7 +92,6 @@ class SourceActionUi private constructor(
     fun cancel() = release(true)
 
     override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-        trace("event=lifecycle transition=$event")
         if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_DESTROY) cancel()
     }
 
@@ -124,7 +101,6 @@ class SourceActionUi private constructor(
 
     private fun release(cancel: Boolean) {
         check(Looper.myLooper() == Looper.getMainLooper())
-        trace("event=release cancel=$cancel")
         if (closed.get()) return
         closedAt = SystemClock.uptimeMillis()
         if (!closed.compareAndSet(false, true)) return
@@ -151,11 +127,7 @@ class SourceActionUi private constructor(
         windows.clear()
         // Close during ON_PAUSE, while the owner's token and dialog state are
         // still live; waiting until destruction can leave a detached Dialog open.
-        remaining.forEach { (view, manager) ->
-            trace("event=window-decision view=${System.identityHashCode(view)}" +
-                " type=${(view.layoutParams as? WindowManager.LayoutParams)?.type} decision=close reason=release cancel=$cancel")
-            closeWindow(view, manager)
-        }
+        remaining.forEach { (view, manager) -> closeWindow(view, manager) }
     }
 
     @RequiresApi(29)
@@ -165,30 +137,17 @@ class SourceActionUi private constructor(
         pendingWindows++
         awaitingLegacyWindow = false
         App.removeCallbacks(windowDeadline)
-        trace("event=capture-scheduled before=${before.size} hadWindow=$hadWindow userAction=$userAction")
         // Capture before Dialog constructs its window. This callback runs after its
         // addView in the same UI message, before the new window's first traversal.
         App.post {
             try {
                 val added = WindowInspector.getGlobalWindowViews().filter { it !in before &&
                     (it.layoutParams as? WindowManager.LayoutParams)?.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION }
-                trace("event=capture-scan added=${added.size} hadWindow=$hadWindow userAction=$userAction")
                 for (view in added) {
                     // One constructor may query WINDOW_SERVICE more than once.
                     // Overlapping captures must not reject the window already owned here.
-                    if (view in windows) {
-                        trace("event=window-decision view=${System.identityHashCode(view)}" +
-                            " type=${(view.layoutParams as? WindowManager.LayoutParams)?.type} decision=skip reason=already-owned")
-                        continue
-                    }
-                    val usable = isUsable()
-                    val duplicate = (hadWindow || windows.isNotEmpty()) && !userAction
-                    trace("event=window-decision view=${System.identityHashCode(view)}" +
-                        " type=${(view.layoutParams as? WindowManager.LayoutParams)?.type}" +
-                        " usable=$usable hadWindow=$hadWindow userAction=$userAction" +
-                        " decision=${if (!usable || duplicate) "close" else "keep"}" +
-                        " reason=${if (!usable) "owner-unusable" else if (duplicate) "duplicate-window" else "new-window"}")
-                    if (!usable || duplicate) {
+                    if (view in windows) continue
+                    if (!isUsable() || ((hadWindow || windows.isNotEmpty()) && !userAction)) {
                         closeWindow(view, manager)
                     } else {
                         windows[view] = manager
@@ -197,7 +156,6 @@ class SourceActionUi private constructor(
                             override fun onViewDetachedFromWindow(view: View) {
                                 view.removeOnAttachStateChangeListener(this)
                                 windows.remove(view)
-                                trace("event=window-detached view=${System.identityHashCode(view)}")
                                 // AlertDialog posts the next user step before its dismiss
                                 // callback. Let that queued constructor retain the owner.
                                 App.post { releaseIfFinished() }
@@ -207,7 +165,6 @@ class SourceActionUi private constructor(
                 }
             } finally {
                 pendingWindows--
-                trace("event=capture-complete")
                 releaseIfFinished()
             }
         }
@@ -233,20 +190,11 @@ class SourceActionUi private constructor(
             check(Looper.myLooper() == Looper.getMainLooper())
             active[activity]?.let { previous ->
                 if (!previous.actionFinished || previous.pendingWindows > 0 || previous.windows.isNotEmpty() ||
-                    (previous.awaitingLegacyWindow && previous.actionKey == actionKey)) {
-                    previous.trace("event=start decision=rejected reason=active-request")
-                    return null
-                }
-                previous.trace("event=start decision=replace-previous")
+                    (previous.awaitingLegacyWindow && previous.actionKey == actionKey)) return null
                 previous.cancel()
             }
             val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel, retainCallingPage)
-            val usable = request.isUsable()
-            if (!usable || !activity.hasWindowFocus()) {
-                request.trace("event=start decision=rejected usable=$usable focused=${activity.hasWindowFocus()}")
-                return null
-            }
-            request.trace("event=start decision=accepted usable=$usable focused=true")
+            if (!request.isUsable() || !activity.hasWindowFocus()) return null
             active[activity] = request
             activity.lifecycle.addObserver(request)
             if (page !== activity) page.lifecycle.addObserver(request)
@@ -262,7 +210,6 @@ class SourceActionUi private constructor(
             val fromSource = Thread.currentThread().stackTrace.any { frame ->
                 request.sourceNames.any { matchesSource(frame, it) }
             }
-            if (fromSource) request.trace("event=finish decision=retain-calling-page")
             return fromSource
         }
 
@@ -286,34 +233,15 @@ class SourceActionUi private constructor(
             val trace = Thread.currentThread().stackTrace
             if (trace.none { it.className == "android.app.Dialog" && it.methodName == "<init>" }) return original
             val current = Init.currentActivityOwner()
-            var route = "unmatched"
-            val request = if (current != null) {
-                route = "current"
-                current as? SourceActionUi
-            } else {
+            val request = if (current != null) current as? SourceActionUi else {
                 val bound = trace.firstNotNullOfOrNull { frame ->
                     sources.entries.firstOrNull { (name, _) -> matchesSource(frame, name) }?.value
                 }
-                val activeBound = bound?.takeUnless { it.closed.get() }
-                if (activeBound != null) {
-                    route = "bound"
-                    activeBound
-                } else {
-                    val retired = trace.firstNotNullOfOrNull { retiredConstructors[constructorKey(it)] }
-                    if (retired != null) {
-                        route = "retired"
-                        retired
-                    } else {
-                        if (bound != null) route = "bound-closed"
-                        bound
-                    }
-                }
+                bound?.takeUnless { it.closed.get() }
+                    ?: trace.firstNotNullOfOrNull { retiredConstructors[constructorKey(it)] }
+                    ?: bound
             }
-            if (request == null) {
-                if (BuildConfig.DEBUG) Log.d("SourceDialogTrace", "request=none event=route route=$route scoped=${current != null}")
-                return original
-            }
-            request.trace("event=route route=$route")
+            if (request == null) return original
             request.rememberConstructor(trace)
             val manager = request.get()?.windowManager ?: original
             if (Build.VERSION.SDK_INT >= 29) {

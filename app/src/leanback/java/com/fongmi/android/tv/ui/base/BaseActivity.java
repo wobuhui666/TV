@@ -5,9 +5,7 @@ import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.os.Bundle;
-import android.os.Looper;
 import android.graphics.drawable.ColorDrawable;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -23,7 +21,6 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.fongmi.android.tv.R;
-import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.ui.custom.JetStreamWallView;
 import com.fongmi.android.tv.ui.custom.JetStreamNativeTheme;
@@ -33,7 +30,6 @@ import com.fongmi.android.tv.ui.theme.JetStreamPalette;
 import com.fongmi.android.tv.ui.theme.RexTheme;
 import com.fongmi.android.tv.utils.Util;
 import com.fongmi.android.tv.ui.dialog.SourceActionUi;
-import com.github.catvod.Init;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -57,34 +53,6 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     @Override
     public void finish() {
-        if (BuildConfig.DEBUG) {
-            try {
-                StackTraceElement[] trace = Thread.currentThread().getStackTrace();
-                boolean fromHostCloseWindow = false;
-                boolean fromSpider = false;
-                StringBuilder frames = new StringBuilder();
-                int recorded = 0;
-                for (StackTraceElement frame : trace) {
-                    String type = frame.getClassName();
-                    String method = frame.getMethodName();
-                    if (type.startsWith("com.fongmi.android.tv.ui.dialog.SourceActionUi")
-                            && method.contains("closeWindow")) fromHostCloseWindow = true;
-                    if (type.startsWith("com.github.catvod.spider.")) fromSpider = true;
-                    if (recorded < 8 && !type.equals(Thread.class.getName())) {
-                        if (recorded > 0) frames.append(';');
-                        frames.append(type).append('#').append(method);
-                        recorded++;
-                    }
-                }
-                Log.d("SourceDialogTrace", "finish host=" + getClass().getName()
-                        + " thread=" + (Looper.myLooper() == Looper.getMainLooper() ? "main" : "worker")
-                        + " scopedOwner=" + (Init.currentActivityOwner() != null)
-                        + " fromHostCloseWindow=" + fromHostCloseWindow + " fromSpider=" + fromSpider
-                        + " frames=" + frames);
-            } catch (RuntimeException ignored) {
-                // A diagnostic failure must not prevent the Activity from finishing.
-            }
-        }
         // List details now run on this existing page; legacy providers must not close it.
         if (SourceActionUi.shouldRetainCallingPage(this)) return;
         super.finish();
