@@ -2,7 +2,7 @@
 <resources>
     <string name="calendar_title">Airing calendar</string>
     <string name="calendar_nav">Calendar</string>
-    <string name="calendar_public">Public schedule</string>
+    <string name="calendar_public">Public</string>
     <string name="calendar_following">Following</string>
     <string name="calendar_previous_week">Previous week</string>
     <string name="calendar_next_week">Next week</string>
@@ -22,4 +22,8 @@
     <string name="calendar_friday">Fri</string>
     <string name="calendar_saturday">Sat</string>
     <string name="calendar_sunday">Sun</string>
+    <string name="calendar_status_aired">Aired</string>
+    <string name="calendar_status_today">Airing today</string>
+    <string name="calendar_status_upcoming">Upcoming</string>
+    <string name="calendar_runtime_minutes">%1$d min</string>
 </resources>

@@ -27,7 +27,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** Calendar browsing owns no source selection or playback requests. */
+/** Calendar facts describe broadcast schedules, independent of playable source availability. */
 class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
     companion object {
         @JvmStatic fun start(activity: Activity) {
@@ -51,7 +51,9 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
     private var reloadOnResume = false
     private var resumed = false
     private var keepsDirty = false
+    private var indicatorsRequested: LocalDate? = null
     private var previewKey = ""
+    private var enrichmentKey = ""
     private var preview = AiringCalendarPreview()
     private val artworkTag = Any()
     private var artworkGeneration = 0
@@ -77,21 +79,17 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
         repository = AiringCalendarRepository(BuildConfig.TMDB_API_KEY) { value ->
             if (!isFinishing && !isDestroyed) {
                 result = value
-                val entries = selectedEntries()
-                val retained = entries.firstOrNull { it.stableKey == previewKey }
-                if (retained == null) setPreview(entries.firstOrNull())
-                else {
-                    preview = preview.copy(title = retained.media.name, subtitle = episodeLabel(retained),
-                        backdrop = retained.media.backdrop.ifBlank { preview.backdrop })
-                    if (!value.loading && preview.logo.isEmpty() && logos.containsKey(retained.media.id)) {
-                        DiscoverMediaKey.parse(retained.media.id)?.let { fallbackLogos(it, artworkGeneration) }
-                    }
-                }
+                val retained = selectedEntries().firstOrNull { it.stableKey == previewKey }
+                if (retained == null) setPreview(selectedEntries().firstOrNull())
+                else if (enrichmentKey != retained.stableKey) setPreview(retained)
+                else preview = previewFor(retained, metadataFor(retained))
                 render()
+                requestIndicators()
+                requestLogoFallback()
             }
         }
         load()
-        binding.calendarRoot.focusKey(savedInstanceState?.getString("focus") ?: "mode:$mode")
+        binding.calendarRoot.focusKey(savedInstanceState?.getString("focus") ?: "content")
     }
 
     override fun onAction(action: String, key: String) {
@@ -123,10 +121,14 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                 load()
             }
             "keeps" -> KeepActivity.start(this)
-            "retry" -> repository.retry()
-            "loadMore" -> if (mode == "public" && !result.loading && !result.failed
-                && result.page < result.totalPages) {
+            "retry" -> {
+                cancelArtwork()
+                repository.retry()
+            }
+            "loadMore" -> if (mode == "public" && !result.loading && !result.failed && result.page < result.totalPages) {
                 pendingPage = result.page + 1
+                indicatorsRequested = null
+                cancelArtwork()
                 repository.loadPublic(selectedDate, pendingPage)
             }
             "open" -> selectedEntries().firstOrNull { it.stableKey == key }?.let { entry ->
@@ -138,18 +140,21 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
     }
 
     override fun onFocused(key: String) {
-        if (key.startsWith("item:")) {
-            selectedEntries().firstOrNull { it.stableKey == key.removePrefix("item:") }?.let {
-                if (it.stableKey != previewKey) { setPreview(it); render() }
+        if (key.startsWith("item:")) selectedEntries().firstOrNull { it.stableKey == key.removePrefix("item:") }?.let {
+            if (it.stableKey != previewKey || enrichmentKey != it.stableKey) {
+                setPreview(it)
+                render()
             }
         }
     }
 
     private fun load() {
         if (!::repository.isInitialized) return
+        repository.cancel()
         setPreview(null)
         result = AiringCalendarResult(emptyList(), true, false)
         pendingPage = 1
+        indicatorsRequested = null
         keepsDirty = false
         render()
         if (mode == "public") repository.loadPublic(selectedDate)
@@ -158,27 +163,36 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
 
     private fun selectedEntries() = result.items.filter { it.date == selectedDate }
 
+    private fun requestIndicators() {
+        if (mode != "public" || result.loading || result.failed || indicatorsRequested == weekStart) return
+        indicatorsRequested = weekStart
+        repository.loadWeekIndicators(weekStart)
+    }
+
     private fun render() {
         val end = weekStart.plusDays(6)
-        val entries = selectedEntries()
+        val range = if (weekStart.year == end.year) {
+            "${weekStart.format(DATE_FORMAT)} – ${end.format(DATE_FORMAT)}"
+        } else {
+            "${weekStart.year}/${weekStart.format(DATE_FORMAT)} – ${end.year}/${end.format(DATE_FORMAT)}"
+        }
         binding.calendarRoot.submit(AiringCalendarState(
-            mode = mode,
-            weekStart = weekStart.toString(),
-            selectedDate = selectedDate.toString(),
-            weekLabel = "${weekStart.year}  ${weekStart.format(DATE_FORMAT)} – " +
-                (if (end.year != weekStart.year) "${end.year}/" else "") + end.format(DATE_FORMAT),
+            mode = mode, weekStart = weekStart.toString(), selectedDate = selectedDate.toString(),
+            weekLabel = range,
             days = (0..6).map { offset ->
                 val date = weekStart.plusDays(offset.toLong())
-                AiringCalendarDay(date.toString(), getString(WEEKDAYS[offset]), date == today)
+                AiringCalendarDay(date.toString(), getString(WEEKDAYS[offset]), date == today,
+                    date in result.knownUpdateDates)
             },
-            items = entries.map { AiringCalendarItem(it.stableKey, it.media.name, it.media.pic, episodeLabel(it)) },
-            preview = preview,
-            loading = result.loading,
-            failed = result.failed,
-            hasKeeps = result.hasKeeps,
-            hasMore = mode == "public" && result.page < result.totalPages,
+            items = selectedEntries().map {
+                AiringCalendarItem(it.stableKey, it.media.name, it.media.pic, episodeLabel(it),
+                    episodeStill(it), actualBackdrop(it))
+            },
+            preview = preview, loading = result.loading, failed = result.failed,
+            hasKeeps = result.hasKeeps, hasMore = mode == "public" && result.page < result.totalPages,
             emptyMessage = getString(if (mode == "following" && !result.hasKeeps)
-                R.string.calendar_empty_following else R.string.calendar_empty_day)
+                R.string.calendar_empty_following else R.string.calendar_empty_day),
+            todayDate = today.toString()
         ))
     }
 
@@ -186,64 +200,81 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
         String.format(Locale.ROOT, "S%02dE%02d", it.season(), it.number())
     }
 
+    private fun episodeStill(entry: AiringCalendarEntry) =
+        entry.episodeDetails.firstOrNull { it.still().isNotBlank() }?.still().orEmpty()
+
+    private fun actualBackdrop(entry: AiringCalendarEntry) =
+        entry.media.backdrop.takeUnless { it == entry.media.pic }.orEmpty()
+
+    private fun metadataFor(entry: AiringCalendarEntry) =
+        DiscoverMediaKey.parse(entry.media.id)?.let(repository::metadataFor)
+
+    private fun previewFor(entry: AiringCalendarEntry, metadata: LibraryMedia.Metadata?): AiringCalendarPreview {
+        val detail = metadata?.detail()
+        val runtime = entry.episodes.map { it.runtime() }.filter { it > 0 }.distinct()
+            .ifEmpty { detail?.runtimeMinutes?.takeIf { it > 0 }?.let { listOf(it) } ?: emptyList() }
+        val facts = buildList {
+            (detail?.rating?.ifBlank { entry.media.remarks } ?: entry.media.remarks).takeIf { it.isNotBlank() }?.let(::add)
+            episodeLabel(entry).takeIf { it.isNotBlank() }?.let(::add)
+            if (runtime.isNotEmpty()) add(runtime.joinToString(" / ") { getString(R.string.calendar_runtime_minutes, it) })
+            metadata?.networkNames()?.takeIf { it.isNotEmpty() }?.joinToString(" · ")?.let(::add)
+            add(entry.date.toString())
+        }
+        return AiringCalendarPreview(
+            key = entry.stableKey, title = detail?.title?.ifBlank { entry.media.name } ?: entry.media.name,
+            backdrop = episodeStill(entry).ifBlank { detail?.backdrop.orEmpty() }
+                .ifBlank { actualBackdrop(entry) }.ifBlank { entry.media.pic },
+            logo = logos[entry.media.id]?.firstOrNull().orEmpty(),
+            subtitle = entry.episodeDetails.map { it.name() }.filter { it.isNotBlank() }.distinct().joinToString(" · "),
+            overview = entry.episodeDetails.firstOrNull { it.overview().isNotBlank() }?.overview()
+                ?: detail?.overview?.ifBlank { entry.media.content } ?: entry.media.content,
+            metadata = facts,
+            airingStatus = when {
+                entry.date.isBefore(today) -> "aired"
+                entry.date.isAfter(today) -> "upcoming"
+                else -> "today"
+            }
+        )
+    }
+
     private fun setPreview(entry: AiringCalendarEntry?) {
         cancelArtwork()
         previewKey = entry?.stableKey.orEmpty()
-        preview = if (entry == null) AiringCalendarPreview() else AiringCalendarPreview(
-            key = entry.stableKey, title = entry.media.name, backdrop = entry.media.backdrop,
-            subtitle = episodeLabel(entry)
-        )
+        preview = if (entry == null) AiringCalendarPreview() else previewFor(entry, metadataFor(entry))
         if (entry == null) return
-        val mediaKey = DiscoverMediaKey.parse(entry.media.id) ?: return
-        val known = logos[mediaKey.toString()]
-        if (known != null) {
-            preview = preview.copy(logo = known.firstOrNull().orEmpty())
-            if (known.isEmpty()) fallbackLogos(mediaKey, artworkGeneration)
-            return
-        }
-        val metadata = repository.metadataFor(mediaKey)
-        if (metadata != null) {
-            bindPreviewMetadata(mediaKey, metadata)
-            if (metadata.logos().isEmpty()) fallbackLogos(mediaKey, artworkGeneration)
-            return
-        }
+        enrichmentKey = entry.stableKey
         val ticket = artworkGeneration
         artworkTask = Runnable {
-            TmdbLibraryApi.detail(mediaKey, BuildConfig.TMDB_API_KEY, artworkTag,
-                object : TmdbLibraryApi.Listener<LibraryMedia.Metadata> {
-                    override fun onSuccess(value: LibraryMedia.Metadata) {
-                        if (!artworkCurrent(ticket, entry.stableKey)) return
-                        bindPreviewMetadata(mediaKey, value)
-                        render()
-                        if (value.logos().isEmpty()) fallbackLogos(mediaKey, ticket)
-                    }
-                    override fun onError(error: Exception) { }
-                })
+            repository.focus(entry) { focused ->
+                if (!artworkCurrent(ticket, entry.stableKey)) return@focus
+                focused.metadata?.let { value ->
+                    val id = focused.entry.media.id
+                    originalLanguages[id] = value.originalLanguage()
+                    if (!logos.containsKey(id)) logos[id] = value.logos().filter { it !in failedLogos }
+                }
+                preview = previewFor(focused.entry, focused.metadata)
+                render()
+                requestLogoFallback()
+            }
         }.also { binding.calendarRoot.postDelayed(it, 180) }
-    }
-
-    private fun bindPreviewMetadata(key: DiscoverMediaKey, value: LibraryMedia.Metadata) {
-        logos[key.toString()] = value.logos()
-        originalLanguages[key.toString()] = value.originalLanguage()
-        preview = preview.copy(logo = value.logos().firstOrNull().orEmpty(),
-            backdrop = value.detail().backdrop.ifBlank { preview.backdrop })
     }
 
     private fun nextLogo() {
         val entry = selectedEntries().firstOrNull { it.stableKey == previewKey } ?: return
-        val key = DiscoverMediaKey.parse(entry.media.id) ?: return
         if (preview.logo.isNotEmpty()) failedLogos.add(preview.logo)
-        val choices = logos[key.toString()].orEmpty().filter { it !in failedLogos }
-        logos[key.toString()] = choices
-        preview = preview.copy(logo = choices.firstOrNull().orEmpty())
+        logos[entry.media.id] = logos[entry.media.id].orEmpty().filter { it !in failedLogos }
+        preview = preview.copy(logo = logos[entry.media.id]?.firstOrNull().orEmpty())
         render()
-        if (choices.isEmpty()) fallbackLogos(key, artworkGeneration)
+        requestLogoFallback()
     }
 
-    private fun fallbackLogos(key: DiscoverMediaKey, ticket: Int) {
-        if (mode == "following" && result.loading) return
-        if (key.toString() in logoFallbacks || activeFallback == key.toString()) return
+    private fun requestLogoFallback() {
+        if (preview.logo.isNotEmpty() || activeFallback != null || repository.hasPendingRequests()) return
+        val entry = selectedEntries().firstOrNull { it.stableKey == previewKey } ?: return
+        val key = DiscoverMediaKey.parse(entry.media.id) ?: return
+        if (!logos.containsKey(key.toString()) || key.toString() in logoFallbacks) return
         activeFallback = key.toString()
+        val ticket = artworkGeneration
         val selected = previewKey
         TmdbLibraryApi.logos(key, originalLanguages[key.toString()].orEmpty(), BuildConfig.TMDB_API_KEY,
             artworkTag, object : TmdbLibraryApi.Listener<List<String>> {
@@ -251,9 +282,8 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                     if (!artworkCurrent(ticket, selected)) return
                     activeFallback = null
                     logoFallbacks.add(key.toString())
-                    val fresh = value.filter { it !in failedLogos }
-                    logos[key.toString()] = fresh
-                    preview = preview.copy(logo = fresh.firstOrNull().orEmpty())
+                    logos[key.toString()] = value.filter { it !in failedLogos }
+                    preview = preview.copy(logo = logos[key.toString()]?.firstOrNull().orEmpty())
                     render()
                 }
                 override fun onError(error: Exception) {
@@ -273,6 +303,8 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
         artworkTask?.let { binding.calendarRoot.removeCallbacks(it) }
         artworkTask = null
         activeFallback = null
+        enrichmentKey = ""
+        if (::repository.isInitialized) repository.cancelFocus()
         TmdbLibraryApi.cancel(artworkTag)
     }
 
@@ -286,6 +318,7 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
     override fun onResume() {
         super.onResume()
         if (!::repository.isInitialized) return
+        binding.calendarRoot.refreshTheme()
         val now = LocalDate.now(AiringCalendarRepository.TIME_ZONE)
         if (now != today) {
             val browsingCurrentWeek = weekStart == AiringCalendarRepository.weekStart(today)
@@ -304,19 +337,16 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
             else repository.loadPersonal(weekStart, Keep.getVodAndDiscover())
         }
         reloadOnResume = false
-        if (preview.logo.isEmpty()) {
-            val current = selectedEntries().firstOrNull { it.stableKey == previewKey }
-            if (current != null && (!logos.containsKey(current.media.id)
-                || (logos[current.media.id].isNullOrEmpty() && current.media.id !in logoFallbacks))) {
-                setPreview(current)
-            }
-        }
+        val current = selectedEntries().firstOrNull { it.stableKey == previewKey } ?: selectedEntries().firstOrNull()
+        if (current != null && enrichmentKey != current.stableKey) setPreview(current)
+        requestIndicators()
         render()
     }
 
     override fun onPause() {
         resumed = false
         reloadOnResume = result.loading || result.failed
+        indicatorsRequested = null
         if (::repository.isInitialized) repository.cancel()
         cancelArtwork()
         super.onPause()

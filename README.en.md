@@ -58,7 +58,7 @@ Frames from the earlier 90-second cut of the tour, showing the interface as reco
 
 The home screen puts featured artwork and continued viewing within reach. Library and discovery pages lead into search results, title details, and episode selection. Playback controls and settings use the same remote-friendly interaction patterns.
 
-The TV home navigation includes an airing calendar with public schedules and followed titles. Choose **Follow / Following** on a linked TV title in media-library mode to add or remove it, using existing favorites. The personal calendar groups all known episode dates for the selected week; TMDB dates do not guarantee that a playback source is available. See the [calendar guide](docs/native-discovery.md#追更日历).
+The TV home navigation includes an airing calendar with public schedules and followed titles, a uniform media rail, and artwork and episode information for the focused title. Choose **Follow / Following** on a linked TV title in media-library mode to add or remove it, using existing favorites. The personal calendar groups all known episode dates for the selected week; TMDB dates do not guarantee that a playback source is available. See the [calendar guide](docs/native-discovery.md#追更日历).
 
 Live TV brings channel groups and channel selection together. The personal page provides entry points for favorites, history, media push, casting reception, local files, and settings.
 

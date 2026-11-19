@@ -22,4 +22,8 @@
     <string name="calendar_friday">週五</string>
     <string name="calendar_saturday">週六</string>
     <string name="calendar_sunday">週日</string>
+    <string name="calendar_status_aired">已播出</string>
+    <string name="calendar_status_today">今日播出</string>
+    <string name="calendar_status_upcoming">待播出</string>
+    <string name="calendar_runtime_minutes">%1$d 分鐘</string>
 </resources>

@@ -25,7 +25,7 @@ class AiringCalendarView @JvmOverloads constructor(
     private var listener: Listener? = null
     private var state by mutableStateOf(AiringCalendarState())
     private var themeVersion by mutableIntStateOf(0)
-    private var focusRequest by mutableStateOf(CalendarFocusRequest("", 0))
+    private var focusRequest by mutableStateOf(CalendarFocusRequest("content", 0))
     private var lastFocusedKey = ""
 
     init {
@@ -50,8 +50,17 @@ class AiringCalendarView @JvmOverloads constructor(
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (gainFocus) {
-            val key = lastFocusedKey.ifBlank { "date:${state.selectedDate}" }
+            val key = lastFocusedKey.ifBlank { "content" }
             if (state.selectedDate.isNotBlank()) focusRequest = CalendarFocusRequest(key, focusRequest.token + 1)
+        }
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (hasWindowFocus) post {
+            if (isAttachedToWindow && this@AiringCalendarView.hasWindowFocus() && hasFocus() && !isInTouchMode) {
+                focusRequest = CalendarFocusRequest(lastFocusedKey.ifBlank { "content" }, focusRequest.token + 1)
+            }
         }
     }
 

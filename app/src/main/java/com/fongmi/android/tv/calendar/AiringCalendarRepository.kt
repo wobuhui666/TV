@@ -43,23 +43,31 @@ class AiringCalendarRepository internal constructor(
     }
 
     private data class Cached<T>(val time: Long, val value: T)
-    private data class Job(val key: String, val generation: Int, val run: () -> Unit)
+    private enum class Scope { LOAD, FOCUS, INDICATOR }
+    private data class Job(val key: String, val generation: Int, val scope: Scope = Scope.LOAD,
+        val focusToken: Int? = null, val run: () -> Unit)
     private data class Work(
         val key: DiscoverMediaKey,
-        val keep: Keep,
+        val keep: Keep?,
         val media: Vod,
         var metadata: LibraryMedia.Metadata? = null,
-        val seasons: MutableMap<Int, Map<LocalDate, List<LibraryMedia.AiringEpisode>>> = linkedMapOf()
+        val seasons: MutableMap<Int, Map<LocalDate, List<LibraryMedia.Episode>>> = linkedMapOf()
     )
+    private data class FocusWork(val base: AiringCalendarEntry, val work: Work, val token: Int,
+        val listener: (AiringCalendarFocusResult) -> Unit)
 
     private val tag = Any()
+    private val focusTag = Any()
+    private val indicatorTag = Any()
     private val queue = ArrayDeque<Job>()
     private val active = linkedMapOf<String, Job>()
     private val failures = linkedMapOf<String, Job>()
+    private val auxiliaryFailures = linkedMapOf<String, Job>()
+    private val updateDates = mutableMapOf<LocalDate, Cached<Boolean>>()
     private val publicItems = linkedMapOf<String, AiringCalendarEntry>()
     private val personal = linkedMapOf<DiscoverMediaKey, Work>()
     private val metadataCache = cache<DiscoverMediaKey, LibraryMedia.Metadata>(64)
-    private val seasonCache = cache<String, Map<LocalDate, List<LibraryMedia.AiringEpisode>>>(256)
+    private val seasonCache = cache<String, Map<LocalDate, List<LibraryMedia.Episode>>>(256)
     private val publicCache = cache<String, TmdbLibraryApi.Page>(64)
     private var generation = 0
     private var pumping = false
@@ -69,6 +77,8 @@ class AiringCalendarRepository internal constructor(
     private var page = 1
     private var totalPages = 1
     private var hasKeeps = false
+    private var focusToken = 0
+    private var focused: FocusWork? = null
 
     fun loadPublic(date: LocalDate, page: Int = 1) {
         if (closed) return
@@ -88,7 +98,7 @@ class AiringCalendarRepository internal constructor(
         val cached = value(publicCache, cacheKey)
         if (cached != null) {
             addPublic(date, cached)
-            publish()
+            notifyState()
             return
         }
         val ticket = generation
@@ -103,7 +113,7 @@ class AiringCalendarRepository internal constructor(
                 override fun onError(error: Exception) = finish("public|$cacheKey", ticket, false)
             })
         })
-        publish()
+        notifyState()
         pump()
     }
 
@@ -131,17 +141,80 @@ class AiringCalendarRepository internal constructor(
             if (cached != null) applyMetadata(work, cached)
             else enqueueMetadata(work)
         }
-        publish()
+        notifyState()
         pump()
+    }
+
+    /** Six other dated discovery pages, sharing the existing bounded queue and page cache. */
+    fun loadWeekIndicators(weekStart: LocalDate) {
+        val selected = publicDate ?: return
+        val week = AiringCalendarIndex.weekStart(weekStart)
+        if (closed || personalWeek != null || AiringCalendarIndex.weekStart(selected) != week) return
+        val ticket = generation
+        repeat(7) { offset ->
+            val date = week.plusDays(offset.toLong())
+            if (date == selected) return@repeat
+            val cacheKey = "$date|1"
+            val cached = value(publicCache, cacheKey)
+            if (cached != null) rememberUpdateDate(date, cached)
+            else {
+                val jobKey = "indicator|$date"
+                enqueue(Job(jobKey, ticket, Scope.INDICATOR) {
+                    source.airingOn(date, 1, indicatorTag, object : TmdbLibraryApi.Listener<TmdbLibraryApi.Page> {
+                        override fun onSuccess(value: TmdbLibraryApi.Page) {
+                            if (!current(ticket)) return
+                            publicCache[cacheKey] = Cached(clock(), value)
+                            rememberUpdateDate(date, value)
+                            finish(jobKey, ticket, true)
+                        }
+                        override fun onError(error: Exception) = finish(jobKey, ticket, false)
+                    })
+                })
+            }
+        }
+        notifyState()
+        pump()
+    }
+
+    /** Enrich only the focused public work; followed works reuse their ongoing full scan. */
+    fun focus(entry: AiringCalendarEntry, listener: (AiringCalendarFocusResult) -> Unit) {
+        if (closed) return
+        clearFocus()
+        val key = DiscoverMediaKey.parse(entry.media.id)?.takeUnless { it.isMovie } ?: return
+        val personalWork = personal[key]
+        val work = personalWork ?: Work(key, entry.keep, entry.media)
+        focused = FocusWork(entry, work, focusToken, listener)
+        if (personalWork == null) {
+            val metadata = metadataFor(key)
+            if (metadata != null) applyMetadata(work, metadata, focusToken)
+            else enqueueMetadata(work, focusToken)
+        }
+        notifyState()
+        pump()
+    }
+
+    fun cancelFocus() {
+        clearFocus()
+        pump()
+    }
+
+    private fun clearFocus() {
+        focusToken++
+        focused = null
+        queue.removeIf { it.scope == Scope.FOCUS }
+        active.entries.removeIf { it.value.scope == Scope.FOCUS }
+        auxiliaryFailures.entries.removeIf { it.value.scope == Scope.FOCUS }
+        source.cancel(focusTag)
     }
 
     /** Retry only failed requests; completed work and its exact dates remain visible. */
     fun retry() {
-        if (closed || failures.isEmpty()) return
-        val retry = failures.values.toList()
+        if (closed || failures.isEmpty() && auxiliaryFailures.isEmpty()) return
+        val retry = failures.values.toList() + auxiliaryFailures.values.toList()
         failures.clear()
+        auxiliaryFailures.clear()
         retry.forEach(::enqueue)
-        publish()
+        notifyState()
         pump()
     }
 
@@ -149,12 +222,17 @@ class AiringCalendarRepository internal constructor(
     fun metadataFor(key: DiscoverMediaKey): LibraryMedia.Metadata? =
         personal[key]?.metadata ?: value(metadataCache, key)
 
+    fun hasPendingRequests(): Boolean = queue.isNotEmpty() || active.isNotEmpty()
+
     fun cancel() {
+        clearFocus()
         generation++
         queue.clear()
         active.clear()
         failures.clear()
+        auxiliaryFailures.clear()
         source.cancel(tag)
+        source.cancel(indicatorTag)
     }
 
     fun close() {
@@ -166,25 +244,27 @@ class AiringCalendarRepository internal constructor(
         publicCache.clear()
         personal.clear()
         publicItems.clear()
+        updateDates.clear()
     }
 
-    private fun enqueueMetadata(work: Work) {
+    private fun enqueueMetadata(work: Work, focus: Int? = null) {
         val ticket = generation
-        val jobKey = "detail|${work.key}"
-        enqueue(Job(jobKey, ticket) {
-            source.detail(work.key, tag, object : TmdbLibraryApi.Listener<LibraryMedia.Metadata> {
+        val jobKey = (if (focus == null) "detail|" else "focus-detail|") + work.key
+        val scope = if (focus == null) Scope.LOAD else Scope.FOCUS
+        enqueue(Job(jobKey, ticket, scope, focus) {
+            source.detail(work.key, if (focus == null) tag else focusTag, object : TmdbLibraryApi.Listener<LibraryMedia.Metadata> {
                 override fun onSuccess(value: LibraryMedia.Metadata) {
-                    if (!current(ticket)) return
+                    if (!current(ticket, focus)) return
                     metadataCache[work.key] = Cached(clock(), value)
-                    applyMetadata(work, value)
-                    finish(jobKey, ticket, true)
+                    applyMetadata(work, value, focus)
+                    finish(jobKey, ticket, true, focus)
                 }
-                override fun onError(error: Exception) = finish(jobKey, ticket, false)
+                override fun onError(error: Exception) = finish(jobKey, ticket, false, focus)
             })
         })
     }
 
-    private fun applyMetadata(work: Work, metadata: LibraryMedia.Metadata) {
+    private fun applyMetadata(work: Work, metadata: LibraryMedia.Metadata, focus: Int? = null) {
         work.metadata = metadata
         val detail = metadata.detail()
         work.media.apply {
@@ -197,27 +277,33 @@ class AiringCalendarRepository internal constructor(
             remarks = detail.rating
             genreText = detail.genres
         }
-        AiringCalendarIndex.seasonNumbers(metadata).forEach { number ->
+        val numbers = AiringCalendarIndex.seasonNumbers(metadata)
+        val currentSeasons = listOfNotNull(metadata.lastAired()?.season(), metadata.nextAiring()?.season()).toSet()
+        // Focus jobs enter the front of the queue, so enqueue current seasons last.
+        val ordered = if (focus == null) numbers else numbers.filterNot { it in currentSeasons } +
+            numbers.filter { it in currentSeasons }
+        ordered.forEach { number ->
             val cached = value(seasonCache, "${work.key}|$number")
             if (cached != null) work.seasons[number] = cached
-            else enqueueSeason(work, number)
+            else enqueueSeason(work, number, focus)
         }
     }
 
-    private fun enqueueSeason(work: Work, number: Int) {
+    private fun enqueueSeason(work: Work, number: Int, focus: Int? = null) {
         val ticket = generation
         val cacheKey = "${work.key}|$number"
-        val jobKey = "season|$cacheKey"
-        enqueue(Job(jobKey, ticket) {
-            source.season(work.key, number, tag, object : TmdbLibraryApi.Listener<List<LibraryMedia.Episode>> {
+        val jobKey = (if (focus == null) "season|" else "focus-season|") + cacheKey
+        val scope = if (focus == null) Scope.LOAD else Scope.FOCUS
+        enqueue(Job(jobKey, ticket, scope, focus) {
+            source.season(work.key, number, if (focus == null) tag else focusTag, object : TmdbLibraryApi.Listener<List<LibraryMedia.Episode>> {
                 override fun onSuccess(value: List<LibraryMedia.Episode>) {
-                    if (!current(ticket)) return
+                    if (!current(ticket, focus)) return
                     val dates = AiringCalendarIndex.episodeDates(number, value)
                     seasonCache[cacheKey] = Cached(clock(), dates)
                     work.seasons[number] = dates
-                    finish(jobKey, ticket, true)
+                    finish(jobKey, ticket, true, focus)
                 }
-                override fun onError(error: Exception) = finish(jobKey, ticket, false)
+                override fun onError(error: Exception) = finish(jobKey, ticket, false, focus)
             })
         })
     }
@@ -232,11 +318,22 @@ class AiringCalendarRepository internal constructor(
         }
         page = result.page()
         totalPages = result.totalPages()
+        rememberUpdateDate(date, result)
+    }
+
+    private fun rememberUpdateDate(date: LocalDate, result: TmdbLibraryApi.Page) {
+        val hasItems = result.items().any { DiscoverMediaKey.parse(it.id)?.isMovie == false }
+        if (hasItems || result.page() == 1) {
+            val time = publicCache["$date|${result.page()}"]?.time ?: clock()
+            updateDates[date] = Cached(time, hasItems)
+        }
     }
 
     private fun enqueue(job: Job) {
         if (job.generation == generation && !active.containsKey(job.key)
-            && queue.none { it.key == job.key }) queue.addLast(job)
+            && queue.none { it.key == job.key }) {
+            if (job.scope == Scope.FOCUS) queue.addFirst(job) else queue.addLast(job)
+        }
     }
 
     private fun pump() {
@@ -245,33 +342,64 @@ class AiringCalendarRepository internal constructor(
         try {
             while (active.size < MAX_CONCURRENT && queue.isNotEmpty() && !closed) {
                 val job = queue.removeFirst()
-                if (job.generation != generation) continue
+                if (!current(job.generation, job.focusToken)) continue
                 active[job.key] = job
                 try { job.run() }
-                catch (_: Exception) { finish(job.key, job.generation, false) }
+                catch (_: Exception) { finish(job.key, job.generation, false, job.focusToken) }
             }
         } finally { pumping = false }
     }
 
-    private fun finish(key: String, ticket: Int, success: Boolean) {
-        if (!current(ticket)) return
+    private fun finish(key: String, ticket: Int, success: Boolean, focus: Int? = null) {
+        if (!current(ticket, focus)) return
         val job = active.remove(key) ?: return
-        if (!success) failures[key] = job
-        publish()
+        val failed = if (job.scope == Scope.LOAD) failures else auxiliaryFailures
+        failed.remove(key)
+        if (!success) failed[key] = job
+        notifyState()
         pump()
     }
 
-    private fun current(ticket: Int) = !closed && ticket == generation
+    private fun current(ticket: Int, focus: Int? = null) =
+        !closed && ticket == generation && (focus == null || focus == focusToken)
 
-    private fun publish() {
+    private fun notifyState() {
         if (closed) return
+        val focus = focused
+        val focusResult = focus?.let { focusResult(it) }
+        if (personalWeek == null && focusResult != null && publicDate == focusResult.entry.date
+            && publicItems.containsKey(focusResult.entry.stableKey)) {
+            publicItems[focusResult.entry.stableKey] = focusResult.entry
+        }
         val week = personalWeek
         val items = if (week == null) publicItems.values.toList() else personal.values.flatMap { work ->
             work.metadata?.let { AiringCalendarIndex.entries(work.media, work.keep, it, work.seasons, week) }
                 ?: emptyList()
         }.sortedWith(compareBy({ it.date }, { it.media.name }, { it.media.id }))
-        listener(AiringCalendarResult(items, queue.isNotEmpty() || active.isNotEmpty(),
-            failures.isNotEmpty(), page, totalPages, hasKeeps))
+        val knownDates = if (week == null) {
+            publicDate?.let { selected -> updateDates.filter { (date, cached) ->
+                cached.value && clock() - cached.time < CACHE_TTL &&
+                    AiringCalendarIndex.weekStart(date) == AiringCalendarIndex.weekStart(selected)
+            }.keys.toSet() }
+                ?: emptySet()
+        } else items.map { it.date }.toSet()
+        listener(AiringCalendarResult(items, queue.any { it.scope == Scope.LOAD } || active.values.any { it.scope == Scope.LOAD },
+            failures.isNotEmpty(), page, totalPages, hasKeeps, knownDates))
+        if (focus != null && focused === focus && focusResult != null) focus.listener(focusResult)
+    }
+
+    private fun focusResult(focus: FocusWork): AiringCalendarFocusResult {
+        val work = focus.work
+        val metadata = work.metadata
+        val entry = metadata?.let {
+            AiringCalendarIndex.entries(work.media, work.keep, it, work.seasons,
+                AiringCalendarIndex.weekStart(focus.base.date)).firstOrNull { entry -> entry.date == focus.base.date }
+        } ?: if (metadata == null) focus.base else focus.base.copy(episodes = emptyList(), episodeDetails = emptyList())
+        fun relevant(job: Job): Boolean = job.scope == Scope.FOCUS && job.focusToken == focus.token ||
+            job.scope == Scope.LOAD && (job.key == "detail|${work.key}" || job.key.startsWith("season|${work.key}|"))
+        return AiringCalendarFocusResult(entry, metadata,
+            queue.any(::relevant) || active.values.any(::relevant),
+            failures.values.any(::relevant) || auxiliaryFailures.values.any(::relevant))
     }
 
     private fun <K, V> value(cache: Map<K, Cached<V>>, key: K): V? = cache[key]?.takeIf {

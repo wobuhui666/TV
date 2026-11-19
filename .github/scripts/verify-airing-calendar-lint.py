@@ -22,6 +22,7 @@ TASK_PREFIXES = (
 )
 TASK_FILES = {
     "app/src/main/java/com/fongmi/android/tv/api/TmdbLibraryApi.java",
+    "app/src/main/java/com/fongmi/android/tv/bean/LibraryMedia.java",
     "app/src/leanback/AndroidManifest.xml",
     "app/src/leanback/java/com/fongmi/android/tv/ui/activity/AiringCalendarActivity.kt",
     "app/src/leanback/java/com/fongmi/android/tv/ui/activity/HomeActivity.java",

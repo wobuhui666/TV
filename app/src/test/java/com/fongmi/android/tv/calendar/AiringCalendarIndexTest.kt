@@ -82,6 +82,24 @@ class AiringCalendarIndexTest {
         assertEquals(LocalDate.of(2026, 11, 9), AiringCalendarIndex.weekStart(monday.minusDays(1)))
     }
 
+    @Test fun shouldRetainExactDayEpisodeStillOverviewAndRuntimeWithoutInventingMissingArtwork() {
+        val episodes = listOf(
+            LibraryMedia.Episode(1, 1, "重逢", "真实单集简介", "/real-still.jpg", monday.toString(), 46),
+            LibraryMedia.Episode(1, 2, "归途", "", "", monday.toString(), 47),
+            LibraryMedia.Episode(1, 3, "下一周", "另一天简介", "/next.jpg", monday.plusDays(7).toString(), 48)
+        )
+        val index = AiringCalendarIndex.episodeDates(1, episodes)
+        val metadata = metadata("\"seasons\":[{\"season_number\":1}]")
+        val result = AiringCalendarIndex.entries(media, keep, metadata, mapOf(1 to index), monday).single()
+        assertEquals(listOf(1, 2), result.episodeDetails.map { it.number() })
+        assertEquals("/real-still.jpg", result.episodeDetails.first().still())
+        assertEquals("真实单集简介", result.episodeDetails.first().overview())
+        assertEquals("", result.episodeDetails.last().still())
+        assertEquals(listOf(46, 47), result.episodes.map { it.runtime() })
+        val next = AiringCalendarIndex.entries(media, keep, metadata, mapOf(1 to index), monday.plusDays(7)).single()
+        assertEquals("/next.jpg", next.episodeDetails.single().still())
+    }
+
     private fun metadata(fields: String) = TmdbLibraryApi.parseMetadata(
         DiscoverMediaKey.of("tv", 8), "{\"id\":8,\"name\":\"作品\",$fields}"
     )

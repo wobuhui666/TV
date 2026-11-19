@@ -268,7 +268,21 @@ public final class TmdbLibraryApi {
                 logos, originalLanguage, key.isMovie() ? null : airing(child(object, "last_episode_to_air")),
                 key.isMovie() ? null : airing(child(object, "next_episode_to_air")),
                 key.isMovie() ? 0 : Math.max(0, number(object, "number_of_episodes")),
-                !key.isMovie() && bool(object, "in_production"), productionLogos(object));
+                !key.isMovie() && bool(object, "in_production"), productionLogos(object),
+                key.isMovie() ? List.of() : networkNames(object));
+    }
+
+    /** Reported broadcast networks; this is not a source availability guarantee. */
+    private static List<String> networkNames(JsonObject object) {
+        Set<String> names = new LinkedHashSet<>();
+        for (JsonElement value : array(object, "networks")) {
+            if (!value.isJsonObject()) continue;
+            JsonElement name = value.getAsJsonObject().get("name");
+            if (name == null || !name.isJsonPrimitive() || !name.getAsJsonPrimitive().isString()) continue;
+            String text = name.getAsString().trim();
+            if (!text.isEmpty()) names.add(text);
+        }
+        return List.copyOf(names);
     }
 
     /** These optional fields are part of the existing detail response, requiring no extra request. */

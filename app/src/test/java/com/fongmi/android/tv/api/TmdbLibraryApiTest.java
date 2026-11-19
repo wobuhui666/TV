@@ -10,6 +10,29 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TmdbLibraryApiTest {
+    @Test public void shouldCarryReportedNetworksWithoutImplyingMovieAvailability() {
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"networks\":[{\"name\":\"NHK\"},{\"name\":\" NHK \"},{\"name\":\"Netflix\"}]}");
+        assertEquals(List.of("NHK", "Netflix"), metadata.networkNames());
+        var oldConstructor = new LibraryMedia.Metadata(metadata.detail(), metadata.logo(), metadata.seasons(),
+                metadata.aliases(), metadata.logos(), metadata.originalLanguage(), metadata.lastAired(),
+                metadata.nextAiring(), metadata.totalEpisodes(), metadata.inProduction(), List.of("/studio.png"));
+        assertEquals(List.of("/studio.png"), oldConstructor.productionLogos());
+        assertTrue(oldConstructor.networkNames().isEmpty());
+        var movie = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("movie", 8),
+                "{\"id\":8,\"title\":\"作品\",\"networks\":[{\"name\":\"Netflix\"}]}");
+        assertTrue(movie.networkNames().isEmpty());
+    }
+
+    @Test public void shouldKeepNetworkNamesOptionalAndIgnoreMalformedNames() {
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"networks\":[null,2,{},"
+                        + "{\"name\":null},{\"name\":false},{\"name\":3},{\"name\":[]},{\"name\":\" \"},{\"name\":\"HBO\"}]}");
+        assertEquals(List.of("HBO"), metadata.networkNames());
+        assertTrue(TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\"}").networkNames().isEmpty());
+    }
+
     @Test public void shouldQueryExactAiringDateWithoutFilteringSeriesPremieres() {
         var parameters = TmdbLibraryApi.calendarParams(LocalDate.of(2026, 11, 18), 2);
         assertEquals("2026-11-18", parameters.get("air_date.gte"));

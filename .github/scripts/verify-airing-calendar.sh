@@ -61,7 +61,7 @@ if [ "$api" -ge 33 ]; then
 fi
 # Calendar's BeforeClass clears old evidence inside the app; the following suite keeps it.
 run_status=0
-if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$out" '8,4'; then
+if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$out" '12,4'; then
     run_status=0
 else
     run_status=$?
@@ -77,7 +77,7 @@ root = pathlib.Path(sys.argv[1])
 api = int(sys.argv[2])
 run_status = int(sys.argv[3])
 expected = {
-    'com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest': 8,
+    'com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest': 12,
     'com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest': 4,
 }
 path = root / 'suite-summary.json'
@@ -123,6 +123,11 @@ required_images = (
     'calendar-library.png', 'calendar-simple.png', 'calendar-classic.png',
     'calendar-artwork-dark.png', 'calendar-artwork-light.png',
     'calendar-artwork-logo-loaded.png', 'calendar-artwork-next-logo-loaded.png',
+    'calendar-two-headers-today-focus.png',
+    'calendar-poster-focus-scale.png', 'calendar-landscape-focus-scale.png',
+    'calendar-poster-motion-disabled.png', 'calendar-landscape-motion-disabled.png',
+    'calendar-complete-work-info.png',
+    'calendar-full-background-dark.png', 'calendar-full-background-light.png',
     'library-follow-no-source.png', 'library-follow-calendar.png',
 )
 images = []
@@ -141,16 +146,16 @@ for name in required_images:
     images.append(result)
 
 passed = (run_status == 0 and suites.get('passed') is True and counts == expected
-          and suites.get('passedTests') == 12 and case_counts == expected
+          and suites.get('passedTests') == sum(expected.values()) and case_counts == expected
           and failures == 0 and skipped == 0 and all(image['passed'] for image in images))
 summary = {'headSha': os.environ.get('GITHUB_SHA'), 'api': api, 'passed': passed,
            'runStatus': run_status, 'passedTests': suites.get('passedTests', 0),
            'suites': suites.get('suites', []), 'junitCases': case_counts,
            'failures': failures, 'skipped': skipped, 'screenshots': images,
-           'scope': 'Offline production TV calendar, exact-date TMDB fixtures, follow actions and rendered x86_64 preview UI'}
+           'scope': 'Offline production TV calendar, exact-date TMDB fixtures, two-layer remote navigation, fixed media-rail geometry, decoded full-screen artwork, actual PNG text contrast and library follow actions'}
 (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 markdown = (f"Airing calendar API {api}: {'PASS' if passed else 'FAIL'}\n\n"
-            f"Android tests: {summary['passedTests']}/12. Native screenshots: "
+            f"Android tests: {summary['passedTests']}/{sum(expected.values())}. Native screenshots: "
             f"{sum(image['passed'] for image in images)}/{len(images)}.\n")
 (root / 'verification-summary.md').write_text(markdown)
 step_summary = os.environ.get('GITHUB_STEP_SUMMARY')
@@ -159,5 +164,5 @@ if step_summary:
         output.write(markdown + '\n')
 print(json.dumps(summary, indent=2))
 if not passed:
-    raise SystemExit('Expected exactly 12 passing preview tests and all 9 native calendar/follow screenshots')
+    raise SystemExit(f'Expected exactly {sum(expected.values())} passing preview tests and all {len(required_images)} native calendar/follow screenshots')
 PY

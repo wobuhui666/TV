@@ -9,11 +9,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
-data class AiringCalendarEntry(
+data class AiringCalendarEntry @JvmOverloads constructor(
     val media: Vod,
     val date: LocalDate,
     val episodes: List<LibraryMedia.AiringEpisode> = emptyList(),
-    val keep: Keep? = null
+    val keep: Keep? = null,
+    val episodeDetails: List<LibraryMedia.Episode> = emptyList()
 ) {
     val stableKey: String get() = "${media.id}|$date"
 }
@@ -24,7 +25,15 @@ data class AiringCalendarResult(
     val failed: Boolean,
     val page: Int = 1,
     val totalPages: Int = 1,
-    val hasKeeps: Boolean = false
+    val hasKeeps: Boolean = false,
+    val knownUpdateDates: Set<LocalDate> = emptySet()
+)
+
+data class AiringCalendarFocusResult(
+    val entry: AiringCalendarEntry,
+    val metadata: LibraryMedia.Metadata?,
+    val loading: Boolean,
+    val failed: Boolean
 )
 
 /** Exact dates and coordinates from TMDB; never estimates a weekly recurrence. */
@@ -61,13 +70,14 @@ object AiringCalendarIndex {
     fun episodeDates(
         season: Int,
         episodes: List<LibraryMedia.Episode>
-    ): Map<LocalDate, List<LibraryMedia.AiringEpisode>> {
-        val dated = linkedMapOf<Pair<Int, Int>, LibraryMedia.AiringEpisode>()
+    ): Map<LocalDate, List<LibraryMedia.Episode>> {
+        val dated = linkedMapOf<Pair<Int, Int>, LibraryMedia.Episode>()
         episodes.forEach { episode ->
             if (season < 0 || episode.season() != season || episode.number() <= 0) return@forEach
             val date = date(episode.airDate()) ?: return@forEach
-            dated.putIfAbsent(season to episode.number(), LibraryMedia.AiringEpisode(
-                season, episode.number(), episode.name(), date.toString(), episode.runtime()
+            dated.putIfAbsent(season to episode.number(), LibraryMedia.Episode(
+                season, episode.number(), episode.name(), episode.overview(), episode.still(),
+                date.toString(), episode.runtime()
             ))
         }
         return dated.values.groupBy { LocalDate.parse(it.airDate()) }
@@ -76,17 +86,18 @@ object AiringCalendarIndex {
     @JvmStatic
     fun entries(
         media: Vod,
-        keep: Keep,
+        keep: Keep?,
         metadata: LibraryMedia.Metadata,
-        seasons: Map<Int, Map<LocalDate, List<LibraryMedia.AiringEpisode>>>,
+        seasons: Map<Int, Map<LocalDate, List<LibraryMedia.Episode>>>,
         weekStart: LocalDate
     ): List<AiringCalendarEntry> {
-        val coordinates = linkedMapOf<Pair<Int, Int>, LibraryMedia.AiringEpisode>()
+        val coordinates = linkedMapOf<Pair<Int, Int>, LibraryMedia.Episode>()
         listOfNotNull(metadata.lastAired(), metadata.nextAiring()).forEach { episode ->
             if (episode.season() >= 0 && episode.number() > 0 && date(episode.airDate()) != null) {
                 val detailed = seasons[episode.season()]?.values?.asSequence()?.flatten()
                     ?.firstOrNull { it.number() == episode.number() }
-                coordinates[episode.season() to episode.number()] = detailed ?: episode
+                coordinates[episode.season() to episode.number()] = detailed ?: LibraryMedia.Episode(
+                    episode.season(), episode.number(), episode.name(), "", "", episode.airDate(), episode.runtime())
             }
         }
         // Per-season detail supersedes last/next summaries for the same coordinate.
@@ -102,8 +113,12 @@ object AiringCalendarIndex {
         return coordinates.values.groupBy { LocalDate.parse(it.airDate()) }
             .filterKeys { !it.isBefore(weekStart) && !it.isAfter(weekEnd) }
             .toSortedMap()
-            .map { (day, episodes) -> AiringCalendarEntry(media, day,
-                episodes.sortedWith(compareBy({ it.season() }, { it.number() })), keep) }
+            .map { (day, episodes) ->
+                val ordered = episodes.sortedWith(compareBy({ it.season() }, { it.number() }))
+                AiringCalendarEntry(media, day, ordered.map {
+                    LibraryMedia.AiringEpisode(it.season(), it.number(), it.name(), it.airDate(), it.runtime())
+                }, keep, ordered)
+            }
     }
 
     private fun date(value: String?): LocalDate? = try {

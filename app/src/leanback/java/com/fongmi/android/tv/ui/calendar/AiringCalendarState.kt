@@ -6,7 +6,8 @@ import androidx.compose.runtime.Immutable
 data class AiringCalendarDay @JvmOverloads constructor(
     val date: String,
     val label: String,
-    val today: Boolean = false
+    val today: Boolean = false,
+    val hasUpdates: Boolean = false
 )
 
 /** One work on one date; subtitle contains all of that day's episode coordinates. */
@@ -15,7 +16,9 @@ data class AiringCalendarItem @JvmOverloads constructor(
     val key: String,
     val title: String,
     val poster: String = "",
-    val subtitle: String = ""
+    val subtitle: String = "",
+    val episodeStill: String = "",
+    val backdrop: String = ""
 )
 
 @Immutable
@@ -24,7 +27,10 @@ data class AiringCalendarPreview @JvmOverloads constructor(
     val backdrop: String = "",
     val logo: String = "",
     val subtitle: String = "",
-    val key: String = ""
+    val key: String = "",
+    val overview: String = "",
+    val metadata: List<String> = emptyList(),
+    val airingStatus: String = ""
 )
 
 /** Display-only snapshots. The activity owns TMDB requests and follow actions. */
@@ -41,7 +47,8 @@ data class AiringCalendarState @JvmOverloads constructor(
     val failed: Boolean = false,
     val hasKeeps: Boolean = false,
     val hasMore: Boolean = false,
-    val emptyMessage: String = ""
+    val emptyMessage: String = "",
+    val todayDate: String = ""
 ) {
     class Builder {
         @JvmField var mode = "public"
@@ -56,8 +63,9 @@ data class AiringCalendarState @JvmOverloads constructor(
         @JvmField var hasKeeps = false
         @JvmField var hasMore = false
         @JvmField var emptyMessage = ""
+        @JvmField var todayDate = ""
 
         fun build() = AiringCalendarState(mode, weekStart, selectedDate, weekLabel,
-            days.toList(), items.toList(), preview, loading, failed, hasKeeps, hasMore, emptyMessage)
+            days.toList(), items.toList(), preview, loading, failed, hasKeeps, hasMore, emptyMessage, todayDate)
     }
 }

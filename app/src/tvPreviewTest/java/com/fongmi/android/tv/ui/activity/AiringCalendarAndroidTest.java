@@ -3,6 +3,8 @@ package com.fongmi.android.tv.ui.activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.ParcelFileDescriptor;
+import android.provider.Settings;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -27,6 +29,7 @@ import androidx.test.uiautomator.Until;
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.api.TmdbLibraryApi;
 import com.fongmi.android.tv.bean.Result;
+import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.calendar.AiringCalendarRepository;
 import com.fongmi.android.tv.setting.ExperienceMode;
 import com.fongmi.android.tv.setting.ExperienceSettings;
@@ -34,6 +37,7 @@ import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.calendar.AiringCalendarState;
 import com.fongmi.android.tv.ui.calendar.AiringCalendarView;
+import com.fongmi.android.tv.ui.custom.LibraryMotion;
 import com.fongmi.android.tv.ui.theme.JetStreamThemeController;
 import com.fongmi.android.tv.utils.TmdbNetwork;
 import com.github.catvod.net.OkHttp;
@@ -47,9 +51,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -60,6 +64,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 
 import okhttp3.HttpUrl;
@@ -85,6 +90,9 @@ public final class AiringCalendarAndroidTest {
     private final UiDevice device = UiDevice.getInstance(instrumentation);
     private final List<HttpUrl> requested = Collections.synchronizedList(new ArrayList<>());
     private final List<AiringCalendarActivity> activities = new ArrayList<>();
+    private final Map<Integer, String> workDates = new ConcurrentHashMap<>();
+    private final Map<Integer, String> workTitles = new ConcurrentHashMap<>();
+    private final Map<String, Keep> savedFixtureKeeps = new HashMap<>();
     private final CountDownLatch heldEntered = new CountDownLatch(1);
     private final CountDownLatch releaseHeld = new CountDownLatch(1);
     private final AtomicInteger cancelled = new AtomicInteger();
@@ -95,13 +103,15 @@ public final class AiringCalendarAndroidTest {
     private HomePreviewFixtures.Session homeSession;
     private volatile boolean failDiscover;
     private volatile boolean validLogo;
+    private volatile boolean provideEpisodeStills = true;
+    private LocalDate fixtureDate;
     private volatile String heldDate = "";
     private volatile int pageSize = 3, totalPages = 1;
 
     @Before public void setup() {
         assertEquals("Isolated preview only", "com.fongmi.android.tv.preview",
                 instrumentation.getTargetContext().getPackageName());
-        byte[] artwork = bitmap();
+        fixtureDate = LocalDate.now(AiringCalendarRepository.TIME_ZONE);
         main(() -> {
             savedPreferences = new HashMap<>(Prefers.getPrefers().getAll());
             original = OkHttp.client();
@@ -118,7 +128,7 @@ public final class AiringCalendarAndroidTest {
                 String type = "application/json";
                 if (url.encodedPath().contains("/t/p/")) {
                     if (url.encodedPath().endsWith("failed-logo.png")) throw new IOException("Missing fixture logo");
-                    body = artwork;
+                    body = CalendarArtworkFixtures.image(url.encodedPath());
                     type = "image/png";
                 } else {
                     if (url.encodedPath().endsWith("/discover/tv")) {
@@ -171,6 +181,11 @@ public final class AiringCalendarAndroidTest {
             JetStreamThemeController.refresh();
             TmdbLibraryApi.clearCache();
             fixture.connectionPool().evictAll();
+            for (Map.Entry<String, Keep> saved : savedFixtureKeeps.entrySet()) {
+                Keep current = Keep.findDiscover(saved.getKey());
+                if (current != null) current.delete();
+                if (saved.getValue() != null) saved.getValue().save();
+            }
         });
     }
 
@@ -178,6 +193,7 @@ public final class AiringCalendarAndroidTest {
         for (ExperienceMode mode : ExperienceMode.values()) {
             main(() -> ExperienceSettings.putMode(mode));
             open(true);
+            await("Opening the day initially focuses its first poster", () -> focused().startsWith("item:") && nodeFocused(focused()));
             LocalDate initial = LocalDate.parse(state().getSelectedDate());
             assertEquals(LocalDate.now(AiringCalendarRepository.TIME_ZONE), initial);
             assertEquals(7, state().getDays().size());
@@ -270,10 +286,10 @@ public final class AiringCalendarAndroidTest {
         open(true);
         assertFalse("The next page waits for the tail", requestSnapshot().stream().anyMatch(url -> "2".equals(url.queryParameter("page"))));
         focus("item:" + state().getItems().get(0).getKey());
-        for (int row = 0; row < 3; row++) {
+        for (int column = 0; column < 20 && state().getItems().size() == 20; column++) {
             String before = focused();
-            device.pressDPadDown();
-            await("Down reaches the next poster row", () -> !before.equals(focused()));
+            device.pressDPadRight();
+            await("Right reaches the next poster in the horizontal row", () -> !before.equals(focused()) || state().getItems().size() == 40);
         }
         await("Visible tail requests page two", () -> requestSnapshot().stream().anyMatch(url -> "2".equals(url.queryParameter("page")))
                 && state().getItems().size() == 40 && !state().getLoading());
@@ -358,6 +374,130 @@ public final class AiringCalendarAndroidTest {
         await("Up keeps the header reachable", () -> focused().startsWith("mode:"));
     }
 
+    @Test public void shouldStartOnTodaysPosterBelowTwoSafeHeaderLayers() {
+        open(true);
+        String first = state().getItems().get(0).getKey();
+        await("Today starts on its first actual poster", () -> focused().equals("item:" + first) && nodeFocused("item:" + first));
+        Rect primary = nodeBounds("calendarPrimaryHeader");
+        Rect dates = nodeBounds("calendarDateHeader");
+        Rect row = nodeBounds("calendarMediaRow");
+        Rect window = hostBounds();
+        assertTrue("Mode and week controls occupy the first header layer", primary.top < dates.top && primary.bottom <= dates.top);
+        assertTrue("The date strip precedes the horizontal poster row", dates.bottom < row.top);
+        assertTrue("Header actions have safe horizontal margins", primary.left >= window.left + dp(40)
+                && primary.right <= window.right - dp(40));
+        for (com.fongmi.android.tv.ui.calendar.AiringCalendarDay day : state().getDays()) {
+            UiObject2 number = device.wait(Until.findObject(By.res("date:" + day.getDate())), 10_000);
+            assertNotNull("Each date has a visible numeric day", number);
+            assertEquals("The date strip shows only the day number", String.valueOf(LocalDate.parse(day.getDate()).getDayOfMonth()), number.getText());
+        }
+        assertEquals(fixtureDate.toString(), state().getSelectedDate());
+        NativeUiEvidence.capture("calendar-two-headers-today-focus");
+    }
+
+    @Test public void shouldKeepUniformPosterGeometryAndRespectDisabledAnimations() throws Exception {
+        assertEquals("Animator preference tests use the dedicated emulator", "1", shell("getprop ro.kernel.qemu").trim());
+        String originalScale = shell("settings get global animator_duration_scale").trim();
+        assertTrue("The saved animator value is a setting value", originalScale.matches("null|[0-9]+(?:\\.[0-9]+)?"));
+        try {
+            for (boolean stills : new boolean[]{false, true}) {
+                provideEpisodeStills = stills;
+                seedFollow(11801); seedFollow(11802);
+                shell("settings put global animator_duration_scale 1");
+                main(TmdbLibraryApi::clearCache);
+                open(true);
+                click("mode:following");
+                await("Two dated followed works load", () -> !state().getLoading() && state().getItems().size() >= 2);
+                await("Enabled system motion is observed", () -> LibraryMotion.enabled(host()));
+                String first = state().getItems().get(0).getKey();
+                String second = state().getItems().get(1).getKey();
+                focus("date:" + state().getSelectedDate());
+                Rect before = nodeBounds("calendarArtwork:" + first);
+                Rect neighbor = nodeBounds("calendarArtwork:" + second);
+                double aspect = (double) before.width() / before.height();
+                assertEquals("Genuine still or backdrop art selects landscape slots; poster fallback stays portrait", stills ? 16d / 9d : 2d / 3d, aspect, .04);
+                assertEquals("Every image in the row uses the same aspect", aspect,
+                        (double) neighbor.width() / neighbor.height(), .02);
+                focus("item:" + first);
+                await("Focus paints a 1.06 image scale", () -> Math.abs((double) nodeBounds("calendarArtwork:" + first).width() / before.width() - 1.06) <= .025);
+                assertEquals("Focusing does not move the neighboring image", neighbor, nodeBounds("calendarArtwork:" + second));
+                Rect focusedImage = nodeBounds("calendarArtwork:" + first);
+                Rect window = hostBounds();
+                assertTrue("The scaled focused image stays within safe screen margins", focusedImage.left >= window.left + dp(28)
+                        && focusedImage.right <= window.right - dp(28));
+                NativeUiEvidence.capture(stills ? "calendar-landscape-focus-scale" : "calendar-poster-focus-scale");
+                shell("settings put global animator_duration_scale 0");
+                await("The existing window observes disabled system motion", () -> !LibraryMotion.enabled(host()));
+                main(activity::finish); await("Enabled-motion page closes", activity::isDestroyed);
+
+                open(true); click("mode:following");
+                await("Disabled motion has dated content", () -> !state().getLoading() && state().getItems().size() >= 2 && !LibraryMotion.enabled(host()));
+                String key = state().getItems().get(0).getKey();
+                focus("date:" + state().getSelectedDate());
+                Rect resting = nodeBounds("calendarArtwork:" + key);
+                focus("item:" + key);
+                assertEquals("Disabling animation leaves focused image geometry unchanged", resting, nodeBounds("calendarArtwork:" + key));
+                NativeUiEvidence.capture(stills ? "calendar-landscape-motion-disabled" : "calendar-poster-motion-disabled");
+                main(activity::finish); await("Disabled-motion page closes", activity::isDestroyed);
+            }
+        } finally {
+            shell("null".equals(originalScale) ? "settings delete global animator_duration_scale"
+                    : "settings put global animator_duration_scale " + originalScale);
+        }
+    }
+
+    @Test public void shouldShowCompleteFocusedWorkFactsAndRealEpisodeDatesWithoutInventedTimes() {
+        open(true);
+        String first = state().getItems().get(0).getKey();
+        focus("item:" + first);
+        await("Focused work metadata and episode overview load", () -> !state().getPreview().getMetadata().isEmpty()
+                && !state().getPreview().getOverview().isEmpty()
+                && String.join(" · ", state().getPreview().getMetadata()).contains("S01E01")
+                && String.join(" · ", state().getPreview().getMetadata()).contains("S01E02"));
+        String facts = String.join(" · ", state().getPreview().getMetadata());
+        assertTrue("Rating comes from the fetched metadata", facts.contains("8.4"));
+        assertTrue("Runtime comes from the fetched episode", facts.matches("(?s).*\\b45\\b.*"));
+        assertTrue("Network comes from the actual network array", facts.contains("Fixture Network"));
+        assertTrue("The selected date retains both dated episode coordinates", facts.contains("S01E01") && facts.contains("S01E02"));
+        assertTrue("The displayed airing date comes from the matched episodes", facts.contains(fixtureDate.toString()));
+        assertFalse("A date-only API never creates an airing clock", facts.matches("(?s).*\\b(?:[01]?\\d|2[0-3]):[0-5]\\d\\b.*"));
+        assertTrue("Overview comes from the supplied work or matching episode", state().getPreview().getOverview().startsWith("Synthetic overview for work "));
+        assertEquals("The focused work owns the full title", state().getItems().get(0).getTitle(), state().getPreview().getTitle());
+        assertNotNull(device.wait(Until.findObject(By.res("calendarPreviewMetadata")), 10_000));
+        assertNotNull(device.wait(Until.findObject(By.res("calendarPreviewOverview")), 10_000));
+        NativeUiEvidence.capture("calendar-complete-work-info");
+    }
+
+    @Test public void shouldPaintAndReplaceFullBackgroundWithSevenToOneTextContrast() {
+        open(true);
+        String first = state().getItems().get(0).getKey();
+        focus("item:" + first);
+        await("The first full background is actually painted", () -> loadedArtwork(state().getPreview().getBackdrop()) != null
+                && "loaded".equals(accessibilityState("calendarBackdrop")) && !state().getPreview().getMetadata().isEmpty());
+        String oldBackdrop = state().getPreview().getBackdrop();
+        assertEquals("The painted background covers the actual app window", hostBounds(), nodeBounds("calendarBackdrop"));
+        assertNonUniformArtwork(loadedArtwork(oldBackdrop));
+        String next = state().getItems().get(1).getKey();
+        device.pressDPadRight();
+        await("The second work replaces the full background", () -> focused().equals("item:" + next)
+                && state().getPreview().getKey().equals(next) && !oldBackdrop.equals(state().getPreview().getBackdrop())
+                && loadedArtwork(state().getPreview().getBackdrop()) != null && loadedArtwork(oldBackdrop) == null
+                && !state().getPreview().getMetadata().isEmpty());
+        assertNonUniformArtwork(loadedArtwork(state().getPreview().getBackdrop()));
+        for (boolean light : new boolean[]{false, true}) {
+            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+            String evidence = light ? "calendar-full-background-light" : "calendar-full-background-dark";
+            NativeUiEvidence.capture(evidence);
+            if ("true".equals(InstrumentationRegistry.getArguments().getString("native_ui_evidence"))) {
+                assertRenderedTextContrast(evidence, light, "calendarPreviewTitle");
+                for (int index = 0; index < state().getPreview().getMetadata().size(); index++) {
+                    assertRenderedTextContrast(evidence, light, "calendarPreviewMetadataText:" + index);
+                }
+                assertRenderedTextContrast(evidence, light, "calendarPreviewOverview");
+            }
+        }
+    }
+
     private String json(HttpUrl url) throws Exception {
         String path = url.encodedPath();
         if (path.endsWith("/discover/tv")) {
@@ -365,33 +505,56 @@ public final class AiringCalendarAndroidTest {
             String date = url.queryParameter("air_date.gte");
             JSONArray results = new JSONArray();
             for (int i = 1; i <= pageSize; i++) {
-                int id = 11800 + (page - 1) * pageSize + i;
-                results.put(new JSONObject().put("id", id).put("name", "Calendar " + date + " #" + id)
+                int id = 118000 + (int) Math.floorMod(LocalDate.parse(date).toEpochDay(), 100000L) * 100 + (page - 1) * pageSize + i;
+                String title = "Calendar " + date + " #" + id;
+                workDates.put(id, date); workTitles.put(id, title);
+                results.put(new JSONObject().put("id", id).put("name", title)
                         .put("first_air_date", "2020-01-01").put("poster_path", "/poster-" + id + ".png")
-                        .put("backdrop_path", "/backdrop-" + id + ".png"));
+                        .put("backdrop_path", provideEpisodeStills ? "/backdrop-" + id + ".png" : ""));
             }
             return new JSONObject().put("page", page).put("total_pages", totalPages).put("results", results).toString();
         }
         if (path.endsWith("/images")) return "{\"logos\":[]}";
-        if (path.contains("/season/")) return "{\"episodes\":[]}";
+        if (path.contains("/season/")) {
+            String show = path.substring(path.indexOf("/tv/") + 4, path.indexOf("/season/"));
+            int id = Integer.parseInt(show);
+            String date = workDates.getOrDefault(id, fixtureDate.toString());
+            JSONArray episodes = new JSONArray();
+            for (int number = 1; number <= 2; number++) episodes.put(new JSONObject()
+                    .put("season_number", 1).put("episode_number", number).put("air_date", date)
+                    .put("name", "Synthetic episode " + number).put("runtime", 45)
+                    .put("overview", overview(id))
+                    .put("still_path", provideEpisodeStills ? "/still-" + id + ".png" : ""));
+            return new JSONObject().put("season_number", 1).put("episodes", episodes).toString();
+        }
         String tail = path.substring(path.lastIndexOf('/') + 1);
         int id = tail.matches("\\d+") ? Integer.parseInt(tail) : 11801;
-        return new JSONObject().put("id", id).put("name", "Calendar fixture " + id)
+        return new JSONObject().put("id", id).put("name", workTitles.getOrDefault(id, "Calendar fixture " + id))
                 .put("first_air_date", "2020-01-01").put("original_language", "en")
-                .put("poster_path", "/poster-" + id + ".png").put("backdrop_path", "/backdrop-" + id + ".png")
+                .put("vote_average", 8.4).put("episode_run_time", new JSONArray().put(45))
+                .put("overview", overview(id))
+                .put("networks", new JSONArray().put(new JSONObject().put("id", 118).put("name", "Fixture Network")))
+                .put("genres", new JSONArray().put(new JSONObject().put("id", 18).put("name", "Drama")))
+                .put("poster_path", "/poster-" + id + ".png").put("backdrop_path", provideEpisodeStills ? "/backdrop-" + id + ".png" : "")
                 .put("images", new JSONObject().put("logos", new JSONArray().put(new JSONObject()
                         .put("file_path", validLogo ? "/valid-logo-" + id + ".png" : "/failed-logo.png")
                         .put("iso_639_1", "en").put("width", 320).put("height", 80))))
-                .put("seasons", new JSONArray()).toString();
+                .put("seasons", new JSONArray().put(new JSONObject().put("season_number", 1).put("episode_count", 2))).toString();
     }
 
-    private byte[] bitmap() {
-        Bitmap bitmap = Bitmap.createBitmap(240, 360, Bitmap.Config.ARGB_8888);
-        bitmap.eraseColor(Color.rgb(53, 88, 123));
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes));
-        bitmap.recycle();
-        return bytes.toByteArray();
+    private String overview(int id) {
+        return "Synthetic overview for work " + id + ". Two researchers cross a mountain pass while a storm approaches. "
+                + "Their journey reveals a distant observatory and a promise they must keep.";
+    }
+
+    private void seedFollow(int id) {
+        main(() -> {
+            String key = "tmdb:tv:" + id;
+            if (!savedFixtureKeeps.containsKey(key)) savedFixtureKeeps.put(key, Keep.findDiscover(key));
+            Keep keep = new Keep(); keep.setKey(key); keep.setMediaRef(key); keep.setType(Keep.TYPE_DISCOVER); keep.setCid(0);
+            keep.setVodName("Calendar fixture " + id); keep.setVodPic("https://" + HOST + "/t/p/w500/poster-" + id + ".png");
+            keep.setSiteName("Fixture Network"); keep.setCreateTime(System.currentTimeMillis()); keep.save();
+        });
     }
 
     private List<HttpUrl> requestSnapshot() {
@@ -403,6 +566,52 @@ public final class AiringCalendarAndroidTest {
         Bitmap[] result = new Bitmap[1];
         main(() -> result[0] = loadedArtwork(host(), expectedUrl));
         return result[0];
+    }
+
+    private Rect nodeBounds(String tag) {
+        UiObject2 node = device.wait(Until.findObject(By.res(tag)), 10_000);
+        assertNotNull("Rendered node exists: " + tag, node);
+        Rect bounds = node.getVisibleBounds();
+        assertTrue("Rendered node has actual pixel bounds: " + tag, bounds.width() > 0 && bounds.height() > 0);
+        return bounds;
+    }
+
+    private Rect hostBounds() {
+        Rect[] bounds = new Rect[1];
+        main(() -> {
+            int[] location = new int[2]; host().getLocationOnScreen(location);
+            bounds[0] = new Rect(location[0], location[1], location[0] + host().getWidth(), location[1] + host().getHeight());
+        });
+        return bounds[0];
+    }
+
+    private int dp(int value) {
+        int[] pixels = new int[1];
+        main(() -> pixels[0] = Math.round(value * host().getResources().getDisplayMetrics().density));
+        return pixels[0];
+    }
+
+    private String shell(String command) throws IOException {
+        ParcelFileDescriptor descriptor = instrumentation.getUiAutomation().executeShellCommand(command);
+        try (ParcelFileDescriptor.AutoCloseInputStream input = new ParcelFileDescriptor.AutoCloseInputStream(descriptor)) {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            for (int count; (count = input.read(buffer)) >= 0;) bytes.write(buffer, 0, count);
+            return bytes.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+        }
+    }
+
+    private void assertNonUniformArtwork(Bitmap source) {
+        assertNotNull("The displayed bitmap exists", source);
+        Bitmap sample = source.copy(Bitmap.Config.ARGB_8888, false);
+        assertNotNull("Read back the actual displayed bitmap", sample);
+        try {
+            java.util.Set<Integer> colors = new java.util.HashSet<>();
+            for (int row = 1; row <= 4; row++) for (int column = 1; column <= 4; column++) {
+                colors.add(sample.getPixel(sample.getWidth() * column / 5, sample.getHeight() * row / 5));
+            }
+            assertTrue("The reference scene is painted, not a featureless placeholder", colors.size() >= 4);
+        } finally { sample.recycle(); }
     }
 
     private void assertRenderedTextContrast(String evidence, boolean light, String tag) {
@@ -417,20 +626,19 @@ public final class AiringCalendarAndroidTest {
             assertTrue("The title has screenshot bounds", bounds.intersect(0, 0, screenshot.getWidth(), screenshot.getHeight()));
             int background = screenshot.getPixel(bounds.centerX(), Math.min(screenshot.getHeight() - 1, bounds.bottom + 3)) | 0xff000000;
             double backgroundLuminance = ColorUtils.calculateLuminance(background);
-            assertTrue("Screenshot background matches the selected theme", light ? backgroundLuminance > .5 : backgroundLuminance < .2);
             int contrastedPixels = 0;
             for (int y = bounds.top; y < bounds.bottom; y++) {
                 for (int x = bounds.left; x < bounds.right; x++) {
                     int pixel = screenshot.getPixel(x, y) | 0xff000000;
                     double luminance = ColorUtils.calculateLuminance(pixel);
-                    boolean direction = light ? luminance < backgroundLuminance - .2 : luminance > backgroundLuminance + .2;
-                    if (direction && ColorUtils.calculateContrast(pixel, background) >= 4.5) contrastedPixels++;
+                    boolean direction = backgroundLuminance > .5 ? luminance < backgroundLuminance - .2 : luminance > backgroundLuminance + .2;
+                    if (direction && ColorUtils.calculateContrast(pixel, background) >= 7.0) contrastedPixels++;
                 }
             }
             Log.i("CalendarContrast", tag + " light=" + light + " background=" + backgroundLuminance
                     + " contrastedPixels=" + contrastedPixels + " bounds=" + bounds);
-            assertTrue("Actual " + tag + " glyph pixels contrast with the " + (light ? "light" : "dark") + " background",
-                    contrastedPixels >= Math.max(20, bounds.width() * bounds.height() / 1000));
+            assertTrue("Actual " + tag + " glyph pixels have at least 7:1 contrast with the " + (light ? "light" : "dark") + " theme background",
+                    contrastedPixels >= Math.max(20, bounds.width() * bounds.height() / 200));
         } finally {
             screenshot.recycle();
         }

@@ -151,9 +151,167 @@ class AiringCalendarRepositoryTest {
         assertNull(repository.metadataFor(key))
     }
 
-    private fun metadata(id: Long, seasons: List<Int>) = TmdbLibraryApi.parseMetadata(
+    @Test fun shouldEnrichOnlyFocusedPublicWorkWithExactDayEpisodesAndStill() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8), media(10)), 1, 1))
+        val focused = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.first(), focused::add)
+        source.succeed(source.pending.single() as DetailRequest,
+            metadata(8, listOf(0, 1, 3), "\"vote_average\":8.7,\"overview\":\"剧集简介\",\"networks\":[{\"name\":\"NHK\"}]"))
+        assertFalse(results.last().loading)
+        assertTrue(focused.last().loading)
+        while (source.pending.isNotEmpty()) {
+            val request = source.pending.first() as SeasonRequest
+            source.succeed(request, when (request.number) {
+                1 -> listOf(LibraryMedia.Episode(1, 1, "重逢", "单集简介", "/still.jpg", monday.toString(), 46),
+                    episode(1, 2, monday))
+                3 -> listOf(episode(3, 1, monday.plusDays(1)))
+                else -> emptyList()
+            })
+        }
+        val entry = focused.last().entry
+        assertEquals(listOf(1, 2), entry.episodes.map { it.number() })
+        assertEquals("/still.jpg", entry.episodeDetails.first().still())
+        assertEquals("单集简介", entry.episodeDetails.first().overview())
+        assertEquals(listOf("NHK"), focused.last().metadata!!.networkNames())
+        assertEquals(1, source.detailCalls)
+        assertTrue(results.last().items.last().episodeDetails.isEmpty())
+        assertFalse(focused.last().loading)
+    }
+
+    @Test fun shouldShareFourSlotsWithIndicatorsAndRejectLateSameKeyFocusCallbacks() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        repository.loadWeekIndicators(monday)
+        val focus = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.single(), focus::add)
+        assertEquals(4, source.pending.size)
+        source.succeed(source.pending.first() as PublicRequest, TmdbLibraryApi.Page(emptyList(), 1, 1))
+        source.succeed(source.pending.filterIsInstance<DetailRequest>().single(), metadata(8, (0..8).toList()))
+        val old = source.pending.filterIsInstance<SeasonRequest>().first()
+        repository.focus(results.last().items.single(), focus::add)
+        val count = focus.size
+        source.fail(old)
+        assertEquals(count, focus.size)
+        assertFalse(focus.last().failed)
+        assertTrue(source.pending.size <= 4)
+        assertTrue(source.pending.filterIsInstance<PublicRequest>().isNotEmpty())
+        repository.cancel()
+        assertTrue(source.pending.isEmpty())
+    }
+
+    @Test fun shouldReuseFullFocusedSeasonCacheAcrossDifferentWeeks() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        val focus = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.single(), focus::add)
+        source.succeed(source.pending.single() as DetailRequest, metadata(8, listOf(1)))
+        source.succeed(source.pending.single() as SeasonRequest, listOf(
+            LibraryMedia.Episode(1, 1, "本周", "本周简介", "/first.jpg", monday.toString(), 45),
+            LibraryMedia.Episode(1, 2, "下周", "下周简介", "/second.jpg", monday.plusDays(7).toString(), 46)))
+        repository.loadPublic(monday.plusDays(7))
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        repository.focus(results.last().items.single(), focus::add)
+        assertTrue(source.pending.isEmpty())
+        assertEquals("/second.jpg", focus.last().entry.episodeDetails.single().still())
+        assertEquals("下周简介", focus.last().entry.episodeDetails.single().overview())
+        assertEquals(1, source.detailCalls)
+        assertEquals(1, source.seasonCalls)
+    }
+
+    @Test fun shouldReuseOngoingPersonalSeasonRequestsWhenFocusingAnEntry() {
+        repository.loadPersonal(monday, listOf(keep(8)))
+        source.succeed(source.pending.single() as DetailRequest, metadata(8, listOf(0, 1, 3)))
+        source.succeed(source.pending.filterIsInstance<SeasonRequest>().single { it.number == 0 },
+            listOf(episode(0, 1, monday)))
+        val focus = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.single(), focus::add)
+        while (source.pending.isNotEmpty()) {
+            val request = source.pending.first() as SeasonRequest
+            source.succeed(request, listOf(LibraryMedia.Episode(request.number, 1, "单集", "实有简介", "/real.jpg", monday.toString(), 24)))
+        }
+        assertEquals(1, source.detailCalls)
+        assertEquals(3, source.seasonCalls)
+        assertEquals(3, focus.last().entry.episodeDetails.size)
+        assertFalse(focus.last().loading)
+    }
+
+    @Test fun shouldLoadExactWeekIndicatorsWithoutReplacingSelectedItemsAndReuseTheirPages() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        repository.loadWeekIndicators(monday)
+        while (source.pending.isNotEmpty()) {
+            assertTrue(source.pending.size <= 4)
+            assertFalse(results.last().loading)
+            val request = source.pending.first() as PublicRequest
+            source.succeed(request, TmdbLibraryApi.Page(if (request.date == monday.plusDays(3)) listOf(media(10)) else emptyList(), 1, 1))
+        }
+        assertEquals(setOf(monday, monday.plusDays(3)), results.last().knownUpdateDates)
+        assertEquals("tmdb:tv:8", results.last().items.single().media.id)
+        assertEquals(0, source.detailCalls)
+        assertEquals(0, source.seasonCalls)
+        repository.loadPublic(monday.plusDays(3))
+        assertTrue(source.pending.isEmpty())
+        assertEquals(7, source.publicCalls)
+        assertEquals("tmdb:tv:10", results.last().items.single().media.id)
+    }
+
+    @Test fun shouldIgnoreOldWeekIndicatorsAfterChangingTheSelectedWeek() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        repository.loadWeekIndicators(monday)
+        val old = source.pending.first() as PublicRequest
+        repository.loadPublic(monday.plusDays(7))
+        val count = results.size
+        source.succeed(old, TmdbLibraryApi.Page(listOf(media(9)), 1, 1))
+        assertEquals(count, results.size)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(10)), 1, 1))
+        assertEquals(setOf(monday.plusDays(7)), results.last().knownUpdateDates)
+    }
+
+    @Test fun shouldNotExposeExpiredIndicatorDatesAsConfirmedUpdates() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 1))
+        repository.loadWeekIndicators(monday)
+        while (source.pending.isNotEmpty()) {
+            val request = source.pending.first() as PublicRequest
+            source.succeed(request, TmdbLibraryApi.Page(listOf(media(9)), 1, 1))
+        }
+        assertEquals(7, results.last().knownUpdateDates.size)
+        now += 30 * 60_000L
+        repository.loadPublic(monday)
+        assertTrue(results.last().knownUpdateDates.isEmpty())
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(emptyList(), 1, 1))
+        assertTrue(results.last().knownUpdateDates.isEmpty())
+    }
+
+    @Test fun shouldRestartSameWorkEnrichmentAfterAppendingAnotherPublicPage() {
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(8)), 1, 2))
+        val focus = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.single(), focus::add)
+        source.succeed(source.pending.single() as DetailRequest, metadata(8, (0..6).toList()))
+        val old = source.pending.first() as SeasonRequest
+        repository.loadPublic(monday, 2)
+        source.succeed(source.pending.single() as PublicRequest, TmdbLibraryApi.Page(listOf(media(10)), 2, 2))
+        repository.focus(results.last().items.first(), focus::add)
+        val count = focus.size
+        source.succeed(old, listOf(episode(old.number, 1, monday)))
+        assertEquals(count, focus.size)
+        while (source.pending.isNotEmpty()) {
+            val request = source.pending.first() as SeasonRequest
+            source.succeed(request, listOf(episode(request.number, 1, monday)))
+            assertTrue(source.pending.size <= 4)
+        }
+        assertEquals(7, focus.last().entry.episodes.size)
+        assertEquals(1, source.detailCalls)
+        assertEquals(2, results.last().items.size)
+    }
+
+    private fun metadata(id: Long, seasons: List<Int>, extra: String = "") = TmdbLibraryApi.parseMetadata(
         DiscoverMediaKey.of("tv", id), "{\"id\":$id,\"name\":\"作品\",\"seasons\":["
-                + seasons.joinToString(",") { "{\"season_number\":$it,\"episode_count\":0}" } + "]}"
+                + seasons.joinToString(",") { "{\"season_number\":$it,\"episode_count\":0}" }
+                + "]" + if (extra.isBlank()) "}" else ",$extra}"
     )
 
     private fun keep(id: Long) = Keep().apply {
@@ -172,13 +330,13 @@ class AiringCalendarRepositoryTest {
     private fun episode(season: Int, number: Int, date: LocalDate) =
         LibraryMedia.Episode(season, number, "", "", "", date.toString(), 24)
 
-    private sealed interface Request
+    private sealed interface Request { val tag: Any }
     private data class PublicRequest(val date: LocalDate, val page: Int,
-        val listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>) : Request
+        val listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>, override val tag: Any) : Request
     private data class DetailRequest(val key: DiscoverMediaKey,
-        val listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>) : Request
+        val listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>, override val tag: Any) : Request
     private data class SeasonRequest(val key: DiscoverMediaKey, val number: Int,
-        val listener: TmdbLibraryApi.Listener<List<LibraryMedia.Episode>>) : Request
+        val listener: TmdbLibraryApi.Listener<List<LibraryMedia.Episode>>, override val tag: Any) : Request
 
     private class FakeSource : AiringCalendarSource {
         val pending = mutableListOf<Request>()
@@ -189,18 +347,18 @@ class AiringCalendarRepositoryTest {
 
         override fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>) {
             publicCalls++
-            pending.add(PublicRequest(date, page, listener))
+            pending.add(PublicRequest(date, page, listener, tag))
         }
         override fun detail(key: DiscoverMediaKey, tag: Any, listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>) {
             detailCalls++
-            pending.add(DetailRequest(key, listener))
+            pending.add(DetailRequest(key, listener, tag))
         }
         override fun season(key: DiscoverMediaKey, number: Int, tag: Any, listener: TmdbLibraryApi.Listener<List<LibraryMedia.Episode>>) {
             seasonCalls++
             requestedSeasons.add(number)
-            pending.add(SeasonRequest(key, number, listener))
+            pending.add(SeasonRequest(key, number, listener, tag))
         }
-        override fun cancel(tag: Any) { pending.clear() }
+        override fun cancel(tag: Any) { pending.removeAll { it.tag == tag } }
         fun succeed(request: PublicRequest, value: TmdbLibraryApi.Page) {
             pending.remove(request)
             request.listener.onSuccess(value)

@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
 import android.os.SystemClock;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -41,7 +40,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -83,22 +81,15 @@ public final class LibraryFollowAndroidTest {
     @Before public void setup() {
         assertEquals("Only the isolated preview application", "com.fongmi.android.tv.preview", instrumentation.getTargetContext().getPackageName());
         fixtureDate = LocalDate.now(AiringCalendarRepository.TIME_ZONE);
-        Bitmap bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888);
-        bitmap.eraseColor(0xff386572);
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output));
-        bitmap.recycle();
-        byte[] picture = output.toByteArray();
         fixture = new OkHttpClient.Builder().addInterceptor(chain -> {
             if (!chain.request().url().host().equals("library-follow.invalid")) throw new IOException("Offline follow fixture");
             String path = chain.request().url().encodedPath();
             byte[] body;
             String type = "application/json";
-            if (path.endsWith(".png")) { body = picture; type = "image/png"; }
+            if (path.endsWith(".png")) { body = CalendarArtworkFixtures.image(path); type = "image/png"; }
             else {
                 String json;
-                if (path.contains("/season/")) json = "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"air_date\":\"" + fixtureDate + "\",\"name\":\"First episode\"},"
-                        + "{\"season_number\":1,\"episode_number\":2,\"air_date\":\"" + fixtureDate + "\",\"name\":\"Second episode\"}]}";
+                if (path.contains("/season/")) json = "{\"season_number\":1,\"episodes\":[" + episode(1) + "," + episode(2) + "]}";
                 else if (path.endsWith("/discover/tv")) json = "{\"page\":1,\"total_pages\":1,\"results\":[" + metadata(TV_ID, false) + "]}";
                 else if (path.endsWith("/tv/" + TV_ID)) json = metadata(TV_ID, false);
                 else if (path.endsWith("/movie/" + MOVIE_ID)) json = metadata(MOVIE_ID, true);
@@ -217,7 +208,8 @@ public final class LibraryFollowAndroidTest {
         main(() -> ((AiringCalendarView) calendar.findViewById(R.id.calendarRoot)).focusKey("item:" + key));
         await("Focusing the work selects its stable preview", () -> calendarState(calendar).getPreview().getKey().equals(key));
         assertEquals("Follow fixture series", calendarState(calendar).getPreview().getTitle());
-        assertEquals("S01E01 · S01E02", calendarState(calendar).getPreview().getSubtitle());
+        assertEquals("Synthetic episode 1 · Synthetic episode 2", calendarState(calendar).getPreview().getSubtitle());
+        assertTrue("The complete preview retains both same-day coordinates", String.join(" · ", calendarState(calendar).getPreview().getMetadata()).contains("S01E01 · S01E02"));
         NativeUiEvidence.capture("library-follow-calendar");
 
         UiObject2 card = device.wait(Until.findObject(By.res("item:" + key)), 10000);
@@ -347,9 +339,16 @@ public final class LibraryFollowAndroidTest {
 
     private String metadata(long id, boolean movie) {
         return "{\"id\":" + id + ",\"" + (movie ? "title" : "name") + "\":\"Follow fixture " + (movie ? "movie" : "series")
-                + "\",\"poster_path\":\"/poster.png\",\"backdrop_path\":\"/poster.png\",\"overview\":\"Calendar follow fixture\",\""
+                + "\",\"poster_path\":\"/poster-" + id + ".png\",\"backdrop_path\":\"/backdrop-" + id + ".png\",\"overview\":\"Calendar follow fixture: two researchers cross a mountain pass.\",\""
                 + (movie ? "release_date" : "first_air_date") + "\":\"2026-11-01\",\"seasons\":[{\"season_number\":1,\"episode_count\":2}],"
+                + "\"vote_average\":8.4,\"episode_run_time\":[45],\"networks\":[{\"id\":118,\"name\":\"Fixture Network\"}],"
                 + "\"credits\":{\"cast\":[]},\"images\":{\"logos\":[]},\"genres\":[]}";
+    }
+
+    private String episode(int number) {
+        return "{\"season_number\":1,\"episode_number\":" + number + ",\"air_date\":\"" + fixtureDate
+                + "\",\"name\":\"Synthetic episode " + number + "\",\"runtime\":45,\"still_path\":\"/still-" + TV_ID
+                + ".png\",\"overview\":\"Calendar follow fixture: two researchers cross a mountain pass.\"}";
     }
 
     private void main(Runnable action) { instrumentation.runOnMainSync(action); }
