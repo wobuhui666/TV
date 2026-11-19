@@ -77,7 +77,7 @@ class LibrarySourcePlaybackAndroidTest {
             val configReady = CountDownLatch(1)
             val loaded = AtomicBoolean()
             workers.submit {
-                VodConfig.load(Config.find(CONFIG_URL, 0), object : Callback {
+                VodConfig.load(Config.find(CONFIG_URL, 0), object : Callback() {
                     override fun success() { loaded.set(true); configReady.countDown() }
                     override fun error(message: String?) { configReady.countDown() }
                 })
@@ -185,7 +185,8 @@ class LibrarySourcePlaybackAndroidTest {
             && transferred.flags.first().episodes !== source.flags.first().episodes
             && transferred.flags.first().episodes.first() !== source.flags.first().episodes.first()
         report.put("handoffFlagsAndEpisodesIndependent", isolated)
-            .put("handoffPreservedExactEpisodeUrl", SmartSourceSelector.selectExplicitEpisode(transferred, episode.url, flag.flag) != null)
+            .put("handoffPreservedExactEpisodeUrl", transferred.flags.any { line -> line.flag == flag.flag &&
+                line.episodes.any { item -> item.name == episode.name && item.url == episode.url } })
             .put("detailTokenSingleUse", consume.invoke(null, token, "validation-detail", VodConfig.getCid(), source.id, request) == null)
         assertTrue("The player must own its flags and episodes independently", isolated)
     }
