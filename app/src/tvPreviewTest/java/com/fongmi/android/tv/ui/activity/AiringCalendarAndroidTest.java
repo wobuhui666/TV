@@ -1012,6 +1012,9 @@ public final class AiringCalendarAndroidTest {
         List<Integer> paintedWidths = new ArrayList<>();
         try {
             int radius = dp(10);
+            // A 2 dp stroke's centerline is inset by half its width on both sides.
+            int restingStrokeSpan = resting.width() - dp(2);
+            assertTrue("The poster is wider than its focus stroke", restingStrokeSpan > 0);
             for (float fraction : new float[]{.30f, .50f, .70f}) {
                 int y = focused.top + Math.round(focused.height() * fraction);
                 int left = -1, right = -1;
@@ -1022,12 +1025,13 @@ public final class AiringCalendarAndroidTest {
                     if (isFocusWhite(frame.getPixel(x, y))) right = x;
                 }
                 if (left >= 0 && right > left) {
-                    int width = right - left + 1;
+                    int width = right - left;
                     paintedWidths.add(width);
-                    if (Math.abs((double) width / resting.width() - expectedScale) <= .025) matched++;
+                    if (Math.abs((double) width / restingStrokeSpan - expectedScale) <= .025) matched++;
                 }
             }
-            Log.i("CalendarFocusPixels", evidence + " resting=" + resting.width() + " actualWhiteBorders=" + paintedWidths + " expected=" + expectedScale);
+            Log.i("CalendarFocusPixels", evidence + " restingImage=" + resting.width() + " restingStrokeSpan="
+                    + restingStrokeSpan + " actualWhiteSpans=" + paintedWidths + " expected=" + expectedScale);
             return matched;
         } finally { frame.recycle(); }
     }
