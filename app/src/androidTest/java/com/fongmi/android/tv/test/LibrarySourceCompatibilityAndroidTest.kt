@@ -253,7 +253,16 @@ class LibrarySourceCompatibilityAndroidTest {
                         val headers = player.header.toMutableMap().apply { put("Range", "bytes=0-1023") }
                         OkHttp.newCall(url, headers).execute().use { response ->
                             val stage = result.getJSONObject("mediaResponse")
-                            val bytes = response.body?.byteStream()?.readNBytes(1024) ?: byteArrayOf()
+                            val bytes = response.body?.byteStream()?.let { input ->
+                                val buffer = ByteArray(1024)
+                                var used = 0
+                                while (used < buffer.size) {
+                                    val read = input.read(buffer, used, buffer.size - used)
+                                    if (read < 0) break
+                                    used += read
+                                }
+                                buffer.copyOf(used)
+                            } ?: byteArrayOf()
                             stage.put("httpStatus", response.code).put("contentType", safe(response.header("Content-Type", "")))
                                 .put("sampledBytes", bytes.size).put("hlsHeader", bytes.take(16).toByteArray().toString(Charsets.UTF_8).contains("#EXTM3U"))
                                 .put("mp4Signature", bytes.size >= 8 && String(bytes, 4, 4, Charsets.US_ASCII) == "ftyp")
