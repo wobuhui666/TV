@@ -2,10 +2,13 @@
 
 package com.fongmi.android.tv.ui.calendar
 
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,9 +46,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -58,8 +64,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fongmi.android.tv.R
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
 import com.fongmi.android.tv.ui.library.DetailArtwork
+import com.fongmi.android.tv.utils.ImgUtil
+import kotlin.math.roundToInt
 
 /** Keep the previous frame until new artwork is decoded, then fade two cached image layers. */
 @Composable
@@ -199,8 +211,8 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
                         cornerRadius = CornerRadius(radius, radius), style = Stroke(strokeWidth))
                 }
             }) {
-                DetailArtwork(image, null, Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
-                    .testTag("calendarArtwork:${item.key}"), placeholderColor = Color(0xFF20232A))
+                CalendarRailArtwork(image, width, if (landscape) 16f / 9f else 2f / 3f,
+                    Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).testTag("calendarArtwork:${item.key}"))
                 if (item.subtitle.isNotBlank()) Text(item.subtitle,
                     Modifier.align(Alignment.BottomStart).padding(8.dp)
                         .background(Color.Black.copy(alpha = .72f), RoundedCornerShape(5.dp))
@@ -215,4 +227,50 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
             onDrawWithContent { drawContent(); if (!focused) drawRect(fade) }
         }, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 1, overflow = TextOverflow.Clip)
     }
+}
+
+/** Keep rail artwork inside Compose's transform/clip tree alongside its focus border. */
+@Composable
+private fun CalendarRailArtwork(url: String, width: androidx.compose.ui.unit.Dp, aspect: Float, modifier: Modifier) {
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val pixelWidth = with(density) { width.roundToPx().coerceAtLeast(1) }
+    val pixelHeight = (pixelWidth / aspect).roundToInt().coerceAtLeast(1)
+    var bitmap by remember(url, pixelWidth, pixelHeight) { mutableStateOf<Bitmap?>(null) }
+    val manager = remember(view) { Glide.with(view) }
+    DisposableEffect(manager, url, pixelWidth, pixelHeight) {
+        var active = true
+        val target = object : CustomTarget<Bitmap>(pixelWidth, pixelHeight) {
+            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                if (active) bitmap = resource
+            }
+
+            override fun onLoadFailed(errorDrawable: Drawable?) {
+                if (active) bitmap = null
+            }
+
+            override fun onLoadCleared(placeholder: Drawable?) {
+                bitmap = null
+            }
+        }
+        if (url.isNotBlank()) {
+            try {
+                manager.asBitmap().load(ImgUtil.getUrl(url))
+                    .override(pixelWidth, pixelHeight).downsample(DownsampleStrategy.AT_MOST)
+                    .dontTransform().dontAnimate().disallowHardwareConfig().into(target)
+            } catch (error: RuntimeException) {
+                // Legacy source poster URLs can contain malformed header suffixes.
+                bitmap = null
+            }
+        }
+        onDispose {
+            active = false
+            bitmap = null
+            manager.clear(target)
+        }
+    }
+    val loaded = bitmap
+    if (loaded == null) Box(modifier.background(Color(0xFF20232A)))
+    else Image(remember(loaded) { loaded.asImageBitmap() }, contentDescription = null,
+        modifier = modifier, contentScale = ContentScale.Crop)
 }
