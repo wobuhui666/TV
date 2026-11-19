@@ -18,7 +18,6 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.ImageView;
 
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
-import androidx.compose.ui.platform.AndroidComposeView;
 import androidx.compose.ui.semantics.SemanticsNode;
 import androidx.compose.ui.semantics.SemanticsProperties;
 import androidx.compose.ui.text.AnnotatedString;
@@ -693,12 +692,18 @@ public final class AiringCalendarAndroidTest {
         String[] observed = new String[1];
         Rect cell = date.getVisibleBounds();
         main(() -> {
-            AndroidComposeView compose = findComposeView(host());
+            View compose = findComposeView(host());
             assertNotNull("The rendered calendar owns a Compose semantics tree", compose);
             int[] screen = new int[2], window = new int[2];
             host().getLocationOnScreen(screen); host().getLocationInWindow(window);
-            observed[0] = numericText(compose.getSemanticsOwner().getUnmergedRootSemanticsNode(),
-                    "date:" + isoDate, "daynumber:" + isoDate, cell, screen[0] - window[0], screen[1] - window[1]);
+            try {
+                Object owner = invoke(compose, "getSemanticsOwner");
+                SemanticsNode root = (SemanticsNode) invoke(owner, "getUnmergedRootSemanticsNode");
+                observed[0] = numericText(root, "date:" + isoDate, "daynumber:" + isoDate,
+                        cell, screen[0] - window[0], screen[1] - window[1]);
+            } catch (ReflectiveOperationException error) {
+                throw new AssertionError("Cannot inspect the rendered calendar's semantics owner", error);
+            }
         });
         assertNotNull("The visible date number is published by its rendered node", observed[0]);
         return observed[0];
@@ -714,10 +719,10 @@ public final class AiringCalendarAndroidTest {
         return "";
     }
 
-    private AndroidComposeView findComposeView(View view) {
-        if (view instanceof AndroidComposeView compose) return compose;
+    private View findComposeView(View view) {
+        if (view.getClass().getName().equals("androidx.compose.ui.platform.AndroidComposeView")) return view;
         if (view instanceof ViewGroup group) for (int index = 0; index < group.getChildCount(); index++) {
-            AndroidComposeView compose = findComposeView(group.getChildAt(index));
+            View compose = findComposeView(group.getChildAt(index));
             if (compose != null) return compose;
         }
         return null;
