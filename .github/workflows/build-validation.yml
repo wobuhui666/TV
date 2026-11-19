@@ -132,7 +132,7 @@ jobs:
           chmod +x ./gradlew
 
       - name: Check shared tests and build the mobile debug app
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :wasm:testDebugUnitTest \
@@ -142,7 +142,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2
 
       - name: Check Python and JavaScript source API compatibility
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         run: |
           python -m pip install lxml pycryptodome pywasm==1.0.8 numpy==1.26.2
           test -f "$TV_LIVE_PYTHON_FIXTURES/live/yangshipin.py"
@@ -154,14 +154,14 @@ jobs:
           node quickjs/src/test/js/wasm.test.cjs
 
       - name: Check application regression tests
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         run: |
           ./gradlew -I "$RUNNER_TEMP/tv-validation.init.gradle" \
             :app:testLeanbackArm64_v8aDebugUnitTest \
             --no-daemon --build-cache --max-workers=2
 
       - name: Check pinned playback patches and query allocations
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         run: |
           set -euo pipefail
           python3 -m unittest discover -s third_party/media3 -p 'test_*.py' -v
@@ -183,7 +183,7 @@ jobs:
             --no-daemon --build-cache --max-workers=2
 
       - name: Run TV Android lint
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         env:
           LINT_BASELINE_REF: ${{ inputs.lint_baseline_ref }}
         run: |
@@ -287,7 +287,7 @@ jobs:
           retention-days: 7
 
       - name: Upload mobile debug APK
-        if: matrix.package == 'sourceprobe'
+        if: matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         uses: actions/upload-artifact@v4
         with:
           name: mobile-validation-arm64-${{ github.run_id }}
@@ -305,7 +305,7 @@ jobs:
           retention-days: 7
 
       - name: Upload unit test reports
-        if: always() && matrix.package == 'sourceprobe'
+        if: always() && matrix.package == 'sourceprobe' && !inputs.configuration_dialog
         uses: actions/upload-artifact@v4
         with:
           name: tv-unit-tests-${{ github.run_id }}
