@@ -427,10 +427,11 @@ public final class AiringCalendarAndroidTest {
                         (double) neighborImage.width() / neighborImage.height(), .02);
                 focus("item:" + first);
                 String scaledEvidence = stills ? "calendar-landscape-focus-scale" : "calendar-poster-focus-scale";
+                Log.i("CalendarFocusPixels", "Pending capture " + scaledEvidence + " focus=" + focused() + " bounds=" + renderedImageBounds(first));
                 NativeUiEvidence.capture(scaledEvidence);
-                await("Focus paints a 1.06 image scale", () -> Math.abs((double) renderedImageBounds(first).width() / before.width() - 1.06) <= .025);
+                Rect focusedImage = captureSettledFocus(scaledEvidence, first, before, 1.06);
+                assertEquals("Focus paints the actual 1.06 image scale", 1.06, (double) focusedImage.width() / before.width(), .025);
                 assertEquals("Focusing does not move the neighboring image", neighbor, nodeBounds("item:" + second));
-                Rect focusedImage = renderedImageBounds(first);
                 Rect window = hostBounds();
                 assertTrue("The scaled focused image stays within safe screen margins", focusedImage.left >= window.left + dp(48)
                         && focusedImage.right <= window.right - dp(48));
@@ -446,8 +447,9 @@ public final class AiringCalendarAndroidTest {
                 Rect resting = renderedImageBounds(key);
                 focus("item:" + key);
                 String disabledEvidence = stills ? "calendar-landscape-motion-disabled" : "calendar-poster-motion-disabled";
+                Log.i("CalendarFocusPixels", "Pending capture " + disabledEvidence + " focus=" + focused() + " bounds=" + renderedImageBounds(key));
                 NativeUiEvidence.capture(disabledEvidence);
-                Rect disabledFocus = renderedImageBounds(key);
+                Rect disabledFocus = captureSettledFocus(disabledEvidence, key, resting, 1.0);
                 assertEquals("Disabling animation leaves focused image geometry unchanged", resting, disabledFocus);
                 if (evidenceEnabled()) assertPaintedFocusScale(disabledEvidence, resting, disabledFocus, 1.0);
                 main(activity::finish); await("Disabled-motion page closes", activity::isDestroyed);
@@ -1000,6 +1002,11 @@ public final class AiringCalendarAndroidTest {
     }
 
     private void assertPaintedFocusScale(String evidence, Rect resting, Rect focused, double expectedScale) {
+        assertTrue("Actual PNG focus borders paint the expected " + expectedScale + " image scale on multiple rows",
+                paintedFocusRows(evidence, resting, focused, expectedScale) >= 2);
+    }
+
+    private int paintedFocusRows(String evidence, Rect resting, Rect focused, double expectedScale) {
         Bitmap frame = evidenceBitmap(evidence);
         int matched = 0;
         List<Integer> paintedWidths = new ArrayList<>();
@@ -1021,8 +1028,52 @@ public final class AiringCalendarAndroidTest {
                 }
             }
             Log.i("CalendarFocusPixels", evidence + " resting=" + resting.width() + " actualWhiteBorders=" + paintedWidths + " expected=" + expectedScale);
-            assertTrue("Actual PNG focus borders paint the expected " + expectedScale + " image scale on multiple rows", matched >= 2);
+            return matched;
         } finally { frame.recycle(); }
+    }
+
+    private Rect captureSettledFocus(String evidence, String key, Rect resting, double expectedScale) {
+        long deadline = SystemClock.uptimeMillis() + 15000;
+        Rect captured = null;
+        int attempt = 0;
+        while (SystemClock.uptimeMillis() < deadline) {
+            Rect settled = stableFocusBounds(key, resting, expectedScale, deadline);
+            Log.i("CalendarFocusPixels", "Settled capture " + evidence + " attempt=" + (++attempt) + " focus=" + focused() + " bounds=" + settled);
+            NativeUiEvidence.capture(evidence);
+            captured = renderedImageBounds(key);
+            Log.i("CalendarFocusPixels", "Captured " + evidence + " focus=" + focused() + " bounds=" + captured);
+            if (!focused().equals("item:" + key) || !nodeFocused("item:" + key) || !settled.equals(captured)) continue;
+            if (!evidenceEnabled() || paintedFocusRows(evidence, resting, captured, expectedScale) >= 2) return captured;
+            // Layout can lead the GPU's presented buffer on the cold emulator. Read a new real frame.
+            nextRenderFrame();
+        }
+        assertNotNull("A stable focused frame was captured before the rendering deadline", captured);
+        assertPaintedFocusScale(evidence, resting, captured, expectedScale);
+        throw new AssertionError("Focused image geometry/input changed while capturing " + evidence);
+    }
+
+    private Rect stableFocusBounds(String key, Rect resting, double expectedScale, long deadline) {
+        Rect previous = null;
+        int unchanged = 0;
+        while (SystemClock.uptimeMillis() < deadline) {
+            Rect measured = renderedImageBounds(key);
+            boolean focusedNow = focused().equals("item:" + key) && nodeFocused("item:" + key);
+            boolean atScale = Math.abs((double) measured.width() / resting.width() - expectedScale) <= .025;
+            if (focusedNow && atScale) {
+                unchanged = measured.equals(previous) ? unchanged + 1 : 1;
+                previous = measured;
+                if (unchanged >= 3) return measured;
+            } else { unchanged = 0; previous = null; }
+            nextRenderFrame();
+        }
+        throw new AssertionError("Focused image did not retain one input key and scaled bounds across two rendering frames: " + key);
+    }
+
+    private void nextRenderFrame() {
+        CountDownLatch frame = new CountDownLatch(1);
+        main(() -> host().postOnAnimation(frame::countDown));
+        try { assertTrue("An actual rendering frame advances", frame.await(3, TimeUnit.SECONDS)); }
+        catch (InterruptedException error) { Thread.currentThread().interrupt(); throw new AssertionError(error); }
     }
 
     private boolean isFocusWhite(int color) {
