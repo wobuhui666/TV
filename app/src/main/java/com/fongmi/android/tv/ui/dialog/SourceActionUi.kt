@@ -143,9 +143,12 @@ class SourceActionUi private constructor(
                 val added = WindowInspector.getGlobalWindowViews().filter { it !in before &&
                     (it.layoutParams as? WindowManager.LayoutParams)?.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION }
                 for (view in added) {
+                    // One constructor may query WINDOW_SERVICE more than once.
+                    // Overlapping captures must not reject the window already owned here.
+                    if (view in windows) continue
                     if (!isUsable() || ((hadWindow || windows.isNotEmpty()) && !userAction)) {
                         closeWindow(view, manager)
-                    } else if (view !in windows) {
+                    } else {
                         windows[view] = manager
                         view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                             override fun onViewAttachedToWindow(view: View) = Unit
