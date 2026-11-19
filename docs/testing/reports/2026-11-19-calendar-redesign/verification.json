@@ -1,0 +1,456 @@
+{
+  "runId": 44602158639,
+  "url": "https://github.com/wobuhui666/TV/actions/runs/44602158639",
+  "headSha": "a8545ac3f6ceaf4e9b9b5e8bd0c60e56865f5732",
+  "passed": true,
+  "apis": [
+    {
+      "api": 24,
+      "unit": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.api.TmdbLibraryApiTest",
+            "tests": 20,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "class": "com.fongmi.android.tv.calendar.AiringCalendarIndexTest",
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "class": "com.fongmi.android.tv.calendar.AiringCalendarRepositoryTest",
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      "buildPassed": true,
+      "buildTasks": [
+        ":app:assembleLeanbackArm64_v8aDebug",
+        ":app:assembleLeanbackArm64_v8aPreview",
+        ":app:assembleLeanbackArm64_v8aPreviewAndroidTest"
+      ],
+      "lint": {
+        "passedTaskScope": true,
+        "fullLintPassed": false,
+        "currentCounts": {
+          "Error": 121,
+          "Warning": 389,
+          "Hint": 6
+        },
+        "newOutOfScopeErrors": 13,
+        "newTaskScopeErrors": 0
+      },
+      "ui": {
+        "passed": true,
+        "passedTests": 16,
+        "failures": 0,
+        "skipped": 0,
+        "junitCases": {
+          "com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest": 12,
+          "com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest": 4
+        }
+      },
+      "packages": [
+        {
+          "applicationId": "com.fongmi.android.tv.preview",
+          "apk": "app/build/outputs/apk/leanbackArm64_v8a/preview/app-leanback-arm64_v8a-preview.apk",
+          "sha256": "907ba95556583fb9c33d27fe5bbda25f9242e552411ef54420e6c1f9cc9292bf",
+          "previewJniLibraries": [
+            "lib/x86_64/libquickjs-android-wrapper.so",
+            "lib/x86_64/libavif_android.so",
+            "lib/x86_64/libarchive-jni.so",
+            "lib/x86_64/libconscrypt_jni.so"
+          ]
+        },
+        {
+          "applicationId": "com.fongmi.android.tv.preview.test",
+          "apk": "app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview/app-leanback-arm64_v8a-preview-androidTest.apk",
+          "sha256": "b6ab2e1f87a222b428410b524c641e7778f16120c95990ccabbd01ae56b6fe6b",
+          "previewJniLibraries": []
+        }
+      ],
+      "screenshots": [
+        {
+          "file": "native-usability-evidence/calendar-library.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1258,
+          "sha256": "87d1d71d61031aeb61ee01750373e1542b980f7d108ccf468263ca51faa27c65"
+        },
+        {
+          "file": "native-usability-evidence/calendar-simple.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1258,
+          "sha256": "608a67f248ebba968dab9fceeb4240af34024d63c0b95fb68e216930788691cb"
+        },
+        {
+          "file": "native-usability-evidence/calendar-classic.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1258,
+          "sha256": "608a67f248ebba968dab9fceeb4240af34024d63c0b95fb68e216930788691cb"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-dark.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1286,
+          "sha256": "9079dd034b08a605e23bdb1eaf8879fcc6842e45b8a89400ad2d3f9ed3e633b2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-light.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1282,
+          "sha256": "9bd6dce8329ed7a2937515618da7e3eecf3d8a8055666aacc2da202db273cd2b"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-logo-loaded.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1249,
+          "sha256": "fb65dff40f3a0777b21d0f1eb61d9373f38810f2c405b5d336abc17975600305"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-next-logo-loaded.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1198,
+          "sha256": "3895a4cf98a9b5c8fb87c109089b28e9c18224396437dfe24e4d789036b943fc"
+        },
+        {
+          "file": "native-usability-evidence/calendar-two-headers-today-focus.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1286,
+          "sha256": "9079dd034b08a605e23bdb1eaf8879fcc6842e45b8a89400ad2d3f9ed3e633b2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-poster-focus-scale.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 937,
+          "sha256": "20f25192de2f7c80b4a2af0d10fb23f364c370570b0701bd535c316d0b2952a7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-landscape-focus-scale.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1111,
+          "sha256": "116d83c01cbe5804d716898a65488ca504e96192785118d9c396d69fddfc2397"
+        },
+        {
+          "file": "native-usability-evidence/calendar-poster-motion-disabled.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 904,
+          "sha256": "518b6bf64406f86b1988e86f512e36e850b235ef7ec2ca89db2eb5264304d6b2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-landscape-motion-disabled.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1103,
+          "sha256": "8cb3061a24ac29436af616e1bfaec17383a841cf4621d1dc0cbe54fbec48de10"
+        },
+        {
+          "file": "native-usability-evidence/calendar-complete-work-info.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1286,
+          "sha256": "9079dd034b08a605e23bdb1eaf8879fcc6842e45b8a89400ad2d3f9ed3e633b2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-first.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1286,
+          "sha256": "9079dd034b08a605e23bdb1eaf8879fcc6842e45b8a89400ad2d3f9ed3e633b2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-dark.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1230,
+          "sha256": "1e9dc9cccda4591bc573f7350f676c347782aac15f372d625bcc1296dfc3760a"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-light.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1226,
+          "sha256": "7a70520ac0d0966e20db2c591a8543bddd72f5080b62e0e269afded144d6f9bb"
+        },
+        {
+          "file": "native-usability-evidence/library-follow-no-source.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1488,
+          "sha256": "06810cf862455cbbd089b62f96b3ce7d53266b7cdb90a88377be9df203e5d112"
+        },
+        {
+          "file": "native-usability-evidence/library-follow-calendar.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 947,
+          "sha256": "73b0b3c6aff232aa4bdbdc476e6b0800daab9efa8e0685e80f2392c0c0d665ca"
+        }
+      ]
+    },
+    {
+      "api": 34,
+      "unit": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.api.TmdbLibraryApiTest",
+            "tests": 20,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "class": "com.fongmi.android.tv.calendar.AiringCalendarIndexTest",
+            "tests": 7,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "class": "com.fongmi.android.tv.calendar.AiringCalendarRepositoryTest",
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      "buildPassed": true,
+      "buildTasks": [
+        ":app:assembleLeanbackArm64_v8aDebug",
+        ":app:assembleLeanbackArm64_v8aPreview",
+        ":app:assembleLeanbackArm64_v8aPreviewAndroidTest"
+      ],
+      "lint": {
+        "passedTaskScope": true,
+        "fullLintPassed": false,
+        "currentCounts": {
+          "Error": 121,
+          "Warning": 389,
+          "Hint": 6
+        },
+        "newOutOfScopeErrors": 13,
+        "newTaskScopeErrors": 0
+      },
+      "ui": {
+        "passed": true,
+        "passedTests": 16,
+        "failures": 0,
+        "skipped": 0,
+        "junitCases": {
+          "com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest": 12,
+          "com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest": 4
+        }
+      },
+      "packages": [
+        {
+          "applicationId": "com.fongmi.android.tv.preview",
+          "apk": "app/build/outputs/apk/leanbackArm64_v8a/preview/app-leanback-arm64_v8a-preview.apk",
+          "sha256": "fafe7265f5850e7aee8b7637eac2ea43f85dc549a555da8b4ea97d2fca24cf11",
+          "previewJniLibraries": [
+            "lib/x86_64/libquickjs-android-wrapper.so",
+            "lib/x86_64/libavif_android.so",
+            "lib/x86_64/libarchive-jni.so",
+            "lib/x86_64/libconscrypt_jni.so"
+          ]
+        },
+        {
+          "applicationId": "com.fongmi.android.tv.preview.test",
+          "apk": "app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview/app-leanback-arm64_v8a-preview-androidTest.apk",
+          "sha256": "3e615a3fcd25a6477cd0785068a4ab0aebed075909267584ca504a2d70c584f3",
+          "previewJniLibraries": []
+        }
+      ],
+      "screenshots": [
+        {
+          "file": "native-usability-evidence/calendar-library.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-simple.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-classic.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-dark.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-light.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1295,
+          "sha256": "3b9d1e9f58ad7502d956c590dd0915752ed3f56680e8c1865a56ab6cc74c5580"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-logo-loaded.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1249,
+          "sha256": "c1021598dc8419416461b70e302b4857414176dc704c7edb05826d470f2a892d"
+        },
+        {
+          "file": "native-usability-evidence/calendar-artwork-next-logo-loaded.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1191,
+          "sha256": "52f2171ad9b3bdd5ddc6e24922915f1e9ed6c2125748f78b6bc943a5f3cc3091"
+        },
+        {
+          "file": "native-usability-evidence/calendar-two-headers-today-focus.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-poster-focus-scale.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 943,
+          "sha256": "d77224cae60d6ab472d89afd77b65a3f40de1293295b08d0669b0c47b3642e93"
+        },
+        {
+          "file": "native-usability-evidence/calendar-landscape-focus-scale.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1130,
+          "sha256": "4ebb15ab37111ee30eb5418c61782e512ff7a4dbbba826516e2407ef77634a19"
+        },
+        {
+          "file": "native-usability-evidence/calendar-poster-motion-disabled.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 921,
+          "sha256": "d59ec04ae03ece6f0ab320d08b824ede861e947929c5ec6b2b0197ffb90adce2"
+        },
+        {
+          "file": "native-usability-evidence/calendar-landscape-motion-disabled.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1109,
+          "sha256": "0921181e6febb667c3bb981a4f04087254339178e20b0ef6336aff3ce8f2ff48"
+        },
+        {
+          "file": "native-usability-evidence/calendar-complete-work-info.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-first.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1293,
+          "sha256": "d10ac8f305d80fa5a542f1f65c44b56a6e3eab23ca7bbac6dbe2169701dc27e7"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-dark.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1224,
+          "sha256": "2033cd9180da16baf97e3074ec5b803581794fc2075647d01e76ab88399d9daa"
+        },
+        {
+          "file": "native-usability-evidence/calendar-full-background-light.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1215,
+          "sha256": "4865fe258dea5444e4c2b72a5f13686338d961db40a1dab235f103c3390750f0"
+        },
+        {
+          "file": "native-usability-evidence/library-follow-no-source.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 1488,
+          "sha256": "e090b3e1ffb2823793cca7fe7d2ca326eb2868f9dbba35cd0dd31d74b97cc572"
+        },
+        {
+          "file": "native-usability-evidence/library-follow-calendar.png",
+          "passed": true,
+          "width": 1920,
+          "height": 1080,
+          "sampleColors": 945,
+          "sha256": "ab1402e4221eaf5cfc531cbf1fce31c95d602927bd4d67faade9fe541001d625"
+        }
+      ]
+    }
+  ]
+}

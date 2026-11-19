@@ -1,5 +1,7 @@
 # 追更日历与媒体库追剧验证
 
+> 本文记录初版功能和旧布局。当前界面与完整复测见 [2026-11-19 界面重排验证](../2026-11-19-calendar-redesign/README.md)。
+
 [最终 GHA](https://github.com/wobuhui666/TV/actions/runs/44423306762) 已通过：32 项专项 JUnit，API 24／34 各 12 项 Android 交互与 9 张真实截图校验通过。完整 lint 仍有既有工作区问题，本轮改动范围未新增错误。
 
 ## 输入与环境

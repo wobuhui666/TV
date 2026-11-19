@@ -35,7 +35,7 @@
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
 | 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |
 | 媒体库与全屏播放器打磨 | [真实片源、画面与遥控器验证](testing/reports/2026-11-15-library-polish/README.md) |
-| 追更日历与媒体库追剧 | [GHA 验证、真实截图与覆盖限制](testing/reports/2026-11-18-airing-calendar/README.md) |
+| 追更日历与媒体库追剧 | [界面重排、GHA 验证与真实截图](testing/reports/2026-11-19-calendar-redesign/README.md) |
 | 媒体库详情对齐与原生稳定性 | [当前 provider 修订、默认 ECH 验收与历史失败](testing/reports/2026-11-16-library-alignment-stability/README.md) |
 | Compose TV 媒体库详情 | [详情重做、验证结果与性能限制](testing/reports/2026-11-15-library-detail-redesign/README.md) |
 | aiwex 实际配置 | [在线加载、片源与搜索验证](testing/reports/2026-11-14-aiwex-live/README.md) |
