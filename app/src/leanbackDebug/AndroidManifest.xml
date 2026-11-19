@@ -2,5 +2,7 @@
     <application>
         <activity android:name="com.fongmi.android.tv.test.SeekInputActivity"
             android:exported="false" android:theme="@style/Theme.App" />
+        <activity android:name="com.fongmi.android.tv.test.SourceDialogTestActivity"
+            android:exported="false" android:theme="@style/Theme.App" />
     </application>
 </manifest>

@@ -30,7 +30,7 @@ import com.fongmi.android.tv.bean.Vod;
 import com.fongmi.android.tv.impl.Callback;
 import com.fongmi.android.tv.model.SiteViewModel;
 import com.fongmi.android.tv.server.Server;
-import com.fongmi.android.tv.test.SeekInputActivity;
+import com.fongmi.android.tv.test.SourceDialogTestActivity;
 import com.fongmi.android.tv.utils.Task;
 import com.github.catvod.Init;
 import com.github.catvod.utils.CallTimeout;
@@ -72,7 +72,7 @@ public final class AiwexConfigDialogAndroidTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final JSONObject report = new JSONObject();
     private final JSONArray stages = new JSONArray();
-    private SeekInputActivity activity;
+    private SourceDialogTestActivity activity;
     private VodActivity categoryActivity;
     private SiteViewModel model;
     private Future<?> pending;
@@ -94,8 +94,8 @@ public final class AiwexConfigDialogAndroidTest {
                 .put("formValuesSubmitted", false).put("passed", false);
         try {
             Init.setActivity(App::activity);
-            activity = (SeekInputActivity) instrumentation.startActivitySync(new Intent(
-                    instrumentation.getTargetContext(), SeekInputActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            activity = (SourceDialogTestActivity) instrumentation.startActivitySync(new Intent(
+                    instrumentation.getTargetContext(), SourceDialogTestActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             instrumentation.waitForIdleSync();
             awaitResumed(activity);
             Server.get().start();
