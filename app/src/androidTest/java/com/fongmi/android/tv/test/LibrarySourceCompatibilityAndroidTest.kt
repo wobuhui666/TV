@@ -29,6 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -206,6 +207,21 @@ class LibrarySourceCompatibilityAndroidTest {
             }
             vod.site = site
             result.put("detailCandidate", metadata(vod))
+            val coordinates = JSONArray()
+            for (line in vod.flags) {
+                for ((position, episode) in line.episodes.withIndex()) {
+                    val label = episode.label
+                    if (position >= 3 && label.number() != 1) continue
+                    coordinates.put(JSONObject().put("flag", safe(line.flag)).put("name", safe(episode.name))
+                        .put("season", label.season()).put("number", label.number()).put("ambiguous", label.isAmbiguous)
+                        .put("edition", safe(label.edition())).put("variant", safe(label.variant()))
+                        .put("part", safe(label.part())).put("special", label.isSpecial)
+                        .put("preview", label.isPreview).put("generated", episode.isGeneratedLabel)
+                        .put("urlSha256", MessageDigest.getInstance("SHA-256").digest(episode.url.toByteArray(Charsets.UTF_8))
+                            .joinToString("") { "%02x".format(it.toInt() and 0xff) }))
+                }
+            }
+            result.put("candidateCoordinates", coordinates)
             val selection = vod.flags.firstNotNullOfOrNull { flag ->
                 SmartSourceSelector.findEpisode(flag, EpisodeTarget.coordinate(1, 1), SmartSourceSelector.implicitEpisodeSeason(vod))
                     ?.let { episode -> flag to episode }

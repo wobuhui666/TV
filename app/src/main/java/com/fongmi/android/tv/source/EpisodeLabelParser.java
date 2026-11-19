@@ -135,7 +135,7 @@ public final class EpisodeLabelParser {
         while (brackets.find()) {
             String content = brackets.group(1) != null ? brackets.group(1) : brackets.group(2);
             String visible = new String(remaining, brackets.start() + 1, content.length()).trim();
-            bracketRange |= RANGE.matcher(visible).find() || DECIMAL.matcher(visible).find();
+            if (brackets.start() > directory) bracketRange |= RANGE.matcher(visible).find() || DECIMAL.matcher(visible).find();
             if (visible.isEmpty()) {
                 consume(remaining, brackets.start(), brackets.end());
             } else if (isSemanticBracket(visible)) {

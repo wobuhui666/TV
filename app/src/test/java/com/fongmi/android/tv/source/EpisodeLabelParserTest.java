@@ -184,6 +184,25 @@ public class EpisodeLabelParserTest {
     }
 
     @Test
+    public void shouldIgnoreParentDirectoryRangesWhileRetainingFileRanges() {
+        for (String filename : new String[]{"/downloads/Show [01-46]/S01E01.mp4",
+                "/downloads/Show [01-46]/01.mp4【S01/4k】",
+                "/downloads/Show [12.5]/S01E01.mp4"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(filename);
+            assertEquals(filename, Integer.valueOf(1), label.season());
+            assertEquals(filename, Integer.valueOf(1), label.number());
+            assertFalse(filename, label.isAmbiguous());
+            assertTrue(filename, label.isApiSafe());
+        }
+        for (String filename : new String[]{"/downloads/Show [01-46]/01-02.mp4【S01/4k】",
+                "/downloads/Show [01-46]/S01E01.mp4【01-02】"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(filename);
+            assertTrue(filename, label.isAmbiguous());
+            assertNull(filename, label.number());
+        }
+    }
+
+    @Test
     public void shouldKeepRealLaBiEpisodeCoordinatesWhenCatalogueTotalsFollowTheExtension() {
         String suffix = "【Q 庆余年 (2019) 4K 高码率 单集5G 国语中字 全46集】";
         EpisodeLabel first = EpisodeLabelParser.parse("[5.3GB]Joy.of.Life.2019.S01.EP01.WEB-DL.4K.HEVC.AAC-LeagueWEB.mp4" + suffix);

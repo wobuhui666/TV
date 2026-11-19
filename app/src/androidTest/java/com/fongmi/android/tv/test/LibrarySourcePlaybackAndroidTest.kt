@@ -58,11 +58,15 @@ class LibrarySourcePlaybackAndroidTest {
         val title = arguments.getString("source_title", "庆余年")!!
         val movie = arguments.getString("source_movie", "false").toBoolean()
         val requirePlayback = arguments.getString("source_expect_playback", "false").toBoolean()
+        val seekMs = arguments.getString("source_seek_ms", "0")!!.toLongOrNull()?.coerceAtLeast(0) ?: 0
+        val observeMs = arguments.getString("source_observe_ms", "5000")!!.toLongOrNull()?.coerceIn(1, 60_000) ?: 5000
+        val timedObservation = seekMs > 0 || arguments.containsKey("source_observe_ms")
         val run = arguments.getString("source_run", "playback")!!.replace(Regex("[^A-Za-z0-9_-]"), "_")
         val directory = context.getExternalFilesDir("library-source-playback")!!
         directory.mkdirs()
         val report = JSONObject().put("schema", "tv.library-source-playback.v1")
             .put("configUrl", CONFIG_URL).put("title", title).put("movie", movie)
+            .put("requestedSeekMs", seekMs).put("requestedObservationMs", observeMs).put("seekApplied", false)
             .put("networkFixtures", false).put("cookieSubmission", false).put("timestampMs", System.currentTimeMillis())
         val observed = JSONArray()
         report.put("playbackSamples", observed)
@@ -120,6 +124,16 @@ class LibrarySourcePlaybackAndroidTest {
             val started = SystemClock.elapsedRealtime()
             val positionSamples = mutableListOf<Long>()
             var decoded = false
+            var seekApplied = false
+            var seekReached = false
+            var seekAt = 0L
+            var seekCounters: Any? = null
+            var seekRenderedBaseline = 0
+            var observationStarted = 0L
+            fun positionAdvance(): Long = if (positionSamples.size >= 2) positionSamples.last() - positionSamples.first() else 0
+            fun observationElapsed(): Long = if (observationStarted > 0) SystemClock.elapsedRealtime() - observationStarted else 0
+            fun observationComplete(): Boolean = positionSamples.size >= 2 && positionAdvance() >= observeMs
+                && (!timedObservation || observationElapsed() >= observeMs)
             while (SystemClock.elapsedRealtime() - started < 60_000) {
                 val activity = video ?: throw AssertionError("The playback Activity was not started")
                 val sample = main {
@@ -141,8 +155,36 @@ class LibrarySourcePlaybackAndroidTest {
                                 .put("renderedOutputBuffers", rendered).put("renderedFirstFrameEvent", firstFrame.get())
                                 .put("playerClass", player.javaClass.simpleName)
                             if (player.playerError != null) snapshot.put("errorCode", player.playerError!!.errorCodeName)
-                            if (current.isPlaying) positionSamples += current.position
-                            decoded = decoded || rendered > 0 || firstFrame.get()
+                            val frameObserved = rendered > 0 || firstFrame.get()
+                            if (seekMs > 0 && !seekApplied && player.playbackState == Player.STATE_READY
+                                && frameObserved && current.canSeek()) {
+                                seekCounters = counters
+                                seekRenderedBaseline = rendered
+                                positionSamples.clear()
+                                firstFrame.set(false)
+                                decoded = false
+                                observationStarted = 0L
+                                seekAt = SystemClock.elapsedRealtime()
+                                seekApplied = true
+                                report.put("seekApplied", true).put("seekAppliedAfterMs", seekAt - started)
+                                    .put("seekPositionMs", seekMs).put("positionBeforeSeekMs", current.position)
+                                current.seekTo(seekMs)
+                                snapshot.put("seekRequested", true).put("positionMs", current.position)
+                                    .put("renderedFirstFrameEvent", false)
+                            } else {
+                                if (seekApplied) {
+                                    seekReached = current.position >= (seekMs - 1500).coerceAtLeast(0)
+                                    val newRenderedFrame = if (counters === seekCounters) rendered > seekRenderedBaseline else rendered > 0
+                                    decoded = decoded || seekReached && (firstFrame.get() || newRenderedFrame)
+                                } else decoded = decoded || frameObserved
+                                if (current.isPlaying && (seekMs == 0L || seekApplied && seekReached && decoded)) {
+                                    if (positionSamples.isEmpty()) observationStarted = SystemClock.elapsedRealtime()
+                                    positionSamples += current.position
+                                }
+                            }
+                            snapshot.put("afterSeekMs", if (seekApplied) SystemClock.elapsedRealtime() - seekAt else JSONObject.NULL)
+                                .put("postSeekFrameConfirmed", seekApplied && decoded)
+                                .put("naturalObservationMs", observationElapsed()).put("sampledPositionAdvanceMs", positionAdvance())
                         }
                     }
                     snapshot
@@ -150,14 +192,17 @@ class LibrarySourcePlaybackAndroidTest {
                 observed.put(sample)
                 File(directory, "$run.json").writeText(report.toString(2))
                 if (sample.optBoolean("finishing") || sample.optBoolean("destroyed")) break
-                if (decoded && positionSamples.size >= 2 && positionSamples.last() - positionSamples.first() >= 5000) break
+                if (decoded && (seekMs == 0L || seekApplied && seekReached) && observationComplete()) break
                 SystemClock.sleep(1000)
             }
-            val advanced = positionSamples.size >= 2 && positionSamples.last() - positionSamples.first() >= 5000
-            report.put("decodedVideoVerified", decoded).put("playingPositionAdvancedByAtLeast5Seconds", advanced)
-                .put("decodedPlaybackVerified", decoded && advanced)
+            val advanced = observationComplete()
+            val verified = decoded && advanced && (seekMs == 0L || seekApplied && seekReached)
+            report.put("decodedVideoVerified", decoded).put("playingPositionAdvancedByAtLeast5Seconds", positionAdvance() >= 5000)
+                .put("playingPositionAdvancedByObservationMs", advanced).put("sampledPositionAdvanceMs", positionAdvance())
+                .put("naturalObservationMs", observationElapsed()).put("postSeekFrameConfirmed", seekApplied && decoded)
+                .put("decodedPlaybackVerified", verified)
             NativeUiEvidence.capture("guazi-library-$run".lowercase().replace(Regex("[^a-z0-9-]"), "-").take(64))
-            if (requirePlayback) assertTrue("The fixed library route must decode video and advance playback", decoded && advanced)
+            if (requirePlayback) assertTrue("The fixed library route must decode video and advance playback after the requested seek", verified)
         } catch (failure: Throwable) {
             report.put("failureType", failure.javaClass.simpleName)
             throw failure
