@@ -85,6 +85,8 @@ public abstract class BaseActivity extends AppCompatActivity {
                 // A diagnostic failure must not prevent the Activity from finishing.
             }
         }
+        // List details now run on this existing page; legacy providers must not close it.
+        if (SourceActionUi.shouldRetainCallingPage(this)) return;
         super.finish();
     }
 

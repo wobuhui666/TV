@@ -33,6 +33,7 @@ class SourceActionUi private constructor(
     private var actionKey: String?,
     private var isCurrentPage: BooleanSupplier?,
     private var onCancel: Runnable?,
+    private val retainCallingPage: Boolean,
 ) : Supplier<Activity?>, LifecycleEventObserver {
     private val activity = WeakReference(activity)
     private val page = WeakReference(page)
@@ -226,8 +227,9 @@ class SourceActionUi private constructor(
         private fun constructorKey(frame: StackTraceElement): String = frame.className + "#" + frame.methodName
 
         @JvmStatic
+        @JvmOverloads
         fun start(activity: FragmentActivity, page: LifecycleOwner, actionKey: String,
-                  isCurrentPage: BooleanSupplier, onCancel: Runnable): SourceActionUi? {
+                  isCurrentPage: BooleanSupplier, onCancel: Runnable, retainCallingPage: Boolean = false): SourceActionUi? {
             check(Looper.myLooper() == Looper.getMainLooper())
             active[activity]?.let { previous ->
                 if (!previous.actionFinished || previous.pendingWindows > 0 || previous.windows.isNotEmpty() ||
@@ -238,7 +240,7 @@ class SourceActionUi private constructor(
                 previous.trace("event=start decision=replace-previous")
                 previous.cancel()
             }
-            val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel)
+            val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel, retainCallingPage)
             val usable = request.isUsable()
             if (!usable || !activity.hasWindowFocus()) {
                 request.trace("event=start decision=rejected usable=$usable focused=${activity.hasWindowFocus()}")
@@ -249,6 +251,19 @@ class SourceActionUi private constructor(
             activity.lifecycle.addObserver(request)
             if (page !== activity) page.lifecycle.addObserver(request)
             return request
+        }
+
+        /** Old detail providers close their temporary player before posting configuration UI. */
+        @JvmStatic
+        fun shouldRetainCallingPage(activity: FragmentActivity): Boolean {
+            if (Looper.myLooper() != Looper.getMainLooper()) return false
+            val request = active[activity] ?: return false
+            if (!request.retainCallingPage || !request.isUsable()) return false
+            val fromSource = Thread.currentThread().stackTrace.any { frame ->
+                request.sourceNames.any { matchesSource(frame, it) }
+            }
+            if (fromSource) request.trace("event=finish decision=retain-calling-page")
+            return fromSource
         }
 
         @JvmStatic

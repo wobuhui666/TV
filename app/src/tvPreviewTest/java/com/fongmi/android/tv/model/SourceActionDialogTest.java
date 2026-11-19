@@ -152,6 +152,15 @@ public final class SourceActionDialogTest {
         assertFalse(device.hasObject(By.text("Visible source configuration")));
     }
 
+    @Test public void shouldAllowAnUnrelatedLegacyActionToFinishItsCaller() {
+        main(() -> model.executeAction(page, page, () -> true, () -> {
+            SourceActionUi.bind(LegacyActionPreviewBridge.class);
+            LegacyActionPreviewBridge.run(() -> LegacyActionPreviewBridge.finishActivity(page), 0);
+            return Result.empty();
+        }));
+        await("Ordinary source actions retain their normal finish behavior", () -> page.isFinishing() && home.hasWindowFocus());
+    }
+
     @Test public void shouldPreserveSequentialLegacyDialogsFromOneAction() throws Exception {
         AtomicReference<AlertDialog> first = new AtomicReference<>();
         AtomicReference<AlertDialog> second = new AtomicReference<>();

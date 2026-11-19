@@ -66,7 +66,7 @@ for display in 1920x1080:320 1280x720:240; do
         done
     ) &
     frame_pid=$!
-    if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$case_out" '3,3,9,3,5'; then
+    if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$case_out" '3,3,10,5,5'; then
         printf '0\n' > "$case_out/run.status"
     else
         printf '%s\n' "$?" > "$case_out/run.status"
@@ -83,7 +83,7 @@ for size, density in (('1920x1080', 320), ('1280x720', 240)):
     path = directory / 'suite-summary.json'
     suites = json.loads(path.read_text()) if path.is_file() else {}
     counts = [suite.get('tests') for suite in suites.get('suites', [])]
-    passed = (directory / 'run.status').read_text().strip() == '0' and suites.get('passed') is True and counts == [3, 3, 9, 3, 5]
+    passed = (directory / 'run.status').read_text().strip() == '0' and suites.get('passed') is True and counts == [3, 3, 10, 5, 5]
     cases.append({'size': size, 'density': density, 'passed': passed,
                   'passedTests': suites.get('passedTests', 0), 'suites': suites.get('suites', []),
                   'capturedFrames': len(list((directory / 'frames').glob('*.png')))})

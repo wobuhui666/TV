@@ -64,6 +64,7 @@ import static org.junit.Assert.*;
 public final class AiwexConfigDialogAndroidTest {
     private static final String PACKAGE = "com.fongmi.android.tv.sourceprobe.wexdialog";
     private static final String CONFIG_URL = "https://9280.kstore.vip/aiwex.json";
+    private static final Set<String> CONFIGURATION_ENTRIES = Set.of("网页版配置中心", "网盘线路排序");
     private static final Set<String> SAFE_CONTROLS = Set.of("确定", "确认", "取消", "返回", "关闭", "保存", "设置", "配置",
             "网页配置", "网页版配置中心", "配置中心", "综合设置", "OK", "Cancel", "Close", "Back");
     private static final Set<String> SAFE_ITEMS = Set.of("网页版配置中心", "配置中心", "网页配置中心", "网盘线路排序",
@@ -84,6 +85,8 @@ public final class AiwexConfigDialogAndroidTest {
                 instrumentation.getTargetContext().getPackageName());
         assertEquals("The real configuration requires an explicit test argument", CONFIG_URL,
                 InstrumentationRegistry.getArguments().getString("source_config_url", ""));
+        String entry = InstrumentationRegistry.getArguments().getString("source_configuration_entry", "网页版配置中心");
+        assertTrue("Only the two approved configuration entries may be selected", CONFIGURATION_ENTRIES.contains(entry));
         assertTrue("WindowInspector requires Android 10", Build.VERSION.SDK_INT >= 29);
         File directory = instrumentation.getTargetContext().getExternalFilesDir("aiwex-config-dialog");
         assertNotNull(directory);
@@ -91,7 +94,7 @@ public final class AiwexConfigDialogAndroidTest {
         ExecutorService loader = Executors.newSingleThreadExecutor();
         report.put("schema", "tv.aiwex-config-dialog.v1").put("sdk", Build.VERSION.SDK_INT)
                 .put("stages", stages).put("configSuccess", false).put("dialogShown", false)
-                .put("formValuesSubmitted", false).put("passed", false);
+                .put("formValuesSubmitted", false).put("passed", false).put("selectedConfigurationEntry", entry);
         try {
             Init.setActivity(App::activity);
             activity = (SourceDialogTestActivity) instrumentation.startActivitySync(new Intent(
@@ -130,7 +133,7 @@ public final class AiwexConfigDialogAndroidTest {
                         new HashMap<>()), result);
             }
             if (!shown && result.get() != null) {
-                Vod card = configurationCard(result.get().getList());
+                Vod card = configurationCard(result.get().getList(), entry);
                 report.put("configurationCardFound", card != null);
                 if (card != null) {
                     card.setSite(site);
@@ -334,9 +337,8 @@ public final class AiwexConfigDialogAndroidTest {
         stage.put("listCount", result.getList().size()).put("typeCount", result.getTypes().size()).put("items", items);
     }
 
-    private static Vod configurationCard(List<Vod> items) {
-        for (Vod value : items) if (value.getName().contains("配置中心")) return value;
-        for (Vod value : items) if (value.isAction() && SAFE_CONTROLS.contains(value.getName().trim())) return value;
+    private static Vod configurationCard(List<Vod> items, String entry) {
+        for (Vod value : items) if (value.getName().equals(entry)) return value;
         return null;
     }
 

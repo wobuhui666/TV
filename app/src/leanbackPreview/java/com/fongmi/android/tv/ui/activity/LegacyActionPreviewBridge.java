@@ -20,6 +20,8 @@ public final class LegacyActionPreviewBridge {
     public static boolean post(Runnable runnable) { return MAIN.post(runnable); }
     public static void execute(Runnable runnable) { new Thread(runnable, "legacy-source-fixture").start(); }
 
+    public static void finishActivity(Activity activity) { activity.finish(); }
+
     public static AlertDialog createDialog(Activity context, String title, String button, DialogInterface.OnClickListener click) {
         return new AlertDialog.Builder(context).setTitle(title).setPositiveButton(button, click).create();
     }
