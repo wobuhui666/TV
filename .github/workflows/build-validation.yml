@@ -3,6 +3,10 @@ name: Build isolated TV validation APKs
 on:
   workflow_dispatch:
     inputs:
+      configuration_dialog:
+        description: Build configuration dialog verification in its dedicated Android package
+        type: boolean
+        default: false
       playback_regression_only:
         description: Run focused playback regression without repeating the performance matrix
         type: boolean
@@ -45,9 +49,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [sourceprobe, preview]
+        package: ${{ fromJSON(inputs.configuration_dialog && '["sourceprobe"]' || '["sourceprobe","preview"]') }}
     env:
-      VALIDATION_PACKAGE: ${{ matrix.package }}
+      VALIDATION_PACKAGE: ${{ inputs.configuration_dialog && matrix.package == 'sourceprobe' && 'sourceprobe.wexdialog' || matrix.package }}
       MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
@@ -109,7 +113,7 @@ jobs:
           test ! -f local.properties
           cat > "$RUNNER_TEMP/tv-validation.init.gradle" <<'GRADLE'
           def suffix = System.getenv('VALIDATION_PACKAGE')
-          if (!(suffix in ['sourceprobe', 'preview'])) throw new GradleException('Invalid validation package')
+          if (!(suffix in ['sourceprobe', 'preview', 'sourceprobe.wexdialog'])) throw new GradleException('Invalid validation package')
           gradle.beforeProject { p ->
               ['com.android.application', 'com.android.library'].each { pluginId ->
                   p.pluginManager.withPlugin(pluginId) {

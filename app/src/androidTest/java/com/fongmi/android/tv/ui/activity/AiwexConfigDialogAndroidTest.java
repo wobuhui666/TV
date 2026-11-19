@@ -62,7 +62,7 @@ import static org.junit.Assert.*;
 /** Opt-in real configuration probe; never submits account fields or exports source identifiers. */
 @RunWith(AndroidJUnit4.class)
 public final class AiwexConfigDialogAndroidTest {
-    private static final String PACKAGE = "com.fongmi.android.tv.sourceprobe";
+    private static final String PACKAGE = "com.fongmi.android.tv.sourceprobe.wexdialog";
     private static final String CONFIG_URL = "https://9280.kstore.vip/aiwex.json";
     private static final Set<String> SAFE_CONTROLS = Set.of("确定", "确认", "取消", "返回", "关闭", "保存", "设置", "配置",
             "网页配置", "网页版配置中心", "配置中心", "综合设置", "OK", "Cancel", "Close", "Back");
@@ -80,7 +80,7 @@ public final class AiwexConfigDialogAndroidTest {
 
     @Test(timeout = 240_000)
     public void explicitRealConfigurationCardShouldShowItsDialog() throws Exception {
-        assertEquals("Only the disposable sourceprobe package may run this live test", PACKAGE,
+        assertEquals("Only the dedicated configuration-dialog package may run this live test", PACKAGE,
                 instrumentation.getTargetContext().getPackageName());
         assertEquals("The real configuration requires an explicit test argument", CONFIG_URL,
                 InstrumentationRegistry.getArguments().getString("source_config_url", ""));

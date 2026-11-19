@@ -87,7 +87,7 @@ Java/Python 回调在发起调用的工作线程执行；QuickJS 回调回到本
 - preview 设备测试类 `com.fongmi.android.tv.test.SpiderDialogTest`：真实 Java 与 QuickJS 表单、输入验证、二维码、选择器、遥控焦点、异步连续弹窗、任务取消与超时暂停；只使用 loopback HTTP 和虚构登录数据。截图目录为应用 externalFiles 下的 `spider-dialog-verification/`。
 - `com.fongmi.android.tv.model.SourceActionDialogTest`：调用页面归属、重复配置动作、离页取消、旧 Java 自建窗口与后续表单；测试范围和截图见 [issue #119 验证记录](testing/reports/2026-11-15-issue119-ui/README.md)。
 - `com.fongmi.android.tv.model.SourceDetailDialogTest`：旧源在列表详情请求中打开配置窗口；验证真实片库点击、重复点击、离页清理及普通视频复用详情响应后进入播放页。
-- 旧源构造弹窗时可以多次查询窗口服务，同一窗口的重复捕获只登记一次。`SourceActionDialogTest` 覆盖这类构造、窗口归属与确认关闭；`AiwexConfigDialogAndroidTest` 仅在隔离 `sourceprobe` 包显式传入 `source_config_url=https://9280.kstore.vip/aiwex.json` 时实测配置中心，使用返回键退出，不提交表单值，摘要保存在 externalFiles 下的 `aiwex-config-dialog/report.json`。
+- 旧源构造弹窗时可以多次查询窗口服务，同一窗口的重复捕获只登记一次。`SourceActionDialogTest` 覆盖这类构造、窗口归属与确认关闭；`AiwexConfigDialogAndroidTest` 通过验证工作流的 `configuration_dialog` 输入构建独立包 `com.fongmi.android.tv.sourceprobe.wexdialog`，显式传入 `source_config_url=https://9280.kstore.vip/aiwex.json` 后实测配置中心。测试使用返回键退出，不提交表单值，摘要保存在 externalFiles 下的 `aiwex-config-dialog/report.json`。
 
 真实 Python 虚拟机调用还需要包含 Python 原生库的 ARM 测试设备；Python facade 测试不能替代该验证。需要源主动接入上述 API，现有源不会自动出现登录界面。
 
