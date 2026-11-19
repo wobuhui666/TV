@@ -142,6 +142,7 @@ public final class AiwexConfigDialogAndroidTest {
             }
             report.put("dialogShown", shown);
             if (shown) report.put("dismissedWithBack", dismissWithBack());
+            assertTrue("The real configuration card must be reached", report.optBoolean("configurationCardFound"));
             assertTrue("No real configuration dialog appeared; inspect the safe report", shown);
             report.put("passed", true);
         } catch (Throwable failure) {
@@ -246,13 +247,24 @@ public final class AiwexConfigDialogAndroidTest {
     }
 
     private boolean observe(JSONObject stage, java.util.function.BooleanSupplier done, long timeout) throws Exception {
-        long started = SystemClock.elapsedRealtime(), completedAt = 0;
+        long started = SystemClock.elapsedRealtime(), completedAt = 0, visibleAt = 0;
+        Set<View> visible = Collections.newSetFromMap(new IdentityHashMap<>());
         do {
             Set<View> dialogs = dialogRoots();
-            if (!dialogs.isEmpty()) {
-                stage.put("dialogShown", true).put("additionalWindowCount", dialogs.size());
+            Set<View> focused = Collections.newSetFromMap(new IdentityHashMap<>());
+            main(() -> dialogs.forEach(root -> { if (root.hasWindowFocus()) focused.add(root); }));
+            visible.retainAll(focused);
+            long now = SystemClock.elapsedRealtime();
+            if (focused.isEmpty()) visibleAt = 0;
+            else if (visible.isEmpty()) {
+                visible.addAll(focused);
+                visibleAt = now;
+            }
+            if (!visible.isEmpty() && now - visibleAt >= 500) {
+                stage.put("dialogShown", true).put("additionalWindowCount", dialogs.size())
+                        .put("windowFocused", true).put("visibleForMs", now - visibleAt);
                 JSONArray labels = new JSONArray();
-                main(() -> dialogs.forEach(root -> safeControls(root, labels)));
+                main(() -> visible.forEach(root -> safeControls(root, labels)));
                 stage.put("safeDialogControls", labels).put("elapsedMs", SystemClock.elapsedRealtime() - started);
                 return true;
             }
