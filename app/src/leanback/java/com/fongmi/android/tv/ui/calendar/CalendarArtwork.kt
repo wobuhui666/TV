@@ -6,7 +6,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,10 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -172,20 +176,31 @@ private fun CalendarHeroTitle(title: String, motion: Boolean) {
 @Composable
 internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, motion: Boolean,
     modifier: Modifier, onClick: () -> Unit) {
-    var focused by remember(item.key) { mutableStateOf(false) }
+    val interactions = remember(item.key) { MutableInteractionSource() }
+    val focused by interactions.collectIsFocusedAsState()
     val scale = if (motion) 1.06f else 1f
     val image = if (landscape) item.episodeStill.ifBlank { item.backdrop.ifBlank { item.poster } } else item.poster
     val width = if (landscape) 232.dp else 96.dp
     Column(Modifier.width(width), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        TvFocusableSurface(onClick = onClick, focusedScale = scale,
-            modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+        TvFocusableSurface(onClick = onClick, focusedScale = scale, interactionSource = interactions,
+            modifier = modifier.fillMaxWidth()
                 .semantics { contentDescription = item.title + if (item.subtitle.isBlank()) "" else " · ${item.subtitle}" }
                 .graphicsLayer { shadowElevation = if (focused) 16.dp.toPx() else 0f; shape = RoundedCornerShape(12.dp) },
             shape = RoundedCornerShape(12.dp), containerColor = Color.Transparent) {
-            Box(Modifier.fillMaxWidth().aspectRatio(if (landscape) 16f / 9f else 2f / 3f)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(if (landscape) 16f / 9f else 2f / 3f).drawWithCache {
+                val strokeWidth = 2.dp.toPx()
+                val inset = strokeWidth / 2f
+                val radius = (12.dp.toPx() - inset).coerceAtLeast(0f)
+                onDrawWithContent {
+                    drawContent()
+                    // Draw after the AndroidView artwork using the Surface's actual interaction.
+                    if (focused) drawRoundRect(Color.White, topLeft = Offset(inset, inset),
+                        size = Size((size.width - strokeWidth).coerceAtLeast(0f), (size.height - strokeWidth).coerceAtLeast(0f)),
+                        cornerRadius = CornerRadius(radius, radius), style = Stroke(strokeWidth))
+                }
+            }) {
                 DetailArtwork(image, null, Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
                     .testTag("calendarArtwork:${item.key}"), placeholderColor = Color(0xFF20232A))
-                if (focused) Box(Modifier.fillMaxSize().border(2.dp, Color.White, RoundedCornerShape(12.dp)))
                 if (item.subtitle.isNotBlank()) Text(item.subtitle,
                     Modifier.align(Alignment.BottomStart).padding(8.dp)
                         .background(Color.Black.copy(alpha = .72f), RoundedCornerShape(5.dp))

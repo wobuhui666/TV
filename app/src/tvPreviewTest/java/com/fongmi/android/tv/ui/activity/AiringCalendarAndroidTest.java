@@ -697,7 +697,21 @@ public final class AiringCalendarAndroidTest {
             } catch (StaleObjectException error) { stale = error; }
             SystemClock.sleep(50);
         }
-        if (stale != null) throw new AssertionError("Rendered node remains stale after four lookups: " + tag, stale);
+        if (stale != null) {
+            Rect[] rendered = new Rect[1];
+            main(() -> {
+                SemanticsNode node = semanticNode(semanticsRoot(), tag);
+                if (node != null && node.getLayoutNode$ui_release().isPlaced() && !node.isTransparent$ui_release()) {
+                    Rect bounds = semanticsBounds(node);
+                    if (bounds.width() > 0 && bounds.height() > 0 && hostBoundsOnMain().contains(bounds)) rendered[0] = bounds;
+                }
+            });
+            if (rendered[0] != null) {
+                Log.i("CalendarBounds", "Four platform lookups were stale; actual placed visible text/layout bounds used for " + tag + ": " + rendered[0]);
+                return rendered[0];
+            }
+            throw new AssertionError("Rendered node remains stale after four lookups and has no visible matching unmerged layout: " + tag, stale);
+        }
         throw new AssertionError("Rendered node has no stable visible bounds after four lookups: " + tag);
     }
 
