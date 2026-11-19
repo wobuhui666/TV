@@ -29,7 +29,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
-| aiwex 配置弹窗回归 | [重复窗口捕获修复、离线回归与真实源待验收项](testing/reports/2026-11-19-aiwex-config-dialog/README.md) |
+| aiwex 配置弹窗回归 | [页面保留修复、真实源双入口验收与回归](testing/reports/2026-11-19-aiwex-config-dialog/README.md) |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
 | 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |
 | 首页精选与模式预览 | [真实首页、24 项回归与覆盖限制](testing/reports/2026-11-16-home-modes/README.md) |
