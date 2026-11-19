@@ -1,0 +1,120 @@
+{
+  "schema": "tv.aiwex-config-dialog.v1",
+  "sdk": 29,
+  "stages": [
+    {
+      "phase": "home",
+      "dialogsAllowed": true,
+      "dialogShown": false,
+      "requestCompleted": true,
+      "elapsedMs": 4212,
+      "listCount": 0,
+      "typeCount": 12,
+      "items": [],
+      "sharedDialogStateObserved": true,
+      "sharedDialogDenied": false,
+      "sharedDialogUsed": false
+    },
+    {
+      "phase": "first-category",
+      "dialogsAllowed": true,
+      "dialogShown": false,
+      "requestCompleted": true,
+      "elapsedMs": 4369,
+      "listCount": 12,
+      "typeCount": 0,
+      "items": [
+        {
+          "name": "网页版配置中心",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "网盘线路排序",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "多线程代理模式",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "Go多线程管理",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        },
+        {
+          "name": "[omitted]",
+          "isAction": false,
+          "isFolder": false
+        }
+      ],
+      "sharedDialogStateObserved": true,
+      "sharedDialogDenied": false,
+      "sharedDialogUsed": false
+    },
+    {
+      "phase": "configuration-card-detail",
+      "dialogShown": false,
+      "requestCompleted": true,
+      "elapsedMs": 4100,
+      "detailReturned": false,
+      "categoryActivityFinishing": true,
+      "anchorActivityFinishing": false,
+      "currentActivityIsAnchor": true,
+      "currentActivityIsCategory": false
+    }
+  ],
+  "configSuccess": true,
+  "dialogShown": false,
+  "formValuesSubmitted": false,
+  "passed": false,
+  "localServerRunning": true,
+  "baselineWindowCount": 1,
+  "configLoadMs": 1956,
+  "configCallbackCompleted": true,
+  "siteCount": 100,
+  "configurationCardFound": true,
+  "categoryHostResumed": true,
+  "categoryBaselineWindowCount": 2,
+  "activitySupplier": "App.activity",
+  "failureTypes": [
+    "AssertionError"
+  ]
+}

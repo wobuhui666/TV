@@ -1,6 +1,6 @@
 # aiwex 配置弹窗回归（2026-11-19）
 
-已修复旧源窗口捕获中的重复处理错误，离线 Android 回归通过。`https://9280.kstore.vip/aiwex.json` 的 Guard 插件在修复包上的实测仍待完成，当前不能宣布真实源配置弹窗已恢复。机器可读结果见 [verification.json](verification.json)。
+已修复旧源窗口捕获中的重复处理错误，离线 Android 回归通过。`https://9280.kstore.vip/aiwex.json` 的 Guard 插件在首个候选包上的实测未通过，当前不能宣布真实源配置弹窗已恢复。机器可读结果见 [verification.json](verification.json)。
 
 ## 生产基线
 
@@ -36,6 +36,6 @@ Lint 与发布基线对比通过，既有 108 个 Error、388 个 Warning、6 �
 
 UI 运行 `44582559040` 第 1 次执行在 Media3 设置插件依赖解析阶段失败：Gradle Plugin Portal 未取得 Kotlin 2.2.0 的 stdlib、插件 API 与 BOM，测试执行数为 0。相同提交的第 2 次执行通过构建、集中单测和两种尺寸的 Android 回归；依赖失败没有作为应用测试失败计入通过数量。
 
-修复后的真实源验证仍为 **待完成**。最新隔离测试包目标为 `com.fongmi.android.tv.sourceprobe.wexdialog`，测试提交 `318a0038b39941b2efac6c90bbd873520aff410e`，构建运行 [44587398285](https://github.com/wobuhui666/TV/actions/runs/44587398285)。测试使用启用生产窗口钩子的 debug Activity，要求真实弹窗取得焦点并连续可见至少 500 ms。完整 ARM64 APK 对已构建，签名、ZIP、元数据 SHA-256 及 35 个 ARM64 库检查通过；该记录尚无修复后的 Guard 弹窗通过结果。
+首个候选包的真实源验证为 **失败**。最新隔离测试包目标为 `com.fongmi.android.tv.sourceprobe.wexdialog`，测试提交 `318a0038b39941b2efac6c90bbd873520aff410e`，构建运行 [44587398285](https://github.com/wobuhui666/TV/actions/runs/44587398285)。测试使用启用生产窗口钩子的 debug Activity，要求真实弹窗取得焦点并连续可见至少 500 ms。完整 ARM64 APK 对已构建，签名、ZIP、元数据 SHA-256 及 35 个 ARM64 库检查通过；补齐本独立包声明的存储权限后，配置加载和卡片查找成功，但分类页面仍提前结束，返回宿主有效，弹窗没有显示。安全结果见 [首个候选包报告](native-first-candidate.json)；原始日志留在仓库外。未提交表单值，也未修改其他包。
 
-后续需要在 ARM 设备上完成「网页版配置中心」「网盘线路排序」显示、关闭和离页清理检查，再更新本报告。离线夹具、APK 构建和较早提交的验证不能替代这项验收。
+正在准备仅记录窗口决策和页面结束来源的 DEBUG 跟踪包，继续查明实际 Guard 窗口关闭原因。后续需要在 ARM 设备上完成「网页版配置中心」「网盘线路排序」显示、关闭和离页清理检查，再更新本报告。离线夹具、APK 构建和较早提交的验证不能替代这项验收。

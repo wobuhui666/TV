@@ -1,7 +1,7 @@
 {
   "date": "2026-11-19",
   "topic": "aiwex source configuration dialog overlapping window captures",
-  "status": "offline_regression_passed_native_source_pending",
+  "status": "offline_regression_passed_native_first_candidate_failed",
   "configurationUrl": "https://9280.kstore.vip/aiwex.json",
   "fixCommit": "834dcb5c2db7f82488d456a7fd80604be88656c9",
   "fix": "Skip a window already owned by the request before applying duplicate-window rejection to overlapping constructor snapshots.",
@@ -142,8 +142,8 @@
     "sameCommitAttempt2Passed": true
   },
   "nativeSourceValidation": {
-    "status": "pending",
-    "passed": null,
+    "status": "first_candidate_failed",
+    "passed": false,
     "latestTestCommit": "318a0038b39941b2efac6c90bbd873520aff410e",
     "buildRunId": 44587398285,
     "buildUrl": "https://github.com/wobuhui666/TV/actions/runs/44587398285",
@@ -154,7 +154,7 @@
       "Real drive ordering popup displays",
       "Dismiss and page departure clear the windows"
     ],
-    "coverageLimit": "No passing result for the real Guard source on a fixed APK has been obtained.",
+    "coverageLimit": "The real Guard popup did not appear on the first candidate. Debug-only window/finish tracing is being prepared; acceptance is not complete.",
     "buildPassed": true,
     "apkIntegrityVerified": true,
     "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
@@ -182,7 +182,23 @@
         "requiredProbeClassPresent": true,
         "arm64NativeLibraryCount": 0
       }
-    ]
+    ],
+    "safeReport": "native-first-candidate.json",
+    "realResult": {
+      "configSuccess": true,
+      "configuredSites": 100,
+      "configurationCardFound": true,
+      "dialogShown": false,
+      "categoryActivityFinishing": true,
+      "currentActivityIsAnchor": true,
+      "formValuesSubmitted": false
+    },
+    "setup": {
+      "declaredStoragePermissionsGrantedToDedicatedPackage": true,
+      "initialPermissionPromptAttemptCountedAsPassed": false,
+      "otherPackagesModified": false
+    },
+    "nextDiagnosticCommit": "49fabcaed05a633d778115e99d21b56d9159d8fc"
   },
   "publicEvidence": {
     "screenshotsReviewed": true,
