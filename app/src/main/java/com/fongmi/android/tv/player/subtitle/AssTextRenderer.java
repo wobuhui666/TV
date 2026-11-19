@@ -45,6 +45,7 @@ public final class AssTextRenderer extends BaseRenderer {
     private final AtomicInteger queued = new AtomicInteger();
     private final AtomicInteger queuedBytes = new AtomicInteger();
     private final AtomicBoolean rendering = new AtomicBoolean();
+    private final AssFrameCache frames = new AssFrameCache();
     private HandlerThread thread;
     private Handler worker;
     private Ass ass;
@@ -105,6 +106,7 @@ public final class AssTextRenderer extends BaseRenderer {
         source = streamSource;
         streamOffsetUs = offset;
         generation++;
+        output.clear(generation);
         worker().post(() -> { fonts = streamSource.fonts; initialize(current); });
     }
 
@@ -130,7 +132,7 @@ public final class AssTextRenderer extends BaseRenderer {
         generation++;
         lastRenderUs = C.TIME_UNSET;
         output.clear(generation);
-        worker().post(() -> { if (track != null) track.clearEvent(); eventBytes = 0; historyPackets = 0; });
+        worker().post(() -> { if (track != null) track.clearEvent(); frames.clear(); eventBytes = 0; historyPackets = 0; });
         refresh();
     }
 
@@ -203,12 +205,14 @@ public final class AssTextRenderer extends BaseRenderer {
                     render.setCacheLimit(4096, 24);
                     render.setTrack(track);
                 }
-                render.setFrameSize(width, height);
-                render.setStorageSize(width, height);
+                int renderWidth = width;
+                int renderHeight = height;
+                render.setFrameSize(renderWidth, renderHeight);
+                render.setStorageSize(renderWidth, renderHeight);
                 float size = PlayerSetting.getSubtitleTextSize();
                 render.setFontScale(size == 0 ? 1 : Math.clamp(size / .0533f, .5f, 3f));
                 AssFrame frame = render.renderFrame(positionUs / 1000, AssTexType.BITMAP_ALPHA);
-                if (frame == null || frame.getChanged() != 0) output.frame(frame, width, height, ticket);
+                if (frames.update(frame)) output.frame(frames.getFrame(), renderWidth, renderHeight, ticket);
             } catch (RuntimeException error) { Log.w("Libass", "Render failed", error); }
             finally { rendering.set(false); }
         });
@@ -227,6 +231,7 @@ public final class AssTextRenderer extends BaseRenderer {
         if (worker != null) { worker.post(this::closeNative); thread.quitSafely(); worker = null; thread = null; }
     }
     private void closeNative() {
+        frames.clear();
         if (render != null) render.release();
         if (track != null) track.release();
         if (ass != null) ass.release();

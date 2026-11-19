@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_search_sources">片源</string>
+    <string name="library_search_more">加载更多</string>
+    <string name="library_search_result_count">共 %1$d 项结果</string>
+    <string name="library_search_resource_count">%1$d 个资源</string>
+</resources>

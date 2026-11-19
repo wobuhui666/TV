@@ -17,7 +17,7 @@ public final class MediaMatcher {
     private static final Pattern TRAILING_ROMAN = Pattern.compile("(?i)(?<=\\p{L})\\s*(I{1,3}|IV|V|VI{0,3}|IX|X)\\s*$");
     private static final Pattern NOISE = Pattern.compile("(?i)(?:4k|8k|16k|2160p|1080p|720p|480p|uhd|hdr|dolby|blu[ -]?ray|web[ -]?dl|中字|中文字幕|国语|国語|粤语|高清|超清|蓝光|藍光|完结|完結|全集|全\\d+集|无删减|無刪減|纯净版|純淨版|修复版|修復版|抢先版|搶先版|导演剪辑版|導演剪輯版)");
     private static final Pattern TYPE_MOVIE = Pattern.compile("(?i)电影|電影|movie|film");
-    private static final Pattern TYPE_SERIES = Pattern.compile("(?i)电视剧|電視劇|连续剧|連續劇|剧集|劇集|series|tv|anime|番剧|番劇");
+    private static final Pattern TYPE_SERIES = Pattern.compile("(?i)电视剧|電視劇|连续剧|連續劇|剧集|劇集|series|tv|anime|番剧|番劇|动漫|動漫|动画|動畫");
     private static final String CHINESE_DIGITS = "零〇一二两三四五六七八九十百千万";
 
     private MediaMatcher() {
@@ -156,7 +156,7 @@ public final class MediaMatcher {
         return text.replaceAll("[^\\p{L}\\p{Nd}]", "").toLowerCase(Locale.ROOT);
     }
 
-    private static MediaIdentity.Kind kind(String value) {
+    public static MediaIdentity.Kind kind(String value) {
         if (TYPE_MOVIE.matcher(value).find()) return MediaIdentity.Kind.MOVIE;
         if (TYPE_SERIES.matcher(value).find()) return MediaIdentity.Kind.SERIES;
         return MediaIdentity.Kind.UNKNOWN;

@@ -83,6 +83,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     @JsonAdapter(ContentRatingAdapter.class)
     private String contentRating;
     private String backdrop;
+    private String originalName;
     /** Rex 卡片副题用的流派串（最多 2 个中文流派，可为空）。 */
     private String genreText;
     @SerializedName("vod_play_from")
@@ -127,6 +128,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         this.vodContent = in.readString();
         this.contentRating = in.readString();
         this.backdrop = in.readString();
+        this.originalName = in.readString();
         this.genreText = in.readString();
         this.vodPlayFrom = in.readString();
         this.vodPlayUrl = in.readString();
@@ -157,6 +159,9 @@ public class Vod implements Parcelable, Diffable<Vod> {
     public String getId() {
         return TextUtils.isEmpty(vodId) ? "" : vodId.trim();
     }
+
+    public String getOriginalName() { return originalName == null ? "" : originalName; }
+    public void setOriginalName(String value) { originalName = value; }
 
     public void setId(String vodId) {
         this.vodId = vodId;
@@ -290,7 +295,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
     }
 
     public String getAction() {
-        return TextUtils.isEmpty(action) ? "" : action;
+        return action == null ? "" : action;
     }
 
     public Cate getCate() {
@@ -463,6 +468,7 @@ public class Vod implements Parcelable, Diffable<Vod> {
         dest.writeString(this.vodContent);
         dest.writeString(this.contentRating);
         dest.writeString(this.backdrop);
+        dest.writeString(this.originalName);
         dest.writeString(this.genreText);
         dest.writeString(this.vodPlayFrom);
         dest.writeString(this.vodPlayUrl);

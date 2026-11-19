@@ -1,0 +1,90 @@
+{
+  "schema": "tv.aiwex.final-verification.v1",
+  "testedBaseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "baselineFullApkSha256": "cea0fe43cc1825447af9e44944d0915b74f11e3b723838557fb84b8b8ab090c3",
+  "baselineRuntime": {
+    "sdk": 31,
+    "fullArm64ApkInstalled": true,
+    "hardwareVirtualization": false,
+    "nativeBridgePropertyVerified": true,
+    "guardSearchVerified": false,
+    "submittedQueriesExecuted": 0,
+    "backTestExecuted": false
+  },
+  "diagnosticRun": {
+    "rawReportLocation": "/workspace/tv-vod-build/online-api31-warm-evidence/online-library-search/report.json",
+    "rawReportStoredOutsideRepository": true,
+    "configurationCallbackArrived": false,
+    "configurationLoadSucceeded": false,
+    "observedElapsedMs": 180649,
+    "configFindElapsedMs": 64059,
+    "configLoadDispatchElapsedMs": 14455,
+    "outerFutureCompletedNormally": true,
+    "innerFutureDoneAt180Seconds": false,
+    "innerThreadStateAt180Seconds": "RUNNABLE",
+    "observedParsingPath": [
+      "GsonTypes.resolveTypeVariable",
+      "Class.getTypeParameters",
+      "Proxy.arrayFrom",
+      "VodConfig.initList",
+      "VodConfig.parseConfig"
+    ],
+    "configurationResponseReachedParsing": true,
+    "guardInitializationReachedByThisObservation": false,
+    "queryCount": 0,
+    "backVerified": false
+  },
+  "change": {
+    "path": "catvod/src/main/java/com/github/catvod/bean/Proxy.java",
+    "runtimeFieldsExcludedFromGson": [
+      "proxies",
+      "uris",
+      "wildcard"
+    ],
+    "configurationFields": [
+      "name",
+      "hosts",
+      "urls"
+    ],
+    "userSearchFreezeResolved": false
+  },
+  "validation": {
+    "independentBaselineTests": 4,
+    "independentBaselineFailures": 3,
+    "independentPatchedTests": 4,
+    "independentPatchedFailures": 0,
+    "localIndependentComparisonRepeated": true,
+    "localComparisonAndroidApi": "SDK37 Android API jar for compilation; no Android runtime execution",
+    "closestGradleCommand": "./gradlew :catvod:testDebugUnitTest --tests com.github.catvod.bean.ProxyParsingTest",
+    "closestGradleSucceeded": true,
+    "gradleJUnitXmlRecheckCompleted": false,
+    "fullPreviewAndAndroidTestBuildSucceeded": true,
+    "androidProxyRuntimeTestExecuted": false,
+    "patchedOnlineTestExecuted": false
+  },
+  "artifact": {
+    "filename": "TV-aiwex-parser-fix-20261114-arm64.apk",
+    "sha256": "d72e15065cd37fdba3825bddeaa5b3a200d139006d55509f3c3076f86724312e",
+    "bytes": 116711547,
+    "arm64Libraries": 35,
+    "pythonRuntimeRetained": true,
+    "signatureVerified": true,
+    "storedOnCloudBox": true,
+    "transferredToLocalWorkspace": false,
+    "installedAndTested": false
+  },
+  "executionBlock": {
+    "provider": "Box",
+    "toolRejected": true,
+    "reason": "Box wallet empty",
+    "billingUrl": "https://box.simular.ai/billing",
+    "automaticHibernationInterruptedWarmProcess": true,
+    "locallyAttachedAdbDevices": 0
+  },
+  "coverageLimits": [
+    "Configuration/JAR download and integrity checks do not establish source availability.",
+    "Proxy adapter exclusion is proven by before/after regression, not by patched online timing.",
+    "No real source results, result-page response, Back navigation or playback have been verified with the new APK.",
+    "The unaccelerated emulator and framework timeout multiplier do not establish performance on the user's TV."
+  ]
+}

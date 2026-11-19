@@ -20,6 +20,10 @@ public class CollectActivity extends BaseActivity {
     private boolean initialFocus = true;
 
     public static void start(Activity activity, String keyword) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            LibrarySearchActivity.start(activity, keyword);
+            return;
+        }
         Intent intent = new Intent(activity, CollectActivity.class);
         intent.putExtra("keyword", keyword);
         activity.startActivity(intent);
@@ -32,6 +36,11 @@ public class CollectActivity extends BaseActivity {
 
     @Override
     protected void initView(Bundle savedInstanceState) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            LibrarySearchActivity.start(this, getIntent().getStringExtra("keyword"));
+            finish();
+            return;
+        }
         results = new SearchResultsController(this, mBinding.results, false, focus);
         results.search(getIntent().getStringExtra("keyword"));
         results.requestFocus();
@@ -41,6 +50,7 @@ public class CollectActivity extends BaseActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (results == null) return;
         results.search(intent.getStringExtra("keyword"));
         initialFocus = !hasWindowFocus();
         results.requestFocus();

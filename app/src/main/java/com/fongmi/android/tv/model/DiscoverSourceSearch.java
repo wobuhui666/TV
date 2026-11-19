@@ -65,9 +65,11 @@ public final class DiscoverSourceSearch {
                     deliver(job, null, error);
                 }
                 private void deliver(Job job, Result result, Throwable error) {
+                    if (generation.get() != current) return;
+                    // Health checks include hashing and connectivity IPC; keep them on the worker.
+                    job.attempt.complete(result, error);
                     App.post(() -> {
                         if (generation.get() != current) return;
-                        job.attempt.complete(result, error);
                         listener.onResult(result, ++returned, jobs.size());
                         if (returned == jobs.size()) {
                             stop();

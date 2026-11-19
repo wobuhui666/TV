@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_compact_cn_movie">國產電影</string>
+    <string name="home_compact_cn_tv">國產劇集</string>
+    <string name="home_compact_cn_top_movie">國產高分電影</string>
+    <string name="home_compact_cn_top_tv">國產高分劇集</string>
+</resources>

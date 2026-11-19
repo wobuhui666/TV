@@ -1,0 +1,190 @@
+diff --git a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java
+index 49f3ab062edca4fd9d68c95595c85bf4a3a329db..374b120dc3c94b1e5b00d5bcbdbf0fca8a1eac3c 100644
+--- a/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java
++++ b/libraries/ui_danmaku/src/main/java/androidx/media3/ui/danmaku/DanmakuRenderPool.java
+@@ -23,11 +23,10 @@ import android.os.SystemClock;
+ import androidx.annotation.Nullable;
+ import androidx.annotation.VisibleForTesting;
+ import java.util.ArrayList;
++import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.List;
+-import java.util.NavigableMap;
+-import java.util.TreeMap;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
+ /** Owns pending render items and their background text measurement. */
+@@ -37,7 +36,8 @@ final class DanmakuRenderPool {
+   private static final Comparator<DanmakuRenderItem> BY_TIME =
+       (first, second) -> Long.compare(first.timeMs, second.timeMs);
+   private final Object lock = new Object();
+-  private final List<TreeMap<Long, List<DanmakuRenderItem>>> poolChunks = new ArrayList<>();
++  // Sorted on the measurement thread; array order and timestamps stay fixed after publication.
++  private final List<DanmakuRenderItem[]> poolChunks = new ArrayList<>();
+   private final AtomicInteger poolGeneration = new AtomicInteger();
+   private final AtomicInteger measurementGeneration = new AtomicInteger();
+   private final Object remeasureToken = new Object();
+@@ -84,34 +84,64 @@ final class DanmakuRenderPool {
+   }
+ 
+   void copyRange(long fromMs, long toMs, List<DanmakuRenderItem> destination) {
++    if (fromMs > toMs) {
++      throw new IllegalArgumentException("Invalid time range");
++    }
+     int destinationStart = destination.size();
+-    boolean multipleChunks;
++    int matchingChunks = 0;
+     synchronized (lock) {
+-      multipleChunks = poolChunks.size() > 1;
+       for (int i = 0; i < poolChunks.size(); i++) {
+-        NavigableMap<Long, List<DanmakuRenderItem>> range =
+-            poolChunks.get(i).subMap(fromMs, false, toMs, true);
+-        for (List<DanmakuRenderItem> bucket : range.values()) {
+-          destination.addAll(bucket);
++        DanmakuRenderItem[] chunk = poolChunks.get(i);
++        // Most chunks are past history. Reject them without map views, iterators or boxed keys.
++        if (chunk[chunk.length - 1].timeMs <= fromMs || chunk[0].timeMs > toMs) {
++          continue;
++        }
++        int fromIndex = upperBound(chunk, fromMs);
++        int toIndex = upperBound(chunk, toMs);
++        if (fromIndex < toIndex) {
++          matchingChunks++;
++          for (int j = fromIndex; j < toIndex; j++) {
++            destination.add(chunk[j]);
++          }
+         }
+       }
+     }
+-    if (multipleChunks && destination.size() - destinationStart > 1) {
++    if (matchingChunks > 1 && destination.size() - destinationStart > 1) {
+       Collections.sort(destination.subList(destinationStart, destination.size()), BY_TIME);
+     }
+   }
+ 
++  private static int upperBound(DanmakuRenderItem[] sorted, long timeMs) {
++    int low = 0;
++    int high = sorted.length;
++    while (low < high) {
++      int middle = (low + high) >>> 1;
++      if (sorted[middle].timeMs <= timeMs) {
++        low = middle + 1;
++      } else {
++        high = middle;
++      }
++    }
++    return low;
++  }
++
+   @Nullable
+   Long nextTimeAfter(long timeMs) {
+     synchronized (lock) {
+-      @Nullable Long nextTimeMs = null;
++      long nextTimeMs = Long.MAX_VALUE;
++      boolean found = false;
+       for (int i = 0; i < poolChunks.size(); i++) {
+-        @Nullable Long chunkNextTimeMs = poolChunks.get(i).higherKey(timeMs);
+-        if (chunkNextTimeMs != null && (nextTimeMs == null || chunkNextTimeMs < nextTimeMs)) {
++        DanmakuRenderItem[] chunk = poolChunks.get(i);
++        if (chunk[chunk.length - 1].timeMs <= timeMs) {
++          continue;
++        }
++        long chunkNextTimeMs = chunk[upperBound(chunk, timeMs)].timeMs;
++        if (!found || chunkNextTimeMs < nextTimeMs) {
+           nextTimeMs = chunkNextTimeMs;
++          found = true;
+         }
+       }
+-      return nextTimeMs;
++      return found ? nextTimeMs : null;
+     }
+   }
+ 
+@@ -159,7 +189,7 @@ final class DanmakuRenderPool {
+       if (widths == null) {
+         continue;
+       }
+-      TreeMap<Long, List<DanmakuRenderItem>> chunk = buildChunk(items, widths);
++      DanmakuRenderItem[] chunk = buildChunk(items, widths);
+       if (commitChunk(chunk, measurement)) {
+         mainHandler.post(() -> listener.onItemsAdded(items, measurement.poolGeneration));
+         return;
+@@ -185,29 +215,25 @@ final class DanmakuRenderPool {
+     return widths;
+   }
+ 
+-  private static TreeMap<Long, List<DanmakuRenderItem>> buildChunk(
++  private static DanmakuRenderItem[] buildChunk(
+       List<DanmakuRenderItem> items, float[] widths) {
+-    TreeMap<Long, List<DanmakuRenderItem>> chunk = new TreeMap<>();
++    DanmakuRenderItem[] chunk = items.toArray(new DanmakuRenderItem[0]);
+     for (int i = 0; i < items.size(); i++) {
+-      DanmakuRenderItem item = items.get(i);
+-      item.measuredWidth = widths[i];
+-      List<DanmakuRenderItem> bucket = chunk.get(item.timeMs);
+-      if (bucket == null) {
+-        bucket = new ArrayList<>();
+-        chunk.put(item.timeMs, bucket);
+-      }
+-      bucket.add(item);
++      chunk[i].measuredWidth = widths[i];
+     }
++    Arrays.sort(chunk, BY_TIME);
+     return chunk;
+   }
+ 
+   private boolean commitChunk(
+-      TreeMap<Long, List<DanmakuRenderItem>> chunk, DanmakuMeasurement measurement) {
++      DanmakuRenderItem[] chunk, DanmakuMeasurement measurement) {
+     synchronized (lock) {
+       if (!isCurrent(measurement)) {
+         return false;
+       }
+-      poolChunks.add(chunk);
++      if (chunk.length > 0) {
++        poolChunks.add(chunk);
++      }
+       return true;
+     }
+   }
+@@ -247,7 +273,7 @@ final class DanmakuRenderPool {
+ 
+   @Nullable
+   private List<DanmakuRenderItem> snapshotItems(DanmakuMeasurement measurement) {
+-    List<TreeMap<Long, List<DanmakuRenderItem>>> chunks;
++    List<DanmakuRenderItem[]> chunks;
+     synchronized (lock) {
+       if (!isCurrent(measurement) || poolChunks.isEmpty()) {
+         return null;
+@@ -256,8 +282,8 @@ final class DanmakuRenderPool {
+     }
+     List<DanmakuRenderItem> snapshot = new ArrayList<>();
+     for (int i = 0; i < chunks.size(); i++) {
+-      for (List<DanmakuRenderItem> bucket : chunks.get(i).values()) {
+-        snapshot.addAll(bucket);
++      for (DanmakuRenderItem item : chunks.get(i)) {
++        snapshot.add(item);
+       }
+     }
+     return snapshot;
+@@ -302,9 +328,7 @@ final class DanmakuRenderPool {
+     synchronized (lock) {
+       int size = 0;
+       for (int i = 0; i < poolChunks.size(); i++) {
+-        for (List<DanmakuRenderItem> items : poolChunks.get(i).values()) {
+-          size += items.size();
+-        }
++        size += poolChunks.get(i).length;
+       }
+       return size;
+     }
+@@ -315,7 +339,7 @@ final class DanmakuRenderPool {
+     synchronized (lock) {
+       @Nullable DanmakuRenderItem firstItem = null;
+       for (int i = 0; i < poolChunks.size(); i++) {
+-        DanmakuRenderItem chunkFirstItem = poolChunks.get(i).firstEntry().getValue().get(0);
++        DanmakuRenderItem chunkFirstItem = poolChunks.get(i)[0];
+         if (firstItem == null || chunkFirstItem.timeMs < firstItem.timeMs) {
+           firstItem = chunkFirstItem;
+         }

@@ -373,6 +373,29 @@ object JetStreamPalette {
     @ColorInt
     fun resolveColor(context: Context, @ColorRes colorRes: Int): Int {
         if (isDynamicSelector(colorRes)) return resolveColorStateList(context, colorRes).defaultColor
+        // Neutral roles do not depend on the accent; avoid rebuilding it for every card label.
+        when (colorRes) {
+            R.color.jetstream_surface -> return SURFACE
+            R.color.jetstream_surface_container -> return SURFACE_CONTAINER
+            R.color.jetstream_surface_container_high -> return SURFACE_CONTAINER_HIGH
+            R.color.jetstream_surface_container_highest -> return SURFACE_CONTAINER_HIGHEST
+            R.color.jetstream_on_surface -> return ON_SURFACE
+            R.color.jetstream_on_surface_variant -> return ON_SURFACE_VARIANT
+            R.color.jetstream_outline -> return OUTLINE
+            R.color.jetstream_outline_variant -> return OUTLINE_VARIANT
+            R.color.jetstream_error -> return ERROR
+            R.color.jetstream_on_error -> return ON_ERROR
+            R.color.jetstream_error_container -> return ERROR_CONTAINER
+            R.color.jetstream_on_error_container -> return ON_ERROR_CONTAINER
+            R.color.jetstream_background -> return BACKGROUND
+            R.color.jetstream_on_background -> return ON_BACKGROUND
+            R.color.jetstream_scrim_light -> return SCRIM_LIGHT
+            R.color.jetstream_scrim_medium -> return SCRIM_MEDIUM
+            R.color.jetstream_scrim_heavy -> return SCRIM_HEAVY
+            R.color.jetstream_overlay_surface -> return OVERLAY_SURFACE
+            R.color.jetstream_overlay_surface_light -> return OVERLAY_SURFACE_LIGHT
+            else -> Unit
+        }
         val palette = presentationPalette()
         return when (colorRes) {
             R.color.jetstream_primary -> palette.primary
@@ -387,25 +410,6 @@ object JetStreamPalette {
             R.color.jetstream_on_tertiary -> palette.onTertiary
             R.color.jetstream_tertiary_container -> palette.tertiaryContainer
             R.color.jetstream_on_tertiary_container -> palette.onTertiaryContainer
-            R.color.jetstream_surface -> SURFACE
-            R.color.jetstream_surface_container -> SURFACE_CONTAINER
-            R.color.jetstream_surface_container_high -> SURFACE_CONTAINER_HIGH
-            R.color.jetstream_surface_container_highest -> SURFACE_CONTAINER_HIGHEST
-            R.color.jetstream_on_surface -> ON_SURFACE
-            R.color.jetstream_on_surface_variant -> ON_SURFACE_VARIANT
-            R.color.jetstream_outline -> OUTLINE
-            R.color.jetstream_outline_variant -> OUTLINE_VARIANT
-            R.color.jetstream_error -> ERROR
-            R.color.jetstream_on_error -> ON_ERROR
-            R.color.jetstream_error_container -> ERROR_CONTAINER
-            R.color.jetstream_on_error_container -> ON_ERROR_CONTAINER
-            R.color.jetstream_background -> BACKGROUND
-            R.color.jetstream_on_background -> ON_BACKGROUND
-            R.color.jetstream_scrim_light -> SCRIM_LIGHT
-            R.color.jetstream_scrim_medium -> SCRIM_MEDIUM
-            R.color.jetstream_scrim_heavy -> SCRIM_HEAVY
-            R.color.jetstream_overlay_surface -> OVERLAY_SURFACE
-            R.color.jetstream_overlay_surface_light -> OVERLAY_SURFACE_LIGHT
             else -> ContextCompat.getColor(context, colorRes)
         }
     }

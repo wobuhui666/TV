@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_sources_action">Sources</string>
+    <string name="library_all_episodes">All episodes</string>
+    <string name="library_episodes_loading">Loading episodes…</string>
+    <string name="library_episodes_empty">No episode information</string>
+    <string name="library_cancel_playback">Cancel loading</string>
+    <string name="library_play_episode">Play episode %1$d</string>
+    <string name="library_resume_episode">Resume episode %1$d · %2$s</string>
+    <string name="library_resume_position">Resume · %1$s</string>
+    <string name="library_detail_other_quality">Other</string>
+    <string name="library_detail_media_information">Media information</string>
+    <string name="library_detail_episode_hint">%1$s · Episode %2$d</string>
+    <string name="library_detail_resume_episode_hint">%1$s · Episode %2$d · %3$s</string>
+    <string name="library_detail_save">Save for later</string>
+    <string name="library_detail_kept">Saved</string>
+    <string name="library_detail_follow">Follow</string>
+    <string name="library_detail_following">Following</string>
+</resources>

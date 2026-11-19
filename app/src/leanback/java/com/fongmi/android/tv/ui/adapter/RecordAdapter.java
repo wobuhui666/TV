@@ -10,20 +10,58 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.databinding.AdapterSearchRecordBinding;
 import com.fongmi.android.tv.setting.Setting;
-import com.google.gson.reflect.TypeToken;
+import com.fongmi.android.tv.ui.search.SearchInputParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder> {
 
     private final OnClickListener listener;
     private final List<String> mItems;
+    private final ExecutorService cacheWorker = Executors.newSingleThreadExecutor();
+    private Future<?> cacheTask;
+    private final Set<String> removed = new HashSet<>();
+    private boolean edited, closed, cacheLoaded;
 
     public RecordAdapter(OnClickListener listener) {
         this.listener = listener;
-        this.mItems = getItems();
-        this.listener.onDataChanged(mItems.size(), RecyclerView.NO_POSITION);
+        this.mItems = new ArrayList<>();
+        loadCache();
+    }
+
+    private void loadCache() {
+        cacheTask = cacheWorker.submit(() -> {
+            String source = Setting.getKeyword();
+            List<String> cached = SearchInputParser.records(source);
+            if (Thread.currentThread().isInterrupted()) return;
+            App.post(() -> applyCache(source, cached));
+        });
+    }
+
+    private void applyCache(String source, List<String> cached) {
+        if (closed && !edited) { cacheWorker.shutdownNow(); return; }
+        // Another search window may have saved while this one was loading.
+        // Refresh that cache before merging; never replace a newer persisted list.
+        if (!source.equals(Setting.getKeyword())) { loadCache(); return; }
+        List<String> merged = SearchInputParser.mergeRecords(mItems, cached, removed);
+        int previousSize = mItems.size();
+        mItems.clear();
+        mItems.addAll(merged);
+        cacheLoaded = true;
+        if (edited) persist();
+        if (closed) { cacheWorker.shutdownNow(); return; }
+        if (mItems.size() > previousSize) notifyItemRangeInserted(previousSize, mItems.size() - previousSize);
+        listener.onDataChanged(mItems.size(), RecyclerView.NO_POSITION);
+    }
+
+    private void persist() {
+        if (cacheLoaded) Setting.putKeyword(App.gson().toJson(mItems));
     }
 
     public interface OnClickListener {
@@ -33,20 +71,28 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
         void onDataChanged(int size, int deletedPosition);
     }
 
-    private List<String> getItems() {
-        if (Setting.getKeyword().isEmpty()) return new ArrayList<>();
-        return App.gson().fromJson(Setting.getKeyword(), TypeToken.getParameterized(List.class, String.class).getType());
+    public void close() {
+        closed = true;
+        // Pending edits still need the old cache before they can be saved.
+        // The bounded loader finishes and persists without notifying the closed UI.
+        if (cacheLoaded || !edited) {
+            cacheTask.cancel(true);
+            cacheWorker.shutdownNow();
+        }
     }
 
     private void checkToAdd(String item) {
         mItems.remove(item);
         mItems.add(0, item);
-        if (mItems.size() > 9) mItems.remove(9);
+        while (mItems.size() > SearchInputParser.MAX_RECORDS) mItems.remove(mItems.size() - 1);
     }
 
     public void add(String item) {
+        if (closed || item == null || item.trim().isEmpty()) return;
+        edited = true;
+        removed.remove(item);
         checkToAdd(item);
-        Setting.putKeyword(App.gson().toJson(mItems));
+        persist();
         notifyDataSetChanged();
         listener.onDataChanged(getItemCount(), RecyclerView.NO_POSITION);
     }
@@ -89,10 +135,12 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.ViewHolder
         public boolean onLongClick(View v) {
             int position = getBindingAdapterPosition();
             if (!isValidPosition(position)) return true;
+            edited = true;
+            removed.add(mItems.get(position));
             mItems.remove(position);
             notifyItemRemoved(position);
             listener.onDataChanged(getItemCount(), position);
-            Setting.putKeyword(App.gson().toJson(mItems));
+            persist();
             return true;
         }
     }

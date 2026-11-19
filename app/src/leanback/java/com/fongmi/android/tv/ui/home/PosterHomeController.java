@@ -21,6 +21,8 @@ import com.fongmi.android.tv.bean.DiscoverHero;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.databinding.AdapterHomeWallCategoriesBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallFooterBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallShelfBinding;
@@ -64,6 +66,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private final Activity activity;
     private final Listener listener;
     private final boolean compact;
+    private final boolean librarySpotlights;
     private final PosterKeepShelfController keepShelf;
     private final Object requestTag = new Object();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -96,11 +99,11 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         this.activity = activity;
         this.listener = listener;
         this.compact = compact;
+        librarySpotlights = compact && ExperienceSettings.getMode() == ExperienceMode.LIBRARY;
         rexLoader = new RexFeedLoader(compact);
         keepShelf = new PosterKeepShelfController(activity);
         if (compact) {
-            for (RexSection section : RexSections.home()) {
-                if (section.isShelf()) continue;
+            for (RexSection section : RexSections.compactHome()) {
                 Shelf shelf = new Shelf(section.getLabelRes(), null);
                 shelf.key = section.getKey();
                 shelf.section = section;
@@ -159,7 +162,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             }
         }, PosterHomeController.this));
         rexSpotlightRow = new ListRow(rexSpotlightAdapter);
-        page.add(rexSpotlightRow);
+        if (!compact) page.add(rexSpotlightRow);
         if (compact) page.add(source);
         page.add(footer);
         updateHistoryOrder();
@@ -265,6 +268,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         category = value;
         notifyRow(categories);
         render();
+        if (compact) refreshRex();
     }
 
     private void render() {
@@ -326,7 +330,11 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     }
 
     private void refreshRex() {
-        rexLoader.load(RexSections.home(), results -> {
+        if (compact) {
+            footer.loading = true;
+            notifyRow(footer);
+        }
+        rexLoader.load(compact ? PosterHomeCatalog.compactSections(category, librarySpotlights) : RexSections.home(), results -> {
             if (closed || rexSpotlightAdapter == null) return;
             applyRexResults(results);
         });
@@ -392,6 +400,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     private void renderCompact() {
         List<RexFeedResult> feeds = new ArrayList<>(compactFeeds.values());
+        renderLibrarySpotlights();
         List<Vod> heroItems = PosterHomeCatalog.compactHero(feeds, category);
         if (!RexFeedResult.sameItems(hero.value.getItems(), heroItems)) {
             hero.value.replace(heroItems);
@@ -426,30 +435,35 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
                 }
             }
         }
-        List<RexFeedResult> specialty = new ArrayList<>();
-        if (category == PosterHomeCatalog.ALL || category == PosterHomeCatalog.TV) {
-            for (RexSection section : RexSections.home()) {
-                RexFeedResult feed = compactFeeds.get(section.getKey());
-                if (!section.isShelf() || feed == null) continue;
-                List<Vod> items = PosterHomeCatalog.compactItems(feed.getItems(), category);
-                if (!items.isEmpty()) specialty.add(new RexFeedResult(section, items));
-            }
-        }
-        if (rexSpotlightAdapter != null) {
-            rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(specialty), new BaseDiffCallback<RexFeedResult>());
-            if (page != null) {
-                if (specialty.isEmpty()) page.remove(rexSpotlightRow);
-                else if (page.indexOf(rexSpotlightRow) < 0) page.add(page.indexOf(source), rexSpotlightRow);
-            }
-        }
-        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && specialty.isEmpty();
+        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && !rexAny();
         notifyRow(footer);
         listener.onHeroChanged(!hero.value.isEmpty());
     }
 
-    private int compactShelfEnd() {
+    private void renderLibrarySpotlights() {
+        if (!librarySpotlights || rexSpotlightAdapter == null || page == null) return;
+        List<RexFeedResult> results = new ArrayList<>();
+        for (String key : PosterHomeCatalog.librarySpotlightKeys(category)) {
+            RexFeedResult feed = compactFeeds.get(key);
+            if (feed == null) continue;
+            results.add(new RexFeedResult(feed.getSection(), PosterHomeCatalog.compactItems(feed.getItems(), category)));
+        }
+        rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(results), new BaseDiffCallback<RexFeedResult>());
         int index = page.indexOf(rexSpotlightRow);
-        return index >= 0 ? index : page.indexOf(source);
+        if (rexSpotlightAdapter.size() == 0) {
+            if (index >= 0) page.remove(rexSpotlightRow);
+        } else if (index < 0) {
+            int position = page.indexOf(source);
+            for (Shelf shelf : shelves) {
+                int shelfIndex = page.indexOf(shelf);
+                if (shelfIndex >= 0) position = Math.min(position, shelfIndex);
+            }
+            page.add(position, rexSpotlightRow);
+        }
+    }
+
+    private int compactShelfEnd() {
+        return page.indexOf(source);
     }
 
     public void setSourceListener(VodPresenter.OnClickListener listener, Runnable openLibrary) {

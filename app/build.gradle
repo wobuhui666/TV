@@ -26,7 +26,8 @@ if (!(tvVersionCode ==~ /[0-9]+/) || tvVersionCode.toBigInteger() < 1 || tvVersi
 }
 def tvVersionName = System.getenv('TV_VERSION_NAME') ?: '5.8.7'
 
-// Default package stays compatible with FongMi/TV upgrades. Pass -PtvApplicationId=com.wobuhui666.android.tv
+// Default package matches FongMi/TV, but a different signature prevents in-place upgrades.
+// Pass -PtvApplicationId=com.wobuhui666.android.tv
 // (or TV_APPLICATION_ID) to build the coexist edition that installs side by side with FongMi/TV.
 def tvDefaultApplicationId = 'com.fongmi.android.tv'
 def tvApplicationId = (project.findProperty('tvApplicationId') ?: System.getenv('TV_APPLICATION_ID') ?: tvDefaultApplicationId).toString().trim()
@@ -225,6 +226,9 @@ dependencies {
     leanbackImplementation libs.compose.material3
     leanbackImplementation libs.compose.tv.material
     leanbackImplementation libs.compose.ui
+    // Shared Kotlin utilities also compile in mobile variants with the Compose plugin enabled.
+    mobileImplementation platform(libs.compose.bom)
+    mobileImplementation "androidx.compose.runtime:runtime"
     mobileImplementation libs.biometric
     mobileImplementation libs.zxing.android.embedded
     annotationProcessor libs.room.compiler

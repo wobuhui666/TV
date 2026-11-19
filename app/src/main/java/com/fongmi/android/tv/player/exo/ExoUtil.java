@@ -60,18 +60,19 @@ import java.util.stream.Collectors;
 public class ExoUtil {
 
     public static ExoPlayer buildPlayer(int decode, Player.Listener listener) {
-        return buildPlayer(decode, listener, null);
+        return buildPlayer(decode, decode, listener, null);
     }
 
-    static ExoPlayer buildPlayer(int decode, Player.Listener listener, androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Builder preloader) {
+    static ExoPlayer buildPlayer(int audioDecode, int videoDecode, Player.Listener listener, androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Builder preloader) {
         ExoPlayer.Builder builder = new ExoPlayer.Builder(App.get())
-                .setTrackSelector(buildTrackSelector(decode))
-                .setRenderersFactory(buildPlaybackRenderersFactory(decode))
+                .setTrackSelector(buildTrackSelector(audioDecode, videoDecode))
+                .setRenderersFactory(buildPlaybackRenderersFactory(audioDecode, videoDecode))
                 .setMediaSourceFactory(buildMediaSourceFactory())
                 // Sony's Dolby Vision OMX stack regularly needs >500 ms to flush/release. The
                 // Media3 default reports a false fatal timeout during AI AudioSink rebuilds.
                 .setReleaseTimeoutMs(3_000L);
         ExoPlayer player = preloader == null ? builder.build() : preloader.buildExoPlayer(builder);
+        player.addAnalyticsListener(new ExoPlaybackDiagnostics());
         if (BuildConfig.DEBUG) player.addAnalyticsListener(new EventLogger());
         player.setAudioAttributes(AudioAttributes.DEFAULT, true);
         player.setHandleAudioBecomingNoisy(true);
@@ -97,23 +98,35 @@ public class ExoUtil {
     }
 
     static TrackSelector buildTrackSelector(int decode) {
-        DecodeTrackSelector trackSelector = decode == PlayerEngine.SOFT
-                ? new SoftwareTrackSelector(App.get()) : new DecodeTrackSelector(App.get());
-        int decodeMode = getDecodeMode(decode);
-        trackSelector.setRendererDecodePreferences(decodeMode, decodeMode);
+        return buildTrackSelector(decode, decode);
+    }
+
+    static TrackSelector buildTrackSelector(int audioDecode, int videoDecode) {
+        boolean softwareAudio = audioDecode == PlayerEngine.SOFT;
+        boolean softwareVideo = videoDecode == PlayerEngine.SOFT;
+        DecodeTrackSelector trackSelector = softwareAudio || softwareVideo
+                ? new SoftwareTrackSelector(App.get(), softwareAudio, softwareVideo) : new DecodeTrackSelector(App.get());
+        trackSelector.setRendererDecodePreferences(getDecodeMode(audioDecode), getDecodeMode(videoDecode));
         DefaultTrackSelector.Parameters.Builder builder = trackSelector.buildUponParameters();
         if (PlayerSetting.isPreferAAC()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AAC);
         else if (PlayerSetting.isAv3a()) builder.setPreferredAudioMimeType(MimeTypes.AUDIO_AV3A);
         builder.setPreferredTextLanguages(LangUtil.getPreferredTextLanguages());
-        builder.setTunnelingEnabled(decode == PlayerEngine.HARD && PlayerSetting.isTunnelingEnabled()
+        builder.setTunnelingEnabled(!softwareAudio && !softwareVideo && PlayerSetting.isTunnelingEnabled()
                 && !com.fongmi.android.tv.setting.AudioEffectSetting.enabled());
-        if (decode == PlayerEngine.SOFT) builder.setAudioOffloadPreferences(AudioOffloadPreferences.DEFAULT);
+        if (softwareAudio) builder.setAudioOffloadPreferences(AudioOffloadPreferences.DEFAULT);
         trackSelector.setParameters(builder.build());
         return trackSelector;
     }
 
     static RenderersFactory buildPlaybackRenderersFactory(int decode) {
-        return buildRenderersFactory(getRenderMode(decode), PlayerSetting.isAudioPrefer(), PlayerSetting.isVideoPrefer(), decode == PlayerEngine.SOFT);
+        return buildPlaybackRenderersFactory(decode, decode);
+    }
+
+    static RenderersFactory buildPlaybackRenderersFactory(int audioDecode, int videoDecode) {
+        boolean softwareAudio = audioDecode == PlayerEngine.SOFT;
+        boolean softwareVideo = videoDecode == PlayerEngine.SOFT;
+        return buildRenderersFactory(getRenderMode(softwareAudio || softwareVideo ? PlayerEngine.SOFT : PlayerEngine.HARD),
+                PlayerSetting.isAudioPrefer(), PlayerSetting.isVideoPrefer(), softwareAudio, softwareVideo);
     }
 
     private static @C.DecodeMode int getDecodeMode(int decode) {
@@ -121,14 +134,14 @@ public class ExoUtil {
     }
 
     static RenderersFactory buildRenderersFactory() {
-        return buildRenderersFactory(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, PlayerSetting.isAudioPrefer(), PlayerSetting.isVideoPrefer(), false);
+        return buildRenderersFactory(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, PlayerSetting.isAudioPrefer(), PlayerSetting.isVideoPrefer(), false, false);
     }
 
-    private static RenderersFactory buildRenderersFactory(int renderMode, boolean audioPrefer, boolean videoPrefer, boolean softwareOnly) {
+    private static RenderersFactory buildRenderersFactory(int renderMode, boolean audioPrefer, boolean videoPrefer, boolean softwareAudio, boolean softwareVideo) {
         DefaultRenderersFactory factory = new DefaultRenderersFactory(App.get()) {
             @Override
             protected AudioSink buildAudioSink(@NonNull Context context, boolean enableFloatOutput, boolean enableAudioOutputPlaybackParams) {
-                return ExoUtil.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams, softwareOnly);
+                return ExoUtil.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams, softwareAudio);
             }
 
             @Override
@@ -147,10 +160,19 @@ public class ExoUtil {
         // Exo keeps its Profile-7 fallback independent from MPV's hwdec codec allow-list.
         boolean dv7 = PlayerSetting.isDv7HevcFallback();
         return factory.setEnableDecoderFallback(true)
-                .setMediaCodecSelector(softwareOnly ? (mimeType, secure, tunneling) -> softwareDecoders(
-                        MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, secure, tunneling)) : MediaCodecSelector.DEFAULT)
+                .setMediaCodecSelector(softwareCodecSelector(MediaCodecSelector.DEFAULT, softwareAudio, softwareVideo))
                 .setDolbyVisionOutputPolicy(dv7 ? DolbyVisionOutputPolicy.ASSUME_UNSUPPORTED : DolbyVisionOutputPolicy.AUTO)
                 .setExtensionRendererMode(extensionMode);
+    }
+
+    static MediaCodecSelector softwareCodecSelector(MediaCodecSelector delegate, boolean softwareAudio, boolean softwareVideo) {
+        if (!softwareAudio && !softwareVideo) return delegate;
+        return (mimeType, secure, tunneling) -> {
+            List<MediaCodecInfo> decoders = delegate.getDecoderInfos(mimeType, secure, tunneling);
+            boolean softwareOnly = MimeTypes.isAudio(mimeType) ? softwareAudio
+                    : MimeTypes.isVideo(mimeType) && softwareVideo;
+            return softwareOnly ? softwareDecoders(decoders) : decoders;
+        };
     }
 
     static List<MediaCodecInfo> softwareDecoders(List<MediaCodecInfo> decoders) {
@@ -160,20 +182,29 @@ public class ExoUtil {
     }
 
     private static final class SoftwareTrackSelector extends DecodeTrackSelector {
-        SoftwareTrackSelector(Context context) { super(context); }
+        private final boolean softwareAudio;
+        private final boolean softwareVideo;
+
+        SoftwareTrackSelector(Context context, boolean softwareAudio, boolean softwareVideo) {
+            super(context);
+            this.softwareAudio = softwareAudio;
+            this.softwareVideo = softwareVideo;
+        }
 
         @Override protected boolean isRendererAllowed(RendererCapabilities renderer, TrackGroup group) {
             // The fork's SOFTWARE preference otherwise excludes every MediaCodec renderer.
             // Keep its FFmpeg preference, but permit our software-filtered platform codecs.
-            return true;
+            return group.type == C.TRACK_TYPE_AUDIO && softwareAudio
+                    || group.type == C.TRACK_TYPE_VIDEO && softwareVideo
+                    || super.isRendererAllowed(renderer, group);
         }
 
         @Override protected void selectAllTracks(ExoTrackSelection.Definition[] definitions,
                 MappedTrackInfo info, int[][][] supports, int[] mixedSupports, Parameters parameters)
                 throws ExoPlaybackException {
             super.selectAllTracks(definitions, info, supports, mixedSupports, parameters);
-            requireSoftwareTrack(info, supports, definitions, parameters, C.TRACK_TYPE_AUDIO);
-            requireSoftwareTrack(info, supports, definitions, parameters, C.TRACK_TYPE_VIDEO);
+            if (softwareAudio) requireSoftwareTrack(info, supports, definitions, parameters, C.TRACK_TYPE_AUDIO);
+            if (softwareVideo) requireSoftwareTrack(info, supports, definitions, parameters, C.TRACK_TYPE_VIDEO);
         }
     }
 

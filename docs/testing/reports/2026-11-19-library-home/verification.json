@@ -1,0 +1,20 @@
+{
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "state": "working tree with existing uncommitted changes",
+  "inputs": {
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeController.java": "2841ddb4f4407d2ade7bc7bbf8cfc876c521d1943b018c241dacb6b102aeb9d9",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeCatalog.java": "c6a65d7212eae5b64b5851cfe5f260c39a2e084050cc7ea4a891135b4df9535d",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexFeedLoader.java": "799d86d61e5d067b287481262fc10803627f3dabd32a726d5fd4454c79bfff00",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java": "199b25d64e966fa49967c6c28ec02a35b764c1a4a1325dd51e3c25aa148109fc",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexNowClient.java": "3b7747aef9b5a3dc98e59a5c366385e0270bcc4d9237eff2313837f1f125644d",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexTmdbQuery.java": "d83a273df164cb1ecc2dd2e6e4a547cd12b897b66f0cc46c0eea9a3a1135f495",
+    "app/src/leanbackPreview/java/com/fongmi/android/tv/ui/activity/HomePreviewFixtures.java": "b6da9e52c430956193911eeec8b27ded6798995d49a7fc1a83c9fdc32ffa889b",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexRegionalFeedTest.java": "1500581019fa2a62ff0a73b3b97b790fa1384ff1daabfb2512e72d611c4b8c1a",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexNowMappingTest.java": "bbd46111cdf51782c7be40965714caa431fb50780048bab9853e58021b5c9c2e",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexTmdbQueryTest.java": "224a4f6ca1d3560c876f73b60ce598dae12d79698e4a25948e9ac70ee5e23a31",
+    "app/src/test/java/com/fongmi/android/tv/ui/home/PosterHomeCatalogTest.java": "c00ceda3e0b28e5fb6518e717582904df0294960f50b38e54fb35f4e128e25eb",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/test/CompactHomeIntegrationTest.java": "d24b20bb95493f5e6605a55d45f5b153d7652b1d835d2130b6edb2467ca8ad01",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/CompactDiscoveryIntegrationTest.java": "78899fcfcb0d1f69b1645e8b88c6fb3024a1e73713b14a0cd64095fc7610c9d1"
+  },
+  "results": "Build and device tests in progress; no pass claimed yet."
+}

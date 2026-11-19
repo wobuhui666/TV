@@ -23,9 +23,9 @@ public class Proxy implements Comparable<Proxy> {
     @SerializedName("urls")
     private List<String> urls;
 
-    private List<java.net.Proxy> proxies;
-    private List<Uri> uris;
-    private boolean wildcard;
+    private transient List<java.net.Proxy> proxies;
+    private transient List<Uri> uris;
+    private transient boolean wildcard;
 
     public static List<Proxy> arrayFrom(JsonElement element) {
         try {

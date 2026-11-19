@@ -328,7 +328,7 @@ public final class DiscoverHeroPresenter extends Presenter {
         private boolean canRotate() {
             if (!attached || items.size() < 2 || !binding.getRoot().isAttachedToWindow()
                     || !binding.getRoot().isShown() || !binding.getRoot().hasWindowFocus()) return false;
-            int mode = BrowseExperienceSettings.getHeroRotationMode();
+            int mode = com.fongmi.android.tv.setting.ExperienceSettings.heroRotationMode();
             if (mode == BrowseExperienceSettings.HERO_ROTATION_MANUAL) return false;
             return mode != BrowseExperienceSettings.HERO_ROTATION_FOCUS_PAUSED || !binding.getRoot().hasFocus();
         }

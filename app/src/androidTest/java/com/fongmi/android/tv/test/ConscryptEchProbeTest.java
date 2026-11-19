@@ -87,7 +87,7 @@ public final class ConscryptEchProbeTest {
         JSONArray phases = new JSONArray();
         JSONObject report = new JSONObject().put("schema", "tv.conscrypt-ech-probe.v1")
                 .put("state", "RUNNING").put("accepted", false).put("sdk", Build.VERSION.SDK_INT)
-                .put("artifact", "org.conscrypt:conscrypt-android:2.7.0")
+                .put("artifact", "org.conscrypt:conscrypt-android")
                 .put("budgetMs", budget).put("dnsQueryType", 65)
                 .put("proxyFixture", proxyFixture).put("proxyType", proxyFixture ? "HTTP" : "DIRECT")
                 .put("evidenceBasis", "SERVER_TRACE_SAME_TLS_RESPONSE")
@@ -104,8 +104,8 @@ public final class ConscryptEchProbeTest {
             Conscrypt.checkAvailability();
             Conscrypt.Version version = Conscrypt.version();
             String actual = version.major() + "." + version.minor() + "." + version.patch();
-            report.put("version", actual);
-            assertTrue("The probe requires pinned Conscrypt 2.7.0", "2.7.0".equals(actual));
+            report.put("version", actual).put("artifact", "org.conscrypt:conscrypt-android:" + actual);
+            assertTrue("The probe requires pinned Conscrypt 2.9.0", "2.9.0".equals(actual));
             report.put("trustRejectionPropagation", verifyTrustRejection());
             base = plainBuilder().build();
             // This transport never uses the ECH factory: DoH cannot recurse through itself.

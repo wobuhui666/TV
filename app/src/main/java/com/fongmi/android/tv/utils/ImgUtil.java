@@ -23,6 +23,7 @@ import com.bumptech.glide.load.resource.bitmap.CenterCrop;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.request.target.DrawableImageViewTarget;
 import com.bumptech.glide.request.transition.DrawableCrossFadeFactory;
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.R;
@@ -42,6 +43,8 @@ public class ImgUtil {
     private static final DrawableCrossFadeFactory CROSS_FADE = new DrawableCrossFadeFactory.Builder(260).setCrossFadeEnabled(true).build();
 
     public static void logo(ImageView view) {
+        GlideWarmup.cancel(view);
+        if (GlideWarmup.defer(view, () -> logo(view), () -> { })) return;
         try {
             // Custom site logo: circle crop to match round home disc.
             // The default vector has its own circular badge; fitCenter preserves the brand mark.
@@ -95,6 +98,9 @@ public class ImgUtil {
     }
 
     public static void clear(ImageView view) {
+        GlideWarmup.cancel(view);
+        // Reading a target's request tag does not construct Glide or its decoding modules.
+        if (new DrawableImageViewTarget(view).getRequest() == null) return;
         Glide.with(App.get()).clear(view);
     }
 
@@ -107,6 +113,7 @@ public class ImgUtil {
     }
 
     private static void load(String text, String url, ImageView view, boolean vod, boolean blurred, boolean keepCurrentOnError, boolean artwork, @Nullable LoadCallback callback) {
+        GlideWarmup.cancel(view);
         if (!artwork) view.setScaleType(vod ? CENTER_CROP : FIT_CENTER);
         if (!vod) view.setVisibility(TextUtils.isEmpty(url) ? View.GONE : View.VISIBLE);
         try {
@@ -117,8 +124,11 @@ public class ImgUtil {
                 notifyLoad(callback, false);
                 return;
             }
+            if (GlideWarmup.defer(view,
+                    () -> load(text, url, view, vod, blurred, keepCurrentOnError, artwork, callback),
+                    () -> notifyLoad(callback, false))) return;
             RequestBuilder<Drawable> builder = Glide.with(view).load(getUrl(url)).transition(DrawableTransitionOptions.withCrossFade(CROSS_FADE)).listener(getListener(text, url, view, vod, keepCurrentOnError, callback));
-            if (artwork) builder.dontTransform().dontAnimate().into(view);
+            if (artwork) builder.disallowHardwareConfig().dontTransform().dontAnimate().into(view);
             else if (blurred) builder.transform(new CenterCrop(), new GaussianBlurTransformation()).into(view);
             else if (vod) builder.centerCrop().into(view);
             else builder.fitCenter().into(view);

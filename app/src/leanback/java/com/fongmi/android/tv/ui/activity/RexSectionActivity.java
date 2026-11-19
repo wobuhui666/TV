@@ -334,6 +334,10 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
     }
 
     private void openDetail(Vod item, View poster) {
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) {
+            LibraryNavigation.open(this, item, poster);
+            return;
+        }
         if (BrowseExperienceSettings.isDetailSourcesEnabled()) {
             DiscoverDetailActivity.start(this, item, poster);
             return;

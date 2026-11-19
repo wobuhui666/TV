@@ -257,10 +257,11 @@ public class DiscoverApi {
             long id = getLong(result, "id");
             String name = tmdbName(result);
             String poster = getString(result, "poster_path");
-            if (id <= 0 || isEmpty(mediaType) || isEmpty(name) || isEmpty(poster)) continue;
+            if (id <= 0 || isEmpty(mediaType) || isEmpty(name)) continue;
             Vod item = new Vod();
             item.setId(DiscoverMediaKey.of(mediaType, id).toString());
             item.setName(name);
+            item.setOriginalName(getString(result, "movie".equals(mediaType) ? "original_title" : "original_name"));
             item.setPic(tmdbPic(poster));
             item.setYear(tmdbYear(result));
             item.setRemarks(tmdbRemarks(getDouble(result, "vote_average")));
@@ -712,7 +713,7 @@ public class DiscoverApi {
     }
 
     @Nullable
-    static DiscoverDetail parseDetail(DiscoverMediaKey key, String body) {
+    public static DiscoverDetail parseDetail(DiscoverMediaKey key, String body) {
         JsonObject object = parseObject(body);
         if (object == null || getLong(object, "id") <= 0) return null;
         boolean movie = key.isMovie();
@@ -774,7 +775,7 @@ public class DiscoverApi {
             JsonObject person = getObject(element);
             String name = getString(person, "name");
             if (name.isEmpty()) continue;
-            result.add(new DiscoverCredit(name, getString(person, "character"), tmdbProfile(getString(person, "profile_path"))));
+            result.add(new DiscoverCredit(getLong(person, "id"), name, getString(person, "character"), tmdbProfile(getString(person, "profile_path"))));
             if (result.size() >= 12) break;
         }
         return result;
