@@ -127,6 +127,7 @@ required_images = (
     'calendar-poster-focus-scale.png', 'calendar-landscape-focus-scale.png',
     'calendar-poster-motion-disabled.png', 'calendar-landscape-motion-disabled.png',
     'calendar-complete-work-info.png',
+    'calendar-full-background-first.png',
     'calendar-full-background-dark.png', 'calendar-full-background-light.png',
     'library-follow-no-source.png', 'library-follow-calendar.png',
 )

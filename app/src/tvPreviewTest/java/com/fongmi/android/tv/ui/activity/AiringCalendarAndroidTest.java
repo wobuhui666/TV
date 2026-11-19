@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -472,30 +473,44 @@ public final class AiringCalendarAndroidTest {
         open(true);
         String first = state().getItems().get(0).getKey();
         focus("item:" + first);
-        await("The first full background is actually painted", () -> loadedArtwork(state().getPreview().getBackdrop()) != null
-                && "loaded".equals(accessibilityState("calendarBackdrop")) && !state().getPreview().getMetadata().isEmpty());
+        await("The first full background is actually painted", () -> loadedBackground(state().getPreview().getBackdrop()) != null
+                && "loaded".equals(accessibilityState("calendarBackdrop"))
+                && String.join(" · ", state().getPreview().getMetadata()).contains("S01E02"));
         String oldBackdrop = state().getPreview().getBackdrop();
         assertEquals("The painted background covers the actual app window", hostBounds(), nodeBounds("calendarBackdrop"));
-        assertNonUniformArtwork(loadedArtwork(oldBackdrop));
+        assertNonUniformArtwork(loadedBackground(oldBackdrop));
+        Bitmap firstFrame = null;
+        if (evidenceEnabled()) {
+            NativeUiEvidence.capture("calendar-full-background-first");
+            firstFrame = evidenceBitmap("calendar-full-background-first");
+            assertBackgroundPixels(firstFrame, oldBackdrop);
+        }
         String next = state().getItems().get(1).getKey();
         device.pressDPadRight();
         await("The second work replaces the full background", () -> focused().equals("item:" + next)
                 && state().getPreview().getKey().equals(next) && !oldBackdrop.equals(state().getPreview().getBackdrop())
-                && loadedArtwork(state().getPreview().getBackdrop()) != null && loadedArtwork(oldBackdrop) == null
-                && !state().getPreview().getMetadata().isEmpty());
-        assertNonUniformArtwork(loadedArtwork(state().getPreview().getBackdrop()));
-        for (boolean light : new boolean[]{false, true}) {
-            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
-            String evidence = light ? "calendar-full-background-light" : "calendar-full-background-dark";
-            NativeUiEvidence.capture(evidence);
-            if ("true".equals(InstrumentationRegistry.getArguments().getString("native_ui_evidence"))) {
-                assertRenderedTextContrast(evidence, light, "calendarPreviewTitle");
-                for (int index = 0; index < state().getPreview().getMetadata().size(); index++) {
-                    assertRenderedTextContrast(evidence, light, "calendarPreviewMetadataText:" + index);
+                && loadedBackground(state().getPreview().getBackdrop()) != null && loadedBackground(oldBackdrop) == null
+                && String.join(" · ", state().getPreview().getMetadata()).contains("S01E02"));
+        assertNonUniformArtwork(loadedBackground(state().getPreview().getBackdrop()));
+        try {
+            for (boolean light : new boolean[]{false, true}) {
+                main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+                String evidence = light ? "calendar-full-background-light" : "calendar-full-background-dark";
+                NativeUiEvidence.capture(evidence);
+                if (evidenceEnabled()) {
+                    Bitmap frame = evidenceBitmap(evidence);
+                    try {
+                        assertBackgroundPixels(frame, state().getPreview().getBackdrop());
+                        assertBackgroundChanged(firstFrame, frame);
+                    } finally { frame.recycle(); }
+                    assertRenderedTextContrast(evidence, light, "calendarPreviewTitle");
+                    for (int index = 0; index < heroChips().size(); index++) {
+                        assertRenderedTextContrast(evidence, light, "calendarPreviewMetadataText:" + index);
+                    }
+                    assertRenderedTextContrast(evidence, light, "calendarPreviewOverview");
                 }
-                assertRenderedTextContrast(evidence, light, "calendarPreviewOverview");
             }
-        }
+        } finally { if (firstFrame != null) firstFrame.recycle(); }
     }
 
     private String json(HttpUrl url) throws Exception {
@@ -568,6 +583,72 @@ public final class AiringCalendarAndroidTest {
         return result[0];
     }
 
+    /** Full, opaque window layers only; excludes row thumbnails and Compose's alpha-zero preloader. */
+    private Bitmap loadedBackground(String expectedUrl) {
+        if (expectedUrl.isEmpty()) return null;
+        Bitmap[] result = new Bitmap[1];
+        main(() -> result[0] = backgroundArtwork(host(), expectedUrl, hostBoundsOnMain()));
+        return result[0];
+    }
+
+    private Bitmap backgroundArtwork(View view, String expectedUrl, Rect window) {
+        if (view instanceof ImageView image && view.getClass().getSimpleName().equals("DetailArtworkImageView")
+                && expectedUrl.equals(field(view, "artworkUrl")) && image.getDrawable() instanceof BitmapDrawable drawable
+                && isOpaqueWindowArtwork(image, window)) {
+            Bitmap bitmap = drawable.getBitmap();
+            if (bitmap != null && !bitmap.isRecycled()) return bitmap;
+        }
+        if (view instanceof ViewGroup group) for (int index = 0; index < group.getChildCount(); index++) {
+            Bitmap bitmap = backgroundArtwork(group.getChildAt(index), expectedUrl, window);
+            if (bitmap != null) return bitmap;
+        }
+        return null;
+    }
+
+    private boolean isOpaqueWindowArtwork(ImageView image, Rect window) {
+        if (!image.isShown() || !image.isAttachedToWindow()) return false;
+        float opacity = 1f;
+        Object composeHolder = null;
+        try {
+            Class<?> holderClass = Class.forName("androidx.compose.ui.viewinterop.AndroidViewHolder");
+            for (View ancestor = image; ancestor != null;) {
+                if (ancestor.getVisibility() != View.VISIBLE || ancestor.getAlpha() <= 0f) return false;
+                opacity *= ancestor.getAlpha();
+                if (holderClass.isInstance(ancestor)) composeHolder = ancestor;
+                ancestor = ancestor.getParent() instanceof View parent ? parent : null;
+            }
+            if (composeHolder == null) throw new AssertionError("The background image has no Compose AndroidViewHolder");
+            Object layout = invoke(composeHolder, "getLayoutNode");
+            for (Object node = layout; node != null; node = invoke(node, "getParent$ui_release")) {
+                if (!Boolean.TRUE.equals(invoke(node, "isPlaced"))) return false;
+                Object coordinator = invoke(node, "getInnerCoordinator$ui_release");
+                if (Boolean.TRUE.equals(invoke(coordinator, "isTransparent"))) return false;
+                for (Object layer = coordinator; layer != null && invoke(layer, "getLayoutNode") == node;
+                        layer = invoke(layer, "getWrappedBy$ui_release")) {
+                    if (invoke(layer, "getLayer") != null) opacity *= ((Number) inheritedField(layer, "lastLayerAlpha")).floatValue();
+                }
+            }
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Cannot inspect the background's actual Compose placement/alpha", error);
+        }
+        if (opacity < .99f) return false;
+        Rect visible = new Rect();
+        return image.getGlobalVisibleRect(visible) && visible.equals(window);
+    }
+
+    private Object invoke(Object target, String name) throws ReflectiveOperationException {
+        return target.getClass().getMethod(name).invoke(target);
+    }
+
+    private Object inheritedField(Object target, String name) throws ReflectiveOperationException {
+        for (Class<?> type = target.getClass(); type != null; type = type.getSuperclass()) {
+            try {
+                Field field = type.getDeclaredField(name); field.setAccessible(true); return field.get(target);
+            } catch (NoSuchFieldException ignored) { }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
     private Rect nodeBounds(String tag) {
         UiObject2 node = device.wait(Until.findObject(By.res(tag)), 10_000);
         assertNotNull("Rendered node exists: " + tag, node);
@@ -578,11 +659,94 @@ public final class AiringCalendarAndroidTest {
 
     private Rect hostBounds() {
         Rect[] bounds = new Rect[1];
-        main(() -> {
-            int[] location = new int[2]; host().getLocationOnScreen(location);
-            bounds[0] = new Rect(location[0], location[1], location[0] + host().getWidth(), location[1] + host().getHeight());
-        });
+        main(() -> bounds[0] = hostBoundsOnMain());
         return bounds[0];
+    }
+
+    private Rect hostBoundsOnMain() {
+        int[] location = new int[2]; host().getLocationOnScreen(location);
+        return new Rect(location[0], location[1], location[0] + host().getWidth(), location[1] + host().getHeight());
+    }
+
+    private boolean evidenceEnabled() {
+        return "true".equals(InstrumentationRegistry.getArguments().getString("native_ui_evidence"));
+    }
+
+    private Bitmap evidenceBitmap(String name) {
+        File directory = instrumentation.getTargetContext().getExternalFilesDir("native-usability-evidence");
+        assertNotNull("Actual screenshot directory exists", directory);
+        Bitmap bitmap = BitmapFactory.decodeFile(new File(directory, name + ".png").getPath());
+        assertNotNull("Actual screenshot is readable: " + name, bitmap);
+        return bitmap;
+    }
+
+    private List<String> heroChips() {
+        LinkedHashSet<String> chips = new LinkedHashSet<>();
+        String status = state().getPreview().getAiringStatus();
+        int label = switch (status) {
+            case "aired" -> R.string.calendar_status_aired;
+            case "today" -> R.string.calendar_status_today;
+            case "upcoming" -> R.string.calendar_status_upcoming;
+            default -> 0;
+        };
+        if (label != 0) chips.add(activity.getString(label));
+        for (String fact : state().getPreview().getMetadata()) if (!fact.isBlank()) chips.add(fact);
+        return new ArrayList<>(chips);
+    }
+
+    /** Compare unobstructed right-side screen pixels with the actual displayed source scene. */
+    private void assertBackgroundPixels(Bitmap frame, String url) {
+        Bitmap displayed = loadedBackground(url);
+        assertNotNull("A full opaque background owns this screenshot", displayed);
+        Bitmap source = displayed.copy(Bitmap.Config.ARGB_8888, false);
+        assertNotNull("Read the background's actual decoded scene", source);
+        Rect window = hostBounds();
+        int matched = 0;
+        try {
+            double scale = Math.max((double) window.width() / source.getWidth(), (double) window.height() / source.getHeight());
+            double cropX = (source.getWidth() * scale - window.width()) / 2d;
+            double cropY = (source.getHeight() * scale - window.height()) / 2d;
+            for (int[] point : backgroundPoints(window)) {
+                assertTrue("Background sample lies inside the real PNG", point[0] >= 0 && point[1] >= 0
+                        && point[0] < frame.getWidth() && point[1] < frame.getHeight());
+                int sourceX = Math.max(0, Math.min(source.getWidth() - 1, (int) ((point[0] - window.left + cropX) / scale)));
+                int sourceY = Math.max(0, Math.min(source.getHeight() - 1, (int) ((point[1] - window.top + cropY) / scale)));
+                int expected = source.getPixel(sourceX, sourceY), actual = frame.getPixel(point[0], point[1]);
+                int peakSource = Math.max(Color.red(expected), Math.max(Color.green(expected), Color.blue(expected)));
+                int peakFrame = Math.max(Color.red(actual), Math.max(Color.green(actual), Color.blue(actual)));
+                if (peakSource == 0 || peakFrame < 4) continue;
+                // Black readability scrims attenuate the scene; they do not replace its color pattern.
+                double attenuation = (double) peakFrame / peakSource;
+                if (attenuation > 1.05) continue;
+                int tolerance = 6 + (int) Math.round(peakFrame * .04);
+                if (Math.abs(Color.red(actual) - Color.red(expected) * attenuation) <= tolerance
+                        && Math.abs(Color.green(actual) - Color.green(expected) * attenuation) <= tolerance
+                        && Math.abs(Color.blue(actual) - Color.blue(expected) * attenuation) <= tolerance) matched++;
+            }
+            Log.i("CalendarBackground", "Actual PNG/source correspondences=" + matched + "/9 url=" + url);
+            assertTrue("At least six actual screen samples retain the decoded scene's color pattern", matched >= 6);
+        } finally { source.recycle(); }
+    }
+
+    private void assertBackgroundChanged(Bitmap previous, Bitmap current) {
+        assertNotNull("A first real background frame was captured", previous);
+        int changed = 0;
+        for (int[] point : backgroundPoints(hostBounds())) {
+            int before = previous.getPixel(point[0], point[1]), after = current.getPixel(point[0], point[1]);
+            int difference = Math.abs(Color.red(before) - Color.red(after)) + Math.abs(Color.green(before) - Color.green(after))
+                    + Math.abs(Color.blue(before) - Color.blue(after));
+            if (difference >= 8) changed++;
+        }
+        Log.i("CalendarBackground", "Actual before/after background differences=" + changed + "/9");
+        assertTrue("Changing focused work repaints multiple unobstructed background regions", changed >= 3);
+    }
+
+    private List<int[]> backgroundPoints(Rect window) {
+        List<int[]> points = new ArrayList<>();
+        for (float row : new float[]{.30f, .38f, .46f}) for (float column : new float[]{.72f, .81f, .90f}) {
+            points.add(new int[]{window.left + Math.round(window.width() * column), window.top + Math.round(window.height() * row)});
+        }
+        return points;
     }
 
     private int dp(int value) {
