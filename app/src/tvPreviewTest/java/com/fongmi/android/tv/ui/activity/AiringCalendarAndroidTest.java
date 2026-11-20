@@ -401,12 +401,17 @@ public final class AiringCalendarAndroidTest {
             assertNotNull("Each date has a visible numeric day", number);
             assertTrue("The visible date action retains its full accessible date", renderedDateDescription(day.getDate()).contains(day.getDate()));
             assertEquals("The date strip exposes its actual rendered numeric label", String.valueOf(LocalDate.parse(day.getDate()).getDayOfMonth()), renderedDayNumber(number, day.getDate()));
-            Rect cell = nodeBounds("date:" + day.getDate());
+            Rect cell = renderedLayoutBounds("date:" + day.getDate());
             Rect weekday = renderedLayoutBounds("weekday:" + day.getDate());
             Rect numeric = renderedLayoutBounds("daynumber:" + day.getDate());
-            assertTrue("Each date action stays inside the compact date strip", dates.contains(cell));
-            assertTrue("The weekday and number are visible inside their date action", cell.contains(weekday) && cell.contains(numeric));
-            assertTrue("The weekday precedes its numeric day on the same row", weekday.right <= numeric.left
+            Log.i("CalendarDateBounds", day.getDate() + " strip=" + dates + " cell=" + cell
+                    + " weekday=" + weekday + " number=" + numeric);
+            assertTrue("Each date's visual layout stays inside the compact strip: strip=" + dates + " cell=" + cell,
+                    dates.contains(cell));
+            assertTrue("Weekday and number stay inside their date: cell=" + cell + " weekday=" + weekday + " number=" + numeric,
+                    cell.contains(weekday) && cell.contains(numeric));
+            assertTrue("Weekday precedes its number on the same row: weekday=" + weekday + " number=" + numeric,
+                    weekday.right <= numeric.left
                     && Math.abs(weekday.centerY() - numeric.centerY()) <= dp(1));
         }
         assertEquals(fixtureDate.toString(), state().getSelectedDate());
@@ -919,9 +924,9 @@ public final class AiringCalendarAndroidTest {
 
     /** Reuse the header PNG, then overwrite it after restoring the initial poster focus. */
     private void assertFocusedDateColors(String isoDate) {
-        Rect cell = nodeBounds("date:" + isoDate);
+        Rect cell = renderedLayoutBounds("date:" + isoDate);
         Bitmap[] painted = new Bitmap[1];
-        await("The focused date paints a solid white capsule", () -> {
+        await("The focused date paints a solid white capsule at " + cell, () -> {
             NativeUiEvidence.capture("calendar-two-headers-today-focus");
             Bitmap frame = evidenceBitmap("calendar-two-headers-today-focus");
             if (isFocusWhite(frame.getPixel(cell.centerX(), cell.top + dp(6)))
