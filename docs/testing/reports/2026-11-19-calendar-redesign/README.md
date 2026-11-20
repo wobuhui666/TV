@@ -1,5 +1,7 @@
 # 追更日历界面重排验证
 
+> 本文记录首次整页重排。当前悬浮日期栏及复测结果见 [2026-11-20 验证](../2026-11-20-calendar-floating-dates/README.md)。
+
 [GHA 最终复测](https://github.com/wobuhui666/TV/actions/runs/44602158639)：43 项专项 JVM 测试通过；API 24／34 各 16 项 Android 用例与 18 张必需截图通过，测试无失败或跳过。本轮改动范围未新增 lint 错误；完整 lint 仍有既有错误。
 
 ## 页面行为

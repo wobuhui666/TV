@@ -4,6 +4,7 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-20 | [追更日历悬浮日期栏](reports/2026-11-20-calendar-floating-dates/README.md) | 43 项专项 JVM、API 24／34 各 16 项交互与 18 张截图通过；同行布局及焦点反色验证，完整 lint 仍有 121 项既有错误 |
 | 2026-11-19 | [媒体库首页大卡与新剧数据](reports/2026-11-19-library-home/README.md) | 公开当期 Rex 榜单与静态检查通过；专项构建及隔离 Android 回归进行中 |
 | 2026-11-19 | [追更日历界面重排](reports/2026-11-19-calendar-redesign/README.md) | 43 项专项 JVM、API 24／34 各 16 项交互与 18 张截图通过；完整 lint 121 项既有错误，日历范围无新增 |
 | 2026-11-18 | [追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md) | 32 项专项 JUnit、API 24／34 各 12 项交互与 9 张截图通过；完整 lint 仍有 121 项工作区错误，改动范围无新增 |
