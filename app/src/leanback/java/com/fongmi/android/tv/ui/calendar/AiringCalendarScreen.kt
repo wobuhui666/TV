@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
@@ -64,6 +63,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -261,11 +261,10 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
                         }) { onAction("keeps", "") }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Row(Modifier.fillMaxWidth().height(56.dp).calendarGlass().padding(horizontal = 6.dp)
-                        .focusGroup().testTag("calendarDateHeader"),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.width(484.dp).height(40.dp).focusGroup().testTag("calendarDateHeader"),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         state.days.forEach { day ->
-                            CalendarDateCell(day, day.date == state.selectedDate, Modifier.weight(1f).then(focus("date:${day.date}"))) {
+                            CalendarDateCell(day, day.date == state.selectedDate, Modifier.width(64.dp).then(focus("date:${day.date}"))) {
                                 onAction("date", day.date); registry.pendingDate = day.date
                             }
                         }
@@ -313,38 +312,43 @@ private fun CalendarGlassButton(label: String, modifier: Modifier, selected: Boo
 @Composable
 private fun CalendarDateCell(day: AiringCalendarDay, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val number = runCatching { LocalDate.parse(day.date).dayOfMonth.toString() }.getOrDefault(day.date)
-    CalendarNavigationSurface(onClick, selected, RoundedCornerShape(12.dp), modifier.height(56.dp)
-        .semantics { contentDescription = "${day.label} ${day.date}"; text = AnnotatedString(number) }) {
-        Column(Modifier.fillMaxSize().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(day.label, Modifier.clearAndSetSemantics { }, color = Color.White, fontSize = 13.sp, lineHeight = 17.sp)
+    val dateTextStyle = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = false))
+    CalendarNavigationSurface(onClick, selected, RoundedCornerShape(20.dp), modifier.height(40.dp)
+        .semantics { contentDescription = "${day.label} ${day.date}"; text = AnnotatedString(number) }, compactDate = true) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+            Text(day.label, Modifier.testTag("weekday:${day.date}").clearAndSetSemantics { },
+                style = dateTextStyle, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
             Text(number, Modifier.testTag("daynumber:${day.date}").clearAndSetSemantics { },
-                color = Color.White, fontSize = 20.sp, lineHeight = 25.sp,
-                fontWeight = FontWeight.SemiBold)
-            Box(Modifier.size(4.dp).background(if (day.hasUpdates) Color.White else Color.Transparent, CircleShape))
+                style = dateTextStyle, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
-        if (selected) Box(Modifier.align(Alignment.BottomCenter).width(16.dp).height(2.dp)
-            .background(Color.White, RoundedCornerShape(1.dp)))
     }
 }
 
-/** Calendar chrome uses a transparent white focus treatment over the cinematic scrim. */
+/** Shared calendar chrome; compact dates use white capsules with inverse focus text. */
 @Composable
 private fun CalendarNavigationSurface(onClick: () -> Unit, selected: Boolean,
-    shape: RoundedCornerShape, modifier: Modifier, content: @Composable BoxScope.() -> Unit) {
+    shape: RoundedCornerShape, modifier: Modifier, compactDate: Boolean = false, content: @Composable BoxScope.() -> Unit) {
     val interactions = remember { MutableInteractionSource() }
+    val focusedText = if (compactDate) Color(0xFF101114) else Color.White
     Surface(onClick = onClick, modifier = modifier.tvTouchInput(true, onClick, interactionSource = interactions),
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) Color.White.copy(alpha = .16f) else Color.Transparent,
-            focusedContainerColor = Color.White.copy(alpha = if (selected) .16f else .08f),
-            pressedContainerColor = Color.White.copy(alpha = .20f),
-            contentColor = Color.White, focusedContentColor = Color.White, pressedContentColor = Color.White
+            containerColor = if (selected) Color.White.copy(alpha = if (compactDate) .14f else .16f) else Color.Transparent,
+            focusedContainerColor = if (compactDate) Color.White else Color.White.copy(alpha = if (selected) .16f else .08f),
+            pressedContainerColor = if (compactDate) Color.White else Color.White.copy(alpha = .20f),
+            contentColor = if (compactDate && !selected) Color.White.copy(alpha = .5f) else Color.White,
+            focusedContentColor = focusedText, pressedContentColor = focusedText
         ),
         border = ClickableSurfaceDefaults.border(
             border = Border.None,
-            focusedBorder = Border(BorderStroke(2.dp, Color.White), shape = shape)
-        ), interactionSource = interactions, content = content)
+            focusedBorder = if (compactDate) Border.None else Border(BorderStroke(2.dp, Color.White), shape = shape)
+        ), interactionSource = interactions) {
+        CompositionLocalProvider(LocalContentColor provides androidx.tv.material3.LocalContentColor.current) {
+            content()
+        }
+    }
 }
 
 @Composable

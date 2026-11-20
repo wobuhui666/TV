@@ -391,13 +391,32 @@ public final class AiringCalendarAndroidTest {
         assertTrue("The date strip precedes the horizontal poster row", dates.bottom < row.top);
         assertTrue("Header actions have safe horizontal margins", primary.left >= window.left + dp(48)
                 && primary.right <= window.right - dp(48));
+        assertEquals("The compact date strip is 40 dp tall", dp(40), dates.height());
+        assertEquals("The date strip aligns with the first header's left edge", primary.left, dates.left);
+        double dateWidthFraction = (double) dates.width() / primary.width();
+        assertTrue("Seven dates occupy 55 to 60 percent of the available header width",
+                dateWidthFraction >= .55 && dateWidthFraction <= .60);
         for (com.fongmi.android.tv.ui.calendar.AiringCalendarDay day : state().getDays()) {
             UiObject2 number = device.wait(Until.findObject(By.res("date:" + day.getDate())), 10_000);
             assertNotNull("Each date has a visible numeric day", number);
             assertTrue("The visible date action retains its full accessible date", renderedDateDescription(day.getDate()).contains(day.getDate()));
             assertEquals("The date strip exposes its actual rendered numeric label", String.valueOf(LocalDate.parse(day.getDate()).getDayOfMonth()), renderedDayNumber(number, day.getDate()));
+            Rect cell = nodeBounds("date:" + day.getDate());
+            Rect weekday = renderedLayoutBounds("weekday:" + day.getDate());
+            Rect numeric = renderedLayoutBounds("daynumber:" + day.getDate());
+            assertTrue("Each date action stays inside the compact date strip", dates.contains(cell));
+            assertTrue("The weekday and number are visible inside their date action", cell.contains(weekday) && cell.contains(numeric));
+            assertTrue("The weekday precedes its numeric day on the same row", weekday.right <= numeric.left
+                    && Math.abs(weekday.centerY() - numeric.centerY()) <= dp(1));
         }
         assertEquals(fixtureDate.toString(), state().getSelectedDate());
+        device.pressDPadUp();
+        await("Up reaches today's actual date action", () -> focused().equals("date:" + fixtureDate)
+                && nodeFocused("date:" + fixtureDate));
+        if (evidenceEnabled()) assertFocusedDateColors(fixtureDate.toString());
+        device.pressDPadDown();
+        await("Down returns from today's date to its first poster", () -> focused().equals("item:" + first)
+                && nodeFocused("item:" + first));
         NativeUiEvidence.capture("calendar-two-headers-today-focus");
     }
 
@@ -718,20 +737,23 @@ public final class AiringCalendarAndroidTest {
     }
 
     private Rect renderedImageBounds(String key) {
-        String tag = "calendarArtwork:" + key;
+        return renderedLayoutBounds("calendarArtwork:" + key);
+    }
+
+    private Rect renderedLayoutBounds(String tag) {
         for (int attempt = 0; attempt < 4; attempt++) {
             Rect[] measured = new Rect[1];
             main(() -> {
-                SemanticsNode image = semanticNode(semanticsRoot(), tag);
-                if (image != null && image.getLayoutNode$ui_release().isPlaced() && !image.isTransparent$ui_release()) {
-                    Rect bounds = semanticsBounds(image);
+                SemanticsNode node = semanticNode(semanticsRoot(), tag);
+                if (node != null && node.getLayoutNode$ui_release().isPlaced() && !node.isTransparent$ui_release()) {
+                    Rect bounds = semanticsBounds(node);
                     if (bounds.width() > 0 && bounds.height() > 0) measured[0] = bounds;
                 }
             });
             if (measured[0] != null) return measured[0];
             SystemClock.sleep(50);
         }
-        throw new AssertionError("The actual unmerged image node has no placed visible bounds: " + tag);
+        throw new AssertionError("The actual unmerged layout node has no placed visible bounds: " + tag);
     }
 
     private SemanticsNode semanticsRoot() {
@@ -893,6 +915,37 @@ public final class AiringCalendarAndroidTest {
 
     private boolean evidenceEnabled() {
         return "true".equals(InstrumentationRegistry.getArguments().getString("native_ui_evidence"));
+    }
+
+    /** Reuse the header PNG, then overwrite it after restoring the initial poster focus. */
+    private void assertFocusedDateColors(String isoDate) {
+        Rect cell = nodeBounds("date:" + isoDate);
+        Bitmap[] painted = new Bitmap[1];
+        await("The focused date paints a solid white capsule", () -> {
+            NativeUiEvidence.capture("calendar-two-headers-today-focus");
+            Bitmap frame = evidenceBitmap("calendar-two-headers-today-focus");
+            if (isFocusWhite(frame.getPixel(cell.centerX(), cell.top + dp(6)))
+                    && isFocusWhite(frame.getPixel(cell.centerX(), cell.bottom - dp(6)))
+                    && isFocusWhite(frame.getPixel(cell.left + dp(4), cell.centerY()))) {
+                painted[0] = frame;
+                return true;
+            }
+            frame.recycle();
+            return false;
+        });
+        Bitmap frame = painted[0];
+        try {
+            for (String prefix : List.of("weekday:", "daynumber:")) {
+                Rect text = renderedLayoutBounds(prefix + isoDate);
+                int darkPixels = 0;
+                for (int y = text.top; y < text.bottom; y++) for (int x = text.left; x < text.right; x++) {
+                    int pixel = frame.getPixel(x, y) | 0xff000000;
+                    if (ColorUtils.calculateContrast(pixel, Color.WHITE) >= 7.0) darkPixels++;
+                }
+                Log.i("CalendarDatePixels", prefix + isoDate + " darkTextPixels=" + darkPixels);
+                assertTrue("The focused weekday and number paint dark text with 7:1 contrast", darkPixels >= dp(3));
+            }
+        } finally { frame.recycle(); }
     }
 
     private Bitmap evidenceBitmap(String name) {
