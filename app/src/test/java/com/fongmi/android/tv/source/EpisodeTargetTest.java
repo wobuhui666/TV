@@ -103,6 +103,21 @@ public class EpisodeTargetTest {
     }
 
     @Test
+    public void shouldNotTreatMissingPlaybackUrlsAsOneIdenticalRelease() {
+        for (String url : new String[]{null, "", "   "}) {
+            Flag flag = new Flag("mixed");
+            Episode first = episode("Show.S01E03.1080p.mkv");
+            Episode second = episode("Show.S01E03.1080p.mkv");
+            first.setUrl(url);
+            second.setUrl(url);
+            flag.getEpisodes().add(first);
+            flag.getEpisodes().add(second);
+
+            assertNull(SmartSourceSelector.findEpisode(flag, EpisodeTarget.of(3)));
+        }
+    }
+
+    @Test
     public void shouldUseUrlToResumeIdenticalDisplayLabels() {
         Episode first = Episode.create("第03集", "first-url");
         Episode selected = Episode.create("第03集", "selected-url");

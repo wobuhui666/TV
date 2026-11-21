@@ -57,6 +57,10 @@ on:
         description: Verify the airing calendar, follow actions and native screenshots on API 24 and 34
         type: boolean
         default: false
+      library_detail_handoff:
+        description: Verify offline library detail handoff, Parcel isolation and controller reuse on API 34
+        type: boolean
+        default: false
       library_native_probe:
         description: Run the isolated library native TLS probe on API 31
         type: boolean
@@ -86,36 +90,45 @@ permissions:
   contents: read
 
 concurrency:
-  group: tv-ui-${{ github.ref }}-${{ inputs.airing_calendar && 'airing-calendar' || inputs.launcher_banner && 'launcher-banner' || inputs.library_native_probe && 'library-native-api31' || inputs.live_lines_touch_scroll && 'live-lines-touch-scroll' || inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
+  group: tv-ui-${{ github.ref }}-${{ inputs.library_detail_handoff && 'library-detail-handoff' || inputs.airing_calendar && 'airing-calendar' || inputs.launcher_banner && 'launcher-banner' || inputs.library_native_probe && 'library-native-api31' || inputs.live_lines_touch_scroll && 'live-lines-touch-scroll' || inputs.wasm && 'wasm' || inputs.guarded_source && 'guarded-source' || inputs.variety_episodes && 'variety-episodes' || inputs.upstream_stability && 'fongmi-stability' || inputs.home_background && 'home-background' || inputs.live_home && 'live-home' || 'appearance' }}
   cancel-in-progress: true
 
 jobs:
   guarded-source:
-    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe && !inputs.airing_calendar
+    if: github.event_name == 'workflow_dispatch' && inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe && !inputs.airing_calendar && !inputs.library_detail_handoff
     uses: ./.github/workflows/guarded-source-verify.yml
     with:
       preload: ${{ inputs.preload }}
   responsiveness:
-    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe && !inputs.airing_calendar
+    if: github.event_name == 'workflow_dispatch' && (inputs.responsiveness || inputs.polish) && !inputs.guarded_source && !inputs.wasm && !inputs.live_lines_touch_scroll && !inputs.library_native_probe && !inputs.airing_calendar && !inputs.library_detail_handoff
     uses: ./.github/workflows/app-responsiveness.yml
     with:
       baseline_ref: ${{ inputs.baseline_ref }}
       compare_baseline: ${{ inputs.compare_baseline }}
       polish: ${{ inputs.polish }}
   verify:
-    if: ${{ inputs.airing_calendar || inputs.library_native_probe || inputs.live_lines_touch_scroll || inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
+    if: ${{ inputs.library_detail_handoff || inputs.airing_calendar || inputs.library_native_probe || inputs.live_lines_touch_scroll || inputs.wasm || (!inputs.responsiveness && !inputs.polish && !inputs.guarded_source) }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.airing_calendar && 90 || 60 }}
     strategy:
       fail-fast: false
       matrix:
-        api: ${{ fromJSON((inputs.airing_calendar || inputs.launcher_banner) && '[24,34]' || inputs.compact_home && inputs.library_native_probe && '[31]' || !inputs.live_lines_touch_scroll && inputs.wasm && '[24,34]' || '[34]') }}
+        api: ${{ fromJSON(inputs.library_detail_handoff && '[34]' || (inputs.airing_calendar || inputs.launcher_banner) && '[24,34]' || inputs.compact_home && inputs.library_native_probe && '[31]' || !inputs.live_lines_touch_scroll && inputs.wasm && '[24,34]' || '[34]') }}
     steps:
+      - name: Validate isolated library detail handoff options
+        if: inputs.library_detail_handoff
+        env:
+          HANDOFF_OTHER_MODE: ${{ inputs.airing_calendar || inputs.library_native_probe || inputs.compact_home || inputs.launcher_banner || inputs.playback_clock || inputs.guarded_source || inputs.preload || inputs.episode_navigation || inputs.variety_episodes || inputs.assrt_subtitles || inputs.upstream_stability || inputs.wasm || inputs.responsiveness || inputs.polish || inputs.live_lines_touch_scroll || inputs.home_background || inputs.live_home }}
+        run: |
+          if [ "$HANDOFF_OTHER_MODE" != 'false' ]; then
+            echo 'library_detail_handoff requires all other feature flags=false' >&2
+            exit 1
+          fi
       - name: Validate isolated library native probe options
         if: inputs.library_native_probe
         env:
           NATIVE_PROBE_COMPACT_HOME: ${{ inputs.compact_home }}
-          NATIVE_PROBE_OTHER_MODE: ${{ inputs.airing_calendar || inputs.launcher_banner || inputs.playback_clock || inputs.guarded_source || inputs.preload || inputs.episode_navigation || inputs.variety_episodes || inputs.assrt_subtitles || inputs.upstream_stability || inputs.wasm || inputs.responsiveness || inputs.polish || inputs.live_lines_touch_scroll || inputs.home_background || inputs.live_home }}
+          NATIVE_PROBE_OTHER_MODE: ${{ inputs.library_detail_handoff || inputs.airing_calendar || inputs.launcher_banner || inputs.playback_clock || inputs.guarded_source || inputs.preload || inputs.episode_navigation || inputs.variety_episodes || inputs.assrt_subtitles || inputs.upstream_stability || inputs.wasm || inputs.responsiveness || inputs.polish || inputs.live_lines_touch_scroll || inputs.home_background || inputs.live_home }}
         run: |
           if [ "$NATIVE_PROBE_COMPACT_HOME" != 'true' ] || [ "$NATIVE_PROBE_OTHER_MODE" != 'false' ]; then
             echo 'library_native_probe requires compact_home=true and all other feature flags=false' >&2
@@ -264,10 +277,22 @@ jobs:
       - name: Build TV preview and run local unit tests
         if: '!inputs.airing_calendar'
         env:
+          TV_LIBRARY_DETAIL_HANDOFF: ${{ inputs.library_detail_handoff }}
           MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
           TMDB_API_KEY: ${{ inputs.live_lines_touch_scroll && 'compact-ui-fixture' || inputs.live_home && 'tmdb-live-preview' || (inputs.compact_home || inputs.home_background) && 'compact-ui-fixture' || '' }}
           ASSRT_API_TOKEN: ${{ (inputs.assrt_subtitles || inputs.variety_episodes) && 'assrt-ui-fixture' || '' }}
-        run: ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+        run: |
+          if [ "$TV_LIBRARY_DETAIL_HANDOFF" = 'true' ]; then
+            ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" \
+              :app:assembleLeanbackArm64_v8aPreview \
+              :app:assembleLeanbackArm64_v8aPreviewAndroidTest \
+              :app:testLeanbackArm64_v8aPreviewUnitTest \
+              --tests com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetchTest \
+              --tests com.fongmi.android.tv.playback.vod.VodPlaybackControllerTest \
+              -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+          else
+            ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" :app:assembleLeanbackArm64_v8aPreview :app:assembleLeanbackArm64_v8aPreviewAndroidTest :app:testLeanbackArm64_v8aPreviewUnitTest ${{ inputs.wasm && ':wasm:testDebugUnitTest' || '' }} -PtvPreview --no-daemon --build-cache --max-workers=2 --console=plain
+          fi
       - name: Build airing calendar debug and isolated preview APKs
         if: inputs.airing_calendar
         env:
@@ -338,7 +363,7 @@ jobs:
         if: always() && !inputs.airing_calendar
         uses: actions/upload-artifact@v4
         with:
-          name: tv-preview-apk${{ inputs.launcher_banner && format('-launcher-banner-api-{0}', matrix.api) || inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
+          name: tv-preview-apk${{ inputs.library_detail_handoff && '-library-detail-handoff' || inputs.launcher_banner && format('-launcher-banner-api-{0}', matrix.api) || inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: app/build/outputs/apk/leanbackArm64_v8a/preview/*.apk
       - name: Upload airing calendar APKs
         if: always() && inputs.airing_calendar
@@ -360,6 +385,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Prepare emulator checks
         env:
+          TV_LIBRARY_DETAIL_HANDOFF: ${{ inputs.library_detail_handoff }}
           TV_AIRING_CALENDAR: ${{ inputs.airing_calendar }}
           TV_LAUNCHER_BANNER: ${{ inputs.launcher_banner }}
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
@@ -377,7 +403,9 @@ jobs:
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_AIRING_CALENDAR" = 'true' ]; then
+          if [ "$TV_LIBRARY_DETAIL_HANDOFF" = 'true' ]; then
+            bash .github/scripts/verify-library-detail-handoff.sh
+          elif [ "$TV_AIRING_CALENDAR" = 'true' ]; then
             bash .github/scripts/verify-airing-calendar.sh "$TV_EMULATOR_API"
           elif [ "$TV_LAUNCHER_BANNER" = 'true' ]; then
             python3 - <<'PYINSTALL'
@@ -732,6 +760,7 @@ jobs:
       - name: Verify themes and touch on emulator
         timeout-minutes: ${{ inputs.airing_calendar && 25 || inputs.home_background && 20 || 40 }}
         env:
+          TV_LIBRARY_DETAIL_HANDOFF: ${{ inputs.library_detail_handoff }}
           TV_AIRING_CALENDAR: ${{ inputs.airing_calendar }}
           TV_LAUNCHER_BANNER: ${{ inputs.launcher_banner }}
           TV_COMPACT_HOME: ${{ inputs.compact_home }}
@@ -803,7 +832,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tv-ui-verification-${{ github.run_id }}${{ inputs.airing_calendar && format('-calendar-api-{0}', matrix.api) || inputs.launcher_banner && format('-launcher-banner-api-{0}', matrix.api) || inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
+          name: tv-ui-verification-${{ github.run_id }}${{ inputs.library_detail_handoff && '-library-detail-handoff' || inputs.airing_calendar && format('-calendar-api-{0}', matrix.api) || inputs.launcher_banner && format('-launcher-banner-api-{0}', matrix.api) || inputs.live_lines_touch_scroll && '-live-lines-touch-scroll' || inputs.wasm && format('-wasm-api-{0}', matrix.api) || '' }}
           path: |
             artifacts/launcher-banner-api-*/
             artifacts/tv-ui/
@@ -812,6 +841,7 @@ jobs:
             artifacts/playback-clock/
             artifacts/compact-home/
             artifacts/library-native-probe/
+            artifacts/library-detail-handoff/
             artifacts/airing-calendar/
             artifacts/live-lines-touch-scroll/
             artifacts/home-background/

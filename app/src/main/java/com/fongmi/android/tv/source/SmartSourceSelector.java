@@ -79,8 +79,10 @@ public final class SmartSourceSelector {
         }
         if (matches.isEmpty()) return null;
         Episode selected = matches.get(0);
+        if (matches.size() == 1) return selected;
         String selectedUrl = selected.getUrl();
-        if (matches.stream().allMatch(episode -> selectedUrl.equals(episode.getUrl()))) return selected;
+        if (selectedUrl != null && !selectedUrl.isBlank()
+                && matches.stream().allMatch(episode -> selectedUrl.equals(episode.getUrl()))) return selected;
         int highest = 0;
         boolean ambiguous = false;
         String edition = null;
@@ -94,7 +96,10 @@ public final class SmartSourceSelector {
                 selected = episode;
                 highest = resolution;
                 ambiguous = false;
-            } else if (resolution == highest && !selected.getUrl().equals(episode.getUrl())) ambiguous = true;
+            } else if (resolution == highest) {
+                String url = selected.getUrl();
+                if (url == null || url.isBlank() || !url.equals(episode.getUrl())) ambiguous = true;
+            }
         }
         return ambiguous ? null : selected;
     }
