@@ -140,7 +140,7 @@
   "coverageLimits": [
     "Offline x86_64 emulator sources; no real account/form submission or 100-source resampling",
     "No physical ARM TV or live schedule accuracy/performance validation",
-    "Formal APK structure, signatures and OTA will be recorded after publication"
+    "Downloaded APK structure, signatures, versions, ABI, calendar entry and bytecode, banners and OTA verified; no physical-TV installation"
   ],
   "totalAndroidTestExecutions": 126,
   "productionSourceCommit": "200448937e88bd9b4a80877ec3b0819b6f057264",
@@ -161,5 +161,9 @@
       "app/src/tvPreviewTest/java/com/fongmi/android/tv/playback/vod/LibraryDetailHandoffAndroidTest.kt",
       ".github/scripts/verify-library-detail-handoff.sh"
     ]
-  }
+  },
+  "releaseCommit": "74cdb8a06b2cef442feba8ef656d2551d71c3df6",
+  "releaseRun": 44890522965,
+  "releaseTag": "build-44890522965-1",
+  "releaseVerification": "release-verification.json"
 }

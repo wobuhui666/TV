@@ -19,7 +19,11 @@
 
 交接实现、模型和专项用例在 `eea05ba` 至首页修复提交之间未改变，其结果按实际提交保留。源码相同性与计数摘要见 [verification.json](verification.json)。日历与首页截图使用离线排期、作品及图片，不能证明线上排期准确性、全部片源可播放、账号提交或实体电视性能；此次交接测试使用离线 host，未验证真实媒体解码。11 月 19 日的真实来源采样保留在[来源兼容报告](../2026-11-19-library-source-compatibility/README.md)，未作为本次新版重新采样。
 
-正式 ARM64／ARMv7 标准版和共存版会在统一发布后下载核对包名、ABI、版本、签名、OTA 哈希与横幅资源，并补充实际发布记录。
+[Release 194](https://github.com/wobuhui666/TV/releases/tag/build-44890522965-1) 已正式发布，[正式构建 44890522965](https://github.com/wobuhui666/TV/actions/runs/44890522965) 全部成功。Run、Release target 和 tag 均指向 `74cdb8a06b2cef442feba8ef656d2551d71c3df6`。发布记录更新只修改文档，不再次触发 APK 发布。
+
+下载后的 ARM64／ARMv7 标准版与共存版均通过 ZIP、包名、单一 ABI、Android 7.0 最低版本及签名 v2 校验。四包签名证书均与 Release 193 标准包一致；版本统一为 `5.8.7+20261121.093831`／`218417111`，高于上一版 `218392640`。两份 OTA 清单和 GitHub 资产 SHA-256、大小与下载文件匹配；三语言横幅与发布提交逐像素一致；四包的 manifest 和 DEX 均包含追更日历入口及仓库实现。Release 非草稿、非预发布，已设为 Latest，六资产完整。详细结果见 [release-verification.json](release-verification.json)，本轮未在实体电视安装正式包。
+
+正式 Gradle 命令为 `assembleLeanbackArm64_v8aRelease assembleLeanbackArmeabi_v7aRelease --no-daemon --build-cache --max-workers=2`；共存版附加 `-PtvApplicationId=com.wobuhui666.android.tv`。原 `/data/TV` 工作区已在保留本地备份后同步到发布分支，源码无未提交改动。
 
 以下为 API34 的实际界面，排期、作品与图片均为离线测试素材。
 

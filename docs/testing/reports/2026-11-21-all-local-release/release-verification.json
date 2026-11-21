@@ -1,0 +1,123 @@
+{
+  "releaseTag": "build-44890522965-1",
+  "releaseUrl": "https://github.com/wobuhui666/TV/releases/tag/build-44890522965-1",
+  "sourceCommit": "74cdb8a06b2cef442feba8ef656d2551d71c3df6",
+  "draft": false,
+  "prerelease": false,
+  "latest": true,
+  "versionCode": 218417111,
+  "versionName": "5.8.7+20261121.093831",
+  "previousVersionCode": 218392640,
+  "certificateMatchesPreviousRelease": true,
+  "files": [
+    {
+      "file": "leanback-arm64_v8a.apk",
+      "packageName": "com.fongmi.android.tv",
+      "abi": "arm64-v8a",
+      "size": 105013419,
+      "sha256": "1164fb185f16c14a8ef01ffe7d4e6de7e37e238d04ead791748b3927b25c03bd",
+      "certificateSha256": "d02c97644246b64be6d3971c7a6604f95b06232d7c33a4333f9b00660a8f7d28",
+      "signatureV2": true,
+      "calendarActivityAndRepositoryPresent": true,
+      "banners": {
+        "en": {
+          "resource": "res/aC.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-CN": {
+          "resource": "res/Ed.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-TW": {
+          "resource": "res/rz.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        }
+      }
+    },
+    {
+      "file": "leanback-armeabi_v7a.apk",
+      "packageName": "com.fongmi.android.tv",
+      "abi": "armeabi-v7a",
+      "size": 101330979,
+      "sha256": "7510bd7d4682533f2ae8c04baf52681747d2fb24a58d56684d8e42d430c5483a",
+      "certificateSha256": "d02c97644246b64be6d3971c7a6604f95b06232d7c33a4333f9b00660a8f7d28",
+      "signatureV2": true,
+      "calendarActivityAndRepositoryPresent": true,
+      "banners": {
+        "en": {
+          "resource": "res/aC.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-CN": {
+          "resource": "res/Ed.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-TW": {
+          "resource": "res/rz.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        }
+      }
+    },
+    {
+      "file": "leanback-arm64_v8a-coexist.apk",
+      "packageName": "com.wobuhui666.android.tv",
+      "abi": "arm64-v8a",
+      "size": 105013523,
+      "sha256": "9ffc085f18272564b50b1408c12496be19aae25d0889f979906da73b71fb1009",
+      "certificateSha256": "d02c97644246b64be6d3971c7a6604f95b06232d7c33a4333f9b00660a8f7d28",
+      "signatureV2": true,
+      "calendarActivityAndRepositoryPresent": true,
+      "banners": {
+        "en": {
+          "resource": "res/aC.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-CN": {
+          "resource": "res/Ed.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-TW": {
+          "resource": "res/rz.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        }
+      }
+    },
+    {
+      "file": "leanback-armeabi_v7a-coexist.apk",
+      "packageName": "com.wobuhui666.android.tv",
+      "abi": "armeabi-v7a",
+      "size": 101330947,
+      "sha256": "4f5ef737b3a13ee138708c81f8ec7c7ef5bff3048d9d04ece4058f2f520ff30e",
+      "certificateSha256": "d02c97644246b64be6d3971c7a6604f95b06232d7c33a4333f9b00660a8f7d28",
+      "signatureV2": true,
+      "calendarActivityAndRepositoryPresent": true,
+      "banners": {
+        "en": {
+          "resource": "res/aC.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-CN": {
+          "resource": "res/Ed.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        },
+        "zh-TW": {
+          "resource": "res/rz.png",
+          "pixelsMatchSource": true,
+          "opaque": true
+        }
+      }
+    }
+  ],
+  "coverageLimits": "Downloaded APK structure, signatures, versions, OTA and banner resources verified; release APKs were not installed on a physical TV."
+}
