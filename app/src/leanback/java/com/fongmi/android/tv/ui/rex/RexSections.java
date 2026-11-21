@@ -39,6 +39,36 @@ public final class RexSections {
     public static RexSection byKey(String key) {
         if (key == null) return null;
         for (RexSection section : home()) if (section.getKey().equals(key)) return section;
+        for (RexSection section : domestic()) if (section.getKey().equals(key)) return section;
         return null;
+    }
+
+    /** Media-library section cards follow the home layout's fixed four topics. */
+    public static List<RexSection> librarySpotlights() {
+        return List.of(
+                RexSection.regional("cn_variety", R.string.home_library_month_variety, "chinese", "variety").limit(12),
+                RexSection.regional("cn_series", R.string.home_library_month_series, "chinese", "series").limit(12),
+                RexSection.tmdb("popular_movie", R.string.rex_section_popular_movie, RexTmdbQuery.popular(RexTmdbQuery.MOVIE)).limit(12),
+                RexSection.anime("anime_daily", R.string.rex_section_anime).limit(12));
+    }
+
+    /** Available compact-home shelves and regional spotlight cards. */
+    public static List<RexSection> compactHome() {
+        List<RexSection> sections = new ArrayList<>(domestic());
+        for (RexSection section : home()) {
+            if (List.of("trending_day", "douban_movie", "douban_tv", "now_playing", "popular_movie", "popular_tv",
+                    "cn_series", "kr_series", "cn_variety", "anime_daily").contains(section.getKey())) {
+                sections.add(section.limit(12));
+            }
+        }
+        return sections;
+    }
+
+    private static List<RexSection> domestic() {
+        return List.of(
+                RexSection.tmdb("cn_movie", R.string.home_compact_cn_movie, RexTmdbQuery.chinese(RexTmdbQuery.MOVIE, false)).limit(12),
+                RexSection.regional("cn_tv", R.string.home_compact_cn_tv, "chinese", "series").limit(12),
+                RexSection.tmdb("cn_top_movie", R.string.home_compact_cn_top_movie, RexTmdbQuery.chinese(RexTmdbQuery.MOVIE, true)).limit(12),
+                RexSection.tmdb("cn_top_tv", R.string.home_compact_cn_top_tv, RexTmdbQuery.chinese(RexTmdbQuery.TV, true)).limit(12));
     }
 }

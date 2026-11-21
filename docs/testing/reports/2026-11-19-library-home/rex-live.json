@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-11-19T16:33:42.010912+00:00",
+  "manifestUrl": "https://assets.rexnow.tv/scripts/datas/rex/regional-tv/latest.json",
+  "manifestDate": "20261119",
+  "generatedAt": "2026-11-19T07:25:49.019481Z",
+  "feedUrl": "https://assets.rexnow.tv/scripts/datas/rex/regional-tv/20261119/chinese_series.json",
+  "window": {
+    "start": "2026-10-19",
+    "end": "2026-11-19"
+  },
+  "firstThree": [
+    {
+      "id": "307853",
+      "title": "今天是太阳雨",
+      "releaseDate": "2026-11-06"
+    },
+    {
+      "id": "270431",
+      "title": "折月亮",
+      "releaseDate": "2026-11-05"
+    },
+    {
+      "id": "275297",
+      "title": "走马上任",
+      "releaseDate": "2026-11-02"
+    }
+  ]
+}

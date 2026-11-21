@@ -1,0 +1,171 @@
+{
+  "schema": "tv.library-alignment-stability.v1",
+  "date": "2026-11-16",
+  "state": "PASS_WITH_COVERAGE_LIMITS",
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "sourceManifestSha256": "08313aaca7d5bd454e4f5786e6662189bb7e12187d9c947a83aedcf22ce35a9c",
+  "sourceInputs": 1990,
+  "conscryptVersion": "2.9.0",
+  "ordinaryTlsProvider": "EXPLICIT_CONSCRYPT",
+  "echDefaultEnabled": true,
+  "globalProviderInstalled": false,
+  "artifactHashes": {
+    "debug": "50205c94afdbe3c292e83f8c69cd85218dcfc3572a8de1fbe1927be16a8e7e82",
+    "mainTest": "2573099a50a1a99d20b9e84715499a06e7c10b95c4d4bc6f314832ade05ed122",
+    "preview": "0997678d8cb392fcb1cebe7ae97b009ea21d411f6c04b09f0102f0aa0f277a04",
+    "previewTest": "d6e2b0a7501c05fe024f5250bb560916611258a3c18ab9e90edfb3eb0f517f0d"
+  },
+  "rawCertificateStressTestApkSha256": "9f914f68155d776f4dc3f961d072850c7cd49b8dfa4b3396dd288b612d7764bc",
+  "arm64NativeLibraryCount": 35,
+  "pythonAssetCount": 20,
+  "nativeAndPythonAssetsByteIdenticalTo13f": true,
+  "unitTests": {
+    "passed": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 36
+  },
+  "offlineTests": {
+    "passed": 2,
+    "seconds": 0.373,
+    "networkRequests": 0,
+    "engineCount": 128,
+    "readsPerEngine": 128,
+    "getterCount": 7
+  },
+  "previewFocusedTests": {
+    "passed": 4,
+    "seconds": 76.3,
+    "cases": [
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#changingAppThemeWhileBrowsingKeepsEpisodeFocusAndScroll",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#rapidEpisodeNavigationPreservesFocusAndPlaybackTarget",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#resumeStartsOnTheRangeContainingTheSavedEpisode",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#seriesShowsEpisodeCardsAndResolvesTheExactSelectedEpisode"
+    ]
+  },
+  "realDetail": {
+    "pid": 4726,
+    "completedCycles": 10,
+    "records": 20,
+    "hostResumeOriginalCycles": 2,
+    "hostResumeNewCycles": 8,
+    "instrumentationRestarted": false,
+    "explicitGcCallsDuringUi": 0,
+    "newNativeCrashOrAnrObserved": false,
+    "samePidConnections": 34,
+    "allConnectionsServerEncrypted": true,
+    "maxConcurrentRequests": 8,
+    "certificateStressCopies": 0,
+    "combinedTestState": "FAIL",
+    "combinedTestFailure": "Cleaned shared Handshake chain empty; certificate stress not exercised"
+  },
+  "strictTlsStress": {
+    "state": "PASS",
+    "pid": 4639,
+    "seconds": 48.938,
+    "clientPolicy": "PRODUCTION_TRUSTED_METADATA_CLIENT",
+    "strictCertificateValidation": true,
+    "requests": 34,
+    "allRequestsConscryptTls13ServerEncrypted": true,
+    "allRawTlsSessionPeerChainsNonempty": true,
+    "closedSockets": 34,
+    "nativeCertificateCopies": 1536,
+    "copiesObservedCollected": 1536,
+    "maxConcurrentRequests": 1,
+    "gcRounds": 4,
+    "explicitGcCalls": 12,
+    "finalizerWitnesses": 4,
+    "tailSeconds": 15,
+    "registryTrue": 0,
+    "registryFalse": 1536,
+    "registryUnavailable": 0,
+    "registryPathCovered": false,
+    "settingsRestored": true,
+    "dohRestored": true,
+    "newNativeCrashOrAnrObserved": false
+  },
+  "sharedConcurrentTlsStress": {
+    "state": "PASS",
+    "pid": 5031,
+    "seconds": 26.876,
+    "clientPolicy": "EXISTING_SOURCE_CLIENT_TRUST_ALL",
+    "strictCertificateValidation": false,
+    "requests": 34,
+    "allRequestsConscryptTls13ServerEncrypted": true,
+    "allRawTlsSessionPeerChainsNonempty": true,
+    "closedSockets": 34,
+    "nativeCertificateCopies": 1536,
+    "copiesObservedCollected": 1536,
+    "maxConcurrentRequests": 8,
+    "gcRounds": 4,
+    "explicitGcCalls": 12,
+    "finalizerWitnesses": 4,
+    "tailSeconds": 15,
+    "registryTrue": 0,
+    "registryFalse": 1536,
+    "registryUnavailable": 0,
+    "registryPathCovered": false,
+    "settingsRestored": true,
+    "dohRestored": true,
+    "newNativeCrashOrAnrObserved": false
+  },
+  "allUiAndCertificateStressInOnePid": false,
+  "actualImages": {
+    "hero-aligned.png": {
+      "sha256": "b5ad06b2b65888414ba601b7151d9a9fd192c9e25e45b70e16d3fc80a1503eeb",
+      "bytes": 2778858,
+      "actualMainPackage": true
+    },
+    "episodes-aligned.png": {
+      "sha256": "b1462c4e44e81585a315c77bad5398fd6262b66b92b83d534a1c53696dff06a9",
+      "bytes": 2221958,
+      "actualMainPackage": true
+    },
+    "resources-aligned.png": {
+      "sha256": "a404c1646ff6f44c0d1530edd62a46fc083a69c38e70bd443623e653af945b80",
+      "bytes": 1194412,
+      "actualMainPackage": true
+    }
+  },
+  "publication": {
+    "filename": "TV-detail-stability-20261116-arm64.apk",
+    "bytes": 117297462,
+    "sha256": "50205c94afdbe3c292e83f8c69cd85218dcfc3572a8de1fbe1927be16a8e7e82",
+    "externalFullDownloadVerified": true,
+    "headStatus": 200,
+    "rangeStatus": 206,
+    "rangeVerified": true,
+    "verifiedAtUtc": "2026-11-16T19:50:46Z",
+    "tokenizedUrlStoredInPublicReport": false
+  },
+  "historicalFailure": {
+    "mainApkSha256": "13f2fd98e4185eb9a04dd2cc032702c0b4f8546a23df295cc3af8ba15991dd7e",
+    "pid": 5577,
+    "reason": 5,
+    "status": 6,
+    "timestampUtc": "2026-11-16 16:53:34 UTC",
+    "thread": "FinalizerDaemon",
+    "location": "PLATFORM_CONSCRYPT_LIBCRYPTO_ASN1_X509_RELEASE",
+    "rootCauseOfHeapCorruptionProven": false,
+    "tombstoneSha256": "53cb8bb7369a9e0d3eaa98f4e6ec4be1064b973b1b3ef0be6b18b752f906fa25"
+  },
+  "environment": {
+    "sdk": 31,
+    "hostAbi": "x86_64",
+    "applicationAbi": "arm64-v8a",
+    "nativeBridge": "libndk_translation",
+    "physicalTv": false
+  },
+  "coverageLimits": [
+    "Finite workload; not all-device stability",
+    "Ten UI cycles and certificate stress used different PIDs",
+    "Shared source client retained trustAll; not certificate security validation",
+    "Explicit GC and finalizer witnesses do not prove natural collection or leak freedom",
+    "NativeAllocationRegistry callback path not enabled in this runtime",
+    "No physical-TV frame-rate acceptance",
+    "No user Cookie submission or playback request in main-package regression",
+    "Not all source plugins or all playable resources validated"
+  ],
+  "privateRawEvidencePublished": false
+}

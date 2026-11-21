@@ -147,6 +147,14 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
         activity.startActivity(intent);
     }
 
+    public static void startGenre(Activity activity, String type, String name) {
+        Intent intent = new Intent(activity, DiscoverActivity.class);
+        intent.putExtra(EXTRA_FILTERS_ONLY, true);
+        intent.putExtra(EXTRA_CATEGORY, "tv".equals(type) ? PosterHomeCatalog.TV : PosterHomeCatalog.MOVIES);
+        intent.putExtra("libraryGenre", name);
+        activity.startActivity(intent);
+    }
+
     @Override
     protected ViewBinding getBinding() {
         return mBinding = ActivityDiscoverBinding.inflate(getLayoutInflater());
@@ -155,6 +163,7 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
     @Override
     protected void initView(Bundle savedInstanceState) {
         filtersOnly = getIntent().getBooleanExtra(EXTRA_FILTERS_ONLY, false);
+        if (com.fongmi.android.tv.setting.ExperienceSettings.usesLibrary()) douban = false;
         if (filtersOnly) {
             int category = getIntent().getIntExtra(EXTRA_CATEGORY, PosterHomeCatalog.ALL);
             mediaType = category == PosterHomeCatalog.TV ? DiscoverMediaKey.TV : DiscoverMediaKey.MOVIE;
@@ -430,6 +439,15 @@ public class DiscoverActivity extends BaseActivity implements VodPresenter.OnCli
             public void onSuccess(List<DiscoverFacet> items) {
                 if (isInactive() || generation != genreGeneration || douban || !mediaType.equals(type)) return;
                 genres = items;
+                String requested = getIntent().getStringExtra("libraryGenre");
+                if (requested != null) for (DiscoverFacet facet : items) {
+                    if (requested.equals(facet.getName())) {
+                        genreId = facet.getId();
+                        getIntent().removeExtra("libraryGenre");
+                        refreshResults(true);
+                        break;
+                    }
+                }
                 updateFilterPanel();
             }
 

@@ -1,0 +1,36 @@
+{
+  "schema": "tv.online-library-search.v1",
+  "configUrl": "https://9280.kstore.vip/aiwex.json",
+  "deviceAbis": [
+    "x86_64",
+    "arm64-v8a"
+  ],
+  "testTransportReplacement": false,
+  "testResponseFixtures": false,
+  "nativeArmHardwareOrPlaybackVerified": false,
+  "tmdbKeyConfigured": true,
+  "configCallbackArrived": false,
+  "configLoadSucceeded": false,
+  "configLoadElapsedMs": 90078,
+  "driverFailureType": "AssertionError",
+  "queries": [],
+  "cleanupFinishRequested": true,
+  "configMainResponse": {
+    "phase": "config-load",
+    "elapsedMs": 90074,
+    "maxMainHandlerDelayMs": 654,
+    "handlerSamples": 1801,
+    "reference250MsExceeded": true
+  },
+  "stackAttribution": "Only Looper/MessageQueue idle stack sampled; no component cause established",
+  "unmodifiedFullApkInstalled": true,
+  "fullApkSha256": "cea0fe43cc1825447af9e44944d0915b74f11e3b723838557fb84b8b8ab090c3",
+  "testEnvironment": {
+    "sdk": 31,
+    "frameworkTimeoutMultiplier": 10,
+    "nativeBridge": "libndk_translation.so",
+    "hardwareAcceleration": false,
+    "virtualCpus": 1,
+    "hardwareArmDevice": false
+  }
+}

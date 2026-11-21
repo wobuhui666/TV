@@ -1,0 +1,297 @@
+{
+  "schema": "tv.home-modes-verification.v1",
+  "date": "2026-11-16",
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "dirtyWorkspace": true,
+  "sourceManifestSha256": "92def23be27caad4ad20af8a2da8e45965f5807ad676f8830af3c05869244340",
+  "sourceInputCount": 1995,
+  "mainApk": {
+    "sha256": "b87c3668a8e23f01869fd4839d347d6b912d59d7223909f569174f2cfa46a705",
+    "bytes": 120287542,
+    "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+    "signatureVerified": true,
+    "arm64Libraries": 35,
+    "pythonAssets": 20,
+    "nativeAndPythonUnchangedFromPreviousApk": true
+  },
+  "previewApk": {
+    "sha256": "2431ef05a2ed5a6b7621fad344c1708f5613cd2945c277fed15c7b49a52a748d",
+    "bytes": 120316214,
+    "signatureVerified": true,
+    "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+    "arm64Libraries": 35,
+    "pythonAssets": 20
+  },
+  "previewTestApk": {
+    "sha256": "76fc07e23c9d295f4efe81cdffc029d1e313d950fdcfb4f4ee33222ccc38d30e",
+    "bytes": 1910543,
+    "signatureVerified": true,
+    "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1"
+  },
+  "build": [
+    {
+      "stage": "main",
+      "tasks": [
+        ":app:assembleLeanbackArm64_v8aDebug"
+      ],
+      "exit": 0,
+      "seconds": 155
+    },
+    {
+      "stage": "lint",
+      "tasks": [
+        ":app:lintLeanbackArm64_v8aDebug"
+      ],
+      "exit": 1,
+      "seconds": 218
+    }
+  ],
+  "previewBuild": {
+    "exit": 0,
+    "seconds": 154
+  },
+  "jvm": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "suites": [
+      {
+        "name": "com.fongmi.android.tv.setting.BrowseExperienceSettingsTest",
+        "tests": 1
+      },
+      {
+        "name": "com.fongmi.android.tv.api.rex.RexTmdbQueryTest",
+        "tests": 16
+      },
+      {
+        "name": "com.fongmi.android.tv.setting.ExperienceSettingsTest",
+        "tests": 2
+      },
+      {
+        "name": "com.fongmi.android.tv.ui.home.PosterHomeCatalogTest",
+        "tests": 12
+      },
+      {
+        "name": "com.fongmi.android.tv.ui.rex.RexHomeCatalogTest",
+        "tests": 8
+      }
+    ]
+  },
+  "jvmScope": "Catalog, query and preferences only; classes unchanged during later native focus repairs. Not native focus coverage.",
+  "android": [
+    {
+      "stage": "home-modes-focus",
+      "exit": 0,
+      "class": "com.fongmi.android.tv.test.CompactHomeIntegrationTest,com.fongmi.android.tv.test.ExperienceModePreviewTest,com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest,com.fongmi.android.tv.test.HomeTouchScrollTest",
+      "expectedTests": 23,
+      "reportedTests": 23,
+      "passedCases": [
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepAccountFoldersOutOfIndexSourceSearch",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepLegacyLayoutChoicesIndependentOfOtherSettings",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepNoArtworkActionBeyondThePreviewLimit",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepTheSameCuratedHomeInSimpleMode",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldMergeRecommendationsIntoHomeAndKeepTheNativeSourceLibrary",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldOpenSourceAccountFolderWithoutTmdbInterception",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldPreserveSourceFolderIdentityInSharedNavigation",
+        "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldRebindSourceCardsAfterAnIdenticalRefresh",
+        "com.fongmi.android.tv.test.ExperienceModePreviewTest#shouldRestoreTheLastCardFromBackAndExitWithoutChangingTheMode",
+        "com.fongmi.android.tv.test.ExperienceModePreviewTest#shouldShowAllThreeChoicesAndFocusTheCurrentModeInBothThemes",
+        "com.fongmi.android.tv.test.ExperienceModePreviewTest#shouldSwitchEachModeWithTheRemoteAndPreserveOtherPreferences",
+        "com.fongmi.android.tv.test.HomeTouchScrollTest#shouldCancelQueuedContentFocusWhenTouchStarts",
+        "com.fongmi.android.tv.test.HomeTouchScrollTest#shouldKeepScrolledViewportAfterHistoryRefreshAndWindowFocusReturns",
+        "com.fongmi.android.tv.test.HomeTouchScrollTest#shouldRestoreRemoteAndExplicitHomeNavigationAfterTouchScrolling",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#categoryEntryUsesOneQueryAndKeepsThePageCompact",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#changingFiltersCancelsTheSeparateTmdbDispatcherAndIgnoresOldResults",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#closingLoaderCancelsTheFeedAndDoesNotStartFallback",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#closingLoaderCancelsTheIndependentDoubanFallback",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#compactPreviewKeepsTheSharedRegularPageAndCapsCacheHits",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#directDoubanFallbackAlsoWorksInTheSectionList",
+        "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#emptyAndFailedQueriesLeaveFiltersAndRetryActionable"
+      ],
+      "failedCases": [],
+      "seconds": 179.8,
+      "success": true
+    },
+    {
+      "stage": "mode-compatibility",
+      "exit": 0,
+      "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#modeSelectionKeepsPlaybackAndSourcePreferences",
+      "expectedTests": 1,
+      "reportedTests": 1,
+      "passedCases": [
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#modeSelectionKeepsPlaybackAndSourcePreferences"
+      ],
+      "failedCases": [],
+      "seconds": 9.5,
+      "success": true
+    }
+  ],
+  "environment": {
+    "api": "31",
+    "serial": "emulator-5580",
+    "size": [
+      1920,
+      1080
+    ],
+    "densityDpi": 320,
+    "abiList": "x86_64,arm64-v8a",
+    "bridge": "libndk_translation.so",
+    "fixtureCount": 48,
+    "fixtureBytes": 759657
+  },
+  "lint": {
+    "counts": {
+      "Error": 121,
+      "Warning": 385,
+      "Hint": 6
+    },
+    "exit": 1,
+    "fullyPassed": false,
+    "addedErrorsInCurrentTask": false,
+    "olderSavedReportErrorCount": 108,
+    "unchangedPriorDetailHctErrors": 13,
+    "comparisonLimit": "Saved 108-error report predates previous detail changes; not an exact predecessor baseline."
+  },
+  "earlierTrials": [
+    {
+      "stage": "initial",
+      "runs": [
+        {
+          "reportedTests": null,
+          "passedCount": 17,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges",
+            "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#categoryEntryUsesOneQueryAndKeepsThePageCompact",
+            "com.fongmi.android.tv.ui.CompactDiscoveryIntegrationTest#emptyAndFailedQueriesLeaveFiltersAndRetryActionable"
+          ],
+          "success": false
+        }
+      ]
+    },
+    {
+      "stage": "test-mode-isolation",
+      "runs": [
+        {
+          "reportedTests": null,
+          "passedCount": 19,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut"
+          ],
+          "success": false
+        }
+      ]
+    },
+    {
+      "stage": "remote-input-flow",
+      "runs": [
+        {
+          "reportedTests": null,
+          "passedCount": 18,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges"
+          ],
+          "success": false
+        }
+      ]
+    },
+    {
+      "stage": "offscreen-row-diagnostic",
+      "runs": [
+        {
+          "reportedTests": 1,
+          "passedCount": 1,
+          "failedCases": [],
+          "success": true
+        },
+        {
+          "reportedTests": null,
+          "passedCount": 1,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges"
+          ],
+          "success": false
+        }
+      ]
+    },
+    {
+      "stage": "position-aware-callback-only",
+      "runs": [
+        {
+          "reportedTests": null,
+          "passedCount": 17,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepAccountFoldersOutOfIndexSourceSearch",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepNoArtworkActionBeyondThePreviewLimit",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldOpenSourceAccountFolderWithoutTmdbInterception",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldRebindSourceCardsAfterAnIdenticalRefresh"
+          ],
+          "success": false
+        }
+      ]
+    },
+    {
+      "stage": "content-focus-entry",
+      "runs": [
+        {
+          "reportedTests": null,
+          "passedCount": 17,
+          "failedCases": [
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepAccountFoldersOutOfIndexSourceSearch",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepCategoryOrderAndExposeFilterShortcut",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepNoArtworkActionBeyondThePreviewLimit",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldKeepSeriesAndTopSelectionsBoundedAfterCategoryChanges",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldOpenSourceAccountFolderWithoutTmdbInterception",
+            "com.fongmi.android.tv.test.CompactHomeIntegrationTest#shouldRebindSourceCardsAfterAnIdenticalRefresh"
+          ],
+          "success": false
+        }
+      ]
+    }
+  ],
+  "images": {
+    "mode-dark.png": {
+      "sha256": "ce850024976ce908cada1daec29d3ff32cba3af4806c8351657a50bab7428a44",
+      "source": "Final Preview real Android mode picker"
+    },
+    "home-domestic.png": {
+      "sha256": "55cee030b4eb876230cd94268eccb1471b75483339257e21c68870937db5e173",
+      "source": "Final Main real network"
+    },
+    "mode-light.png": {
+      "sha256": "1d6cf493377175b11dcbd0936b0d1d58071c2a6740536887ad468b4367ef2285",
+      "source": "Final Preview real Android mode picker"
+    }
+  },
+  "download": {
+    "sha256": "b87c3668a8e23f01869fd4839d347d6b912d59d7223909f569174f2cfa46a705",
+    "bytes": 120287542,
+    "rangeVerified": true,
+    "externalDownloadVerified": true,
+    "verifiedAtUtc": "2026-11-16T22:49:53Z"
+  },
+  "mainRuntime": {
+    "apkSha256": "b87c3668a8e23f01869fd4839d347d6b912d59d7223909f569174f2cfa46a705",
+    "pidBefore": "2988",
+    "pidAfter": "2988",
+    "nativeLibraryRoutingAttempted": true,
+    "nativeLibraryEmptyFallbackObserved": true,
+    "nativeLibraryContentLoaded": false,
+    "sourceNativeExtensionArmTranslationMismatchObserved": true,
+    "sourceConfigurationChanged": false,
+    "modePreferencesChanged": false,
+    "returnedHome": true,
+    "systemUiBootDialogDismissed": true,
+    "realDomesticShelvesObserved": true
+  },
+  "limits": [
+    "API 31 x86_64 with ARM64 translation; no physical-TV performance acceptance",
+    "No new playback/native TLS pressure suite",
+    "Current configured source Go native extension has architecture mismatch in translation emulator; its category content did not load",
+    "Main screenshot automation selected the native source empty-state fallback; offline source routing and account folder regression passed"
+  ]
+}

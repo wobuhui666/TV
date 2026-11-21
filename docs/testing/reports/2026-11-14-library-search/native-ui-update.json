@@ -1,0 +1,102 @@
+{
+  "testedBaseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "sourceSha256": {
+    "app/src/leanback/java/com/fongmi/android/tv/ui/adapter/LibrarySearchAdapter.kt": "a00ea16a01daf87797eb9ffb041b280038505ebfe770179566c78beabcdab4f4",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/custom/LibraryViews.kt": "92b9db2f898085933c3d461ad7e752f4a468105548296eddd9892a00d6a0ffb6",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibrarySearchActivity.java": "68e105b3522a2c30e1469f095bebdbad4f46707d81769b74e0c5fcff4998e9a0",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java": "795ee5ca6532a94c4162bbdd5924c3f29abb7c3416aab7be1dd3080a6813ac02",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryImagesActivity.java": "d8fbcba98b63d2964f2adf938835db5b047eeb4eb70bece9ff90675e04e39dbc",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/ExperienceModeActivity.kt": "31c6e5cfa58dff9b017f16d79427cc6f0976059ec1d5a8b2f41474c9e2a1a485",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/custom/LibraryFrostedSurface.kt": "e78408f45c98bd08336842fbdb32e2fb4c00d3fcce04ee21e8ceb0fc29adda59",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/custom/LibraryHeroScrim.kt": "fddc146268f4159313af3dda808caff86e5a53f3a737194f93a43c12cb8d59e9",
+    "app/src/leanback/res/layout/activity_library_search.xml": "ebc526e7803a350e98bc69caf09d383f9b8966774ec29befacb1b5b34eb2f61f",
+    "app/src/leanback/res/layout/activity_library_detail.xml": "36f5a08d350729cb51c9c1a9ff7eb0809bc792b4b4204688b950e24027c53a8a",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java": "8cd99ba91c077b2c9dd149da82433db5c1e0769ec1a05d51fdd9acd8df36a4b7"
+  },
+  "reusedPosterLayout": "app/src/leanback/res/layout/adapter_rex_poster.xml",
+  "portraitAspectRatio": "2:3, integer pixel height = width * 3 / 2",
+  "landscapeAspectRatio": "16:9",
+  "returnControlsRemovedFrom": [
+    "LibrarySearchActivity",
+    "LibraryDetailActivity",
+    "LibraryImagesActivity"
+  ],
+  "appearancePreference": "Shared App setting: light, dark, system",
+  "themeChangePreservesActivity": true,
+  "compile": {
+    "kotlin": "passed",
+    "java": "passed",
+    "tasks": [
+      ":app:compileLeanbackArm64_v8aDebugKotlin",
+      ":app:compileLeanbackArm64_v8aDebugJavaWithJavac"
+    ],
+    "jdk": 21,
+    "compileSdk": "37.0",
+    "workers": 1,
+    "temporaryGradleHeapMiB": 1024
+  },
+  "androidUiTests": {
+    "sourceUpdated": true,
+    "compiled": false,
+    "executed": false,
+    "connectedAdbDeviceCount": 0,
+    "previousAndroidRunsCoverThisUpdate": false
+  },
+  "designPreviews": {
+    "source": "Local Chromium HTML render",
+    "actualAndroidScreenshots": false,
+    "artwork": "MobLand public TVmaze poster",
+    "statusTextAbbreviated": true,
+    "screenPixels": [
+      960,
+      540
+    ],
+    "cardPixelsBeforeFocus": [
+      159,
+      238
+    ],
+    "files": [
+      "images/search-light-design.png",
+      "images/search-dark-design.png"
+    ]
+  },
+  "apkAssembly": {
+    "status": "passed",
+    "gradleTask": ":app:assembleLeanbackArm64_v8aDebug",
+    "elapsedSeconds": 666,
+    "path": "app/build/outputs/apk/leanbackArm64_v8a/debug/app-leanback-arm64_v8a-debug.apk",
+    "sha256": "1a0174fdfad8ecc314788178555f942f67bb942d3e7468e34f923412e9998ac4",
+    "bytes": 116690115,
+    "applicationId": "com.fongmi.android.tv",
+    "versionName": "5.8.7",
+    "signatureVerified": true,
+    "arm64Libraries": 35,
+    "pythonAssetsRetained": true,
+    "tmdbApiKeyConfigured": false,
+    "usesDefaultLocalDebugSignature": true,
+    "deviceInstalled": false
+  },
+  "coverageLimits": [
+    "UI compile does not prove TV rendering or D-pad navigation.",
+    "No live search performance or real-device verification is included in this update."
+  ],
+  "apiKeyBuildOn20261115": {
+    "file": "/home/ubuntu/TV-concepts/TV-library-native-ui-apikey-20261115-arm64.apk",
+    "bytes": 117039779,
+    "sha256": "d1bf9628289c87ae315bac9c42924f988162c448a6f664197ce5bdb79636260d",
+    "applicationId": "com.fongmi.android.tv",
+    "versionName": "5.8.7",
+    "tmdbKeyConfigured": true,
+    "tmdbKeyApiVerifiedStatus": 200,
+    "tmdbKeyExactApkFieldVerified": true,
+    "signatureVerified": true,
+    "sameDefaultDebugSignatureAsPreviousLocalUiApk": true,
+    "differentFromOldPreviewSignature": true,
+    "arm64Libraries": 35,
+    "pythonAssetsRetained": true,
+    "apkInstalledOnDevice": false,
+    "buildSucceeded": true,
+    "verifiedAtDate": "2026-11-15"
+  },
+  "apiKeyInjectionMethod": "Build environment variable; key omitted from documentation and source control"
+}

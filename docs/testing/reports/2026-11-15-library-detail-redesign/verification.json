@@ -1,0 +1,1038 @@
+{
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+  "build": [
+    {
+      "stage": "detail-unit",
+      "exit": 0,
+      "seconds": 128,
+      "tasks": [
+        ":app:testLeanbackArm64_v8aDebugUnitTest",
+        "--tests",
+        "*TmdbLibraryApiTest",
+        "--tests",
+        "*LibraryEpisode*Test",
+        "--tests",
+        "*LibrarySourceMatcherPreparedTest",
+        "--tests",
+        "*LibraryPlaybackPrefetchTest"
+      ]
+    },
+    {
+      "stage": "detail-apk",
+      "exit": 0,
+      "seconds": 152,
+      "tasks": [
+        ":app:assembleLeanbackArm64_v8aDebug",
+        ":app:assembleLeanbackArm64_v8aPreview",
+        ":app:assembleLeanbackArm64_v8aPreviewAndroidTest",
+        "-PtvPreview"
+      ]
+    }
+  ],
+  "apks": {
+    "debug": {
+      "bytes": 119873846,
+      "sha256": "7caa3fdf3f330d80cc6bcfb3abf3961343ed6289d41a66bc4572bd968fd5daf9",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "nativeLibrariesMatchPreviousApk": true,
+      "scope": "Before the inherited TV text-color correction",
+      "sourceManifestSha256": "7a56ac6a5aab1b199c80b81066848923343a77465f1e2f7f43d7aeb8cd884a7e"
+    },
+    "preview": {
+      "bytes": 120029494,
+      "sha256": "ed6374f0ab0abb59a8ce40d4ecf3274cbedeb59bea3d5cc0a92d54c36e67917c",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "scope": "Before the inherited TV text-color correction",
+      "sourceManifestSha256": "7a56ac6a5aab1b199c80b81066848923343a77465f1e2f7f43d7aeb8cd884a7e"
+    },
+    "test": {
+      "bytes": 1640207,
+      "sha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 0,
+      "pythonAssetsRetained": false,
+      "testSourceSha256": "e75f185742deae7a24d995d22f8fbaebeb7fe689d354ed0376fa4b81a205d3f7",
+      "scope": "Bitmap-adapted instrumentation APK used for the 48-test pre-color Preview run"
+    },
+    "originalTest": {
+      "bytes": 1636111,
+      "sha256": "246ddfda16e0a9e35c67fbb58b765272f8ffc560a3b727835fd948ab721a3483",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 0,
+      "pythonAssetsRetained": false,
+      "scope": "Initial instrumentation APK before the loaded-bitmap test adaptation"
+    }
+  },
+  "unit": {
+    "tests": 46,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "classes": {
+      "TmdbLibraryApiTest": 15,
+      "LibraryPlaybackPrefetchTest": 8,
+      "LibraryEpisodeNavigationTest": 7,
+      "LibraryEpisodeSelectionTest": 12,
+      "LibrarySourceMatcherPreparedTest": 4
+    },
+    "scope": "Passed before the inherited TV text-color correction"
+  },
+  "android": {
+    "expectedUnique": 48,
+    "status": "passed",
+    "uniquePassed": 48,
+    "failures": 0,
+    "rawClassRun": "full.log",
+    "initialFailures": [
+      "SystemUI startup ANR obscured the app window; corrected device preflight and rerun",
+      "Decorative backdrop accessibility node was occluded by content; test-only actual bitmap inspection corrected"
+    ],
+    "finalTestApkSha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+    "scope": "48 complete tests passed before the inherited TV text-color correction",
+    "targetPreviewApkSha256": "ed6374f0ab0abb59a8ce40d4ecf3274cbedeb59bea3d5cc0a92d54c36e67917c",
+    "instrumentationSeconds": 416.499,
+    "wallSeconds": 418.9,
+    "evidenceArchive": {
+      "file": "native-ui-evidence.tar.gz",
+      "bytes": 33359265,
+      "files": 48,
+      "sha256": "9edbb6226dddf6339a51a9953afd551baf0b9077a8c15658cb23e1791eb74973"
+    }
+  },
+  "performance": {
+    "status": "failed",
+    "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+    "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+    "configuration": "https://9280.kstore.vip/aiwex.json",
+    "theme": "global light",
+    "environment": {
+      "api": 31,
+      "architecture": "x86_64 with ARM64 libndk_translation.so",
+      "renderer": "Skia OpenGL / SwiftShader",
+      "size": "1920x1080",
+      "densityDpi": 320,
+      "gpuHistogramSentinelMs": 4950,
+      "gpuHistogramUsable": false,
+      "physicalTv": false
+    },
+    "smoothnessAccepted": false,
+    "frameSamples": [
+      {
+        "validFrames": 118,
+        "budgetMs": 16.6667,
+        "medianMs": 424.551,
+        "p90Ms": 549.428,
+        "p95Ms": 568.282,
+        "maxMs": 700.26,
+        "overBudgetFrames": 118,
+        "overBudgetPercent": 100.0,
+        "androidTotalFrames": 118,
+        "androidJankyFrames": 118,
+        "name": "vertical-warm",
+        "measurement": "IntendedVsync to FrameCompleted, parsed using the API31 FrameTimelineVsyncId column"
+      },
+      {
+        "validFrames": 41,
+        "budgetMs": 16.6667,
+        "medianMs": 485.802,
+        "p90Ms": 568.65,
+        "p95Ms": 574.65,
+        "maxMs": 650.698,
+        "overBudgetFrames": 41,
+        "overBudgetPercent": 100.0,
+        "androidTotalFrames": 41,
+        "androidJankyFrames": 41,
+        "name": "horizontal-resource-warm",
+        "seconds": 18.19,
+        "initialAndFinalPid": "4328",
+        "physicalTv": false,
+        "measurement": "IntendedVsync to FrameCompleted, parsed using the API31 FrameTimelineVsyncId column"
+      }
+    ],
+    "sameProcessThreeCyclesCompleted": false,
+    "memorySamples": [
+      {
+        "name": "detail-cycle-1",
+        "pid": "4328",
+        "totalPssKb": 293048,
+        "javaHeapPssKb": 56300,
+        "nativeHeapPssKb": 82824,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 162,
+        "viewRootCount": 4,
+        "requestedActivity": "LibraryDetailActivity",
+        "actualForegroundActivity": "LibraryDetailActivity",
+        "validForSameProcessTrend": true
+      },
+      {
+        "name": "search-cycle-1",
+        "pid": "4328",
+        "totalPssKb": 268312,
+        "javaHeapPssKb": 44152,
+        "nativeHeapPssKb": 70408,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 162,
+        "viewRootCount": 4,
+        "requestedActivity": "LibrarySearchActivity",
+        "actualForegroundActivity": "LibrarySearchActivity",
+        "validForSameProcessTrend": true
+      },
+      {
+        "name": "detail-cycle-2",
+        "pid": "4328",
+        "totalPssKb": 312189,
+        "javaHeapPssKb": 59708,
+        "nativeHeapPssKb": 91944,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 130,
+        "viewRootCount": 4,
+        "requestedActivity": "LibraryDetailActivity",
+        "actualForegroundActivity": "LibraryDetailActivity",
+        "validForSameProcessTrend": true
+      },
+      {
+        "name": "search-cycle-2",
+        "pid": "4328",
+        "totalPssKb": 293317,
+        "javaHeapPssKb": 48708,
+        "nativeHeapPssKb": 84288,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 130,
+        "viewRootCount": 4,
+        "requestedActivity": "LibrarySearchActivity",
+        "actualForegroundActivity": "LibrarySearchActivity",
+        "validForSameProcessTrend": true
+      },
+      {
+        "name": "detail-cycle-3",
+        "pid": "7170",
+        "totalPssKb": 155980,
+        "javaHeapPssKb": 29084,
+        "nativeHeapPssKb": 27856,
+        "graphicsPssKb": 0,
+        "activityCount": 1,
+        "viewCount": 39,
+        "viewRootCount": 1,
+        "requestedActivity": "LibraryDetailActivity",
+        "actualForegroundActivity": "LibrarySearchActivity",
+        "validForSameProcessTrend": false
+      }
+    ],
+    "thirdCycleValidForTrend": false,
+    "leakFreedomEstablished": false,
+    "exitInfo": {
+      "reason": 5,
+      "description": "APP CRASH(NATIVE)",
+      "status": 6,
+      "signal": "SIGABRT",
+      "pid": 4328,
+      "thread": "FinalizerDaemon",
+      "threadId": 4354,
+      "timeUtc": "2026-11-15T20:54:31.355Z",
+      "abortMessage": "Scudo ERROR: corrupted chunk header",
+      "nativeCaller": "anonymous executable map0x7594d00f9000 offset0x1c99ee",
+      "rootCauseEstablished": false,
+      "candidateEvidence": {
+        "library": "libconscrypt_jni.so",
+        "register": "r13",
+        "tombstoneLine": 63,
+        "scope": "Memory-near register label references ARM64 Conscrypt JNI; the faulting call is anonymous and the corruption origin remains unlocated"
+      }
+    },
+    "phaseAttribution": {
+      "phases": {
+        "vertical-warm": {
+          "inputAndAnimationMs": {
+            "samples": 118,
+            "median": 13.596,
+            "p95": 81.53
+          },
+          "traversalMs": {
+            "samples": 118,
+            "median": 0.051,
+            "p95": 0.168
+          },
+          "recordDrawMs": {
+            "samples": 118,
+            "median": 3.945,
+            "p95": 29.897
+          },
+          "uiThroughRecordingMs": {
+            "samples": 118,
+            "median": 20.679,
+            "p95": 156.526
+          },
+          "renderThreadQueueMs": {
+            "samples": 118,
+            "median": 104.051,
+            "p95": 170.851
+          },
+          "issueDrawCommandsMs": {
+            "samples": 118,
+            "median": 3.95,
+            "p95": 32.948
+          },
+          "swapToFrameCompleteMs": {
+            "samples": 118,
+            "median": 163.795,
+            "p95": 206.039
+          },
+          "swapToGpuCompleteMs": {
+            "samples": 118,
+            "median": 161.447,
+            "p95": 205.912
+          },
+          "vsyncToCompleteMs": {
+            "samples": 118,
+            "median": 322.391,
+            "p95": 404.405
+          }
+        },
+        "horizontal-resource-warm": {
+          "inputAndAnimationMs": {
+            "samples": 41,
+            "median": 9.218,
+            "p95": 56.096
+          },
+          "traversalMs": {
+            "samples": 41,
+            "median": 0.047,
+            "p95": 0.088
+          },
+          "recordDrawMs": {
+            "samples": 41,
+            "median": 2.115,
+            "p95": 5.741
+          },
+          "uiThroughRecordingMs": {
+            "samples": 41,
+            "median": 10.406,
+            "p95": 67.647
+          },
+          "renderThreadQueueMs": {
+            "samples": 41,
+            "median": 139.521,
+            "p95": 184.916
+          },
+          "issueDrawCommandsMs": {
+            "samples": 41,
+            "median": 4.592,
+            "p95": 32.675
+          },
+          "swapToFrameCompleteMs": {
+            "samples": 41,
+            "median": 175.316,
+            "p95": 199.416
+          },
+          "swapToGpuCompleteMs": {
+            "samples": 41,
+            "median": 172.661,
+            "p95": 199.416
+          },
+          "vsyncToCompleteMs": {
+            "samples": 41,
+            "median": 355.601,
+            "p95": 417.365
+          }
+        }
+      },
+      "caveats": [
+        "No additional device sampling; computed from existing navigation CSV",
+        "FrameInterval/FrameStartTime labels in this emulator dump appear swapped, so neither is used",
+        "Swap-to-complete intervals are backend/wait proxies, not standalone physical GPU execution time",
+        "Software GPU histogram gives sentinel bucket4950ms; it is not used as hardware GPU performance"
+      ]
+    },
+    "scope": "One real work with warm D-Pad navigation; third same-process entry failed due native crash. No manual force-stop, process restart or explicit GC command sent by this script.",
+    "limits": [
+      "API31 x86_64 emulator with SwiftShader and ARM64 translation",
+      "All measured navigation frames exceeded60Hz budget; no smoothness acceptance",
+      "Short PSS measurements do not establish absence of leaks",
+      "Third new-process sample is excluded from same-process trend",
+      "Runtime logs include Explicit GC around diagnostic periods; memory dumps may affect finalization",
+      "Normal episode-focus link prefetch may run during navigation",
+      "No physical TV playback/performance or Cookie/login acceptance"
+    ],
+    "evidence": [
+      {
+        "file": "performance-summary.json",
+        "bytes": 8401,
+        "sha256": "2501886a6aa7146ba3003c94d3a340b97eec3f9873891c7f9d99dc1dca5d9645",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "vertical-warm-framestats.txt",
+        "bytes": 43183,
+        "sha256": "e2312bad970fc66d40c4fc31fdadb4de21d6ee9ba195be798a373601b9eaf914",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "horizontal-resource-warm-framestats.txt",
+        "bytes": 23901,
+        "sha256": "4d7cb7db634d534154374f48ea6913b3483c2a0d0917e9d22c3f82757e6d2c7f",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "frame-phase-attribution.json",
+        "bytes": 2474,
+        "sha256": "7c5a5204b4b2c65aa7d1224ff1065635186246594bb74f64f741d0bf35333d25",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "process-change-crash.txt",
+        "bytes": 2946,
+        "sha256": "a251522bb45065880587f3ce38eaf48100a5822e28dfdf3b8530581f106d7a4f",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "process-change-exit-info.txt",
+        "bytes": 3602,
+        "sha256": "b094b372cc4dfa9861aa3f14894eae900e9313fde91af59c33bd77488a7f5ba2",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "process-change-main-system.txt",
+        "bytes": 682742,
+        "sha256": "6e3f1bae9dbe21e476a0dda764dbeb1dca08f8e38226614925dce583c186a22b",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      },
+      {
+        "file": "native-crash-tombstone.txt",
+        "bytes": 2756581,
+        "sha256": "8c2fb39c9f56fb3dd5d11ab023a3b7315fc190556652685f7ddb2be5f135722a",
+        "storage": "Raw diagnostic evidence retained outside repository"
+      }
+    ],
+    "separateDiagnosticReference": "nativeTlsDiagnostic; original frame, crash and memory failure remain unchanged"
+  },
+  "online": {
+    "status": "passed",
+    "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+    "configuration": "https://9280.kstore.vip/aiwex.json",
+    "realNetworkResponses": true,
+    "offlineFixtureReplacement": false,
+    "title": "庆余年",
+    "themes": [
+      "dark",
+      "light"
+    ],
+    "checks": [
+      "Loaded real title logo, backdrop and episode images",
+      "Readable title/metadata/rating and white default-focus primary action",
+      "Global light appearance changes text and surfaces in place",
+      "Original-color company/network logos with cached outline; no tint blocks",
+      "D-pad access to episodes, resources, cast, genres, trailers, stills and similar works"
+    ],
+    "configurationEvidence": "online-performance/configuration-verified.json",
+    "navigationEvidence": "online-performance/deep-navigation.json",
+    "scope": "Final main APK UI and real metadata; no final-pass playback or Cookie submission"
+  },
+  "testAdaptation": {
+    "sourceFile": "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java",
+    "sourceSha256": "e75f185742deae7a24d995d22f8fbaebeb7fe689d354ed0376fa4b81a205d3f7",
+    "change": "Verify the actual loaded AndroidView bitmap; the decorative backdrop is occluded in the accessibility tree",
+    "build": [
+      {
+        "stage": "detail-test-adaptation",
+        "exit": 0,
+        "seconds": 71,
+        "tasks": [
+          ":app:assembleLeanbackArm64_v8aPreviewAndroidTest",
+          "-PtvPreview"
+        ]
+      }
+    ]
+  },
+  "preColorSourceManifestSha256": "7a56ac6a5aab1b199c80b81066848923343a77465f1e2f7f43d7aeb8cd884a7e",
+  "sourceManifestScope": "Final main APK with inherited text colors and cached original-color logo outline rendering",
+  "buildScope": "Initial successful builds before the inherited TV text-color correction",
+  "finalBuild": {
+    "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+    "results": [
+      {
+        "stage": "detail-company-apk",
+        "exit": 0,
+        "seconds": 144,
+        "tasks": [
+          ":app:assembleLeanbackArm64_v8aDebug"
+        ]
+      }
+    ],
+    "scope": "Main Debug APK only; Preview and instrumentation APK retained from c13 text-color revision"
+  },
+  "finalApks": {
+    "debug": {
+      "bytes": 119873846,
+      "sha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+      "zipIntegrityVerified": true,
+      "nativeLibrariesIdenticalToPreCompany": true,
+      "preCompanyApkSha256": "2c1d4fc49a45491f19f470a50de53626d5448622e2a89872eb4774f574ae019f",
+      "file": "TV-detail-redesign-20261115-arm64.apk"
+    },
+    "preview": {
+      "bytes": 120029494,
+      "sha256": "576e2fff256de62f670fde9010e03ab0b62a3ff261535efb4841bd0f93e09d46",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+      "scope": "Text-color revision retained for the previous focused Android regressions; not rebuilt for company-logo correction"
+    },
+    "test": {
+      "bytes": 1640207,
+      "sha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 0,
+      "pythonAssetsRetained": false,
+      "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+      "scope": "Text-color revision retained for the previous focused Android regressions; not rebuilt for company-logo correction",
+      "testSourceSha256": "e75f185742deae7a24d995d22f8fbaebeb7fe689d354ed0376fa4b81a205d3f7"
+    }
+  },
+  "finalFocusedAndroid": {
+    "stage": "final-color-focused",
+    "exit": 0,
+    "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest",
+    "expectedTests": 3,
+    "reportedTests": 3,
+    "passedCases": [
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#changingAppThemeWhileBrowsingKeepsEpisodeFocusAndScroll",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#lightDetailsFollowAppAppearanceAcrossTheImmersiveCanvas",
+      "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#movieUsesReferenceLayoutAndOnlyPlaysAfterRemoteConfirmation"
+    ],
+    "failedCases": [],
+    "seconds": 48.3,
+    "success": true,
+    "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+    "targetPreviewApkSha256": "576e2fff256de62f670fde9010e03ab0b62a3ff261535efb4841bd0f93e09d46",
+    "testApkSha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+    "scope": "Three existing test methods repeated on the final text-color-corrected Preview; no full 48-test rerun",
+    "evidence": "device-final-color/final-color-focused-result.json"
+  },
+  "lint": {
+    "runForThisRedesign": false,
+    "historicalErrorBaseline": 108,
+    "currentErrorComparisonAvailable": false,
+    "scope": "108 errors belong to earlier reports; this redesign did not rerun TV lint"
+  },
+  "publication": {
+    "sha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+    "bytes": 119873846,
+    "rangeVerified": true,
+    "externalDownloadVerified": true,
+    "verifiedAtUtc": "2026-11-15T20:38:03Z",
+    "headStatus": 200,
+    "rangeStatus": 206,
+    "scope": "Final main APK fully downloaded and hashed from the public HTTPS link; temporary access ticket is kept outside the repository"
+  },
+  "visualRevision": {
+    "change": "Provide TV LocalContentColor for fallback title and ratings outside clickable surfaces",
+    "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+    "buildStatus": "passed",
+    "finalDebugApkSha256": "2c1d4fc49a45491f19f470a50de53626d5448622e2a89872eb4774f574ae019f",
+    "focusedAndroidRetest": {
+      "status": "passed",
+      "reportedTests": 3,
+      "passedCases": [
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#changingAppThemeWhileBrowsingKeepsEpisodeFocusAndScroll",
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#lightDetailsFollowAppAppearanceAcrossTheImmersiveCanvas",
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#movieUsesReferenceLayoutAndOnlyPlaysAfterRemoteConfirmation"
+      ],
+      "seconds": 48.3
+    },
+    "finalVisualAcceptance": "passed for final main dark/light and deep sections",
+    "finalPreviewApkSha256": "576e2fff256de62f670fde9010e03ab0b62a3ff261535efb4841bd0f93e09d46",
+    "finalTestApkSha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+    "firstFrameTextContrastVerified": true,
+    "firstFrameEvidence": "online-performance/detail-first-frame.png",
+    "firstFrameScope": "Historical c13 first-frame check of real aiwex data, fallback title/rating contrast and default white play-button focus; final main-APK acceptance is recorded in online and images",
+    "scope": "c13 text-color revision retains its three focused regressions; 91cc logo revision validated with real main-APK UI",
+    "mainLogoCorrection": {
+      "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+      "status": "passed",
+      "change": "Remove unconditional company-logo tint and use cached alpha-rim TmdbLogoTransformation for hero/company artwork",
+      "latestMainApkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "finalVisualAcceptance": "passed"
+    }
+  },
+  "images": [
+    {
+      "path": "images/hero-dark.png",
+      "sourceFile": "online-performance/hero-dark.png",
+      "sha256": "c3ce2e3fca2cf91a54f88568e7ffb4336ec2e89adbd21a591a33f905005326b2",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    },
+    {
+      "path": "images/hero-light.png",
+      "sourceFile": "online-performance/hero-light.png",
+      "sha256": "ae132f7fb0f749b3d2c23e6410cb20e2a1268d09e0a287e38e0f62f39f91bf41",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    },
+    {
+      "path": "images/episodes-dark.png",
+      "sourceFile": "online-performance/episodes-dark.png",
+      "sha256": "d9be745dd76a3e833802fd1e05579d174d9ce6c3c5313904c57afbde1aae19bc",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    },
+    {
+      "path": "images/resources-dark.png",
+      "sourceFile": "online-performance/resources-dark.png",
+      "sha256": "d20aed7ee79d262abb77968bb5813a67723989c35358b156007a6d90a11583b6",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    },
+    {
+      "path": "images/company-logos-light.png",
+      "sourceFile": "online-performance/company-logos-light.png",
+      "sha256": "2227974a9df7adabbda635a661fb735e5b0cde5edff3fee5331624ad1c63d701",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    },
+    {
+      "path": "images/similar-dark.png",
+      "sourceFile": "online-performance/similar-dark.png",
+      "sha256": "b1970eee32e1faf17976ff1fa7ec38772ad2ec2860ddff0910e86390d771d62c",
+      "width": 1920,
+      "height": 1080,
+      "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+      "configuration": "https://9280.kstore.vip/aiwex.json",
+      "offlineFixtureReplacement": false,
+      "review": "Visually reviewed actual final APK; no credentials, account details or playback URL visible"
+    }
+  ],
+  "textColorSourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+  "textColorBuild": {
+    "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+    "results": [
+      {
+        "stage": "detail-final-apk",
+        "exit": 0,
+        "seconds": 235,
+        "tasks": [
+          ":app:assembleLeanbackArm64_v8aDebug",
+          ":app:assembleLeanbackArm64_v8aPreview",
+          ":app:assembleLeanbackArm64_v8aPreviewAndroidTest",
+          "-PtvPreview"
+        ]
+      }
+    ],
+    "scope": "Successful text-color revision build before the production/company logo correction"
+  },
+  "textColorApks": {
+    "debug": {
+      "bytes": 119873846,
+      "sha256": "2c1d4fc49a45491f19f470a50de53626d5448622e2a89872eb4774f574ae019f",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+      "scope": "Verified historical text-color revision, superseded for delivery by the final main-only logo correction",
+      "zipIntegrityVerified": true,
+      "nativeLibrariesIdenticalToPreColor": true,
+      "preColorApkSha256": "7caa3fdf3f330d80cc6bcfb3abf3961343ed6289d41a66bc4572bd968fd5daf9",
+      "file": "TV-detail-redesign-20261115-arm64.apk"
+    },
+    "preview": {
+      "bytes": 120029494,
+      "sha256": "576e2fff256de62f670fde9010e03ab0b62a3ff261535efb4841bd0f93e09d46",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 35,
+      "pythonAssetsRetained": true,
+      "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+      "scope": "Retained c13 text-color revision; not rebuilt for the main-only logo correction"
+    },
+    "test": {
+      "bytes": 1640207,
+      "sha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+      "signatureVerified": true,
+      "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+      "arm64Libraries": 0,
+      "pythonAssetsRetained": false,
+      "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+      "scope": "Retained c13 text-color revision; not rebuilt for the main-only logo correction",
+      "testSourceSha256": "e75f185742deae7a24d995d22f8fbaebeb7fe689d354ed0376fa4b81a205d3f7"
+    }
+  },
+  "nativeTlsDiagnostic": {
+    "status": "completed-observation",
+    "apkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+    "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc",
+    "originalEchEnabled": true,
+    "originalEchStoredEntry": false,
+    "diagnosticEchEnabled": false,
+    "initialDiagnosticPid": "7600",
+    "completedSameProcessCycles": 3,
+    "processChangedOrWrongForeground": false,
+    "observedNewNativeExit": false,
+    "records": [
+      {
+        "name": "ech-off-detail-1",
+        "pid": "7600",
+        "totalPssKb": 269185,
+        "javaHeapPssKb": 61852,
+        "nativeHeapPssKb": 96284,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibraryDetailActivity"
+      },
+      {
+        "name": "ech-off-search-1",
+        "pid": "7600",
+        "totalPssKb": 235197,
+        "javaHeapPssKb": 46552,
+        "nativeHeapPssKb": 73556,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibrarySearchActivity"
+      },
+      {
+        "name": "ech-off-detail-2",
+        "pid": "7600",
+        "totalPssKb": 276063,
+        "javaHeapPssKb": 56936,
+        "nativeHeapPssKb": 102944,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibraryDetailActivity"
+      },
+      {
+        "name": "ech-off-search-2",
+        "pid": "7600",
+        "totalPssKb": 281451,
+        "javaHeapPssKb": 54556,
+        "nativeHeapPssKb": 111112,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibrarySearchActivity"
+      },
+      {
+        "name": "ech-off-detail-3",
+        "pid": "7600",
+        "totalPssKb": 257299,
+        "javaHeapPssKb": 49336,
+        "nativeHeapPssKb": 91692,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibraryDetailActivity"
+      },
+      {
+        "name": "ech-off-search-3",
+        "pid": "7600",
+        "totalPssKb": 283471,
+        "javaHeapPssKb": 56140,
+        "nativeHeapPssKb": 111076,
+        "graphicsPssKb": 0,
+        "activityCount": 4,
+        "viewCount": 464,
+        "viewRootCount": 4,
+        "actualForegroundActivity": "LibrarySearchActivity"
+      }
+    ],
+    "rootCauseProven": false,
+    "defaultConfigurationStabilityEstablished": false,
+    "originalFailureSuperseded": false,
+    "scope": "Isolated ECH-off cold process; do not merge with original159frame measurements or default configuration failure",
+    "limits": [
+      "Different workload and isolated cold process; not an equivalent frame or long-term memory comparison",
+      "Supports a Native TLS/ECH candidate, without proving the source of memory corruption",
+      "Main source, APK and original performance failure are unchanged"
+    ],
+    "evidence": [
+      {
+        "file": "tls-diagnostic/ech-off-result.json",
+        "bytes": 3475,
+        "sha256": "e35d9fd43137fd9c3cf3f553b39bf776777d941deea34e861976d5d0b08a8850",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-original.json",
+        "bytes": 174,
+        "sha256": "8d6f36e962e5edf20bd13415a1b77965d34335954b7dc3cc83f5127f674dd6dc",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-disabled.json",
+        "bytes": 187,
+        "sha256": "0ba40b420e409af45c8a4f339a1c824f0f9cfaf8bd8c1a20cf5caa6d3970d2ef",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/exit-info-after-diagnostic.txt",
+        "bytes": 4099,
+        "sha256": "789c5d4f78c5e4f698d3d402d6b7678472685a44c288957605f53d6df9cfd6e7",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-1-memory.json",
+        "bytes": 340,
+        "sha256": "f81d554445c2d5d228a2b13fcba4030183d149bae9897b18c814679687015368",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-1-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "bfd0c732fdc79349c3aab5f17b11c6b75d2c81a7d3f9dbdb0745028953510ea0",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-1-memory.json",
+        "bytes": 340,
+        "sha256": "355c0cc71244dfcaaa005fa598d88bca3ca14b9d29b6ab4bf6d25f9e694e8a70",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-1-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "cde16df4a0f9353daeee06bde0f85501438362f24127492b8ddff2d8ff4c7d9c",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-2-memory.json",
+        "bytes": 341,
+        "sha256": "244a0ac09ff3321526d3f2fad3a8dcdca26d0582fa052a93bf198216ce1db43a",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-2-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "b98c122594ebddfd92e825c72a5934d97b9ee7196cc761e9df365fc3c9612483",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-2-memory.json",
+        "bytes": 341,
+        "sha256": "c04835e242e18434e3769e4e5caee9628a7304beb51a4dc7544e9fd2115694b5",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-2-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "16484cb9099146f4faacdd54025f5866ba3dc93660e3e8341c19111adec851d7",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-3-memory.json",
+        "bytes": 340,
+        "sha256": "8b4e8e7e0ce19b1c84144413a3a0e7f581b10a01025d2b205e1ae909d97a9d46",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-detail-3-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "6982397ecca2ca2f17abcb6c12436e312d39cf28627bb15e7003f0f578cfc418",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-3-memory.json",
+        "bytes": 341,
+        "sha256": "25e8a2869012503a95ca3f226b6523c9555ee5c6f4cf6b2f9e95dd029918ceed",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-off-search-3-meminfo.txt",
+        "bytes": 4421,
+        "sha256": "0f15fd24495565dbe3573fe20e6693de009887d9569606e931474323e556bc52",
+        "storage": "Raw isolated diagnosis retained outside repository"
+      },
+      {
+        "file": "tls-diagnostic/ech-restored.json",
+        "bytes": 452,
+        "sha256": "26d00a350952cb82a9cc29adcd1c66868ad8757deed509557e4102a11221ab94",
+        "storage": "Raw restoration verification retained outside repository"
+      }
+    ],
+    "settingsRestored": true,
+    "restoration": {
+      "restoredStoredEntryPresent": false,
+      "effectiveOriginalDefaultEnabled": true,
+      "deletedSingleKey": "ech_enabled",
+      "otherPreferenceValuesEquivalent": true,
+      "ownerModeUnchanged": true,
+      "selinuxContextUnchanged": true,
+      "coldRestartAfterRestoration": true,
+      "pidAfter": "8372",
+      "noAdditionalSamplingAfterRestore": true,
+      "actualForegroundActivity": "HomeActivity"
+    }
+  },
+  "appearanceRestoration": {
+    "originalUiMode": "dark",
+    "restoredThemeMode": 0,
+    "restoredLegacyLightFlag": false,
+    "echKeyRestoredToOriginalAbsence": true,
+    "otherPreferencesUnchanged": true,
+    "fileOwnerModeSelinuxUnchanged": true,
+    "returnedToHome": true,
+    "newPerformanceSamples": false,
+    "evidenceFile": "appearance-restored.json",
+    "evidenceSha256": "4d7cd56c51c078530de8811691eeb8436f2e6fa1307a0b576978b5d1e188ebe3"
+  },
+  "nativeReleaseCodeReview": {
+    "scope": "Read-only review; no production code changes after final logo correction",
+    "registerSymbol": "OPENSSL_sk_pop_free_ex+0x50",
+    "elfOffset": "0x224d40",
+    "library": "libconscrypt_jni.so",
+    "matchingBuildId": "e2076d61e40951f097b3d58b18ab7aeafe81eacb",
+    "limits": "Register evidence, not an unwound caller; exact object and root cause remain unresolved",
+    "pageReview": "No direct double-release path found in page cancellation or Glide bitmap ownership during static review"
+  },
+  "compactEpisodeRevision": {
+    "sourceManifestSha256": "842f8c33a639445c2f0f36977efa56e647bc1a30187cee87bb88240c26fdb82b",
+    "apks": {
+      "debug": {
+        "path": "/tmp/tv-build-20261115/episode-compact-debug-signed.apk",
+        "bytes": 119873846,
+        "sha256": "93a35b788ea626d6323e0d2ffe693ae0419c782e6100d7052011605c981d4b59",
+        "signatureVerified": true,
+        "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+        "sourceManifestSha256": "842f8c33a639445c2f0f36977efa56e647bc1a30187cee87bb88240c26fdb82b",
+        "sourceInputs": 1989,
+        "zipIntegrityVerified": true,
+        "arm64Libraries": 35,
+        "nativeLibrariesIdenticalToPreEpisodeCompact": true,
+        "preEpisodeCompactApkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+        "pythonAssetsRetained": true,
+        "pythonAssetCount": 20,
+        "pythonAssetsIdenticalToPreEpisodeCompact": true
+      },
+      "preview": {
+        "path": "/tmp/tv-build-20261115/episode-compact-preview-signed.apk",
+        "bytes": 120029494,
+        "sha256": "84bd161bd94309043acea14963e90bb6939eba4874445ea691da73c1ac6abc4b",
+        "signatureVerified": true,
+        "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+        "sourceManifestSha256": "842f8c33a639445c2f0f36977efa56e647bc1a30187cee87bb88240c26fdb82b",
+        "sourceInputs": 1989,
+        "zipIntegrityVerified": true,
+        "arm64Libraries": 35,
+        "nativeLibrariesIdenticalToPreEpisodeCompact": true,
+        "preEpisodeCompactApkSha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+        "pythonAssetsRetained": true,
+        "pythonAssetCount": 20,
+        "pythonAssetsIdenticalToPreEpisodeCompact": true
+      },
+      "test": {
+        "path": "/tmp/tv-build-20261115/detail-test-signed.apk",
+        "bytes": 1640207,
+        "sha256": "06622ce924e919285d583c7844e19659a6ee9e64b09b02dcfb75f10d85d867b9",
+        "signatureVerified": true,
+        "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+        "arm64Libraries": 0,
+        "pythonAssetsRetained": false,
+        "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+        "scope": "Retained instrumentation APK from previous text-color snapshot; not rebuilt for episode compact UI"
+      },
+      "retainedArtifacts": {
+        "debug": {
+          "path": "/tmp/tv-build-20261115/detail-debug-signed.apk",
+          "bytes": 119873846,
+          "sha256": "7f6446cf018a66afa02edeb0fef36afb39a81ed47ae41413510894436afb5043",
+          "signatureVerified": true,
+          "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+          "arm64Libraries": 35,
+          "pythonAssetsRetained": true,
+          "sourceManifestSha256": "91cc77117bc9a4c6209eb1d5f4fc2f790f9975ffe8392f6a930ba12d3c5bc2fc"
+        },
+        "preview": {
+          "path": "/tmp/tv-build-20261115/detail-preview-signed.apk",
+          "bytes": 120029494,
+          "sha256": "576e2fff256de62f670fde9010e03ab0b62a3ff261535efb4841bd0f93e09d46",
+          "signatureVerified": true,
+          "certificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+          "arm64Libraries": 35,
+          "pythonAssetsRetained": true,
+          "sourceManifestSha256": "c13c8e651ea201ef39014d1a79cd6342f9c4d5d29ec6f383b6c9894f7a365799",
+          "scope": "Text-color revision retained for the previous focused Android regressions; not rebuilt for company-logo correction"
+        }
+      }
+    },
+    "buildSeconds": 292,
+    "androidFocused": {
+      "stage": "episode-compact-focused",
+      "exit": 0,
+      "class": "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest",
+      "expectedTests": 4,
+      "reportedTests": 4,
+      "passedCases": [
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#rapidEpisodeNavigationPreservesFocusAndPlaybackTarget",
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#resumeStartsOnTheRangeContainingTheSavedEpisode",
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#seriesShowsEpisodeCardsAndResolvesTheExactSelectedEpisode",
+        "com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest#sourceOnlySeriesKeepsOriginalEpisodesWhenTmdbIsUnavailable"
+      ],
+      "failedCases": [],
+      "seconds": 64.8,
+      "success": true
+    },
+    "scope": "Episode appearance/data presentation only; no new nativeTLS, memory stability or frame acceptance",
+    "realScreenshotStatus": "passed",
+    "publicationStatus": "verified",
+    "image": {
+      "file": "images/episodes-compact-dark.png",
+      "sha256": "c7033e803ea294bc29fa0f9a7fd80b7967c968ec5d887a8285156f231030c06f",
+      "realWork": "庆余年2019",
+      "scope": "Real main93 episode focus and appearance; no native/performance re-acceptance"
+    },
+    "publication": {
+      "sha256": "93a35b788ea626d6323e0d2ffe693ae0419c782e6100d7052011605c981d4b59",
+      "bytes": 119873846,
+      "rangeVerified": true,
+      "externalDownloadVerified": true,
+      "verifiedAtUtc": "2026-11-15T23:02:08Z"
+    }
+  }
+}

@@ -10,6 +10,7 @@ import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.rex.DoubanBridgeClient;
 import com.fongmi.android.tv.api.rex.RexNowClient;
 import com.fongmi.android.tv.api.rex.RexTmdbClient;
+import com.fongmi.android.tv.api.rex.RexTmdbQuery;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.bean.Vod;
@@ -77,12 +78,12 @@ public final class RexFeedLoader {
         cancelDeadline();
         for (RexSection section : sections) {
             List<Vod> cached = cached(section.getKey());
-            if (cached != null) merged.put(section.getKey(), cached);
+            if (cached != null) merged.put(section.getKey(), capped(cached, section.getLimit()));
             else {
                 pending++;
                 missing.add(section);
                 // A partial refresh must not remove still-visible sections while they load.
-                if (previous.containsKey(section.getKey())) merged.put(section.getKey(), previous.get(section.getKey()));
+                if (previous.containsKey(section.getKey())) merged.put(section.getKey(), capped(previous.get(section.getKey()), section.getLimit()));
             }
         }
         if (pending == 0) {
@@ -100,7 +101,15 @@ public final class RexFeedLoader {
             deliver(request);
         };
         handler.postDelayed(deadline, DEADLINE_MS);
-        for (RexSection section : missing) fetch(section, request);
+        Map<String, List<RexSection>> regional = new LinkedHashMap<>();
+        for (RexSection section : missing) {
+            if (section.getSource() == RexSection.Source.REXNOW_REGIONAL) {
+                // The domestic shelf and Chinese spotlight share one current feed.
+                String key = section.getRegion() + ":" + section.getCategory();
+                regional.computeIfAbsent(key, ignored -> new ArrayList<>()).add(section);
+            } else fetch(section, request);
+        }
+        for (List<RexSection> group : regional.values()) fetchRegional(group, request);
     }
 
     public void close() {
@@ -139,7 +148,7 @@ public final class RexFeedLoader {
                     accept(section, List.of(), request);
                 }
             });
-            case REXNOW_REGIONAL -> RexNowClient.fetchRegional(section.getRegion(), section.getCategory(), tag, feedListener);
+            case REXNOW_REGIONAL -> fetchRegional(List.of(section), request);
             case REXNOW_DOUBAN -> RexNowClient.fetchDouban(section.getFeedCategory(), tag, feedListener);
             case REXNOW_ANIME -> RexNowClient.fetchAnime(tag, new RexNowClient.WeeklyListener() {
                 @Override
@@ -160,6 +169,39 @@ public final class RexFeedLoader {
             });
             case BRIDGE_CATALOG -> fetchBridge(section, request);
         }
+    }
+
+    private void fetchRegional(List<RexSection> group, int request) {
+        RexSection section = group.get(0);
+        RexNowClient.fetchRegional(section.getRegion(), section.getCategory(), tag, new RexNowClient.ItemsListener() {
+            @Override public void onSuccess(List<Vod> items) {
+                if (!isCurrent(request)) return;
+                if (items.isEmpty()) fetchRegionalFallback(group, request);
+                else acceptRegional(group, items, request);
+            }
+
+            @Override public void onError(Exception error) {
+                fetchRegionalFallback(group, request);
+            }
+        });
+    }
+
+    private void fetchRegionalFallback(List<RexSection> group, int request) {
+        if (!isCurrent(request)) return;
+        RexSection section = group.get(0);
+        RexTmdbQuery.Query query = RexTmdbQuery.regionalTv(section.getRegion(), section.getCategory());
+        if (query == null) {
+            acceptRegional(group, List.of(), request);
+            return;
+        }
+        RexTmdbClient.fetch(query, BuildConfig.TMDB_API_KEY, tag, new RexTmdbClient.ItemsListener() {
+            @Override public void onSuccess(List<Vod> items) { acceptRegional(group, items, request); }
+            @Override public void onError(Exception error) { acceptRegional(group, List.of(), request); }
+        });
+    }
+
+    private void acceptRegional(List<RexSection> group, List<Vod> items, int request) {
+        for (RexSection section : group) accept(section, items, request);
     }
 
     /** 云桥：sk 为空或 401/失败时回退 rexnow 豆瓣 feed（按栏目媒体类型过滤）。 */
@@ -233,18 +275,19 @@ public final class RexFeedLoader {
             return;
         }
         if (closed || done || request != generation) return;
-        List<Vod> capped = items.isEmpty()
-                ? List.of()
-                : new ArrayList<>(items.subList(0, Math.min(items.size(), section.getLimit())));
-        merged.put(section.getKey(), capped);
-        if (!capped.isEmpty()) CACHE.put(section.getKey(), new CacheEntry(capped));
+        List<Vod> preview = capped(items, section.getLimit());
+        merged.put(section.getKey(), preview);
+        // Cache the regular page independently of a compact home's smaller visible preview.
+        // The same key is also used by classic home and discovery after a mode switch.
+        if (!items.isEmpty()) CACHE.put(section.getKey(), new CacheEntry(capped(items,
+                Math.max(RexSection.DEFAULT_LIMIT, section.getLimit()))));
         pending = Math.max(0, pending - 1);
         if (pending == 0) {
             done = true;
             cancelDeadline();
             cancelDelivery();
             deliver(request);
-        } else if (!capped.isEmpty() && delivery == null) {
+        } else if (!preview.isEmpty() && delivery == null) {
             // Several feeds often finish together; publish one bounded UI update.
             delivery = () -> {
                 delivery = null;
@@ -262,6 +305,10 @@ public final class RexFeedLoader {
             if (items != null && !items.isEmpty()) results.add(new RexFeedResult(section, items));
         }
         if (listener != null) listener.onResults(results);
+    }
+
+    private static List<Vod> capped(List<Vod> items, int limit) {
+        return items.isEmpty() ? List.of() : new ArrayList<>(items.subList(0, Math.min(items.size(), limit)));
     }
 
     private void cancelDeadline() {

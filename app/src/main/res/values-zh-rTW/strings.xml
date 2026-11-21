@@ -263,6 +263,7 @@
     <string name="error_dolby_fallback">已切換杜比視界平台解碼器</string>
     <string name="error_tunnel_fallback">隧道播放失敗，已關閉並重試</string>
     <string name="error_decode_fallback">硬解失敗，已切換軟解</string>
+    <string name="error_decode_track_fallback">解碼失敗，已將出錯的軌道切換為軟解</string>
     <string name="error_audio_track_reselect">本機無法解碼所選音軌，已切換可播放音軌</string>
     <string name="error_audio_track_fallback">本機無法解碼該音軌，已切換 MPV 內核</string>
     <string name="error_audio_track_undecodable">本機無法解碼該音軌，可在設定中改用 MPV 內核</string>

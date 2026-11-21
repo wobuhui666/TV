@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calendar_title">追更日曆</string>
+    <string name="calendar_nav">日曆</string>
+    <string name="calendar_public">公开排期</string>
+    <string name="calendar_following">我的追更</string>
+    <string name="calendar_previous_week">上一週</string>
+    <string name="calendar_next_week">下一週</string>
+    <string name="calendar_today">今天</string>
+    <string name="calendar_all_keeps">全部收藏</string>
+    <string name="calendar_retry">重試</string>
+    <string name="calendar_load_more">載入更多</string>
+    <string name="calendar_loading">正在載入排期…</string>
+    <string name="calendar_empty_day">當天暫無排期</string>
+    <string name="calendar_empty_following">暫無追劇</string>
+    <string name="calendar_load_failed">排期載入失敗</string>
+    <string name="calendar_partial_failed">部分排期載入失敗</string>
+    <string name="calendar_monday">週一</string>
+    <string name="calendar_tuesday">週二</string>
+    <string name="calendar_wednesday">週三</string>
+    <string name="calendar_thursday">週四</string>
+    <string name="calendar_friday">週五</string>
+    <string name="calendar_saturday">週六</string>
+    <string name="calendar_sunday">週日</string>
+    <string name="calendar_status_aired">已播出</string>
+    <string name="calendar_status_today">今日播出</string>
+    <string name="calendar_status_upcoming">待播出</string>
+    <string name="calendar_runtime_minutes">%1$d 分鐘</string>
+</resources>

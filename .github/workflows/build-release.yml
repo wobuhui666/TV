@@ -202,7 +202,7 @@ jobs:
 
             | 文件 | 包名 | 说明 |
             | --- | --- | --- |
-            | `leanback-<abi>.apk` | `com.fongmi.android.tv` | 标准版，可覆盖升级 FongMi/TV 与本项目旧版，支持应用内更新。 |
+            | `leanback-<abi>.apk` | `com.fongmi.android.tv` | 标准版，与 FongMi/TV 同包名，但签名不同，无法覆盖安装；可覆盖升级本项目相同签名的旧版，支持应用内更新。 |
             | `leanback-<abi>-coexist.apk` | `com.wobuhui666.android.tv` | 共存版，可与 FongMi/TV 同时安装，桌面名不变；数据彼此独立，支持应用内更新（读取 `leanback-coexist.json`）。 |
           files: |
             dist/*

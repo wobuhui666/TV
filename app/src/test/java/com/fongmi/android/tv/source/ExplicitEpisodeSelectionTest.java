@@ -95,6 +95,98 @@ public class ExplicitEpisodeSelectionTest {
         assertNull(select(vod(line), "", "line"));
     }
 
+    @Test
+    public void shouldPreserveTheExactLibraryUrlBeforeTryingTheOriginalName() {
+        Episode selected = Episode.create("renamed", "exact-url");
+        Vod source = vod(flag("line", Episode.create("第4集", "refreshed-url"), selected));
+
+        assertSame(selected, SmartSourceSelector.selectLibraryEpisode(source, "exact-url", "第4集", "line").episode());
+    }
+
+    @Test
+    public void shouldFindRefreshedSignedUrlsByTheExactNameOnTheSelectedLine() {
+        Episode selected = Episode.create("第4集", "vod_id=42&mobile_time=200&_client_ts=600||1080@720");
+        Vod source = vod(flag("line", Episode.create("第1集", "first"), selected));
+
+        assertSame(selected, SmartSourceSelector.selectLibraryEpisode(source,
+                "vod_id=42&mobile_time=100&_client_ts=500||1080@720", "第4集", "line").episode());
+    }
+
+    @Test
+    public void shouldRetainManualCollectionsAndVersionsAfterTheirUrlsRefresh() {
+        for (String name : List.of("第4-5集合并", "导演剪辑版", "上部", "04")) {
+            Episode selected = Episode.create(name, "new-url");
+            selected.setGeneratedLabel(true);
+            assertSame(name, selected, SmartSourceSelector.selectLibraryEpisode(
+                    vod(flag("line", selected)), "expired-url", name, "line").episode());
+        }
+    }
+
+    @Test
+    public void shouldRejectRefreshedNamesWithDifferentUrlsOnTheSelectedLine() {
+        Vod source = vod(flag("line", Episode.create("第4集", "release-a"), Episode.create("第4集", "release-b")));
+
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "第4集", "line"));
+    }
+
+    @Test
+    public void shouldAllowRepeatedNamesWhenTheyIdentifyTheSameRefreshedUrl() {
+        Episode selected = Episode.create("第4集", "shared");
+        Vod source = vod(flag("line", selected, Episode.create("第4集", "shared")));
+
+        assertSame(selected, SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "第4集", "line").episode());
+    }
+
+    @Test
+    public void shouldKeepLibraryUrlAndNameSelectionWithinTheExplicitLine() {
+        Vod source = vod(flag("selected", Episode.create("第1集", "first")),
+                flag("other", Episode.create("第4集", "exact-url")));
+
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "exact-url", "第4集", "selected"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "exact-url", "第4集", "removed"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "第4集", "selected"));
+    }
+
+    @Test
+    public void shouldRequireAnExplicitLineForLibraryNameFallback() {
+        Episode selected = Episode.create("第4集", "exact-url");
+        Vod source = vod(flag("line", selected));
+
+        assertSame(selected, SmartSourceSelector.selectLibraryEpisode(source, "exact-url", "第4集", "").episode());
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "第4集", ""));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "第4集", null));
+    }
+
+    @Test
+    public void shouldNotInterpretLibraryUrlsAsNamesOrCoordinates() {
+        Vod source = vod(flag("line", Episode.create("old-url", "different-url"), Episode.create("第4集", "fourth")));
+
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "old-url", "missing-name", "line"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "4", "", "line"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "EP04", "line"));
+    }
+
+    @Test
+    public void shouldNotCompareLibraryUrlsAfterRemovingTheirParameters() {
+        Vod source = vod(flag("line", Episode.create("第1集", "https://example.test/play?id=1")));
+
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "https://example.test/play?id=4", "第4集", "line"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "expired-url", "", "line"));
+    }
+
+    @Test
+    public void shouldKeepTheChosenLibraryEpisodeWhenSeveralNamesShareOneUrl() {
+        Episode selected = Episode.create("第4集", "shared-url");
+        Vod source = vod(flag("line", Episode.create("第1集", "shared-url"),
+                Episode.create("第2集", "shared-url"), selected));
+
+        assertSame(selected, SmartSourceSelector.selectLibraryEpisode(source, "shared-url", "第4集", "line").episode());
+        assertSame(source.getFlags().get(0).getEpisodes().get(1),
+                SmartSourceSelector.selectLibraryEpisode(source, "shared-url", "第2集", "line").episode());
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "shared-url", "第3集", "line"));
+        assertNull(SmartSourceSelector.selectLibraryEpisode(source, "shared-url", "", "line"));
+    }
+
     private SmartSourceSelector.FlagSelection select(Vod source, String value, String preferred) {
         return SmartSourceSelector.selectExplicitEpisode(source, value, preferred);
     }

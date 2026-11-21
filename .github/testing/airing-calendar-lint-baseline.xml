@@ -1,0 +1,327 @@
+<?xml version='1.0' encoding='utf-8'?>
+<issues format="6" by="lint 9.0.1" baselineDate="2026-11-15" baselineHead="6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec" baselineWorkspace="Includes uncommitted working-tree changes; not a clean commit baseline">
+    <issue id="MissingLeanbackLauncher" severity="Error" message="Expecting an activity to have `android.intent.category.LEANBACK_LAUNCHER` intent filter">
+        <location file="app/src/leanbackDebug/AndroidManifest.xml" />
+    </issue>
+    <issue id="ImpliedTouchscreenHardware" severity="Error" message="Hardware feature `android.hardware.touchscreen` not explicitly marked as optional ">
+        <location file="app/src/leanbackDebug/AndroidManifest.xml" />
+    </issue>
+    <issue id="MissingLeanbackSupport" severity="Error" message="Expecting `&lt;uses-feature android:name=&quot;android.software.leanback&quot; android:required=&quot;false&quot; /&gt;` tag">
+        <location file="app/src/leanbackDebug/AndroidManifest.xml" />
+    </issue>
+    <issue id="NewApi" severity="Error" message="Call requires API level 26 (current min is 24): `java.util.zip.ZipFile#stream`">
+        <location file="app/src/main/java/com/fongmi/android/tv/update/UpdateApkValidator.java" />
+    </issue>
+    <issue id="RestrictedApi" severity="Error" message="BaseGridView.FOCUS_SCROLL_ITEM can only be accessed from within the same library group prefix (referenced groupId=`androidx.leanback` with prefix androidx from groupId=`TV`)">
+        <location file="app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeController.java" />
+    </issue>
+    <issue id="RestrictedApi" severity="Error" message="BaseGridView.FOCUS_SCROLL_ITEM can only be accessed from within the same library group prefix (referenced groupId=`androidx.leanback` with prefix androidx from groupId=`TV`)">
+        <location file="app/src/leanback/java/com/fongmi/android/tv/ui/presenter/RexSectionCardPresenter.java" />
+    </issue>
+    <issue id="RestrictedApi" severity="Error" message="BaseGridView.setFocusScrollStrategy can only be called from within the same library group prefix (referenced groupId=`androidx.leanback` with prefix androidx from groupId=`TV`)">
+        <location file="app/src/leanback/java/com/fongmi/android/tv/ui/presenter/RexSectionCardPresenter.java" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;setting_syncplay&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;setting_webdav&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;setting_sync_not_configured&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;setting_sync_configured&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;setting_sync_last_success&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_tmdb_recovery&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_section&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_search_filter&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_filter_original&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_filter_relevant&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_filter_strict&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_detail_sources&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_smart_sources&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_restore&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_restored&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_settings_help&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_open&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_smart&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_order&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_ranked&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_idle&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_progress&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_complete&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_deadline&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_empty&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_no_sites&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_search&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_retry&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_close&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_ready&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_check&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_unverified&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_season&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_all_seasons&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_sources_season_number&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_experience.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_keep_shelf&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_history_actions&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_hero_rotation&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_hero_rotation_original&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_hero_rotation_focus&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;browse_hero_rotation_manual&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_browse_usability.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_hint&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_all&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_movies&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_tv&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_top&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_loading&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_empty&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_empty_hint&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_ready&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_retry&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_more&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_settings&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_trending&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_movie_shelf&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_tv_shelf&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_playing_shelf&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_series_shelf&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_top_movies&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_wall_top_series&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_home_wall.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_keep_shelf_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_keep_shelf.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_keep_shelf_more&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_keep_shelf.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_keep_shelf_failed&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_keep_shelf.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;home_keep_shelf_retry&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_keep_shelf.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_legacy&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_related&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_strict&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_status&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;search_relevance_empty&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/main/res/values/strings_search_relevance.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_short&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_hint&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_add&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_add_title&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_add_selected&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_reset&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_save&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_cancel&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_up&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_down&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_remove&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_up_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_down_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_first_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_last_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_remove_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_rank_description&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_empty&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_no_sites&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_default_status&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_status&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_limit&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_config_changed&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_default&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_count&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_button_default&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_button_count&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+    <issue id="MissingTranslation" severity="Error" message="&quot;poster_source_priority_site&quot; is not translated in &quot;zh&quot; (Chinese)">
+        <location file="app/src/leanback/res/values/strings_source_priority.xml" />
+    </issue>
+</issues>

@@ -19,6 +19,20 @@ Release builds require JDK 21, Python 3.10, Android SDK 37, signing values in `l
 
 Follow the existing Android Studio style: 4-space indentation for Java/Kotlin/XML, Java package names under `com.fongmi.android.tv`, and descriptive class names such as `VodPlaybackController` or `LiveNavigationPolicy`. Keep shared behavior in `app/src/main/`; place UI-specific code in the matching `leanback` or `mobile` source set. Prefer small, single-purpose classes and avoid adding new abstractions unless they remove real duplication.
 
+Prefer Kotlin for new Android code. Keep changes to existing Java files in Java unless migration provides a clear benefit, and migrate incrementally as needed.
+
+Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+
+## Documentation Guidelines
+
+- Prefer updating existing documentation. Keep one primary entry per topic and avoid duplicate task summaries, plans, or explanations.
+- Keep project READMEs, build guides, and agent instructions at the repository root. Place feature, interface, and implementation documentation in `docs/`.
+- Use descriptive topic names for new documents. When adding, moving, or removing documents, update `docs/README.md` and check affected relative links.
+- Store test reports in `docs/testing/reports/YYYY-MM-DD-topic/`. Record the tested commit, environment, results, and coverage limits.
+- Move completed plans and outdated material to `docs/archive/`, clearly mark their historical status, and keep current documentation accurate.
+- Update relevant documentation when behavior, interfaces, or configuration changes; keep Chinese and English READMEs in sync when affected. Keep writing concise and focused on usage and necessary constraints.
+- Keep `docs/` under normal Git version control without ignoring the directory. Commit public documentation, verification summaries, and necessary images; keep generated artifacts, credentials, and raw private logs outside the documentation tree.
+
 ## Testing Guidelines
 
 Tests use JUnit4 under `app/src/test/java`. Name test classes `*Test` and test methods with clear behavior statements, e.g. `shouldRejectImageMimeFormat`. Add or update tests when changing parsing, playback guard logic, database policies, or fallback behavior. Run the closest variant test before broader builds.

@@ -12,6 +12,8 @@ import com.github.catvod.net.interceptor.AuthInterceptor;
 import com.github.catvod.net.interceptor.RequestInterceptor;
 import com.github.catvod.net.interceptor.ResponseInterceptor;
 
+import org.conscrypt.Conscrypt;
+
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -300,7 +302,7 @@ public class OkHttp {
 
     private static SSLContext getSSLContext(X509TrustManager trustManager) {
         try {
-            SSLContext context = SSLContext.getInstance("TLS");
+            SSLContext context = SSLContext.getInstance("TLS", Conscrypt.newProvider());
             context.init(null, new TrustManager[]{trustManager}, new SecureRandom());
             return context;
         } catch (Exception e) {

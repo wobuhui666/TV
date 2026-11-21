@@ -133,6 +133,56 @@ public final class RexTmdbQuery {
         return new Query(type + "/top_rated", type, new LinkedHashMap<>());
     }
 
+    /** Home's domestic selection uses production country, independent of translated titles. */
+    public static Query chinese(String mediaType, boolean topRated) {
+        return chinese(mediaType, topRated, System.currentTimeMillis());
+    }
+
+    static Query chinese(String mediaType, boolean topRated, long now) {
+        String type = TV.equals(mediaType) ? TV : MOVIE;
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("with_origin_country", "CN");
+        params.put("include_adult", "false");
+        params.put("sort_by", topRated ? "vote_average.desc" : "popularity.desc");
+        if (topRated) params.put("vote_count.gte", "100");
+        else if (MOVIE.equals(type)) {
+            params.put("primary_release_date.gte", RexFeedDate.dashed(now - 365L * 24 * 60 * 60 * 1000));
+            params.put("primary_release_date.lte", RexFeedDate.dashed(now));
+        } else recentAirDates(params, now);
+        return new Query("discover/" + type, type, params);
+    }
+
+    /** Regional feed fallback keeps the same region and current broadcasts, including new seasons. */
+    @Nullable
+    public static Query regionalTv(String region, String category) {
+        return regionalTv(region, category, System.currentTimeMillis());
+    }
+
+    @Nullable
+    static Query regionalTv(String region, String category, long now) {
+        String country = switch (region) {
+            case "chinese" -> "CN";
+            case "korean" -> "KR";
+            default -> "";
+        };
+        if (country.isEmpty()) return null;
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("with_origin_country", country);
+        params.put("include_adult", "false");
+        params.put("sort_by", "popularity.desc");
+        if ("variety".equals(category)) params.put("with_genres", "10764|10767");
+        else params.put("without_genres", "10764,10767");
+        recentAirDates(params, now);
+        return new Query("discover/tv", TV, params);
+    }
+
+    private static void recentAirDates(Map<String, String> params, long now) {
+        params.put("air_date.gte", RexFeedDate.dashed(now - 30L * 24 * 60 * 60 * 1000));
+        params.put("air_date.lte", RexFeedDate.dashed(now));
+        params.put("include_null_first_air_dates", "false");
+        params.put("timezone", "Asia/Shanghai");
+    }
+
     public static Query nowPlaying() {
         return new Query("movie/now_playing", MOVIE, new LinkedHashMap<>());
     }

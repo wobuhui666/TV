@@ -1,5 +1,7 @@
 package com.fongmi.android.tv.ui.custom;
 
+import android.text.Editable;
+
 import com.fongmi.android.tv.R;
 import com.fongmi.android.tv.databinding.ActivitySearchBinding;
 import com.fongmi.android.tv.ui.adapter.KeyboardAdapter;
@@ -28,24 +30,29 @@ public class CustomKeyboard implements KeyboardAdapter.OnClickListener {
 
     @Override
     public void onTextClick(String text) {
-        StringBuilder sb = new StringBuilder(binding.keyword.getText().toString());
-        int cursor = binding.keyword.getSelectionStart();
-        if (binding.keyword.length() > 19) return;
-        sb.insert(cursor, text);
-        binding.keyword.setText(sb.toString());
-        binding.keyword.setSelection(cursor + 1);
+        Editable editable = binding.keyword.getText();
+        if (editable == null || text == null || text.isEmpty() || editable.length() > 19) return;
+        int cursor = cursor(editable);
+        String addition = text.substring(0, Math.min(text.length(), 20 - editable.length()));
+        int previousLength = editable.length();
+        binding.keyword.beginBatchEdit();
+        try {
+            editable.insert(cursor, addition);
+            binding.keyword.setSelection(Math.min(editable.length(), cursor + editable.length() - previousLength));
+        } finally {
+            binding.keyword.endBatchEdit();
+        }
     }
 
     @Override
     public void onIconClick(int resId) {
-        StringBuilder sb = new StringBuilder(binding.keyword.getText().toString());
         int cursor = binding.keyword.getSelectionStart();
         if (resId == R.drawable.ic_setting_home) callback.showDialog();
         else if (resId == R.drawable.ic_keyboard_remote) callback.onRemote();
         else if (resId == R.drawable.ic_keyboard_search) callback.onSearch();
         else if (resId == R.drawable.ic_keyboard_left) onMoveLeft(cursor);
         else if (resId == R.drawable.ic_keyboard_right) onMoveRight(cursor);
-        else if (resId == R.drawable.ic_keyboard_back) onBackspace(sb, cursor);
+        else if (resId == R.drawable.ic_keyboard_back) onBackspace();
         else if (resId == R.drawable.ic_keyboard) adapter.toggle();
     }
 
@@ -57,17 +64,39 @@ public class CustomKeyboard implements KeyboardAdapter.OnClickListener {
         binding.keyword.setSelection(++cursor > binding.keyword.length() ? binding.keyword.length() : cursor);
     }
 
-    private void onBackspace(StringBuilder sb, int cursor) {
+    private int cursor(Editable editable) {
+        int selected = binding.keyword.getSelectionStart();
+        return selected < 0 ? editable.length() : Math.min(selected, editable.length());
+    }
+
+    private void onBackspace() {
+        Editable editable = binding.keyword.getText();
+        if (editable == null) return;
+        int cursor = cursor(editable);
         if (cursor <= 0) return;
-        sb.deleteCharAt(cursor - 1);
-        binding.keyword.setText(sb.toString());
-        binding.keyword.setSelection(cursor - 1);
+        int previous = Character.offsetByCodePoints(editable, cursor, -1);
+        binding.keyword.beginBatchEdit();
+        try {
+            editable.delete(previous, cursor);
+            binding.keyword.setSelection(Math.min(previous, editable.length()));
+        } finally {
+            binding.keyword.endBatchEdit();
+        }
     }
 
     @Override
     public boolean onLongClick(int resId) {
         if (resId != R.drawable.ic_keyboard_back) return false;
-        binding.keyword.setText("");
+        Editable editable = binding.keyword.getText();
+        if (editable != null && editable.length() > 0) {
+            binding.keyword.beginBatchEdit();
+            try {
+                editable.clear();
+                binding.keyword.setSelection(0);
+            } finally {
+                binding.keyword.endBatchEdit();
+            }
+        }
         return true;
     }
 

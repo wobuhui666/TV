@@ -39,6 +39,12 @@ public class Word {
         @SerializedName(value = "title", alternate = "name")
         private String title;
 
+        public static Data fromTitle(String title) {
+            Data data = new Data();
+            data.title = title;
+            return data;
+        }
+
         public String getTitle() {
             return TextUtils.isEmpty(title) ? "" : title;
         }

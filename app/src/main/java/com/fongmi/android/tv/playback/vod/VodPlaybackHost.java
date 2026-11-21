@@ -20,6 +20,12 @@ public interface VodPlaybackHost {
 
     default void clearPreload() {}
 
+    default Result takePrefetchedPlayer(VodPlayRequest request) { return null; }
+
+    default Vod takePreparedDetail() { return null; }
+
+    default boolean strictLibraryEpisodeNavigation() { return false; }
+
     default boolean canSkipCommunitySegment() { return false; }
 
     default void skipCommunitySegment(long positionMs) {}
@@ -39,6 +45,8 @@ public interface VodPlaybackHost {
     String getVodMark();
 
     default String getVodPlayId() { return ""; }
+
+    default String getVodPlayName() { return ""; }
 
     default void clearVodPlayId() {}
 

@@ -7,7 +7,8 @@
 | 主题 | 文档 |
 | --- | --- |
 | 配置字段与示例 | [CONFIG](CONFIG.md) |
-| 原生海报墙、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
+| 原生海报墙、追更日历、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
+| TV 媒体库详情与遥控器操作 | [使用说明](../LIBRARY_EXPERIENCE.md) |
 | 诊断、缓存与播放工具 | [使用说明](practical-improvements.md) |
 | OTA 更新与云控 | [使用说明](ota-updates.md) |
 | 直播与节目单 | [LIVE](LIVE.md) |
@@ -28,10 +29,22 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| 媒体库片源兼容性 | [100源对照、瓜子实播与字段／选集修复](testing/reports/2026-11-19-library-source-compatibility/README.md) |
+| 媒体库首页大卡与新剧数据 | [Rex 当前榜单、栏目导航与回退验证](testing/reports/2026-11-19-library-home/README.md) |
+| Instabox Android | [ARM64 APK 安装、界面导航与实例兼容范围](testing/reports/2026-11-15-instabox-android/README.md) |
+| 直播线路与首页触摸滚动 | [专项测试、构建结果与设备覆盖限制](testing/reports/2026-11-15-live-lines-touch-scroll/README.md) |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
+| 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |
+| 媒体库与全屏播放器打磨 | [真实片源、画面与遥控器验证](testing/reports/2026-11-15-library-polish/README.md) |
+| 追更日历与媒体库追剧 | [悬浮日期栏、GHA 验证与真实截图](testing/reports/2026-11-20-calendar-floating-dates/README.md) |
+| 媒体库详情对齐与原生稳定性 | [当前 provider 修订、默认 ECH 验收与历史失败](testing/reports/2026-11-16-library-alignment-stability/README.md) |
+| Compose TV 媒体库详情 | [详情重做、验证结果与性能限制](testing/reports/2026-11-15-library-detail-redesign/README.md) |
+| aiwex 实际配置 | [在线加载、片源与搜索验证](testing/reports/2026-11-14-aiwex-live/README.md) |
+| Exo 声音与弹幕停顿 | [解码回退修复与 GHA 验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | 源、播放器及设备回归 | [验证报告目录](testing/README.md) · [测试运行方法](testing/source-validation.md) |
 | 近期功能与界面 | [社区跳过与播放回归](testing/reports/2026-11-01-community-skip/README.md) · [海报墙、字幕和表单](testing/reports/2026-11-01-tv-polish/README.md) |
+| 连续集数的社区跳过匹配 | [名称处理中间层部署、专项测试与网络检查](testing/reports/2026-11-14-community-skip/README.md) |
 | 流畅度和稳定性 | [真实配置、生命周期与对比结果](testing/reports/2026-10-31-responsiveness/README.md) |
 | TMDB 透明 Logo 轮廓 | [实现、预览和安装验证](ui-redesign/tmdb-logo/README.md) |
 | Girigiri 加载优化 | [优化前后同设备测量](testing/reports/2026-10-06-girigiri-loading/README.md) |
@@ -53,4 +66,4 @@
 
 ## 维护说明
 
-当前仓库的 `.gitignore` 含 `/docs`：已经跟踪的文档可以正常更新，新文件可能不会出现在普通 `git status` 中。新增公开文档应先检查内容，再用 `git add -f -- docs/明确的文件路径` 逐项纳入；不要把设备配置或整个临时证据目录批量强制提交。本次保留原忽略规则，已显式纳入清单中的文件。
+`docs/` 不再整体忽略，新增文档可正常出现在 `git status` 中，并通过 `git add -- docs/明确的文件路径` 纳入版本控制。新增或移动文档时同步更新本索引及相关链接；提交前逐项检查内容，只保留公开说明、验证摘要和必要图片，设备配置、凭据及原始私有日志留在仓库外。
