@@ -106,10 +106,8 @@ public class EpisodeTargetTest {
     public void shouldNotTreatMissingPlaybackUrlsAsOneIdenticalRelease() {
         for (String url : new String[]{null, "", "   "}) {
             Flag flag = new Flag("mixed");
-            Episode first = episode("Show.S01E03.1080p.mkv");
-            Episode second = episode("Show.S01E03.1080p.mkv");
-            first.setUrl(url);
-            second.setUrl(url);
+            Episode first = Episode.create("Show.S01E03.1080p.mkv", url);
+            Episode second = Episode.create("Show.S01E03.1080p.mkv", url);
             flag.getEpisodes().add(first);
             flag.getEpisodes().add(second);
 
