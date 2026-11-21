@@ -1,0 +1,165 @@
+{
+  "productionTestCommit": "200448937e88bd9b4a80877ec3b0819b6f057264",
+  "homeTestCommit": "de8a5aafeb7e7e0ea656c5707bb0bbc7c9703be0",
+  "handoffTestCommit": "eea05ba131792e73047ededa52a0524162be9f52",
+  "baseCommit": "52b68c312442af9d45e5c895760ae7293ed955cf",
+  "localSnapshotCommit": "9544c363c1db42da516072f516ea5af56afa2d4a",
+  "selectedLocalFiles": 331,
+  "excludedGeneratedFiles": 142,
+  "runs": {
+    "build": 44886988840,
+    "calendar": 44886992267,
+    "home": 44888706278,
+    "handoff": 44865556975
+  },
+  "gradleUnitTests": {
+    "app": {
+      "suites": 164,
+      "tests": 1266,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "catvod": {
+      "suites": 29,
+      "tests": 244,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "quickjs": {
+      "suites": 8,
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "wasm": {
+      "suites": 1,
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "totalGradleUnitTests": 1557,
+  "lint": {
+    "baselineSha": "52b68c312442af9d45e5c895760ae7293ed955cf",
+    "currentSha": "200448937e88bd9b4a80877ec3b0819b6f057264",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 385,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 388,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "newWarnings": [
+      {
+        "id": "DiscouragedApi",
+        "severity": "Warning",
+        "message": "Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios.",
+        "locations": [
+          {
+            "file": "app/src/leanback/AndroidManifest.xml",
+            "line": "197"
+          }
+        ]
+      },
+      {
+        "id": "UnusedResources",
+        "severity": "Warning",
+        "message": "The resource `R.string.calendar_loading` appears to be unused",
+        "locations": [
+          {
+            "file": "app/src/leanback/res/values/strings_calendar.xml",
+            "line": "13"
+          }
+        ]
+      },
+      {
+        "id": "UnusedResources",
+        "severity": "Warning",
+        "message": "The resource `R.string.calendar_partial_failed` appears to be unused",
+        "locations": [
+          {
+            "file": "app/src/leanback/res/values/strings_calendar.xml",
+            "line": "17"
+          }
+        ]
+      }
+    ],
+    "passed": true
+  },
+  "calendar": {
+    "apis": [
+      24,
+      34
+    ],
+    "jvmPerApi": 43,
+    "androidPerApi": 16,
+    "requiredScreenshotsPerApi": 18,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "home": {
+    "android": 80,
+    "folderFilter": 6,
+    "spiderForms": 5,
+    "previewJvm": 1266,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "originalFailuresNowPass": true,
+    "fixtureReadAndHashVerified": true,
+    "productionSourceUnchangedFrom200": true
+  },
+  "handoff": {
+    "jvm": 19,
+    "android": 3,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "productionSourcesUnchanged": true
+  },
+  "hostChecks": {
+    "pythonSource": 51,
+    "media3Patches": 10,
+    "media3HostJunit": 17,
+    "javaScriptGroups": 4
+  },
+  "previousFailures": {
+    "c361NullUrlBuild": 44864113107,
+    "eea05HomeClippingAndOldActivity": 44865554919,
+    "2004489ThemeTestSetup": 44886990495
+  },
+  "coverageLimits": [
+    "Offline x86_64 emulator sources; no real account/form submission or 100-source resampling",
+    "No physical ARM TV or live schedule accuracy/performance validation",
+    "Formal APK structure, signatures and OTA will be recorded after publication"
+  ],
+  "totalAndroidTestExecutions": 126,
+  "productionSourceCommit": "200448937e88bd9b4a80877ec3b0819b6f057264",
+  "handoffSourceEquivalence": {
+    "testedCommit": "eea05ba131792e73047ededa52a0524162be9f52",
+    "candidateCommit": "200448937e88bd9b4a80877ec3b0819b6f057264",
+    "identical": true,
+    "paths": [
+      "app/src/main/java/com/fongmi/android/tv/playback/vod/LibraryPlaybackPrefetch.java",
+      "app/src/main/java/com/fongmi/android/tv/playback/vod/VodPlaybackController.java",
+      "app/src/main/java/com/fongmi/android/tv/playback/vod/VodPlaybackHost.java",
+      "app/src/main/java/com/fongmi/android/tv/playback/vod/VodPlaybackState.java",
+      "app/src/main/java/com/fongmi/android/tv/playback/vod/VodPlayRequest.java",
+      "app/src/main/java/com/fongmi/android/tv/bean/Vod.java",
+      "app/src/main/java/com/fongmi/android/tv/bean/Flag.java",
+      "app/src/main/java/com/fongmi/android/tv/bean/Episode.java",
+      "app/src/main/java/com/fongmi/android/tv/bean/History.java",
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/playback/vod/LibraryDetailHandoffAndroidTest.kt",
+      ".github/scripts/verify-library-detail-handoff.sh"
+    ]
+  }
+}
