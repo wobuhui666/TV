@@ -462,6 +462,12 @@ public final class CompactHomeIntegrationTest {
         await("The recreated Home binds the same section cards", () -> spotlightControl(R.id.hero) != null
                 && spotlightKeys().equals(PosterHomeCatalog.librarySpotlightKeys()));
         main(() -> home.focusRow(spotlightPosition()));
+        // Selecting a row can correctly retain its preview rail; this navigation case starts at the hero.
+        main(() -> {
+            View hero = spotlightControl(R.id.hero);
+            assertNotNull("The rebound section has its hero control", hero);
+            assertTrue("The section hero accepts the navigation starting focus", hero.requestFocus());
+        });
         await("The rebound section hero owns actual focus", () -> {
             View hero = spotlightControl(R.id.hero);
             return hero != null && hero.hasFocus();
