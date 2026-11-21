@@ -160,5 +160,9 @@
     "No physical TV or specific third-party launcher tested",
     "Source dialog regression uses offline sources in API34 isolated preview; no new real aiwex Guard or form submission check",
     "No live-stream or playback performance revalidation"
-  ]
+  ],
+  "releaseCommit": "d23b1b5b1d04500aa431fda968216434b0b9e147",
+  "releaseRun": 44858036452,
+  "releaseTag": "build-44858036452-1",
+  "releaseVerification": "release-verification.json"
 }

@@ -14,4 +14,8 @@
 
 横幅覆盖标准 Android TV 接口与资源渲染，未验证具体第三方桌面或实体电视。弹窗检查覆盖离线源、页面保留、重复窗口捕获、用户返回和表单窗口；两种尺寸的关键截图已查看。本轮未重跑真实 aiwex Guard 真机、账号提交、真实直播或播放性能。原任务的真实源结果及范围保留在 [弹窗报告](../2026-11-19-aiwex-config-dialog/README.md)。
 
-正式 APK 在此次单次发布后另行下载核对签名、版本、OTA 和三语言横幅资源；结果随后补充在本报告。
+[Release 193](https://github.com/wobuhui666/TV/releases/tag/build-44858036452-1) 已正式发布，[发布构建 44858036452](https://github.com/wobuhui666/TV/actions/runs/44858036452) 成功，耗时 14 分 33 秒。发布源码与 tag 指向 `d23b1b5b1d04500aa431fda968216434b0b9e147`；相对验证提交只补充文档。后续本报告的发布验收更新也只修改文档，不再触发 APK 发布。
+
+四个下载后的 ARM64／ARMv7 标准版与共存版均通过 ZIP、包名、单一 ABI、Android 7.0 最低版本和签名 v2 校验，证书 SHA-256 均与 Release 192 标准包一致。统一版本为 `5.8.7+20261121.025040`／`218392640`，高于上一版 `218090613`。两份 OTA 清单及 GitHub 资产 SHA-256、大小均与下载文件一致；每包三语言横幅与发布提交逐像素一致。Release 为非草稿、非预发布，已设为 Latest；六个资产完整，详见 [release-verification.json](release-verification.json)。本轮未将正式 APK 安装到实体电视。
+
+正式构建命令为 `assembleLeanbackArm64_v8aRelease assembleLeanbackArmeabi_v7aRelease --no-daemon --build-cache --max-workers=2`；共存版额外使用 `-PtvApplicationId=com.wobuhui666.android.tv`。
