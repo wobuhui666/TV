@@ -40,7 +40,7 @@
 | Exo 声音与弹幕停顿 | [解码回退修复与 GHA 验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | TV 桌面应用卡片 | [本地化横幅、资源回退与验证范围](testing/reports/2026-11-18-launcher-banner/README.md) |
-| 统一发布验收 | [最终源码、完整门禁与覆盖限制](testing/reports/2026-11-17-unified-release/README.md) |
+| 统一发布验收 | [桌面横幅与源弹窗联合验证](testing/reports/2026-11-21-combined-release/README.md) · [媒体库统一发布记录](testing/reports/2026-11-17-unified-release/README.md) |
 | 源、播放器及设备回归 | [验证报告目录](testing/README.md) · [测试运行方法](testing/source-validation.md) |
 | 代理配置解析 | [运行时缓存排除与 JVM 对照](testing/reports/2026-11-15-proxy-parsing/README.md) |
 | 近期功能与界面 | [社区跳过与播放回归](testing/reports/2026-11-01-community-skip/README.md) · [海报墙、字幕和表单](testing/reports/2026-11-01-tv-polish/README.md) |

@@ -1,0 +1,164 @@
+{
+  "testedCommit": "042788112f5d481abef01ddc02e49a156cae307b",
+  "baseCommit": "854727a4a4255413e9a598bda37471f3177004f5",
+  "pullRequests": [
+    130,
+    131
+  ],
+  "environment": {
+    "runner": "GitHub Actions Ubuntu",
+    "jdk": 21,
+    "python": "3.10",
+    "androidSdk": "37.0",
+    "buildTools": "37.0.0",
+    "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1"
+  },
+  "runs": {
+    "build": 44855990751,
+    "launcherBanner": 44855992980,
+    "sourceDialog": 44855994986
+  },
+  "unitTests": {
+    "app": 1190,
+    "catvod": 244,
+    "quickjs": 28,
+    "wasm": 19,
+    "total": 1481,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "launcher": {
+    "api24": 2,
+    "api34": 2,
+    "totalDeviceTests": 4,
+    "sourcePixelsEqual": true,
+    "opaque": true,
+    "size": [
+      320,
+      180
+    ]
+  },
+  "sourceDialog": {
+    "headSha": "042788112f5d481abef01ddc02e49a156cae307b",
+    "passed": true,
+    "passedTests": 52,
+    "displays": [
+      {
+        "size": "1920x1080",
+        "density": 320,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 65
+      },
+      {
+        "size": "1280x720",
+        "density": 240,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 55
+      }
+    ],
+    "scope": "Offline production TV home, live lines, source configuration windows and Java/QuickJS forms; no live streams or Exo performance measurement"
+  },
+  "focusedLiveLineTests": {
+    "tests": 13,
+    "includedInPreview1190": true,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "baselineSha": "854727a4a4255413e9a598bda37471f3177004f5",
+    "currentSha": "042788112f5d481abef01ddc02e49a156cae307b",
+    "baselineCounts": {
+      "Error": 108,
+      "Warning": 388,
+      "Hint": 6
+    },
+    "currentCounts": {
+      "Error": 108,
+      "Warning": 385,
+      "Hint": 6
+    },
+    "newErrors": [],
+    "newWarnings": [],
+    "passed": true
+  },
+  "hostTests": {
+    "pythonSource": 51,
+    "media3Patches": 10,
+    "playbackJUnit": 17,
+    "javaScriptGroups": 4,
+    "otaTool": 14
+  },
+  "coverageLimits": [
+    "No physical TV or specific third-party launcher tested",
+    "Source dialog regression uses offline sources in API34 isolated preview; no new real aiwex Guard or form submission check",
+    "No live-stream or playback performance revalidation"
+  ]
+}
