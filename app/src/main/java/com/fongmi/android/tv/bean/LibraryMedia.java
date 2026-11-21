@@ -14,21 +14,30 @@ public final class LibraryMedia {
     public record Metadata(DiscoverDetail detail, String logo, List<Season> seasons, List<String> aliases,
                            List<String> logos, String originalLanguage, AiringEpisode lastAired,
                            AiringEpisode nextAiring, int totalEpisodes, boolean inProduction,
-                           List<String> productionLogos) {
+                           List<String> productionLogos, List<String> networkNames) {
         public Metadata {
             productionLogos = productionLogos == null ? List.of() : List.copyOf(productionLogos);
+            networkNames = networkNames == null ? List.of() : List.copyOf(networkNames);
         }
 
         public Metadata(DiscoverDetail detail, String logo, List<Season> seasons, List<String> aliases) {
             this(detail, logo, seasons, aliases, logo.isEmpty() ? List.of() : List.of(logo), "", null, null,
-                    detail.getEpisodes(), false, List.of());
+                    detail.getEpisodes(), false, List.of(), List.of());
         }
 
         public Metadata(DiscoverDetail detail, String logo, List<Season> seasons, List<String> aliases,
                         List<String> logos, String originalLanguage, AiringEpisode lastAired,
                         AiringEpisode nextAiring, int totalEpisodes, boolean inProduction) {
             this(detail, logo, seasons, aliases, logos, originalLanguage, lastAired, nextAiring,
-                    totalEpisodes, inProduction, List.of());
+                    totalEpisodes, inProduction, List.of(), List.of());
+        }
+
+        public Metadata(DiscoverDetail detail, String logo, List<Season> seasons, List<String> aliases,
+                        List<String> logos, String originalLanguage, AiringEpisode lastAired,
+                        AiringEpisode nextAiring, int totalEpisodes, boolean inProduction,
+                        List<String> productionLogos) {
+            this(detail, logo, seasons, aliases, logos, originalLanguage, lastAired, nextAiring,
+                    totalEpisodes, inProduction, productionLogos, List.of());
         }
 
         /** The series-wide total must never be displayed as the selected season's total. */

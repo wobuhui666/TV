@@ -11,7 +11,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class LibrarySourceMatcherEpisodeEvidenceTest {
-    @Test public void shouldAcceptRealSourceGenresAndMissingTypeAfterExplicitEpisodeDetailsArrive() {
+    @Test public void shouldAcceptRealSourceGenresAndMissingTypeAfterPlaybackDetailsArrive() {
         for (String type : List.of("剧情,古装,国产", "剧情,古装,内地剧,内地", "")) {
             Vod source = source(type, "第01集", "第02集", "第03集");
             assertTrue(type, match(source, false, 1).automatic());
@@ -26,33 +26,88 @@ public class LibrarySourceMatcherEpisodeEvidenceTest {
         assertTrue(match(source, false, 1).automatic());
     }
 
-    @Test public void shouldKeepUnknownSummariesAndBareFileNumbersManual() {
-        assertFalse(match(source(""), false, 1).automatic());
-        assertFalse(match(source("", "1", "2", "3"), false, 1).automatic());
-        assertFalse(match(source("", "第01集"), false, 1).automatic());
+    @Test public void shouldAcceptBareNumbersAndSingleEpisodeDetailsWithoutRequiringType() {
+        assertTrue(match(source("", "1", "2", "3"), false, 1).automatic());
+        assertTrue(match(source("", "第01集"), false, 1).automatic());
         Vod generated = source("", "第01集", "第02集");
         generated.getFlags().get(0).getEpisodes().forEach(episode -> episode.setGeneratedLabel(true));
-        assertFalse(match(generated, false, 1).automatic());
+        assertTrue(match(generated, false, 1).automatic());
     }
 
-    @Test public void shouldRejectPreviewsPartsSpecialsAndDuplicateVersionsAsTypeEvidence() {
+    @Test public void shouldKeepUnknownSummariesAsCandidatesUntilPlaybackDetailsArrive() {
+        Vod summary = source("");
+        assertTrue(match(summary, false, 1).matches());
+        assertFalse(match(summary, false, 1).automatic());
+        summary.getFlags().get(0).getEpisodes().add(Episode.create("1", ""));
+        summary.getFlags().get(0).getEpisodes().add(Episode.create("2", "   "));
+        assertFalse(match(summary, false, 1).automatic());
+    }
+
+    @Test public void shouldAcceptHydratedMovieWithoutTypeOrYear() {
+        Vod movie = source("", "正片");
+        movie.setName("星际穿越"); movie.setYear("");
+        assertTrue(LibrarySourceMatcher.match(movie, "星际穿越", List.of("Interstellar"), "2014", true, null).automatic());
+        assertTrue(LibrarySourceMatcher.match(movie, "星际穿越", List.of("Interstellar"), "2014", true, null).matches());
+    }
+
+    @Test public void shouldAcceptHydratedSeriesWithoutTypeOrYear() {
+        Vod series = source("", "1", "2", "3");
+        series.setName("庆余年"); series.setYear("");
+        assertTrue(match(series, false, 1).automatic());
+        assertFalse(match(series, false, 2).automatic());
+    }
+
+    @Test public void shouldLeavePlaylistVariantsToEpisodeSelection() {
         for (String[] labels : List.of(new String[]{"第1集 预告", "第2集 预告"},
                 new String[]{"第1集上", "第2集下"}, new String[]{"S00E01", "S00E02"},
                 new String[]{"第1集", "EP01"})) {
-            assertFalse(match(source("", labels), false, 1).automatic());
+            assertTrue(match(source("", labels), false, 1).automatic());
         }
     }
 
     @Test public void shouldRetainTitleYearSeasonAndDeclaredMovieConflicts() {
         assertFalse(match(source("电影", "第01集", "第02集"), false, 1).automatic());
+        Vod declaredSeries = source("电视剧", "正片"); declaredSeries.setName("庆余年");
+        assertFalse(match(declaredSeries, true, null).matches());
         Vod source = source("", "第01集", "第02集");
         assertFalse(match(source, true, null).automatic());
         source.setYear("2024");
+        assertFalse(match(source, false, 1).matches());
         assertFalse(match(source, false, 1).automatic());
         source.setYear("2019"); source.setName("庆余年 第二季");
+        assertFalse(match(source, false, 1).matches());
         assertFalse(match(source, false, 1).automatic());
         source.setName("庆余年之帝王业");
+        assertFalse(match(source, false, 1).matches());
         assertFalse(match(source, false, 1).automatic());
+    }
+
+    @Test public void shouldRetainExplicitMovieYearConflictEvenWithPlaybackDetails() {
+        Vod movie = source("", "正片"); movie.setName("沙丘"); movie.setYear("1984");
+        LibrarySourceMatcher.Match mismatch = LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null);
+        assertFalse(mismatch.matches());
+        assertFalse(mismatch.automatic());
+    }
+
+    @Test public void shouldTreatCatalogDatesAsUnknownYearsForMoviesAndSeries() {
+        for (String year : List.of("2019-11-26", "2020-11-26", "2020/11/26", "更新日期：2020-11-26", "2019年")) {
+            Vod movie = source("", "高清"); movie.setName("流浪地球"); movie.setYear(year);
+            LibrarySourceMatcher.Match movieMatch = LibrarySourceMatcher.match(movie, "流浪地球", List.of(), "2019", true, null);
+            assertTrue(year, movieMatch.matches());
+            assertTrue(year, movieMatch.automatic());
+            Vod series = source("", "1", "2", "3"); series.setYear(year);
+            assertTrue(year, match(series, false, 1).matches());
+            assertTrue(year, match(series, false, 1).automatic());
+        }
+    }
+
+    @Test public void shouldRetainExplicitTitleYearsWhenCatalogYearContainsADate() {
+        Vod movie = source("", "高清"); movie.setName("沙丘 (1984)"); movie.setYear("2020-11-26");
+        assertFalse(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).matches());
+        movie.setName("沙丘 (2021)"); movie.setYear("1984-11-26");
+        assertTrue(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).automatic());
+        movie.setName("沙丘"); movie.setYear(" 1984 ");
+        assertFalse(LibrarySourceMatcher.match(movie, "沙丘", List.of(), "2021", true, null).matches());
     }
 
     private LibrarySourceMatcher.Match match(Vod source, boolean movie, Integer season) {

@@ -770,6 +770,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_vod), getString(R.string.home_tab_library), R.drawable.ic_home_vod));
         if (!ExperienceSettings.usesLibrary()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_discover), getString(R.string.home_discover), R.drawable.ic_home_discover));
         if (LiveConfig.hasUrl()) items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_live), getString(R.string.home_live), R.drawable.ic_home_live));
+        items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.calendar_nav), getString(R.string.calendar_nav), R.drawable.msr_calendar_month));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_search), getString(R.string.home_search), R.drawable.ic_home_search));
         items.add(new JetStreamHomeNavView.NavItem(String.valueOf(R.string.home_tab_my), getString(R.string.home_tab_my), R.drawable.ic_home_setting));
         mBinding.nav.setItems(items);
@@ -956,6 +957,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         else if (resId == R.string.home_keep) KeepActivity.start(this);
         else if (resId == R.string.home_push) PushActivity.start(this);
         else if (resId == R.string.home_search) SearchActivity.start(this);
+        else if (resId == R.string.calendar_nav) AiringCalendarActivity.start(this);
         else if (resId == R.string.home_setting) SettingActivity.start(this);
         else if (resId == R.string.home_tab_my) MyActivity.start(this);
     }

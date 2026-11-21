@@ -14,4 +14,6 @@
     <string name="library_detail_resume_episode_hint">%1$s · 第 %2$d 集 · %3$s</string>
     <string name="library_detail_save">加入收藏</string>
     <string name="library_detail_kept">已收藏</string>
+    <string name="library_detail_follow">追剧</string>
+    <string name="library_detail_following">已追剧</string>
 </resources>

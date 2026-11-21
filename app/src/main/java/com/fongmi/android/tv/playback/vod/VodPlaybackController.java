@@ -75,7 +75,9 @@ public class VodPlaybackController {
 
     public void requestDetail() {
         stopCommunitySkip();
-        host.requestDetail(host.getVodKey(), host.getVodId());
+        Vod prepared = host.takePreparedDetail();
+        if (prepared != null) onDetailResult(Result.vod(prepared));
+        else host.requestDetail(host.getVodKey(), host.getVodId());
     }
 
     public void onDetailResult(Result result) {
@@ -482,10 +484,13 @@ public class VodPlaybackController {
         host.renderHistory(state.getHistory());
         host.onDetailFallbackCancelled();
         if (!host.getVodPlayId().isEmpty()) {
-            SmartSourceSelector.FlagSelection selection = SmartSourceSelector.selectExplicitEpisode(item,
-                    host.getVodPlayId(), state.getHistory().getVodFlag());
+            SmartSourceSelector.FlagSelection selection = host.getVodPlayName().isEmpty()
+                    ? SmartSourceSelector.selectExplicitEpisode(item, host.getVodPlayId(), state.getHistory().getVodFlag())
+                    : SmartSourceSelector.selectLibraryEpisode(item, host.getVodPlayId(), host.getVodPlayName(), state.getHistory().getVodFlag());
             if (selection == null) showMissingEpisode();
             else {
+                // A refreshed URL for the confirmed library choice retains its resume position.
+                if (!host.getVodPlayName().isEmpty()) state.getHistory().setEpisodeUrl(selection.episode().getUrl());
                 bindFlag(selection.flag());
                 selectEpisode(selection.episode());
                 if (state.getHistory().isRevSort()) reverseEpisode(true);

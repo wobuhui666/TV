@@ -21,6 +21,8 @@ import com.fongmi.android.tv.bean.DiscoverHero;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Style;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.databinding.AdapterHomeWallCategoriesBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallFooterBinding;
 import com.fongmi.android.tv.databinding.AdapterHomeWallShelfBinding;
@@ -64,6 +66,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private final Activity activity;
     private final Listener listener;
     private final boolean compact;
+    private final boolean librarySpotlights;
     private final PosterKeepShelfController keepShelf;
     private final Object requestTag = new Object();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -96,6 +99,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         this.activity = activity;
         this.listener = listener;
         this.compact = compact;
+        librarySpotlights = compact && ExperienceSettings.getMode() == ExperienceMode.LIBRARY;
         rexLoader = new RexFeedLoader(compact);
         keepShelf = new PosterKeepShelfController(activity);
         if (compact) {
@@ -118,7 +122,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     public void register(CustomSelector selector) {
         selector.addPresenter(Hero.class, new HeroPresenter());
-        selector.addPresenter(Categories.class, new CategoriesPresenter());
+        if (!librarySpotlights) selector.addPresenter(Categories.class, new CategoriesPresenter());
         selector.addPresenter(Shelf.class, new ShelfPresenter());
         selector.addPresenter(Footer.class, new FooterPresenter());
         if (compact) selector.addPresenter(Source.class, new SourcePresenter());
@@ -142,8 +146,8 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private void attachRows(ArrayObjectAdapter adapter) {
         page = adapter;
         page.add(0, hero);
-        page.add(1, categories);
-        keepShelf.attach(page, categories);
+        if (!librarySpotlights) page.add(1, categories);
+        keepShelf.attach(page, librarySpotlights ? hero : categories);
         page.addAll(page.size(), shelves);
         rexSpotlightAdapter = new ArrayObjectAdapter(new RexSectionCardPresenter(new RexSectionCardPresenter.Listener() {
             @Override
@@ -164,13 +168,14 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         updateHistoryOrder();
     }
 
-    /** Keep the history sentinels contiguous while categories follow any visible history. */
+    /** Keep local shelves outside the history sentinels, including when history disappears. */
     public void updateHistoryOrder() {
         if (page == null) return;
         int history = page.indexOf(R.string.home_history);
         int recommendation = page.indexOf(R.string.home_recommend);
         boolean hasHistory = history >= 0 && recommendation == history + 2;
         int anchor = hasHistory ? recommendation : page.indexOf(hero);
+        if (librarySpotlights) keepShelf.attach(page, hasHistory ? R.string.home_recommend : hero);
         int index = page.indexOf(categories);
         if (anchor >= 0 && index >= 0) {
             int destination = anchor + 1 - (index < anchor ? 1 : 0);
@@ -189,7 +194,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         if (row == rexSpotlightRow) return rexSpotlightAdapter != null && rexSpotlightAdapter.size() > 0;
         if (row == source) return compact;
         if (keepShelf.isRow(row)) return keepShelf.isFocusable();
-        return row == categories || row == footer;
+        return (row == categories && !librarySpotlights) || row == footer;
     }
 
     public void setKeepShelfFocusFallback(Runnable fallback) {
@@ -330,7 +335,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
             footer.loading = true;
             notifyRow(footer);
         }
-        rexLoader.load(compact ? PosterHomeCatalog.compactSections(category) : RexSections.home(), results -> {
+        rexLoader.load(compact ? PosterHomeCatalog.compactSections(category, librarySpotlights) : RexSections.home(), results -> {
             if (closed || rexSpotlightAdapter == null) return;
             applyRexResults(results);
         });
@@ -396,6 +401,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     private void renderCompact() {
         List<RexFeedResult> feeds = new ArrayList<>(compactFeeds.values());
+        renderLibrarySpotlights();
         List<Vod> heroItems = PosterHomeCatalog.compactHero(feeds, category);
         if (!RexFeedResult.sameItems(hero.value.getItems(), heroItems)) {
             hero.value.replace(heroItems);
@@ -430,14 +436,31 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
                 }
             }
         }
-        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty());
+        footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && !rexAny();
         notifyRow(footer);
         listener.onHeroChanged(!hero.value.isEmpty());
     }
 
-    private int compactShelfEnd() {
+    private void renderLibrarySpotlights() {
+        if (!librarySpotlights || rexSpotlightAdapter == null || page == null) return;
+        List<RexFeedResult> results = new ArrayList<>();
+        for (String key : PosterHomeCatalog.librarySpotlightKeys()) {
+            RexFeedResult feed = compactFeeds.get(key);
+            if (feed == null) continue;
+            results.add(new RexFeedResult(feed.getSection(), PosterHomeCatalog.compactItems(feed.getItems(), category)));
+        }
+        rexSpotlightAdapter.setItems(RexHomeCatalog.spotlights(results), new BaseDiffCallback<RexFeedResult>());
         int index = page.indexOf(rexSpotlightRow);
-        return index >= 0 ? index : page.indexOf(source);
+        if (rexSpotlightAdapter.size() == 0) {
+            if (index >= 0) page.remove(rexSpotlightRow);
+        } else if (index < 0) {
+            page.add(page.indexOf(source), rexSpotlightRow);
+        }
+    }
+
+    private int compactShelfEnd() {
+        int spotlight = page.indexOf(rexSpotlightRow);
+        return spotlight >= 0 ? spotlight : page.indexOf(source);
     }
 
     public void setSourceListener(VodPresenter.OnClickListener listener, Runnable openLibrary) {

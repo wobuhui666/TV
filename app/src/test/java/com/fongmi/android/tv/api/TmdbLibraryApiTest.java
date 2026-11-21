@@ -10,6 +10,68 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TmdbLibraryApiTest {
+    @Test public void shouldCarryReportedNetworksWithoutImplyingMovieAvailability() {
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"networks\":[{\"name\":\"NHK\"},{\"name\":\" NHK \"},{\"name\":\"Netflix\"}]}");
+        assertEquals(List.of("NHK", "Netflix"), metadata.networkNames());
+        var oldConstructor = new LibraryMedia.Metadata(metadata.detail(), metadata.logo(), metadata.seasons(),
+                metadata.aliases(), metadata.logos(), metadata.originalLanguage(), metadata.lastAired(),
+                metadata.nextAiring(), metadata.totalEpisodes(), metadata.inProduction(), List.of("/studio.png"));
+        assertEquals(List.of("/studio.png"), oldConstructor.productionLogos());
+        assertTrue(oldConstructor.networkNames().isEmpty());
+        var movie = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("movie", 8),
+                "{\"id\":8,\"title\":\"作品\",\"networks\":[{\"name\":\"Netflix\"}]}");
+        assertTrue(movie.networkNames().isEmpty());
+    }
+
+    @Test public void shouldKeepNetworkNamesOptionalAndIgnoreMalformedNames() {
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"networks\":[null,2,{},"
+                        + "{\"name\":null},{\"name\":false},{\"name\":3},{\"name\":[]},{\"name\":\" \"},{\"name\":\"HBO\"}]}");
+        assertEquals(List.of("HBO"), metadata.networkNames());
+        assertTrue(TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\"}").networkNames().isEmpty());
+    }
+
+    @Test public void shouldQueryExactAiringDateWithoutFilteringSeriesPremieres() {
+        var parameters = TmdbLibraryApi.calendarParams(LocalDate.of(2026, 11, 18), 2);
+        assertEquals("2026-11-18", parameters.get("air_date.gte"));
+        assertEquals("2026-11-18", parameters.get("air_date.lte"));
+        assertEquals("Asia/Shanghai", parameters.get("timezone"));
+        assertEquals("2", parameters.get("page"));
+        assertEquals("false", parameters.get("include_adult"));
+        assertEquals("popularity.desc", parameters.get("sort_by"));
+        assertFalse(parameters.containsKey("first_air_date.gte"));
+        assertFalse(parameters.containsKey("screened_theatrically"));
+        assertEquals("1", TmdbLibraryApi.calendarParams(LocalDate.of(2026, 11, 18), 0).get("page"));
+    }
+
+    @Test public void shouldKeepExplicitSpecialsAndZeroEpisodeSeasonsWithoutInventingCoordinates() {
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"seasons\":[null,3,{},"
+                        + "{\"season_number\":null},{\"season_number\":false},{\"season_number\":-1},"
+                        + "{\"season_number\":1.5},{\"season_number\":2147483648},"
+                        + "{\"season_number\":0,\"episode_count\":0},{\"season_number\":3,\"episode_count\":0}]}");
+        assertEquals(2, metadata.seasons().size());
+        assertEquals(0, metadata.seasons().get(0).number());
+        assertEquals(3, metadata.seasons().get(1).number());
+        assertEquals(0, metadata.seasons().get(1).episodes());
+    }
+
+    @Test public void shouldIgnoreMalformedEpisodeEntriesWithoutTruncatingCoordinates() {
+        var episodes = TmdbLibraryApi.parseEpisodes(0,
+                "{\"season_number\":0,\"episodes\":[null,3,{},"
+                        + "{\"episode_number\":false},{\"episode_number\":1.5},"
+                        + "{\"season_number\":0.5,\"episode_number\":3},"
+                        + "{\"season_number\":0,\"episode_number\":2,\"air_date\":\"2026-11-18\"}]}");
+        assertEquals(1, episodes.size());
+        assertEquals(0, episodes.get(0).season());
+        assertEquals(2, episodes.get(0).number());
+        var metadata = TmdbLibraryApi.parseMetadata(DiscoverMediaKey.of("tv", 8),
+                "{\"id\":8,\"name\":\"作品\",\"next_episode_to_air\":{\"season_number\":1.5,\"episode_number\":2}}");
+        assertNull(metadata.nextAiring());
+    }
+
     @Test public void shouldKeepExactSeasonCoordinatesAndMissingEpisodeImages() {
         var items = TmdbLibraryApi.parseEpisodes(2, "{\"episodes\":[{\"episode_number\":4,\"name\":\"重逢\",\"runtime\":45},{\"episode_number\":7,\"name\":\"归途\",\"still_path\":\"/frame.jpg\"}]}");
         assertEquals(2, items.size());

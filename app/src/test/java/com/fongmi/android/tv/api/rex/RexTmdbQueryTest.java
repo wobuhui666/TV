@@ -4,8 +4,12 @@ import com.fongmi.android.tv.bean.DiscoverFacet;
 
 import org.junit.Test;
 
+import java.util.Calendar;
+import java.util.TimeZone;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 public class RexTmdbQueryTest {
 
@@ -127,5 +131,50 @@ public class RexTmdbQueryTest {
         assertEquals("CN", query.params.get("with_origin_country"));
         assertEquals("vote_average.desc", query.params.get("sort_by"));
         assertEquals("100", query.params.get("vote_count.gte"));
+    }
+
+    @Test public void shouldLimitPopularDomesticMoviesToRecentReleasedWorks() {
+        RexTmdbQuery.Query query = RexTmdbQuery.chinese(RexTmdbQuery.MOVIE, false, now());
+        assertEquals("2025-11-19", query.params.get("primary_release_date.gte"));
+        assertEquals("2026-11-19", query.params.get("primary_release_date.lte"));
+    }
+
+    @Test public void shouldKeepOldWorksInExplicitDomesticTopRatedLists() {
+        for (String type : new String[]{RexTmdbQuery.MOVIE, RexTmdbQuery.TV}) {
+            RexTmdbQuery.Query query = RexTmdbQuery.chinese(type, true, now());
+            assertFalse(query.params.containsKey("primary_release_date.gte"));
+            assertFalse(query.params.containsKey("air_date.gte"));
+            assertEquals("100", query.params.get("vote_count.gte"));
+        }
+    }
+
+    @Test public void shouldKeepRegionalFallbackWithinTheSameCountryAndCurrentBroadcasts() {
+        RexTmdbQuery.Query chinese = RexTmdbQuery.regionalTv("chinese", "series", now());
+        RexTmdbQuery.Query korean = RexTmdbQuery.regionalTv("korean", "series", now());
+        assertEquals("discover/tv", chinese.path);
+        assertEquals("tv", chinese.fallbackMediaType);
+        assertEquals("CN", chinese.params.get("with_origin_country"));
+        assertEquals("KR", korean.params.get("with_origin_country"));
+        assertEquals("2026-10-20", chinese.params.get("air_date.gte"));
+        assertEquals("2026-11-19", chinese.params.get("air_date.lte"));
+        assertEquals("Asia/Shanghai", chinese.params.get("timezone"));
+        assertFalse("New seasons can belong to an older series", chinese.params.containsKey("first_air_date.gte"));
+        assertEquals("10764,10767", chinese.params.get("without_genres"));
+        assertNull(RexTmdbQuery.regionalTv("unknown", "series", now()));
+    }
+
+    @Test public void shouldKeepLongRunningVarietyInItsOwnFallback() {
+        RexTmdbQuery.Query query = RexTmdbQuery.regionalTv("chinese", "variety", now());
+        assertEquals("10764|10767", query.params.get("with_genres"));
+        assertFalse(query.params.containsKey("without_genres"));
+        assertFalse(query.params.containsKey("first_air_date.gte"));
+        assertEquals("2026-10-20", query.params.get("air_date.gte"));
+    }
+
+    private static long now() {
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        calendar.clear();
+        calendar.set(2026, Calendar.NOVEMBER, 19, 4, 0, 0);
+        return calendar.getTimeInMillis();
     }
 }

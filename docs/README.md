@@ -7,8 +7,8 @@
 | 主题 | 文档 |
 | --- | --- |
 | 配置字段与示例 | [CONFIG](CONFIG.md) |
-| 原生海报墙、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
-| TV 媒体库模式、首页与遥控器操作 | [使用说明](media-library.md) |
+| 原生海报墙、追更日历、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
+| TV 媒体库详情与遥控器操作 | [使用说明](media-library.md) |
 | 诊断、缓存与播放工具 | [使用说明](practical-improvements.md) |
 | OTA 更新与云控 | [使用说明](ota-updates.md) |
 | 直播与节目单 | [LIVE](LIVE.md) |
@@ -29,6 +29,12 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| 媒体库片源兼容性 | [100源对照、瓜子实播与字段／选集修复](testing/reports/2026-11-19-library-source-compatibility/README.md) |
+| 媒体库首页大卡与新剧数据 | [Rex 当前榜单、栏目导航与回退验证](testing/reports/2026-11-19-library-home/README.md) |
+| Instabox Android | [ARM64 APK 安装、界面导航与实例兼容范围](testing/reports/2026-11-15-instabox-android/README.md) |
+| 直播线路与首页触摸滚动 | [专项测试、构建结果与设备覆盖限制](testing/reports/2026-11-15-live-lines-touch-scroll/README.md) |
+| 追更日历与媒体库追剧 | [悬浮日期栏、GHA 验证与真实截图](testing/reports/2026-11-20-calendar-floating-dates/README.md) |
+| aiwex 实际配置 | [在线加载、片源与搜索验证](testing/reports/2026-11-14-aiwex-live/README.md) |
 | aiwex 配置弹窗回归 | [页面保留修复、真实源双入口验收与回归](testing/reports/2026-11-19-aiwex-config-dialog/README.md) |
 | 播放器、字幕与预加载 | [内核同步说明](player-core-sync.md) |
 | 媒体库搜索与界面 | [后台关联、卡片回收与压力验证](testing/reports/2026-11-14-library-search/README.md) |

@@ -4,4 +4,6 @@
     <string name="home_compact_cn_tv">国产剧集</string>
     <string name="home_compact_cn_top_movie">国产高分电影</string>
     <string name="home_compact_cn_top_tv">国产高分剧集</string>
+    <string name="home_library_month_variety">Past month · Popular variety</string>
+    <string name="home_library_month_series">Past month · Popular series</string>
 </resources>

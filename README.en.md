@@ -20,6 +20,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 | Home and discovery | Featured artwork, continued viewing, favorites, optional poster-wall home and personal shelf, TMDB/Douban recommendations, and configurable hero rotation. |
 | Poster walls and filters | Source category and folder filters; media type, genre, year, region, and sorting where the page supplies them; consistent poster metadata and filter-panel state. |
 | Search and source selection | Cross-source search, relevance levels, grouped results, optional Smart source selection, per-configuration preferred sources, and episode-aware fallback. |
+| Airing calendar | TV daily schedules for series, anime and variety shows, previous/next weeks, followed titles and title artwork; follow a show from its media-library detail page. |
 | Media-library details | Compose TV immersive backgrounds, shared theme and fonts, playback/episode/source actions, lazy card lists, and stable focus restoration. |
 | Playback | ExoPlayer/Media3 and MPV; hardware/software options, playback speed, seek acceleration, repeat, aspect ratio, track selection, chapters, and editions when provided. |
 | Playback information | A TV specification capsule showing available input resolution, video/audio codec, dynamic range, bit depth, channel information, and explicit content ratings. |
@@ -56,6 +57,8 @@ Frames from the earlier 90-second cut of the tour, showing the interface as reco
 </details>
 
 The home screen puts featured artwork and continued viewing within reach. Library and discovery pages lead into search results, title details, and episode selection. Playback controls and settings use the same remote-friendly interaction patterns.
+
+The TV home navigation includes an airing calendar with public schedules and followed titles, a uniform media rail, and artwork and episode information for the focused title. Choose **Follow / Following** on a linked TV title in media-library mode to add or remove it, using existing favorites. The personal calendar groups all known episode dates for the selected week; TMDB dates do not guarantee that a playback source is available. See the [calendar guide](docs/native-discovery.md#追更日历).
 
 Live TV brings channel groups and channel selection together. The personal page provides entry points for favorites, history, media push, casting reception, local files, and settings.
 
@@ -133,7 +136,7 @@ The TV home, library, recommendations, title details, and settings share JetStre
 
 Media-library and Simple-mode details use Compose TV, with title/summary information on the left and primary playback controls on the right. Artwork tint follows the global appearance; episodes, sources, and people use lazy lists. The detail page has no clock or top back control. See [the media-library guide](docs/media-library.md) for operation and constraints.
 
-Media Library and Simple modes bring curated recommendations into the home page. The default three rows are Chinese movies, Chinese series, and trending titles, with a small selection of worldwide recommendations. Each recommendation row previews up to 12 titles; movie, series, and top-rated categories load only their selected two or three rows. **View all** and **Filter titles** provide more titles and origin/country, type, year, and rating filters. Library continues to open the current source’s categories, folders, filters, and login/cookie actions. Source and personal-shelf previews retain their 20-title limit.
+Media Library home keeps three small poster rows for Chinese movies, Chinese series, and trending titles, followed by four large cards for monthly variety shows, monthly series, popular movies, and daily anime. Each card retains its smaller title rail, with up to 12 titles per row. Media Library removes the category/filter row; title filters remain available from the bottom shortcut. Simple mode retains categories and filters and loads up to three selected rows. Chinese series use the current Rex regional chart first, with recent Chinese broadcasts from TMDB as fallback. Library continues to open the current source’s categories, folders, filters, and login/cookie actions. Source and personal-shelf previews retain their 20-title limit.
 
 Choose **Settings → Home and discovery → Usage mode** to see three static layout previews drawn by the app and select Media Library, Simple, or Classic. To return to Simple, use **Settings → Home and discovery → Usage mode → Simple** (设置 → 首页与发现 → 使用模式 → 简洁), then return home. Classic keeps the original source directory, details, and small-window playback. Your sources, playback settings, favorites, and history are preserved.
 
@@ -215,7 +218,7 @@ When the source or a configured API supplies danmaku, the player can search, imp
 
 ## Live TV and local-network playback
 
-Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Tap the line control on a channel with multiple lines to choose from the full list. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
+Live TV supports configured M3U, TXT, and JSON sources, channel groups, protected groups, favorites, multiple playback lines, channel logos, and XMLTV programme guides. Tap the current line to choose from the full list; cancelling or selecting the current line keeps playback running. Channel/EPG navigation is available in the TV interface; the mobile flavor has its own touch controls.
 
 Catchup and timeshift depend on the provider's retained window and replay URL/metadata. Supported sources can expose seeking within that window and a return-to-live action, preserving the current playback/pause state when replay resolution fails. This is provider-backed replay, not universal local recording. [LIVE.md](docs/LIVE.md) documents the source formats and catchup fields; [CONFIG.md](docs/CONFIG.md) covers the app configuration.
 

@@ -291,6 +291,18 @@ public class EpisodeIdentityResolverTest {
     }
 
     @Test
+    public void shouldUsePrimarySourceWrapperCleanupWithoutChangingTheExplicitSeason() throws Exception {
+        try (MockWebServer server = new MockWebServer()) {
+            server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":73223,\"name\":\"黑色五叶草\",\"first_air_date\":\"2017-10-03\"}]}")
+                    .setHeader("X-Tmdb-Query", encodedTitle("黑色五叶草")).setHeader("X-Title-Normalizer", "primary"));
+            server.enqueue(new MockResponse().setBody(blackCloverDetail().toString()));
+            assertEquals(new EpisodeIdentity(73223, "tt7441658", 2, 4),
+                    resolver(server).resolve("source-black-clover", "[ANi] 黑色五叶草 第二季 (2026) 1080p", "2026", "动漫", "第4集", true, 171));
+            assertEquals(2, server.getRequestCount());
+        }
+    }
+
+    @Test
     public void shouldApplyProxyNormalizationToMoviesWithoutChangingTheReleaseYear() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
             server.enqueue(new MockResponse().setBody("{\"results\":[{\"id\":123,\"title\":\"终结者2：审判日\",\"release_date\":\"1991-07-03\"}]}")
@@ -323,6 +335,8 @@ public class EpisodeIdentityResolverTest {
         assertEquals("原声带", EpisodeIdentityResolver.approvedSearchTitle(
                 "原声带 第二季 (2023) 1080p", encodedTitle("原声带"), "rules"));
         assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
+                "[ANi] 黑色五叶草 1080p", encodedTitle("黑色五叶草"), "primary"));
+        assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
                 "[ANi] 黑色五叶草 1080p", encodedTitle("黑色五叶草"), "groq"));
         assertEquals("黑色五叶草", EpisodeIdentityResolver.approvedSearchTitle(
                 "【字幕组】黑色五叶草 1080p", encodedTitle("黑色五叶草"), "workers-ai"));
@@ -332,7 +346,7 @@ public class EpisodeIdentityResolverTest {
 
     @Test
     public void shouldRejectTranslatedTruncatedAndSequelChangingProxyTitles() {
-        for (String source : new String[]{"rules", "groq", "workers-ai"}) {
+        for (String source : new String[]{"rules", "primary", "groq", "workers-ai"}) {
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", encodedTitle("黑色"), source));
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", encodedTitle("Black Clover"), source));
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("原声带", encodedTitle("带"), source));
@@ -340,13 +354,17 @@ public class EpisodeIdentityResolverTest {
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("终结者2：审判日 (1991) 1080p", encodedTitle("终结者：审判日"), source));
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("[ANi] 终结者2：审判日 1080p", encodedTitle("终结者2"), source));
         }
-        assertNull(EpisodeIdentityResolver.approvedSearchTitle("[第2版] 黑色五叶草", encodedTitle("黑色五叶草"), "groq"));
+        for (String source : new String[]{"primary", "groq", "workers-ai"}) {
+            assertNull(EpisodeIdentityResolver.approvedSearchTitle("[第2版] 黑色五叶草", encodedTitle("黑色五叶草"), source));
+        }
     }
 
     @Test
     public void shouldRejectMalformedControlAndUndeclaredNormalizationHeaders() {
-        for (String header : new String[]{"%GG", "%FF", encodedTitle("黑色五叶草\n"), encodedTitle("黑色五叶草\u202e")}) {
-            assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", header, "rules"));
+        for (String source : new String[]{"rules", "primary", "groq", "workers-ai"}) {
+            for (String header : new String[]{"%GG", "%FF", encodedTitle("黑色五叶草\n"), encodedTitle("黑色五叶草\u202e")}) {
+                assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草", header, source));
+            }
         }
         for (String source : new String[]{"fallback", "none", "untrusted"}) {
             assertNull(EpisodeIdentityResolver.approvedSearchTitle("黑色五叶草 1080p", encodedTitle("黑色五叶草"), source));

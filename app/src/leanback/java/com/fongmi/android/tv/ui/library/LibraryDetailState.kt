@@ -61,7 +61,8 @@ data class LibraryDetailState(
     val similar: List<LibraryDetailItem> = emptyList(),
     val mediaInformation: String = "",
     val productionLogos: List<String> = emptyList(),
-    val showMoreAction: Boolean = true
+    val showMoreAction: Boolean = true,
+    val followable: Boolean = false
 ) {
     /** Java fills a builder; submit() takes an immutable snapshot once per update. */
     class Builder {
@@ -98,6 +99,7 @@ data class LibraryDetailState(
         @JvmField var mediaInformation = ""
         @JvmField var productionLogos: List<String> = emptyList()
         @JvmField var showMoreAction = true
+        @JvmField var followable = false
 
         fun build() = LibraryDetailState(identity, title, backdrop, logo, metadata, overview,
             seriesStatus, ratings.toList(), formats.toList(), playLabel, playHint,
@@ -105,6 +107,6 @@ data class LibraryDetailState(
             episodesLoading, episodes.toList(), ranges.toList(), resources.toList(),
             resourceStatus, resourcesLoading, resourceFilters.toList(), cast.toList(),
             genres.toList(), trailers.toList(), stills.toList(), similar.toList(),
-            mediaInformation, productionLogos.toList(), showMoreAction)
+            mediaInformation, productionLogos.toList(), showMoreAction, followable)
     }
 }

@@ -1,0 +1,272 @@
+{
+  "baseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "state": "working tree with existing uncommitted changes",
+  "inputs": {
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeController.java": "2841ddb4f4407d2ade7bc7bbf8cfc876c521d1943b018c241dacb6b102aeb9d9",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeCatalog.java": "c6a65d7212eae5b64b5851cfe5f260c39a2e084050cc7ea4a891135b4df9535d",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexFeedLoader.java": "799d86d61e5d067b287481262fc10803627f3dabd32a726d5fd4454c79bfff00",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java": "199b25d64e966fa49967c6c28ec02a35b764c1a4a1325dd51e3c25aa148109fc",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexNowClient.java": "3b7747aef9b5a3dc98e59a5c366385e0270bcc4d9237eff2313837f1f125644d",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexTmdbQuery.java": "d83a273df164cb1ecc2dd2e6e4a547cd12b897b66f0cc46c0eea9a3a1135f495",
+    "app/src/leanbackPreview/java/com/fongmi/android/tv/ui/activity/HomePreviewFixtures.java": "b6da9e52c430956193911eeec8b27ded6798995d49a7fc1a83c9fdc32ffa889b",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexRegionalFeedTest.java": "1500581019fa2a62ff0a73b3b97b790fa1384ff1daabfb2512e72d611c4b8c1a",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexNowMappingTest.java": "bbd46111cdf51782c7be40965714caa431fb50780048bab9853e58021b5c9c2e",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexTmdbQueryTest.java": "224a4f6ca1d3560c876f73b60ce598dae12d79698e4a25948e9ac70ee5e23a31",
+    "app/src/test/java/com/fongmi/android/tv/ui/home/PosterHomeCatalogTest.java": "c00ceda3e0b28e5fb6518e717582904df0294960f50b38e54fb35f4e128e25eb",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/test/CompactHomeIntegrationTest.java": "d24b20bb95493f5e6605a55d45f5b153d7652b1d835d2130b6edb2467ca8ad01",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/CompactDiscoveryIntegrationTest.java": "78899fcfcb0d1f69b1645e8b88c6fb3024a1e73713b14a0cd64095fc7610c9d1",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexFeedDate.java": "f6c70cf00693c021fb11f1a0d523033cc3f0e6b897454c8ec253570819abd79e",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexFeedDateTest.java": "451656cacb6f53578b0662b2fcb5426212202693d4490890b368d6b631c87386"
+  },
+  "results": "60 focused Gradle tests and TV ARM64 Debug assembly passed. Complete APK SHA/signature/native/Python checks passed. Android UI regression, Preview/test builds and lint were not executed in this run.",
+  "pureJavaChecks": {
+    "classes": [
+      "RexTmdbQueryTest",
+      "RexFeedDateTest"
+    ],
+    "runner": "JDK 21 javac + JUnitCore 4.13.2, production sources and Android SDK 37.0 jar",
+    "tests": 24,
+    "failures": 0,
+    "limits": "Pure query/date logic only; not the Gradle variant or Android UI regression. The broader Gradle run includes these same tests; do not add duplicate counts."
+  },
+  "concurrentBuildFixes": {
+    "app/src/main/java/com/fongmi/android/tv/source/SmartSourceSelector.java": "60671da4b5a8f92081395e3e8e9fb3a3e5f425df51b9357f19483858c83e501e",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java": "ff407c3bb309132c7bfccde1fa1621e1cec5791e14398db05968da737a7e132e"
+  },
+  "buildScopeNote": "The isolated snapshot originally predated two concurrent compilation fixes; the current SmartSourceSelector and LibraryDetailActivity are synchronized without changing the home/Rex inputs.",
+  "focusedGradleChecks": {
+    "task": ":app:testLeanbackArm64_v8aDebugUnitTest",
+    "classes": {
+      "RexClientCancellationTest": 1,
+      "RexRegionalFeedTest": 4,
+      "RexNowMappingTest": 11,
+      "RexFeedDateTest": 4,
+      "RexTmdbQueryTest": 20,
+      "PosterHomeCatalogTest": 12,
+      "RexHomeCatalogTest": 8
+    },
+    "tests": 60,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "caseSeconds": 5.879,
+    "scope": "Java unit-test source limited to these seven original test files through an external isolated init script; complete production main and the standard SDK/real dependencies are unchanged. Two calendar Kotlin test files also compiled but were not selected for execution. The earlier 24 pure Java tests are a subset, not additional cases.",
+    "xmlSummary": {
+      "classes": [
+        {
+          "class": "com.fongmi.android.tv.api.rex.RexClientCancellationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 5.154
+        },
+        {
+          "class": "com.fongmi.android.tv.api.rex.RexFeedDateTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.015
+        },
+        {
+          "class": "com.fongmi.android.tv.api.rex.RexNowMappingTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.256
+        },
+        {
+          "class": "com.fongmi.android.tv.api.rex.RexRegionalFeedTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.12
+        },
+        {
+          "class": "com.fongmi.android.tv.api.rex.RexTmdbQueryTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.015
+        },
+        {
+          "class": "com.fongmi.android.tv.ui.home.PosterHomeCatalogTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.214
+        },
+        {
+          "class": "com.fongmi.android.tv.ui.rex.RexHomeCatalogTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "seconds": 0.105
+        }
+      ],
+      "totals": {
+        "tests": 60,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 5.879
+      },
+      "focused_java_source_files": 7,
+      "unit_kotlin_sources": "two existing calendar classes also compiled but not selected for execution"
+    }
+  },
+  "scopeNotice": "The top-level tests and APK describe the initial card-restoration snapshot. Later layout changes (removing the classification row, small posters above four requested cards) are tracked separately in layoutRevision; the earlier APK does not include them.",
+  "debugBuild": {
+    "task": ":app:assembleLeanbackArm64_v8aDebug",
+    "exitCode": 0,
+    "seconds": 5058,
+    "artifactVerification": "Complete local download matches remote SHA-256; local and remote signature verification passed."
+  },
+  "apk": {
+    "applicationId": "com.fongmi.android.tv",
+    "sha256": "2843229e39a89f5489f6b101a0660cda293a145893b20dda395fe8cd37b37f51",
+    "bytes": 117073095,
+    "signature_verified": true,
+    "certificate_sha256": "5bc01cbb592fbe451e347eaa9b19757bd5888d02a162e5fa164ee9ff9eaea850",
+    "arm64_native_library_count": 35,
+    "python_asset_count": 20,
+    "section_card_layout_included": true,
+    "source": "2017-file frozen build manifest plus the two recorded pre-existing workspace compile-fix deltas",
+    "full_download_sha256_matched": true,
+    "local_signature_verified": true,
+    "android_ui_tests_executed": false,
+    "localWorkspaceArtifact": "app/build/outputs/apk/leanbackArm64_v8a/debug/library-home-restored-arm64-v8a-debug.apk"
+  },
+  "environment": {
+    "buildHost": "isolated Linux x86_64 development workspace, 4 GiB RAM",
+    "jdk": "JBR 21.0.10+7-b1163.110",
+    "gradle": "9.1.0",
+    "agp": "9.0.1",
+    "androidSdk": "Android 17 API 37.0, platform revision 2/extension 22; build-tools 37.0.0",
+    "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+    "media3PatchCheck": "Original production patch checks passed; required Git objects and all build source files were verified. Unused upstream test media were not copied.",
+    "gradleHeap": "1536 MiB, G1GC, metaspace limit 768 MiB",
+    "testHeap": "256 MiB, one fork",
+    "androidJarSha256": "bf1b4387cc7ca94fc6ef684f040d9d16fbf16248e181819f020736ea2053f177"
+  },
+  "sourceManifestSha256": "cfb2b472fb62108f042cfa03d84d6af10c9a62b8dca0453a48adb8d98284b888",
+  "compileFixDeltaManifestSha256": "26d946b297e9ce4f9301c57ec1cdb825aa3392b21359cbda458bd0f99dcb46a1",
+  "media3SourceManifestSha256": "8450a6642b58a13cf9c28e0acc47a142a7c80a11d1d69a2e70d0b640d13fb014",
+  "cleanup": "The task-specific remote credential copy was removed; all task-owned build processes exited. Existing credentials, development host, other tasks and app data were preserved.",
+  "layoutRevision": {
+    "requestedOrder": "hero, recent plays, optional collections, existing small poster shelves, cn_variety/cn_series/popular_movie/anime_daily section cards, source, footer",
+    "classificationRow": "removed from media-library mode, including its focus fallback",
+    "inputs": {
+      "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeController.java": "44d61c1987fa25f7bb86287b95fa053a29e5d0280a1efe89f867c8bfee600def",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeCatalog.java": "d9c4da4ce33fb03f87e3a97c2819cf803c6336ec5ede13880ee550515462101e",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java": "c02e7104e4710043f752fee885c890591a3a81275cb8f8df259846c5d52a52ef",
+      "app/src/leanback/res/values/strings_home_curated.xml": "3a555f5ba788dda4707107f33bbbe3c510acbf572a76adfec68b4f514b2297f1",
+      "app/src/leanback/res/values-zh-rCN/strings_home_curated.xml": "4cb1bee291f05bcf562878b4e5ccc3db9a9b62914b1e85e281753b34879a25af",
+      "app/src/leanback/res/values-zh-rTW/strings_home_curated.xml": "fd3f27a902d92b9824a19127933d657c6a4804c4af9a0d7c1fcb856690c6bf42",
+      "app/src/test/java/com/fongmi/android/tv/ui/home/PosterHomeCatalogTest.java": "80b4bb62e0d6af35378402c253a4cc87291e65f270578ffb8034483cb60e920b",
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/test/CompactHomeIntegrationTest.java": "397b17e65125c9b9397284799cb3d628fb2b33e2df6fe0bf16df72c480a76a44"
+    },
+    "verification": "Current standard resources/full production Java compilation, 20 focused JUnit checks and verified warm TV Debug APK passed. Android UI tests not executed.",
+    "checks": {
+      "resourceTask": ":app:processLeanbackArm64_v8aDebugResources",
+      "resourceTaskPassed": true,
+      "javaCompilation": "JDK javac of original Controller/Catalog/RexSections/CatalogTest using the complete previous real classpath and newly generated AGP R.jar; no custom stubs",
+      "javaCompilationSeconds": 7.471,
+      "junit": {
+        "PosterHomeCatalogTest": 12,
+        "RexHomeCatalogTest": 8,
+        "tests": 20,
+        "failures": 0,
+        "caseSeconds": [
+          0.312,
+          0.032
+        ]
+      },
+      "androidUiExecuted": false,
+      "verifiedSummary": {
+        "total_passed": 20,
+        "all_passed": true,
+        "tests": [
+          {
+            "class": "com.fongmi.android.tv.ui.home.PosterHomeCatalogTest",
+            "exit_code": 0,
+            "passed_tests": 12,
+            "wall_seconds": 1.635,
+            "case_seconds": 0.312
+          },
+          {
+            "class": "com.fongmi.android.tv.ui.rex.RexHomeCatalogTest",
+            "exit_code": 0,
+            "passed_tests": 8,
+            "wall_seconds": 0.606,
+            "case_seconds": 0.032
+          }
+        ],
+        "javac": {
+          "exit_code": 0,
+          "seconds": 7.471,
+          "actual_unchanged_source_count": 4,
+          "annotation_processing": false,
+          "implicit_source_compilation": false
+        },
+        "resources": {
+          "task": ":app:processLeanbackArm64_v8aDebugResources",
+          "exit_code": 0,
+          "seconds": 362.076,
+          "forbidden_app_library_source_compile_guard": true,
+          "allowed_only_gradle_build_logic_projects": [
+            "buildSrc",
+            "build-logic-settings",
+            "build-logic"
+          ]
+        },
+        "classpath_entry_count": 331,
+        "worker_classpath_argfile_sha256": "0fcd3cf193088c07daed348e8023c733e99d4ca84380c965384113b104ed1417",
+        "resource_r_jar_sha256": "87103ac7697aa70ef649c284c037e86813e57666ea3915d00f42e2c9135a1066",
+        "source_manifest_sha256": "3379b52975cb3a9d02aa43ab3deeeb246d8a018f2da82d61d0a6f117e82a40d0",
+        "ui_or_preview_executed": false
+      }
+    },
+    "warmReuse": {
+      "source": "initial frozen snapshot + recorded compilation fixes + current seven Java/resource files",
+      "unchangedFrozenKotlinSources": 86,
+      "compiledKotlinOutputFiles": 469,
+      "nonFinalResourceFields": true,
+      "newApiKotlinCallers": 0,
+      "concurrentWorkspaceChangesExcluded": [
+        "CalendarArtwork.kt",
+        "later SmartSourceSelector.java edits"
+      ],
+      "buildStatus": "passed; verified complete local download and signature"
+    },
+    "apk": {
+      "sha256": "c0c919bb4bb1c260ea759efa49b14767e8fb06e1a8043d466575222bdbe619de",
+      "bytes": 120078353,
+      "full_download_sha256_matched": true,
+      "local_signature_verified": true,
+      "certificate_sha256": "5bc01cbb592fbe451e347eaa9b19757bd5888d02a162e5fa164ee9ff9eaea850",
+      "applicationId": "com.fongmi.android.tv",
+      "arm64_native_library_count": 35,
+      "python_resource_count": 20,
+      "large_section_card_layout_included": true,
+      "source_manifest_sha256": "3379b52975cb3a9d02aa43ab3deeeb246d8a018f2da82d61d0a6f117e82a40d0",
+      "apk_build": "standard Gradle Java/resources/new project Dex/packaging/signing; precisely reuse verified unchanged Main Kotlin and external Dex outputs",
+      "excluded_unchanged_tasks": [
+        ":app:compileLeanbackArm64_v8aDebugKotlin",
+        ":app:mergeExtDexLeanbackArm64_v8aDebug"
+      ],
+      "immutable_kotlin_source_files": 86,
+      "immutable_kotlin_output_files": 469,
+      "external_dex_recovery_file_count": 5,
+      "external_dex_source": "byte-identical original Gradle outputs recovered via original complete dex-renamer-state mapping from prior verified APK; no App namespace classes in these five outputs",
+      "android_ui_tests_executed": false,
+      "localWorkspaceArtifact": "app/build/outputs/apk/leanbackArm64_v8a/debug/library-home-order-arm64-v8a-debug.apk"
+    }
+  }
+}

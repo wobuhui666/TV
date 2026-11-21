@@ -10,6 +10,7 @@ import com.fongmi.android.tv.api.DiscoverApi;
 import com.fongmi.android.tv.api.rex.DoubanBridgeClient;
 import com.fongmi.android.tv.api.rex.RexNowClient;
 import com.fongmi.android.tv.api.rex.RexTmdbClient;
+import com.fongmi.android.tv.api.rex.RexTmdbQuery;
 import com.fongmi.android.tv.bean.DiscoverMediaKey;
 import com.fongmi.android.tv.bean.RexSection;
 import com.fongmi.android.tv.bean.Vod;
@@ -100,7 +101,15 @@ public final class RexFeedLoader {
             deliver(request);
         };
         handler.postDelayed(deadline, DEADLINE_MS);
-        for (RexSection section : missing) fetch(section, request);
+        Map<String, List<RexSection>> regional = new LinkedHashMap<>();
+        for (RexSection section : missing) {
+            if (section.getSource() == RexSection.Source.REXNOW_REGIONAL) {
+                // The domestic shelf and Chinese spotlight share one current feed.
+                String key = section.getRegion() + ":" + section.getCategory();
+                regional.computeIfAbsent(key, ignored -> new ArrayList<>()).add(section);
+            } else fetch(section, request);
+        }
+        for (List<RexSection> group : regional.values()) fetchRegional(group, request);
     }
 
     public void close() {
@@ -139,7 +148,7 @@ public final class RexFeedLoader {
                     accept(section, List.of(), request);
                 }
             });
-            case REXNOW_REGIONAL -> RexNowClient.fetchRegional(section.getRegion(), section.getCategory(), tag, feedListener);
+            case REXNOW_REGIONAL -> fetchRegional(List.of(section), request);
             case REXNOW_DOUBAN -> RexNowClient.fetchDouban(section.getFeedCategory(), tag, feedListener);
             case REXNOW_ANIME -> RexNowClient.fetchAnime(tag, new RexNowClient.WeeklyListener() {
                 @Override
@@ -160,6 +169,39 @@ public final class RexFeedLoader {
             });
             case BRIDGE_CATALOG -> fetchBridge(section, request);
         }
+    }
+
+    private void fetchRegional(List<RexSection> group, int request) {
+        RexSection section = group.get(0);
+        RexNowClient.fetchRegional(section.getRegion(), section.getCategory(), tag, new RexNowClient.ItemsListener() {
+            @Override public void onSuccess(List<Vod> items) {
+                if (!isCurrent(request)) return;
+                if (items.isEmpty()) fetchRegionalFallback(group, request);
+                else acceptRegional(group, items, request);
+            }
+
+            @Override public void onError(Exception error) {
+                fetchRegionalFallback(group, request);
+            }
+        });
+    }
+
+    private void fetchRegionalFallback(List<RexSection> group, int request) {
+        if (!isCurrent(request)) return;
+        RexSection section = group.get(0);
+        RexTmdbQuery.Query query = RexTmdbQuery.regionalTv(section.getRegion(), section.getCategory());
+        if (query == null) {
+            acceptRegional(group, List.of(), request);
+            return;
+        }
+        RexTmdbClient.fetch(query, BuildConfig.TMDB_API_KEY, tag, new RexTmdbClient.ItemsListener() {
+            @Override public void onSuccess(List<Vod> items) { acceptRegional(group, items, request); }
+            @Override public void onError(Exception error) { acceptRegional(group, List.of(), request); }
+        });
+    }
+
+    private void acceptRegional(List<RexSection> group, List<Vod> items, int request) {
+        for (RexSection section : group) accept(section, items, request);
     }
 
     /** 云桥：sk 为空或 401/失败时回退 rexnow 豆瓣 feed（按栏目媒体类型过滤）。 */

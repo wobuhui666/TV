@@ -5,6 +5,8 @@ import com.fongmi.android.tv.bean.Flag;
 import com.fongmi.android.tv.bean.Result;
 import com.fongmi.android.tv.bean.Drm;
 import com.fongmi.android.tv.bean.Timeshift;
+import com.fongmi.android.tv.bean.Site;
+import com.fongmi.android.tv.bean.Vod;
 
 import org.junit.Test;
 
@@ -14,6 +16,36 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 
 public class LibraryPlaybackPrefetchTest {
+    @Test public void shouldHandOffTheSelectedPlaylistWithoutRegeneratingItsParameters() {
+        AtomicLong time = new AtomicLong(100);
+        var cache = cache(time);
+        Vod source = new Vod();
+        source.setId("vod"); source.setSite(Site.get("site", "site"));
+        Flag flag = new Flag("line");
+        Episode episode = Episode.create("第1集", "id=1&_client_ts=first-call");
+        flag.getEpisodes().add(episode); source.getFlags().add(flag);
+        VodPlayRequest request = VodPlayRequest.create("site", flag, episode);
+        assertTrue(LibraryPlaybackPrefetch.containsSelection(source, request));
+        var identity = LibraryPlaybackPrefetch.Identity.of("work", 1, "configuration", "vod", request);
+        String token = cache.put(identity, Result.vod(source), time.get());
+        Vod handedOff = cache.take(token, identity).getVod();
+        assertEquals(episode.getUrl(), handedOff.getFlags().get(0).getEpisodes().get(0).getUrl());
+        assertTrue(LibraryPlaybackPrefetch.containsSelection(handedOff, request));
+        assertNull(cache.take(token, identity));
+    }
+
+    @Test public void shouldRejectAPlaylistFromAnotherSiteLineOrEpisode() {
+        Vod source = new Vod(); source.setSite(Site.get("site", "site"));
+        Flag flag = new Flag("line"); Episode episode = Episode.create("高清", "selected-file");
+        flag.getEpisodes().add(episode); source.getFlags().add(flag);
+        assertTrue(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("site", flag, episode)));
+        assertFalse(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("other", flag, episode)));
+        assertFalse(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("site", new Flag("other-line"), episode)));
+        assertFalse(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("site", flag, Episode.create("高清", "other-file"))));
+        assertFalse(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("site", flag, Episode.create("另一集", "selected-file"))));
+        assertFalse(LibraryPlaybackPrefetch.containsSelection(source, VodPlayRequest.create("site", flag, Episode.create("高清", ""))));
+    }
+
     @Test public void shouldConsumeAnExactConfirmedSelectionOnlyOnce() {
         AtomicLong time = new AtomicLong(100);
         var cache = cache(time);
@@ -52,6 +84,17 @@ public class LibraryPlaybackPrefetchTest {
             assertNull(cache.take(token, actual));
             assertNull(cache.take(token, expected));
         }
+    }
+
+    @Test public void shouldBindTheSelectedNameWhenEpisodesShareAPlaybackUrl() {
+        AtomicLong time = new AtomicLong(100);
+        var cache = cache(time);
+        VodPlayRequest first = VodPlayRequest.create("site", new Flag("line"), Episode.create("第1集", "shared-url"));
+        VodPlayRequest second = VodPlayRequest.create("site", new Flag("line"), Episode.create("第2集", "shared-url"));
+        var identity = LibraryPlaybackPrefetch.Identity.of("work", 1, "configuration", "vod", first);
+        String token = cache.put(identity, new Result(), time.get());
+        assertNull(cache.take(token, LibraryPlaybackPrefetch.Identity.of("work", 1, "configuration", "vod", second)));
+        assertNull(cache.take(token, identity));
     }
 
     @Test public void shouldExpireFromLinkCompletionRatherThanHandoffTime() {

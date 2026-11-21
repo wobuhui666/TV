@@ -14,4 +14,6 @@
     <string name="library_detail_resume_episode_hint">%1$s · Episode %2$d · %3$s</string>
     <string name="library_detail_save">Save for later</string>
     <string name="library_detail_kept">Saved</string>
+    <string name="library_detail_follow">Follow</string>
+    <string name="library_detail_following">Following</string>
 </resources>

@@ -52,12 +52,23 @@ public final class PosterHomeCatalog {
     }
 
     public static List<RexSection> compactSections(int category) {
-        List<RexSection> result = new ArrayList<>();
+        return compactSections(category, false);
+    }
+
+    public static List<String> librarySpotlightKeys() {
+        return List.of("cn_variety", "cn_series", "popular_movie", "anime_daily");
+    }
+
+    public static List<RexSection> compactSections(int category, boolean librarySpotlights) {
+        Map<String, RexSection> sections = new LinkedHashMap<>();
         for (String key : compactKeys(category)) {
             RexSection section = RexSections.byKey(key);
-            if (section != null) result.add(section.limit(COMPACT_SHELF_LIMIT));
+            if (section != null) sections.put(key, section.limit(COMPACT_SHELF_LIMIT));
         }
-        return result;
+        if (librarySpotlights) for (RexSection section : RexSections.librarySpotlights()) {
+            sections.put(section.getKey(), section.limit(COMPACT_SHELF_LIMIT));
+        }
+        return new ArrayList<>(sections.values());
     }
 
     /** Keep identities intact: titles alone must not collapse different films or seasons. */

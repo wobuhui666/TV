@@ -1,6 +1,8 @@
 package com.fongmi.android.tv.source;
 
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.bean.Episode;
+import com.fongmi.android.tv.bean.Flag;
 
 import org.junit.Test;
 
@@ -73,6 +75,28 @@ public class LibrarySourceMatcherPreparedTest {
                 LibrarySourceMatcher.prepareSource(source("The Matrix", "1999", "电视剧")), work));
     }
 
+    @Test public void shouldPreserveMissingMetadataAndPlaybackEvidenceWhenPrepared() {
+        List<Target> targets = List.of(
+                new Target("星际穿越", List.of("Interstellar"), "2014", true, null),
+                new Target("庆余年", List.of("Joy of Life"), "2019", false, 1),
+                new Target("庆余年", List.of("Joy of Life"), "2019", false, 2));
+        for (String title : List.of("星际穿越", "Interstellar", "庆余年", "庆余年 第一季", "庆余年 第二季")) {
+            for (String year : List.of("", "2014", "2019", "2024")) for (String type : List.of("", "剧情,国产", "电影", "电视剧")) {
+                for (String url : List.of("", "   ", "dynamic-episode-token")) {
+                    Vod source = source(title, year, type);
+                    Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("1", url)); source.getFlags().add(flag);
+                    var preparedSource = LibrarySourceMatcher.prepareSource(source);
+                    for (Target target : targets) {
+                        assertEquals(title + " / " + year + " / " + type + " / " + url + " -> " + target,
+                                LibrarySourceMatcher.match(source, target.title, target.aliases, target.year, target.movie, target.season),
+                                LibrarySourceMatcher.match(preparedSource, LibrarySourceMatcher.prepareWork(
+                                        target.title, target.aliases, target.year, target.movie, target.season)));
+                    }
+                }
+            }
+        }
+    }
+
     @Test public void shouldExtractTheSameSeasonWithoutPreparingUnusedMediaIdentityFields() {
         for (String title : List.of("庆余年", "慶餘年２【國語】 1080p", "某剧 第十二季", "Joy of Life S02",
                 "Planet Earth II", "Sweet2", "庆余年 (2019)", "1917", "4K", "黑客帝国 / The Matrix", "Dark Season 3")) {
@@ -80,6 +104,23 @@ public class LibrarySourceMatcherPreparedTest {
                 Vod source = source(title, year, type);
                 source.setRemarks("全集 2026 第五季");
                 assertEquals(title, MediaMatcher.identity(source).getSeason(), MediaMatcher.extractSeason(source.getName()));
+            }
+        }
+    }
+
+    @Test public void shouldPreserveDateYearNormalizationAndExplicitTitleYearsWhenPrepared() {
+        for (String title : List.of("流浪地球", "流浪地球 (2019)", "流浪地球 (2020)", "庆余年 第一季")) {
+            for (String year : List.of("2019", "2020", "2019-11-26", "2020-11-26", "上映：2020", "")) {
+                Vod source = source(title, year, "");
+                Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("1", "playback-token")); source.getFlags().add(flag);
+                for (boolean movie : List.of(true, false)) {
+                    String expected = movie ? "流浪地球" : "庆余年";
+                    Integer season = movie ? null : 1;
+                    assertEquals(title + " / " + year + " / " + movie,
+                            LibrarySourceMatcher.match(source, expected, List.of(), "2019", movie, season),
+                            LibrarySourceMatcher.match(LibrarySourceMatcher.prepareSource(source),
+                                    LibrarySourceMatcher.prepareWork(expected, List.of(), "2019", movie, season)));
+                }
             }
         }
     }

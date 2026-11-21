@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.playback.vod;
 
 import android.os.SystemClock;
+import android.os.Parcel;
 
 import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.api.SiteApi;
@@ -31,6 +32,7 @@ public final class LibraryPlaybackPrefetch {
     private static final long MAX_AGE_MS = 60_000;
     private static final long RETRY_DELAY_MS = 15_000;
     private static final Handoffs HANDOFFS = new Handoffs(SystemClock::elapsedRealtime, () -> UUID.randomUUID().toString());
+    private static final Handoffs DETAILS = new Handoffs(SystemClock::elapsedRealtime, () -> UUID.randomUUID().toString());
     private ListenableFuture<Result> future;
     private Identity identity;
     private Identity attempted;
@@ -93,6 +95,42 @@ public final class LibraryPlaybackPrefetch {
         return token;
     }
 
+    /** Keep the selected playlist intact when a source regenerates its play parameters per detail call. */
+    public static String handoffDetail(String reference, Vod source, Flag flag, Episode episode) {
+        if (source == null || flag == null || episode == null || reference == null || reference.isEmpty()) return "";
+        VodPlayRequest request = VodPlayRequest.create(source.getSiteKey(), flag, episode);
+        if (!containsSelection(source, request)) return "";
+        Identity identity = Identity.of(reference, VodConfig.getCid(), VodConfig.getUrl(), source.getId(), request);
+        Parcel parcel = Parcel.obtain();
+        try {
+            source.writeToParcel(parcel, 0);
+            parcel.setDataPosition(0);
+            Vod copied = Vod.CREATOR.createFromParcel(parcel);
+            return DETAILS.put(identity, Result.vod(copied), SystemClock.elapsedRealtime());
+        } finally {
+            parcel.recycle();
+        }
+    }
+
+    public static Vod consumeDetail(String token, String reference, int cid, String vodId, VodPlayRequest request) {
+        if (request == null || cid != VodConfig.getCid()) return null;
+        Result cached = DETAILS.take(token, Identity.of(reference, cid, VodConfig.getUrl(), vodId, request));
+        if (cached == null || cached.getList().isEmpty()) return null;
+        Vod source = cached.getVod();
+        return source.getId().equals(vodId) && containsSelection(source, request) ? source : null;
+    }
+
+    static boolean containsSelection(Vod source, VodPlayRequest request) {
+        if (source == null || request == null || request.getKey().isEmpty() || request.getId().isEmpty()
+                || !request.getKey().equals(source.getSiteKey())) return false;
+        for (Flag flag : source.getFlags()) if (request.getFlag().equals(flag.getFlag())) {
+            for (Episode episode : flag.getEpisodes()) {
+                if (request.getId().equals(episode.getUrl()) && request.getTitle().equals(episode.getName())) return true;
+            }
+        }
+        return false;
+    }
+
     /** One use, after the full-screen player has confirmed the same source, flag, and episode. */
     public static Result consume(String token, String reference, int cid, String vodId, VodPlayRequest request) {
         if (request == null || cid != VodConfig.getCid()) return null;
@@ -135,10 +173,10 @@ public final class LibraryPlaybackPrefetch {
         } catch (Exception invalid) { return false; }
     }
 
-    record Identity(String reference, int cid, String configuration, String vodId, String site, String flag, String episode) {
+    record Identity(String reference, int cid, String configuration, String vodId, String site, String flag, String episode, String title) {
         static Identity of(String reference, int cid, String configuration, String vodId, VodPlayRequest request) {
             return new Identity(Objects.toString(reference, ""), cid, Objects.toString(configuration, ""), Objects.toString(vodId, ""),
-                    request.getKey(), request.getFlag(), request.getId());
+                    request.getKey(), request.getFlag(), request.getId(), request.getTitle());
         }
     }
 

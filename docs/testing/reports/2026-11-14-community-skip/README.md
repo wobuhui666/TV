@@ -162,3 +162,54 @@ java -Xmx192m -cp "$JVM_WORK/classes:$JVM_CP" org.junit.runner.JUnitCore \
 | `app/src/test/java/com/fongmi/android/tv/player/skip/PlaybackEpisodeSnapshotTest.java` | `d6818bfe48a484cc9abbbee331025a0344ed12f9a8a0995c1b443d80733b0d7c` |
 | `app/src/test/java/com/fongmi/android/tv/player/skip/SegmentSkipPolicyTest.java` | `1e5cab5c7d60911a3f701af60b292dafd3ee3a644cc5da5a840c2319114c9884` |
 | `app/src/test/java/com/fongmi/android/tv/utils/TmdbEndpointTest.java` | `245fded6832b2d3a41ce4d82b3357aadf11533f41a93d88094f328c151bf1044` |
+
+## 2026-11-15：短提示与 fast 主接口
+
+按用户授权将主接口改为 `https://nnnn.114514heihei.eu.org/v1/chat/completions`，请求模型为 `fast`，失败、超时或标题验证不通过后依次使用 Groq 和 Workers AI。源码提交为 `d6a08b3e551a18be42c430e28fb93de002813c9d`，已推送实际关联仓库 `zhhshss/tttt`。Vercel 部署 `dpl_H1JtHye6rEUJVRnA1bchTeJGdu3J` 为 READY；Cloudflare 部署 ID 为 `b9b1fd29e47f4843849a2146880c9f8c`。两个平台项目名称仍为 `tttt`，两条现有 Cloudflare 路由保持不变。
+
+- 固定英文系统提示经 `o200k_base` / `o200k_harmony` 测量为 69 tokens，`cl100k_base` 为 70 tokens。代表性中文标题请求的服务端总输入用量为 156–160 tokens，包含用户输入及聊天模板；更长名称的总输入量仍会增加。
+- `fast` 是服务端模型别名，成功检查当前返回 `openai/gpt-oss-20b`。主请求使用 `max_completion_tokens=96`、`reasoning_effort=low`，仍有少量思考 token。`none` 探测返回了较慢的其他模型及错误片名，因此未采用；Groq 备用仍使用明确验证过的 `reasoning_effort=none`。
+- 三级模型共享 2500 ms 预算，主接口 1200 ms、Groq 600 ms；两级均耗满期限后，Workers AI 约有 700 ms。保持规则与缓存优先，缓存包含主接口地址和模型，正常返回原名不会继续调用备用模型。
+- `PRIMARY_API_KEY` 通过平台私有配置注入，源码凭据检查通过；Vercel 的 Workers AI 回退仍使用独立内部令牌。
+- 41 项中间层测试、语法与差异检查通过，覆盖三级顺序、有效原名、异常输出、HTTP 错误、实际取消、共享期限、缓存及 Vercel 适配。应用新增 `primary` 来源兼容与严格校验测试，69 项专项 JVM 测试通过。
+
+| 线上检查 | 结果 |
+| --- | --- |
+| Cloudflare 独立域名，`[ANi] 黑色五叶草` | 200，3225 ms，`primary`，正确条目 `73223` |
+| Vercel 源站，`[字幕组] 黑色五叶草` | 200，1392 ms，`primary`，正确条目 `73223` |
+| 当前域名，同一来源标题 | 200，70 ms，`primary` 缓存命中，正确条目 `73223` |
+| 受控主接口 429，实际 Groq 与 TMDB | 200，225 ms，`groq`，正确条目 |
+| 受控两级 API 503，实际 Workers AI 与 TMDB | 200，389 ms，`workers-ai`，正确条目 |
+| 两级 HTTP 请求耗满期限并实际取消，随后实际 Workers AI 与 TMDB | 200，2046 ms，`workers-ai`，正确条目 |
+
+真实客户端身份解析器另以 `[ANi] 黑色五叶草 (2017) 更新至171集 1080p 国语版` 查询当前域名，连续第 4 集正确匹配 S1E4（2966 ms），连续第 171 集复用缓存后匹配 S2E1（19 ms），共 3 次 HTTP 请求，满足原有共享 8 秒期限。
+
+受控回退检查使用同一提交的真实共享逻辑，局部模拟指定 API 的故障，其余 Groq、受保护 Worker 和 TMDB 请求访问真实服务；未修改生产密钥或路由来制造故障。时间为测试主机单次样本，不代表电信设备现场延迟。客户端兼容改动仍为源码与 JVM 验证，本次未构建或安装 APK，也未验证电视实际 seek。
+
+## 2026-11-20：Vercel 亚太区域
+
+Vercel 项目 `tttt` 的函数区域从美国弗吉尼亚（`iad1`）切换为香港（`hkg1`），项目默认区域与仓库 `vercel.json` 均已设置。区域配置提交为 `d400209dabee830da4302bd757cfcd8d9042cd6d`，仅提交区域配置及对应 README 段落，保留工作树中已有的模型与校验改动。
+
+基于切换前的实际生产部署 `dpl_3TZDXvHedW7hRN1JBE1hFkp8RN5q` 重新部署，9 个源文件与原部署一致，包含当时已经上线的标题校验及 Workers AI / NVIDIA 回退；没有用较旧的 Git 源码替换线上逻辑。新部署 `dpl_5Cxat81MSqLzqFJMHR3JjVrwWrCY` 状态为 READY，部署区域和项目默认区域均为 `["hkg1"]`，生产别名已指向该部署。
+
+Vercel 源站健康检查返回 200，响应执行标记含 `cle1::hkg1`；搜索「黑色五叶草 (2017) 1080p 国语版」返回 200（1165 ms）及正确条目 `73223`，实际查询词为「黑色五叶草」。当前主域名和 Cloudflare 独立域名使用浏览器客户端标识查询健康接口均返回 200；测试主机的 Python 默认客户端标识被 Cloudflare 返回 403 / 1010。未调整 Cloudflare 防火墙、Worker、DNS 分流或模型配置。此次仅修改区域配置，未重复运行模型单测，也未构建客户端 APK。
+
+## 2026-11-21：共享缓存与日本东京
+
+按用户要求将 Vercel 区域调整为日本东京（`hnd1`），并在两个平台部署缓存优化。最终源码提交为 `10244748173a28c1d2dbc3e035cb16d885de125d`；缓存实现提交为 `0189d5a`，另将原已上线的标题校验与 Workers AI / NVIDIA 回退整理为独立基线提交，保留原有行为。Vercel 部署 `dpl_njDj4dqxB7DUmtzWcEo6vyQp9Kdx` 为 READY，项目与部署区域均为 `["hnd1"]`，健康检查执行标记含 `cle1::hnd1`。Cloudflare 部署 ID 为 `3ceaa263284d44d1b5a8d0c3aaaf970c`，原有两条域名路由仍指向 `tttt`。
+
+- 搜索与列表默认缓存 1 小时，详情 1 天，名称清理 7 天；成功的旧搜索结果可继续使用 1 天，旧详情 7 天，并后台刷新。失败、空结果或模型全部失败不会覆盖有效旧结果，空结果与模型失败结果只短缓存 30 秒。
+- 明确标签不同的同名搜索、共享缓存读取及最终 TMDB 请求均合并；缓存命中前不调用模型。Cloudflare 使用 Cache API 保存名称及公开元数据，Vercel 在内存未命中时通过受保护的内部缓存接口复用，读取最多等待 250 ms。该存储按 Cloudflare 接入节点保存，可能提前淘汰。
+- 图片启用 Cloudflare 边缘缓存与 Vercel CDN，默认 1 年。公开元数据可使用 CDN；带 Bearer 的请求、会话与账户状态参数、账户接口和错误响应不进入公共 CDN 或旧结果回退。共享缓存键为哈希，按凭据及策略隔离；缓存接口要求内部令牌，正文限制 1 MiB、存储期限最多 8 天。
+- 后台刷新与共享写入使用平台 `waitUntil`；Vercel 固定 `@vercel/functions` 依赖。Node.js `24.22.3` 下 91 项测试全部通过，覆盖有效期、跨实例复用、名称校验、空结果、隐私参数、后台生命周期、并发取消及图片二进制内容。语法、凭据检查及差异检查通过。
+
+| 真实检查 | 首次 | 缓存命中 |
+| --- | --- | --- |
+| Vercel 同名搜索，先带标签再用原名 | 200，1217 ms，MISS | 200，222 ms，原始结果缓存 HIT；随后同 URL 确认 CDN HIT |
+| Cloudflare 同名搜索 | 200，313 ms，MISS | 200，25 ms，HIT |
+| Vercel 原始图片，1356640 字节 | 200，1247 ms，MISS | 200，96 ms，CDN HIT |
+| Cloudflare 同一图片 | 200，563 ms，MISS | 200，54 ms，HIT |
+| 两个独立核心实例，实际共享缓存与 TMDB | 121 ms，TMDB 1 次 | 16 ms，HIT，模型与 TMDB 均 0 次 |
+| 两个独立核心实例，实际 `fast` 清理来源标签 | 1195 ms，模型 1 次 | 13 ms，HIT，模型与 TMDB 均 0 次 |
+
+两个平台的图片正文 SHA-256 相同。真实共享缓存另验证了临时独立键的写入 204、读取 200，以及未鉴权 401；切换搜索参数后仍复用名称缓存，只访问 TMDB。该跨实例测试使用同一提交的真实核心与真实 Cloudflare / TMDB / 模型服务，区别于表中的公开 Vercel 源站测量。自然过期的后台刷新通过模拟时钟验证，未等待完整的一小时或一天。上述时间为测试主机单次样本；本次未修改或构建 Android 客户端。

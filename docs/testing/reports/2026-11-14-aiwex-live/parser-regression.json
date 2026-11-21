@@ -1,0 +1,64 @@
+{
+  "schema": "tv.proxy-parser-regression.v1",
+  "testedBaseCommit": "6d6a4a571ad8a6bd362cb05919bbfd8f0fd7a5ec",
+  "testedWorkingTreeChange": "Proxy.proxies, Proxy.uris and Proxy.wildcard are transient runtime caches; name/hosts/urls remain configuration fields.",
+  "source": {
+    "path": "catvod/src/main/java/com/github/catvod/bean/Proxy.java",
+    "baselineSha256": "62ccf9681d5c2519cadf26b22823d40c280832d46cbe70e579425336d8100fe9",
+    "patchedSha256": "3b16261ab35ca609fd2154c0df81d34a11180efd80c32bf0f86997d9c09ecbbd",
+    "baselineConstruction": "Identical source with transient removed only from the three runtime fields."
+  },
+  "test": {
+    "path": "catvod/src/test/java/com/github/catvod/bean/ProxyParsingTest.java",
+    "sha256": "d98e8a00828d412b7abbb03c2c1b9afbcb50ec33a3a65d1bd9342286891a76eb"
+  },
+  "environment": {
+    "runtime": "OpenJDK 21.0.13.0.3 on Ubuntu 24.04",
+    "gson": "2.14.0 (repository production dependency)",
+    "junit": "4.13.2",
+    "mode": "Standalone javac and JUnitCore",
+    "androidApiDependency": "com.google.android:android:4.1.1.4 used for compile-time API signatures only; Android Uri parsing was not executed."
+  },
+  "baseline": {
+    "tests": 4,
+    "passed": 1,
+    "failed": 3,
+    "exitCode": 1,
+    "failures": [
+      "shouldResolveAnEmptyRuleArrayWithoutPlatformTypeAdapters",
+      "shouldParseTheDocumentedRuleFields",
+      "shouldIgnoreInjectedRuntimeCachesWithoutRejectingTheRule"
+    ],
+    "adapterTraversalEvidence": [
+      "Proxy array adapter creation requested java.net.Proxy before reading an empty array.",
+      "CollectionTypeAdapterFactory -> ReflectiveTypeAdapterFactory.getBoundFields -> ReflectiveTypeAdapterFactory.createBoundField -> java.net.Proxy type adapter request.",
+      "The guarded adapter factory rejects java.net and android.net.Uri types, making accidental platform-object traversal observable."
+    ]
+  },
+  "patched": {
+    "tests": 4,
+    "passed": 4,
+    "failed": 0,
+    "exitCode": 0,
+    "elapsedSeconds": 0.128,
+    "verifiedBehavior": [
+      "Empty arrays construct their adapters without runtime-platform type adapters.",
+      "Valid name/hosts/urls rules parse normally.",
+      "proxies/uris/wildcard input keys cannot seed runtime caches or alter pre-init ordering.",
+      "Serialization contains only name/hosts/urls.",
+      "Null and invalid array shapes remain empty-rule results."
+    ]
+  },
+  "closestGradleCommand": "./gradlew :catvod:testDebugUnitTest --tests com.github.catvod.bean.ProxyParsingTest",
+  "gradleVariantValidation": "Not run in this standalone comparison; scheduled in the primary build workflow.",
+  "androidRuntimeValidation": {
+    "class": "com.fongmi.android.tv.ui.activity.ProxyConfigurationAndroidTest",
+    "status": "Pending a rebuilt APK containing the patch.",
+    "coverage": "Real Android Uri.init rebuilds HTTP/SOCKS endpoints and wildcard ordering from hosts/urls; runtime fields remain excluded from output."
+  },
+  "limits": [
+    "This comparison proves adapter exclusion and the JSON contract, not an Android 31 timing threshold.",
+    "No emulator, full baseline APK, application configuration, transport, JNI fixture or other model was modified by this comparison.",
+    "Actual configuration load, Guard execution and submitted searches require the patched full APK live run."
+  ]
+}

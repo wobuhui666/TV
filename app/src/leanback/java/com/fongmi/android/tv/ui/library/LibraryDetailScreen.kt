@@ -463,10 +463,11 @@ private fun HeroInformation(
             Column(Modifier.width(220.dp), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 PrimaryPlayButton(state, focus("play")) { onAction("play", "play") }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (state.followable) 8.dp else 12.dp, Alignment.CenterHorizontally)) {
                     DetailIconAction("source", stringResource(R.string.library_sources_action), R.drawable.msr_swap_horiz,
                         focus("source"), onAction = onAction)
-                    DetailIconAction("keep", stringResource(R.string.keep), if (state.kept) R.drawable.msr_favorite else R.drawable.msr_favorite_border,
+                    if (state.followable) DetailFollowAction(state.kept, focus("keep"), onAction)
+                    else DetailIconAction("keep", stringResource(R.string.keep), if (state.kept) R.drawable.msr_favorite else R.drawable.msr_favorite_border,
                         focus("keep"), selected = state.kept, onAction = onAction)
                     if (state.showMoreAction) DetailIconAction("more", stringResource(R.string.library_more),
                         R.drawable.msr_info, focus("more"), onAction = onAction)
@@ -514,6 +515,22 @@ private fun DetailIconAction(key: String, label: String, icon: Int, modifier: Mo
     TvActionButton(onClick = { onAction(key, key) }, modifier = modifier.size(44.dp).semantics { contentDescription = label; this.selected = selected },
         selected = selected, shape = CircleShape, contentPadding = PaddingValues(10.dp), focusedScale = 1.04f) {
         Icon(painterResource(icon), null, Modifier.size(22.dp))
+    }
+}
+
+@Composable
+private fun DetailFollowAction(selected: Boolean, modifier: Modifier, onAction: (String, String) -> Unit) {
+    val label = stringResource(if (selected) R.string.library_detail_following else R.string.library_detail_follow)
+    TvActionButton(onClick = { onAction("keep", "keep") },
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = label
+            this.selected = selected
+        }.width(116.dp).height(44.dp),
+        selected = selected, shape = CircleShape, contentPadding = PaddingValues(horizontal = 12.dp), focusedScale = 1.04f) {
+        Icon(painterResource(if (selected) R.drawable.msr_favorite else R.drawable.msr_favorite_border), null, Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, modifier = Modifier.testTag("followLabel"), style = MaterialTheme.typography.labelMedium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -677,7 +694,9 @@ private fun ResourceSection(state: LibraryDetailState, registry: DetailFocusRegi
                         selected = state.kept, shape = CircleShape) {
                         Icon(painterResource(if (state.kept) R.drawable.msr_favorite else R.drawable.msr_favorite_border), null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(if (state.kept) R.string.library_detail_kept else R.string.library_detail_save), style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(if (state.followable) {
+                            if (state.kept) R.string.library_detail_following else R.string.library_detail_follow
+                        } else if (state.kept) R.string.library_detail_kept else R.string.library_detail_save), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }

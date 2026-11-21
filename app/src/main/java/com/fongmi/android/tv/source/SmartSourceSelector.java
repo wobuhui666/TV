@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 public final class SmartSourceSelector {
 
     private static final Pattern MOVIE_CUT = Pattern.compile("(?i)导演剪辑|導演剪輯|导剪|導剪|加长|加長|未删减|未刪減|剧场版|劇場版|影院版|院线版|院線版|director(?:['’]s)?[ ._-]*cut|extended|uncut|theatrical|remaster(?:ed)?");
+    private static final Pattern SUBTITLE_FILE = Pattern.compile("(?i)\\.(?:srt|ass|ssa|vtt|sub|idx|lrc)(?=\\s*(?:$|[\\[（(【]))");
+    private static final Pattern RESOLUTION_TAG = Pattern.compile("(?:^|\\|)(?:16k|8k|4k|[0-9]{3,4}[pi]|uhd|fhd)(?=\\||$)");
 
     private SmartSourceSelector() {
     }
@@ -64,21 +66,59 @@ public final class SmartSourceSelector {
 
     public static Episode findEpisode(Flag flag, EpisodeTarget target, Integer sourceSeason) {
         if (flag == null || target == null) return null;
-        Episode selected = null;
+        List<Episode> matches = new ArrayList<>();
         int best = -1;
-        boolean ambiguous = false;
         for (Episode episode : flag.getEpisodes()) {
             if (!target.matches(episode, sourceSeason)) continue;
             int score = target.score(episode);
             if (score > best) {
-                selected = episode;
+                matches.clear();
+                matches.add(episode);
                 best = score;
+            } else if (score == best) matches.add(episode);
+        }
+        if (matches.isEmpty()) return null;
+        Episode selected = matches.get(0);
+        String selectedUrl = selected.getUrl();
+        if (matches.stream().allMatch(episode -> selectedUrl.equals(episode.getUrl()))) return selected;
+        int highest = 0;
+        boolean ambiguous = false;
+        String edition = null;
+        for (Episode episode : matches) {
+            int resolution = knownResolution(episode);
+            if (resolution == 0) return null;
+            String remainingEdition = RESOLUTION_TAG.matcher(episode.getLabel().edition()).replaceAll("").replaceAll("^\\||\\|$", "");
+            if (edition != null && !edition.equals(remainingEdition)) return null;
+            edition = remainingEdition;
+            if (resolution > highest) {
+                selected = episode;
+                highest = resolution;
                 ambiguous = false;
-            } else if (score == best && selected != null && !selected.getUrl().equals(episode.getUrl())) {
-                ambiguous = true;
-            }
+            } else if (resolution == highest && !selected.getUrl().equals(episode.getUrl())) ambiguous = true;
         }
         return ambiguous ? null : selected;
+    }
+
+    /** Only explicit, consistent resolution tags can settle an otherwise equal content identity. */
+    private static int knownResolution(Episode episode) {
+        if (SUBTITLE_FILE.matcher(episode.getName()).find()) return 0;
+        int resolution = 0;
+        for (String tag : episode.getLabel().edition().split("\\|")) {
+            int value = switch (tag) {
+                case "16k", "8640p", "8640i" -> 8640;
+                case "8k", "4320p", "4320i" -> 4320;
+                case "4k", "2160p", "2160i" -> 2160;
+                case "1080p", "1080i" -> 1080;
+                case "720p", "720i" -> 720;
+                default -> 0;
+            };
+            if (value == 0 && tag.matches("[0-9]{3,4}[pi]")) return 0;
+            if (value > 0) {
+                if (resolution != 0 && resolution != value) return 0;
+                resolution = value;
+            }
+        }
+        return resolution;
     }
 
     /**
@@ -127,6 +167,36 @@ public final class SmartSourceSelector {
             cuts.add(cut.find() ? cut.group().toLowerCase(java.util.Locale.ROOT) : "");
             if (cuts.size() > 1) return null;
             if (selected == null) selected = new FlagSelection(flag, episode, 0, flag.getEpisodes().size());
+        }
+        return selected;
+    }
+
+    /** Keeps an explicit library choice when a source refreshes its signed playback parameters. */
+    public static FlagSelection selectLibraryEpisode(Vod source, String url, String name, String preferredFlag) {
+        if (source == null) return null;
+        boolean selectedLine = preferredFlag != null && !preferredFlag.isEmpty();
+        List<Flag> flags = source.getFlags();
+        if (selectedLine) flags = flags.stream().filter(flag -> flag.getFlag().equals(preferredFlag)).toList();
+        // A removed or renamed selected line cannot transfer the choice to another line.
+        if (url != null && !url.isEmpty()) {
+            FlagSelection exact = null, named = null;
+            boolean differentNames = false;
+            for (Flag flag : flags) for (Episode episode : flag.getEpisodes()) {
+                if (!url.equals(episode.getUrl())) continue;
+                FlagSelection match = new FlagSelection(flag, episode, 1000, flag.getEpisodes().size());
+                if (exact == null) exact = match;
+                else if (!episode.getName().equals(exact.episode().getName())) differentNames = true;
+                if (name != null && name.equals(episode.getName()) && named == null) named = match;
+            }
+            if (named != null) return named;
+            if (exact != null) return differentNames ? null : exact;
+        }
+        if (!selectedLine || name == null || name.isEmpty()) return null;
+        FlagSelection selected = null;
+        for (Flag flag : flags) for (Episode episode : flag.getEpisodes()) {
+            if (!name.equals(episode.getName()) || episode.getUrl().isEmpty()) continue;
+            if (selected != null && !episode.getUrl().equals(selected.episode().getUrl())) return null;
+            if (selected == null) selected = new FlagSelection(flag, episode, 600, flag.getEpisodes().size());
         }
         return selected;
     }

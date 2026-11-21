@@ -236,7 +236,8 @@ public final class EpisodeIdentityResolver {
     @Nullable
     static String approvedSearchTitle(String query, @Nullable String encodedTitle, @Nullable String source) {
         if (encodedTitle == null || encodedTitle.length() > 4096
-                || !"rules".equals(source) && !"groq".equals(source) && !"workers-ai".equals(source)) return null;
+                || !"rules".equals(source) && !"primary".equals(source)
+                && !"groq".equals(source) && !"workers-ai".equals(source)) return null;
         String title;
         try {
             title = URLDecoder.decode(encodedTitle, StandardCharsets.UTF_8.name());

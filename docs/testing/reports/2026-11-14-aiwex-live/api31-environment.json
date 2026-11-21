@@ -1,0 +1,47 @@
+{
+  "schema": "tv.aiwex.api31-environment.v1",
+  "verifiedProperties": {
+    "ro.build.version.sdk": {
+      "rc": 0,
+      "value": "31",
+      "stderr": ""
+    },
+    "ro.hw_timeout_multiplier": {
+      "rc": 0,
+      "value": "10",
+      "stderr": ""
+    },
+    "ro.product.cpu.abilist": {
+      "rc": 0,
+      "value": "x86_64,arm64-v8a",
+      "stderr": ""
+    },
+    "ro.dalvik.vm.native.bridge": {
+      "rc": 0,
+      "value": "libndk_translation.so",
+      "stderr": ""
+    }
+  },
+  "propertySetup": {
+    "changedPaths": [
+      "/system/build.prop"
+    ],
+    "previousDefinitions": [
+      {
+        "path": "/system/build.prop",
+        "previousValues": []
+      },
+      {
+        "path": "/vendor/build.prop",
+        "previousValues": []
+      }
+    ],
+    "requestedValue": 10,
+    "qemuPropUsed": false,
+    "applicationAndConfigChanged": false
+  },
+  "frameworkServiceExecutionTimeoutMs": 200000,
+  "applicationSearchDeadlineMs": 30000,
+  "mainHandlerReferenceMs": 250,
+  "propertiesDoNotProveGuardExecution": true
+}

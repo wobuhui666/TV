@@ -27,6 +27,7 @@ import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.LibraryMedia;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.calendar.AiringCalendarIndex;
 import com.fongmi.android.tv.databinding.ActivityLibraryDetailBinding;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetch;
@@ -48,6 +49,9 @@ import com.fongmi.android.tv.ui.library.LibraryDetailState;
 import com.fongmi.android.tv.ui.library.LibraryDetailView;
 import com.fongmi.android.tv.utils.Notify;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -273,7 +277,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
         if (metadata != null && metadata.detail().getRuntimeMinutes() > 0) facts.add(getString(R.string.library_minutes, metadata.detail().getRuntimeMinutes()));
         state.metadata = String.join(" · ", facts); state.seriesStatus = seriesStatus();
         if (metadata != null && !metadata.detail().getRating().isEmpty()) state.ratings = List.of(new LibraryDetailBadge("TMDB", metadata.detail().getRating()));
-        state.kept = keptState; state.selecting = pendingAutoplay || resources.isSelecting();
+        state.kept = keptState; state.followable = followable(); state.selecting = pendingAutoplay || resources.isSelecting();
         boolean resume = history != null && history.getPosition() > 0 && (state.movie || selectedEpisode == null
                 || Objects.equals(history.getMediaSeason(), selectedSeason) && Objects.equals(history.getMediaEpisode(), selectedEpisode));
         state.playLabel = getString(state.selecting ? R.string.library_cancel_playback
@@ -562,7 +566,23 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
     }
     private boolean kept() {
         if (work == null) return false;
+        if (followable()) return !followKeeps().isEmpty();
         return (key == null ? Keep.find(work.getSiteKey() + com.fongmi.android.tv.db.AppDatabase.SYMBOL + work.getId()) : Keep.findDiscover(key.toString())) != null;
+    }
+
+    private boolean followable() { return key != null && !key.isMovie(); }
+
+    private List<Keep> followKeeps() {
+        if (!followable()) return List.of();
+        return Keep.getVodAndDiscover().stream().filter(keep -> key.equals(AiringCalendarIndex.mediaKey(keep))).toList();
+    }
+
+    /** Preserve a source bookmark when its existing detail is reliably linked to TMDB. */
+    private void linkOriginalKeep() {
+        if (!followable() || originalSource == null || originalSource.getSiteKey().isEmpty()) return;
+        Keep saved = Keep.find(originalSource.getSiteKey() + com.fongmi.android.tv.db.AppDatabase.SYMBOL + originalSource.getId());
+        if (saved == null || DiscoverMediaKey.parse(saved.getMediaRef()) != null) return;
+        saved.setMediaRef(key.toString()); saved.save(); RefreshEvent.keep();
     }
 
     private void bindLogo(LibraryMedia.Metadata value) {
@@ -642,7 +662,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
                     work.setTypeName(detail.getMediaType()); work.setName(detail.getTitle()); work.setContent(detail.getComment()); work.setYear(detail.getYear());
                     bindWork();
                     DiscoverApi.matchDoubanToTmdb(detail, BuildConfig.TMDB_API_KEY, metadataTag, new DiscoverApi.MatchListener() {
-                        @Override public void onMatch(DiscoverMediaKey value) { if (!isInactive() && !identityLocked) { key = value; work.setId(value.toString()); reference = value.toString(); loadMetadata(); } }
+                        @Override public void onMatch(DiscoverMediaKey value) { if (!isInactive() && !identityLocked) { key = value; work.setId(value.toString()); reference = value.toString(); updateKeep(); loadMetadata(); } }
                         @Override public void onNoMatch() { }
                         @Override public void onError(Exception error) { }
                     });
@@ -662,6 +682,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
                         }
                         if (match != null) {
                             key = DiscoverMediaKey.parse(match.getId()); reference = match.getId();
+                            linkOriginalKeep(); updateKeep();
                             History linked = History.findByMedia(reference);
                             if (linked != null) history = linked;
                             metadata = null; loadMetadata();
@@ -833,6 +854,13 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
     }
 
     private void toggleKeep() {
+        if (followable()) {
+            List<Keep> saved = followKeeps();
+            if (!saved.isEmpty()) {
+                for (Keep keep : saved) keep.delete();
+                RefreshEvent.keep(); updateKeep(); return;
+            }
+        }
         String keepKey = key == null ? work.getSiteKey() + com.fongmi.android.tv.db.AppDatabase.SYMBOL + work.getId() : key.toString();
         Keep saved = key == null ? Keep.find(keepKey) : Keep.findDiscover(keepKey);
         if (saved != null) saved.delete();
@@ -846,6 +874,16 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
     }
 
     private boolean isInactive() { return isFinishing() || isDestroyed(); }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onKeepEvent(RefreshEvent event) {
+        if (event.getType() == RefreshEvent.Type.KEEP && work != null && !isInactive()) updateKeep();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (work != null && !isInactive()) updateKeep();
+    }
 
     @Override protected void onPause() {
         App.removeCallbacks(warmSelection); linkPrefetch.clear();

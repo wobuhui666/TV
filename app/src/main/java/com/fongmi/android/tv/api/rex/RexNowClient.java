@@ -39,8 +39,6 @@ public final class RexNowClient {
     public static final String ROOT = "https://assets.rexnow.tv/scripts/datas/rex";
     /** regional-tv 清单 schema 版本（与 rex REX_REGIONAL_TV_SCHEMA 一致）。 */
     public static final int REGIONAL_SCHEMA = 1;
-    /** 综艺分区不足该数量时用 western 补足（rex REX_REGIONAL_VARIETY_MINIMUM）。 */
-    public static final int REGIONAL_VARIETY_MINIMUM = 20;
     /** 单个文件最多取多少条（feed 文件自身 limit=40）。 */
     public static final int REGIONAL_MERGE_CAP = 40;
 
@@ -74,45 +72,18 @@ public final class RexNowClient {
 
     // ---------- 网络入口 ----------
 
-    /** regional-tv：manifest 日期 → 逐日回退 → 空/不足时 western 补足（去重）。 */
+    /** regional-tv：最近有效 manifest 日期 → 逐日回退，同一地区不混入其他地区的节目。 */
     public static void fetchRegional(String region, String category, @Nullable Object tag, ItemsListener listener) {
         get(ROOT + "/regional-tv/latest.json", tag, new BodyListener() {
             @Override
             public void onBody(String body) {
                 List<String> dates = dates(manifestDate(body));
-                fetchRegionFeed(region, category, dates, 0, tag, new ItemsListener() {
-                    @Override
-                    public void onSuccess(List<Vod> items) {
-                        boolean needsWestern = !"western".equals(region)
-                                && (items.isEmpty() || ("variety".equals(category) && items.size() < REGIONAL_VARIETY_MINIMUM));
-                        if (!needsWestern) {
-                            listener.onSuccess(items);
-                            return;
-                        }
-                        fetchRegionFeed("western", category, dates, 0, tag, new ItemsListener() {
-                            @Override
-                            public void onSuccess(List<Vod> western) {
-                                listener.onSuccess(mergeDistinct(items, western, REGIONAL_MERGE_CAP));
-                            }
-
-                            @Override
-                            public void onError(Exception e) {
-                                if (!items.isEmpty()) listener.onSuccess(items);
-                                else listener.onError(e);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        listener.onError(e);
-                    }
-                });
+                fetchRegionFeed(region, category, dates, 0, tag, listener);
             }
 
             @Override
             public void onError(Exception e) {
-                listener.onError(e);
+                fetchRegionFeed(region, category, dates(null), 0, tag, listener);
             }
         });
     }
@@ -189,7 +160,9 @@ public final class RexNowClient {
 
             @Override
             public void onError(Exception e) {
-                fetchRegionFeed(region, category, dates, index + 1, tag, listener);
+                if (e instanceof FeedHttpException http && (http.code == 404 || http.code == 410)) {
+                    fetchRegionFeed(region, category, dates, index + 1, tag, listener);
+                } else listener.onError(e);
             }
         });
     }
@@ -228,7 +201,7 @@ public final class RexNowClient {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try (Response resp = response) {
-                    if (!resp.isSuccessful() || resp.body() == null) throw new IOException("Rex feed failed: HTTP " + resp.code());
+                    if (!resp.isSuccessful() || resp.body() == null) throw new FeedHttpException(resp.code());
                     String body = resp.body().string();
                     post(tag, call, () -> listener.onBody(body));
                 } catch (Exception e) {
@@ -247,16 +220,26 @@ public final class RexNowClient {
         return RexJson.string(root, "date");
     }
 
-    /** [manifest 日期, 今天, 昨天, ...]（去重，东八区）。 */
+    /** [近七天内的 manifest 日期, 今天, 昨天, ...]（去重，东八区）。 */
     static List<String> dates(@Nullable String manifestDate) {
         return dates(manifestDate, System.currentTimeMillis());
     }
 
     static List<String> dates(@Nullable String manifestDate, long now) {
         List<String> values = new ArrayList<>();
-        if (manifestDate != null && !manifestDate.isEmpty()) values.add(manifestDate);
-        for (String recent : RexFeedDate.recentFrom(now, RexFeedDate.MAX_BACKTRACK_DAYS)) if (!values.contains(recent)) values.add(recent);
+        List<String> recentDates = RexFeedDate.recentFrom(now, RexFeedDate.MAX_BACKTRACK_DAYS);
+        if (recentDates.contains(manifestDate)) values.add(manifestDate);
+        for (String recent : recentDates) if (!values.contains(recent)) values.add(recent);
         return values;
+    }
+
+    private static final class FeedHttpException extends IOException {
+        private final int code;
+
+        private FeedHttpException(int code) {
+            super("Rex feed failed: HTTP " + code);
+            this.code = code;
+        }
     }
 
     /** regional-tv 文件 → Vod；schemaVersion/region/category 校验不符时返回空。 */

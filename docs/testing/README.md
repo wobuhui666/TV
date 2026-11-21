@@ -17,6 +17,17 @@
 | 2026-11-15 | [Compose TV 媒体库详情重做](reports/2026-11-15-library-detail-redesign/README.md) | 46 项 JVM、48 项 Android 与 3 项既有方法复测通过；最终主包模拟器掉帧及原生退出保留，性能与稳定性验收未通过 |
 | 2026-11-15 | [媒体库与全屏播放器打磨](reports/2026-11-15-library-polish/README.md) | aiwex 实播、海报尺寸、全屏选集、换源与遥控器回归；结果和限制见报告 |
 | 2026-11-14 | [媒体库搜索与界面](reports/2026-11-14-library-search/README.md) | 搜索后台解析／关联、卡片回收、主题与滚动；本轮 Android 和 lint 结果见报告 |
+| 2026-11-20 | [追更日历悬浮日期栏](reports/2026-11-20-calendar-floating-dates/README.md) | 43 项专项 JVM、API 24／34 各 16 项交互与 18 张截图通过；同行布局及焦点反色验证，完整 lint 仍有 121 项既有错误 |
+| 2026-11-19 | [媒体库片源兼容性](reports/2026-11-19-library-source-compatibility/README.md) | 100源搜索／媒体对照、瓜子剧集与电影正片、126项回归通过；最终画质APK现场复测受下载限制 |
+| 2026-11-19 | [媒体库首页大卡与新剧数据](reports/2026-11-19-library-home/README.md) | 首版 60 项变体检查；后续移除筛选／调整海报顺序的 20 项检查、Java 编译及新包校验通过；Android 界面／Preview／lint 未执行 |
+| 2026-11-19 | [追更日历界面重排](reports/2026-11-19-calendar-redesign/README.md) | 43 项专项 JVM、API 24／34 各 16 项交互与 18 张截图通过；完整 lint 121 项既有错误，日历范围无新增 |
+| 2026-11-18 | [追更日历与媒体库追剧](reports/2026-11-18-airing-calendar/README.md) | 32 项专项 JUnit、API 24／34 各 12 项交互与 9 张截图通过；完整 lint 仍有 121 项工作区错误，改动范围无新增 |
+| 2026-11-16 | [首页精选与模式选择](reports/2026-11-16-home-modes/README.md) | 39 项专项 JVM、24 项最终 Android 回归通过；保留初期焦点失败及修订证据，主包交付核验与 lint 限制见报告 |
+| 2026-11-16 | [媒体库详情对齐与原生稳定性](reports/2026-11-16-library-alignment-stability/README.md) | 当前 12 项单测、2 项离线、4 项交互、十轮详情与两组证书压力有限回归通过；最终三张画面及完整下载校验通过，旧失败与硬件限制保留 |
+| 2026-11-15 | [Instabox Android 安装与界面](reports/2026-11-15-instabox-android/README.md) | 现有 ARM64 APK 经实例 ARM 转译安装，首页、我的、设置与方向键返回通过；未验证最新工作树或片源播放 |
+| 2026-11-15 | [直播线路与首页触摸滚动](reports/2026-11-15-live-lines-touch-scroll/README.md) | 1170 项应用单测、12 项模拟器 UI 与 TV／手机 APK 通过；实体设备及真实直播流未覆盖 |
+| 2026-11-14 | [aiwex 实际配置](reports/2026-11-14-aiwex-live/README.md) | 用户指定在线配置的导入、Guard、搜索与返回；实测范围和架构限制见报告 |
+| 2026-11-21 | [连续集数与社区跳过](reports/2026-11-14-community-skip/README.md) | Vercel 东京与两端共享缓存部署、91 项中间层测试及真实搜索／图片缓存命中；此前客户端验证见报告，本次未构建 APK |
 | 2026-11-01 | [社区片头片尾、播放与界面](reports/2026-11-01-community-skip/README.md) | 779 项单测、实际 Exo 区间跳转、99 源配置加载与设置截图；GHA 抽测源未返回内容，未验证本轮真实片源播放 |
 | 2026-11-14 | [连续集数与社区跳过](reports/2026-11-14-community-skip/README.md) | Groq / Workers AI 两端部署、29 项历史中间层测试、82 项独立 PR JVM 测试及真实季集匹配；未构建新 APK 或电视实测 |
 | 2026-11-01 | [海报墙、推荐筛选、字幕与表单](reports/2026-11-01-tv-polish/README.md) | 实际 Android 筛选、字幕标签、长表单滚动提示；示例内容，不代表 ARM 实机性能 |

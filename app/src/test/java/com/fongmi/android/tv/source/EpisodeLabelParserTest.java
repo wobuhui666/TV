@@ -167,6 +167,85 @@ public class EpisodeLabelParserTest {
     }
 
     @Test
+    public void shouldReadRealDuoDuoFileNumbersAndSeasonsBeforeCatalogueDecorations() {
+        EpisodeLabel first = EpisodeLabelParser.parse("[1.4GB]01.4k.mp4【S01/4k】");
+        EpisodeLabel second = EpisodeLabelParser.parse("[1.5GB]02.4k.mp4【S01/4k】");
+        EpisodeLabel later = EpisodeLabelParser.parse("[1.5GB]01.4k.mp4【S02/4k】");
+        assertEquals(Integer.valueOf(1), first.number());
+        assertEquals(Integer.valueOf(2), second.number());
+        assertEquals(Integer.valueOf(1), first.season());
+        assertEquals(Integer.valueOf(2), later.season());
+        assertTrue(first.isApiSafe());
+        assertEquals(first.edition(), second.edition());
+        EpisodeLabel nested = EpisodeLabelParser.parse("/downloads/Show S01/01.mp4【S01/4k】");
+        assertEquals(Integer.valueOf(1), nested.number());
+        assertEquals(Integer.valueOf(1), nested.season());
+        assertTrue(nested.isApiSafe());
+    }
+
+    @Test
+    public void shouldIgnoreParentDirectoryRangesWhileRetainingFileRanges() {
+        for (String filename : new String[]{"/downloads/Show [01-46]/S01E01.mp4",
+                "/downloads/Show [01-46]/01.mp4【S01/4k】",
+                "/downloads/Show [12.5]/S01E01.mp4"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(filename);
+            assertEquals(filename, Integer.valueOf(1), label.season());
+            assertEquals(filename, Integer.valueOf(1), label.number());
+            assertFalse(filename, label.isAmbiguous());
+            assertTrue(filename, label.isApiSafe());
+        }
+        for (String filename : new String[]{"/downloads/Show [01-46]/01-02.mp4【S01/4k】",
+                "/downloads/Show [01-46]/S01E01.mp4【01-02】"}) {
+            EpisodeLabel label = EpisodeLabelParser.parse(filename);
+            assertTrue(filename, label.isAmbiguous());
+            assertNull(filename, label.number());
+        }
+    }
+
+    @Test
+    public void shouldKeepRealLaBiEpisodeCoordinatesWhenCatalogueTotalsFollowTheExtension() {
+        String suffix = "【Q 庆余年 (2019) 4K 高码率 单集5G 国语中字 全46集】";
+        EpisodeLabel first = EpisodeLabelParser.parse("[5.3GB]Joy.of.Life.2019.S01.EP01.WEB-DL.4K.HEVC.AAC-LeagueWEB.mp4" + suffix);
+        EpisodeLabel second = EpisodeLabelParser.parse("[5.5GB]Joy.of.Life.2019.S01.EP02.WEB-DL.4K.HEVC.AAC-LeagueWEB.mp4" + suffix);
+        assertEquals(Integer.valueOf(1), first.season());
+        assertEquals(Integer.valueOf(1), first.number());
+        assertEquals(Integer.valueOf(2), second.number());
+        assertTrue(first.isApiSafe());
+        assertTrue(second.isApiSafe());
+        assertEquals(first.edition(), second.edition());
+    }
+
+    @Test
+    public void shouldRetainRangesCollectionsAndSeasonConflictsInDecoratedFilenames() {
+        for (String label : new String[]{"01-02.mp4【S01/4k】", "01.5.mp4【S01/4k】",
+                "S01E01E02.mp4【全46集】", "S01E01全集.mp4【全46集】", "S01E01[合集].mp4",
+                "S01E01.mp4【合集】", "S01E01.mp4【01-02】", "S01E01.mp4【上下】",
+                "S01E01.mp4【S02/4k】", "01.mp4【S01/E02】"}) {
+            EpisodeLabel parsed = EpisodeLabelParser.parse(label);
+            assertTrue(label, parsed.isAmbiguous());
+            assertNull(label, parsed.number());
+            assertFalse(label, parsed.isApiSafe());
+        }
+        EpisodeLabel consistent = EpisodeLabelParser.parse("01.mp4【S01/E01】");
+        assertEquals(Integer.valueOf(1), consistent.number());
+        assertEquals(Integer.valueOf(1), consistent.season());
+        assertTrue(consistent.isApiSafe());
+    }
+
+    @Test
+    public void shouldPreservePreviewAndSplitMarkersAfterDecoratedFileExtensions() {
+        EpisodeLabel preview = EpisodeLabelParser.parse("S01E01.mp4【预告】");
+        assertEquals(Integer.valueOf(1), preview.number());
+        assertTrue(preview.isPreview());
+        assertFalse(preview.isApiSafe());
+        EpisodeLabel upper = EpisodeLabelParser.parse("S01E01.mp4【上】");
+        assertEquals("upper", upper.part());
+        assertFalse(upper.isApiSafe());
+        assertNull(EpisodeLabelParser.parse("Movie.mp4【全46集】").number());
+        assertNull(EpisodeLabelParser.parse("Movie01.mp4【S01/4k】").number());
+    }
+
+    @Test
     public void shouldParseCalendarDatesWithoutUsingThemAsEpisodeNumbers() {
         for (String name : new String[]{"20261107", "20261107期", "第20261107期", "2026-11-07", "2026.11.7",
                 "2026/11/07", "2026_11_07", "2026 11 07", "2026年11月7日", "２０２６１１０７", "[2026-11-07]"}) {

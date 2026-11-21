@@ -2,6 +2,8 @@ package com.fongmi.android.tv.source;
 
 import com.fongmi.android.tv.bean.Site;
 import com.fongmi.android.tv.bean.Vod;
+import com.fongmi.android.tv.bean.Episode;
+import com.fongmi.android.tv.bean.Flag;
 
 import org.junit.Test;
 
@@ -101,6 +103,17 @@ public class LibrarySearchIndexTest {
         assertEquals(List.of(remake), index.works().get(1).resources());
     }
 
+    @Test public void shouldKeepCatalogDatesFromAssigningAResourceToTheWrongRemake() {
+        LibrarySearchIndex index = new LibrarySearchIndex();
+        index.addWorks(List.of(work("tmdb:movie:1", "沙丘", "1984", "movie"), work("tmdb:movie:2", "沙丘", "2021", "movie")));
+        Vod dated = source("a", "date", "沙丘", "2021-11-26", "电影");
+        Vod titled = source("a", "title", "沙丘 (2021)", "1984-11-26", "电影");
+        index.addSources(List.of(dated, titled));
+        assertEquals(List.of(dated), index.supplements());
+        assertTrue(index.works().get(0).resources().isEmpty());
+        assertEquals(List.of(titled), index.works().get(1).resources());
+    }
+
     @Test public void shouldDistinguishMovieAndSeriesAndKeepSourceOnlyContent() {
         LibrarySearchIndex index = new LibrarySearchIndex();
         index.addWorks(List.of(work("tmdb:movie:1", "三体", "2023", "movie"), work("tmdb:tv:2", "三体", "2023", "tv")));
@@ -112,13 +125,41 @@ public class LibrarySearchIndexTest {
         assertEquals(List.of(exclusive), index.supplements());
     }
 
-    @Test public void shouldUseAliasesButNeverAutoplayUnknownKindsOrLaterUnlabelledSeasons() {
+    @Test public void shouldUseAliasesAndPlaybackDetailsWhileKeepingLaterUnlabelledSeasonsManual() {
         Vod movie = work("tmdb:movie:1", "星际穿越", "2014", "movie"); movie.setOriginalName("Interstellar");
         assertTrue(LibrarySourceMatcher.match(source("a", "x", "Interstellar", "2014", "电影"), movie).automatic());
         assertFalse(LibrarySourceMatcher.match(source("a", "x", "Interstellar", "2014", ""), movie).automatic());
+        Vod hydrated = source("a", "x", "Interstellar", "", "");
+        Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("正片", "movie-token")); hydrated.getFlags().add(flag);
+        assertTrue(LibrarySourceMatcher.match(hydrated, movie).automatic());
         Vod seasonOne = source("a", "tv", "庆余年", "2019", "电视剧");
         assertTrue(LibrarySourceMatcher.match(seasonOne, "庆余年", List.of(), "2019", false, 1).automatic());
         assertFalse(LibrarySourceMatcher.match(seasonOne, "庆余年", List.of(), "2019", false, 2).automatic());
+    }
+
+    @Test public void shouldKeepMissingMetadataCandidatesWithoutResolvingSameNameAmbiguity() {
+        LibrarySearchIndex index = new LibrarySearchIndex();
+        Vod movie = work("tmdb:movie:1", "星际穿越", "2014", "movie");
+        Vod summary = source("a", "summary", "星际穿越", "", "");
+        Vod hydrated = source("b", "detail", "星际穿越", "", "");
+        Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("正片", "movie-token")); hydrated.getFlags().add(flag);
+        index.addWorks(List.of(movie)); index.addSources(List.of(summary, hydrated));
+        assertEquals(List.of(summary, hydrated), index.snapshot().works().get(0).resources());
+        assertFalse(LibrarySourceMatcher.match(summary, movie).automatic());
+        assertTrue(LibrarySourceMatcher.match(hydrated, movie).automatic());
+        index.addWorks(List.of(work("tmdb:movie:2", "星际穿越", "2024", "movie")));
+        assertEquals(List.of(summary, hydrated), index.snapshot().supplements());
+        assertEquals(0, index.snapshot().resourceCount());
+    }
+
+    @Test public void shouldNotAssignUnknownTypeWhenMovieAndSeriesHaveTheSameTitle() {
+        LibrarySearchIndex index = new LibrarySearchIndex();
+        index.addWorks(List.of(work("tmdb:movie:1", "三体", "2023", "movie"), work("tmdb:tv:2", "三体", "2023", "tv")));
+        Vod unknown = source("a", "detail", "三体", "2023", "");
+        Flag flag = new Flag("line"); flag.getEpisodes().add(Episode.create("1", "episode-token")); unknown.getFlags().add(flag);
+        index.addSources(List.of(unknown));
+        assertEquals(List.of(unknown), index.snapshot().supplements());
+        assertEquals(0, index.snapshot().resourceCount());
     }
 
     @Test public void shouldKeepStableWorkOrderWhenSourcesArriveFirst() {

@@ -21,6 +21,7 @@
         <activity android:name=".ui.activity.LibraryDetailActivity" android:screenOrientation="sensorLandscape" />
         <activity android:name=".ui.activity.LibrarySearchActivity" android:screenOrientation="sensorLandscape" />
         <activity android:name=".ui.activity.LibraryImagesActivity" android:screenOrientation="sensorLandscape" />
+        <activity android:name=".ui.activity.AiringCalendarActivity" android:screenOrientation="sensorLandscape" />
         <activity android:name=".ui.activity.ExperienceModeActivity" android:screenOrientation="sensorLandscape" />
 
         <meta-data

@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -64,6 +65,22 @@ public final class TmdbLibraryApi {
         String path = "search/" + ("movie".equals(type) || "tv".equals(type) ? type : "multi");
         get(path, Map.of("query", query, "page", String.valueOf(Math.max(1, page)), "include_adult", "false"), apiKey, tag,
                 body -> parsePage(body, type), listener);
+    }
+
+    /** A dated TV schedule, independent of each show's original premiere date. */
+    public static void airingOn(LocalDate date, int page, String apiKey, Object tag, Listener<Page> listener) {
+        int requestedPage = Math.max(1, page);
+        get("discover/tv", calendarParams(date, requestedPage), apiKey, tag, body -> {
+            Page result = parsePage(body, DiscoverMediaKey.TV);
+            if (result.page() != requestedPage) throw new IllegalArgumentException("Unexpected TMDB calendar page");
+            return new Page(result.items(), result.page(), Math.min(500, result.totalPages()));
+        }, listener);
+    }
+
+    static Map<String, String> calendarParams(LocalDate date, int page) {
+        return Map.of("air_date.gte", date.toString(), "air_date.lte", date.toString(),
+                "timezone", "Asia/Shanghai", "page", String.valueOf(Math.max(1, page)),
+                "include_adult", "false", "sort_by", "popularity.desc");
     }
 
     public static void detail(DiscoverMediaKey key, String apiKey, Object tag, Listener<LibraryMedia.Metadata> listener) {
@@ -230,8 +247,11 @@ public final class TmdbLibraryApi {
         if (longNumber(object, "id") != key.getId()) throw new IllegalArgumentException("Unexpected TMDB work");
         List<LibraryMedia.Season> seasons = new ArrayList<>();
         for (JsonElement value : array(object, "seasons")) {
+            if (!value.isJsonObject()) continue;
             JsonObject season = value.getAsJsonObject();
-            seasons.add(new LibraryMedia.Season(number(season, "season_number"), string(season, "name"), Math.max(0, number(season, "episode_count")), image("w342", string(season, "poster_path"))));
+            Integer coordinate = coordinate(season, "season_number");
+            if (coordinate == null || coordinate < 0) continue;
+            seasons.add(new LibraryMedia.Season(coordinate, string(season, "name"), Math.max(0, number(season, "episode_count")), image("w342", string(season, "poster_path"))));
         }
         Set<String> aliases = new LinkedHashSet<>();
         if (!detail.getOriginalTitle().isEmpty()) aliases.add(detail.getOriginalTitle());
@@ -248,7 +268,21 @@ public final class TmdbLibraryApi {
                 logos, originalLanguage, key.isMovie() ? null : airing(child(object, "last_episode_to_air")),
                 key.isMovie() ? null : airing(child(object, "next_episode_to_air")),
                 key.isMovie() ? 0 : Math.max(0, number(object, "number_of_episodes")),
-                !key.isMovie() && bool(object, "in_production"), productionLogos(object));
+                !key.isMovie() && bool(object, "in_production"), productionLogos(object),
+                key.isMovie() ? List.of() : networkNames(object));
+    }
+
+    /** Reported broadcast networks; this is not a source availability guarantee. */
+    private static List<String> networkNames(JsonObject object) {
+        Set<String> names = new LinkedHashSet<>();
+        for (JsonElement value : array(object, "networks")) {
+            if (!value.isJsonObject()) continue;
+            JsonElement name = value.getAsJsonObject().get("name");
+            if (name == null || !name.isJsonPrimitive() || !name.getAsJsonPrimitive().isString()) continue;
+            String text = name.getAsString().trim();
+            if (!text.isEmpty()) names.add(text);
+        }
+        return List.copyOf(names);
     }
 
     /** These optional fields are part of the existing detail response, requiring no extra request. */
@@ -295,22 +329,24 @@ public final class TmdbLibraryApi {
     }
 
     private static LibraryMedia.AiringEpisode airing(JsonObject episode) {
-        int season = number(episode, "season_number"), number = number(episode, "episode_number");
-        if (season < 0 || season > 999 || number <= 0 || number > 9999 || !episode.has("season_number")) return null;
+        Integer season = coordinate(episode, "season_number"), number = coordinate(episode, "episode_number");
+        if (season == null || number == null || season < 0 || season > 999 || number <= 0 || number > 9999) return null;
         String date = string(episode, "air_date");
         if (!date.isEmpty()) try { LocalDate.parse(date); } catch (RuntimeException error) { return null; }
         return new LibraryMedia.AiringEpisode(season, number, string(episode, "name"), date, Math.max(0, number(episode, "runtime")));
     }
 
     public static List<LibraryMedia.Episode> parseEpisodes(int season, String body) {
+        if (season < 0) throw new IllegalArgumentException("Invalid TMDB season");
         JsonObject object = object(body);
-        if (object.has("season_number") && number(object, "season_number") != season) throw new IllegalArgumentException("Unexpected TMDB season");
+        if (object.has("season_number") && !Integer.valueOf(season).equals(coordinate(object, "season_number"))) throw new IllegalArgumentException("Unexpected TMDB season");
         List<LibraryMedia.Episode> result = new ArrayList<>();
         for (JsonElement value : array(object, "episodes")) {
+            if (!value.isJsonObject()) continue;
             JsonObject episode = value.getAsJsonObject();
-            int number = number(episode, "episode_number");
-            if (number <= 0) continue;
-            if (episode.has("season_number") && number(episode, "season_number") != season) continue;
+            Integer number = coordinate(episode, "episode_number");
+            if (number == null || number <= 0) continue;
+            if (episode.has("season_number") && !Integer.valueOf(season).equals(coordinate(episode, "season_number"))) continue;
             result.add(new LibraryMedia.Episode(season, number, string(episode, "name"), string(episode, "overview"),
                     image("w500", string(episode, "still_path")), string(episode, "air_date"), number(episode, "runtime")));
         }
@@ -342,6 +378,12 @@ public final class TmdbLibraryApi {
     private static JsonObject child(JsonObject object, String key) { return object.has(key) && object.get(key).isJsonObject() ? object.getAsJsonObject(key) : new JsonObject(); }
     private static JsonArray array(JsonObject object, String key) { return object.has(key) && object.get(key).isJsonArray() ? object.getAsJsonArray(key) : new JsonArray(); }
     private static String string(JsonObject object, String key) { return object.has(key) && object.get(key).isJsonPrimitive() ? object.get(key).getAsString() : ""; }
+    private static Integer coordinate(JsonObject object, String key) {
+        JsonElement value = object.get(key);
+        if (value == null || !value.isJsonPrimitive() || value.getAsJsonPrimitive().isBoolean()) return null;
+        try { return new BigDecimal(value.getAsString()).intValueExact(); }
+        catch (RuntimeException error) { return null; }
+    }
     private static int number(JsonObject object, String key) { try { return object.has(key) ? object.get(key).getAsInt() : 0; } catch (RuntimeException error) { return 0; } }
     private static long longNumber(JsonObject object, String key) { try { return object.has(key) ? object.get(key).getAsLong() : 0; } catch (RuntimeException error) { return 0; } }
     private static double decimal(JsonObject object, String key) { try { return object.has(key) ? object.get(key).getAsDouble() : 0; } catch (RuntimeException error) { return 0; } }

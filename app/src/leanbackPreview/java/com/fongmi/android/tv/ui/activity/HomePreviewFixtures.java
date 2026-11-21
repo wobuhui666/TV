@@ -153,8 +153,15 @@ public final class HomePreviewFixtures {
                     for (int i = 0; i < 30; i++) {
                         Vod item = sourcePoster(i, "tmdb:" + type + ":" + (30000 + Math.abs(section.getKey().hashCode() % 10000) + i));
                         item.setTypeName(type);
-                        item.setName((section.getKey().startsWith("cn_") ? "国产" : "精选")
-                                + ("tv".equals(type) ? "剧集 " : "电影 ") + (i + 1));
+                        String prefix = switch (section.getKey()) {
+                            case "cn_series" -> "华语剧集 ";
+                            case "kr_series" -> "韩剧 ";
+                            case "cn_variety" -> "华语综艺 ";
+                            case "anime_daily" -> "动漫 ";
+                            default -> (section.getKey().startsWith("cn_") ? "国产" : "精选")
+                                    + ("tv".equals(type) ? "剧集 " : "电影 ");
+                        };
+                        item.setName(prefix + (i + 1));
                         items.add(item);
                     }
                     feeds.put(section.getKey(), items);

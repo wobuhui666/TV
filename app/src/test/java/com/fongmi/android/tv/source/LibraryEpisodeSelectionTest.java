@@ -109,6 +109,80 @@ public class LibraryEpisodeSelectionTest {
         assertFalse(EpisodeTarget.coordinate(2, 3).offset(1).sameSelection(EpisodeTarget.coordinate(1, 3).offset(1)));
     }
 
+    @Test public void shouldSelectRealDecoratedFileCoordinatesWithoutCrossingSeasons() {
+        Episode first = Episode.create("[1.4GB]01.4k.mp4【S01/4k】", "first");
+        Episode second = Episode.create("[1.5GB]02.4k.mp4【S01/4k】", "second");
+        Episode later = Episode.create("[1.5GB]01.4k.mp4【S02/4k】", "later-first");
+        Flag multiSeason = flag("line", later, second, first);
+        assertSame(first, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(1, 1)));
+        assertSame(second, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(1, 2)));
+        assertSame(later, SmartSourceSelector.findEpisode(multiSeason, EpisodeTarget.coordinate(2, 1)));
+        Episode laBi = Episode.create("[5.3GB]Joy.of.Life.2019.S01.EP01.WEB-DL.4K.HEVC.AAC-LeagueWEB.mp4【Q 庆余年 (2019) 4K 高码率 单集5G 国语中字 全46集】", "labi-first");
+        assertSame(laBi, SmartSourceSelector.findEpisode(flag("labi", laBi), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldSelectTheUniqueHigherResolutionForTheRealDuoDuoEpisode() {
+        Episode high = Episode.create("[1.4GB]01.4k.mp4【S01/4k】", "4k-file");
+        Episode lower = Episode.create("[337.9MB]01.mp4【S01/1080p】", "1080p-file");
+        assertSame(high, SmartSourceSelector.findEpisode(flag("UC原画", lower, high), EpisodeTarget.coordinate(1, 1)));
+        assertSame(high, SmartSourceSelector.findEpisode(flag("UC原画", high, lower), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldKeepSavedUrlNameAndEditionAheadOfResolutionPreference() {
+        Episode high = Episode.create("[1.4GB]01.4k.mp4【S01/4k】", "4k-file");
+        Episode lower = Episode.create("[337.9MB]01.mp4【S01/1080p】", "1080p-file");
+        Flag line = flag("UC原画", high, lower);
+        assertSame(lower, SmartSourceSelector.findEpisode(line, EpisodeTarget.of(lower)));
+        assertSame(lower, SmartSourceSelector.findEpisode(line, new EpisodeTarget(null, lower.getName())));
+        Episode saved = Episode.create("[340MB]01.mp4【S01/1080p】", "expired-1080p-file");
+        assertSame(lower, SmartSourceSelector.findEpisode(line, EpisodeTarget.of(saved)));
+    }
+
+    @Test public void shouldKeepEqualHighestResolutionUrlsManual() {
+        Episode first = Episode.create("S01E01.4k.mp4", "first-4k");
+        Episode second = Episode.create("S01E01.2160p.mp4", "second-4k");
+        Episode lower = Episode.create("S01E01.1080p.mp4", "1080p");
+        assertNull(SmartSourceSelector.findEpisode(flag("line", first, lower, second), EpisodeTarget.coordinate(1, 1)));
+        Episode duplicate = Episode.create("S01E01.2160p.mp4", "first-4k");
+        assertSame(first, SmartSourceSelector.findEpisode(flag("line", first, lower, duplicate), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldNotGuessWhenAnyEqualIdentityCandidateHasUnknownResolution() {
+        Episode high = Episode.create("[Group]S01E01.4k.mp4", "4k");
+        Episode lower = Episode.create("[Group]S01E01.1080p.mp4", "1080p");
+        Episode unknown = Episode.create("[Group]S01E01.unknown.mp4", "unknown");
+        for (List<Episode> order : List.of(List.of(lower, unknown, high), List.of(unknown, lower, high), List.of(high, lower, unknown))) {
+            assertNull(SmartSourceSelector.findEpisode(flag("line", order.toArray(Episode[]::new)), EpisodeTarget.coordinate(1, 1)));
+        }
+        Episode conflicting = Episode.create("[Group]S01E01.4k.1080p.mp4", "conflicting");
+        assertNull(SmartSourceSelector.findEpisode(flag("line", high, conflicting), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldNotPromoteSubtitleFilesDuringResolutionSelection() {
+        Episode video = Episode.create("S01E01.1080p.mp4", "video");
+        Episode subtitle = Episode.create("S01E01.8k.srt", "subtitle");
+        assertNull(SmartSourceSelector.findEpisode(flag("line", video, subtitle), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldKeepReleaseGroupsAndLanguagesDistinctDuringResolutionSelection() {
+        Episode high = Episode.create("[GroupA]S01E01.4k.mp4", "group-a");
+        Episode other = Episode.create("[GroupB]S01E01.1080p.mp4", "group-b");
+        assertNull(SmartSourceSelector.findEpisode(flag("line", high, other), EpisodeTarget.coordinate(1, 1)));
+        Episode mandarin = Episode.create("S01E01.4k.国语.mp4", "mandarin");
+        Episode cantonese = Episode.create("S01E01.1080p.粤语.mp4", "cantonese");
+        assertNull(SmartSourceSelector.findEpisode(flag("line", mandarin, cantonese), EpisodeTarget.coordinate(1, 1)));
+    }
+
+    @Test public void shouldKeepASingleUrlAndSelectEightKOnlyAfterCoordinatesMatch() {
+        Episode first = Episode.create("[Group]S01E01.unknown.mp4", "same-file");
+        Episode duplicate = Episode.create("[Group]S01E01.other.mp4", "same-file");
+        assertSame(first, SmartSourceSelector.findEpisode(flag("line", first, duplicate), EpisodeTarget.coordinate(1, 1)));
+        Episode high = Episode.create("S01E01.8k.mp4", "8k");
+        Episode otherSeason = Episode.create("S02E01.16k.mp4", "other-season");
+        Episode lower = Episode.create("S01E01.4k.mp4", "4k");
+        assertSame(high, SmartSourceSelector.findEpisode(flag("line", lower, otherSeason, high), EpisodeTarget.coordinate(1, 1)));
+    }
+
     private Flag flag(String name, Episode... episodes) {
         Flag flag = new Flag(name); flag.getEpisodes().addAll(List.of(episodes)); return flag;
     }
