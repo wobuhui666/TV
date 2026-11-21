@@ -1,0 +1,71 @@
+{
+  "applicationCommit": "61485f204ef710016a1358769686008ebf03c8cb",
+  "buildRunId": 44604113334,
+  "artifactId": 14568498268,
+  "buildUrl": "https://github.com/wobuhui666/TV/actions/runs/44604113334",
+  "package": "com.fongmi.android.tv.sourceprobe.wexdialog",
+  "sdk": 29,
+  "abi": "arm64-v8a",
+  "configurationUrl": "https://9280.kstore.vip/aiwex.json",
+  "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+  "ciApks": [
+    {
+      "file": "sourceprobe.wexdialog-app-debug.apk",
+      "applicationId": "com.fongmi.android.tv.sourceprobe.wexdialog",
+      "sha256": "7da4cef806bb2bf7b0a4fc2e48f4dbddfe8e5b210be38814df17524e866cfbed"
+    },
+    {
+      "file": "sourceprobe.wexdialog-test-debug.apk",
+      "applicationId": "com.fongmi.android.tv.sourceprobe.wexdialog.test",
+      "sha256": "66e6a401f1a3ab28eefc66cb72272cb44fea5eb13f96246ccf8c1777557c74f9"
+    }
+  ],
+  "installedApks": {
+    "applicationCommit": "61485f204ef710016a1358769686008ebf03c8cb",
+    "fixedLocalCertificateSha256": "e465cbc3324e882934e43f3c9f8f71da3b9f47b895539ca960288b5a2e46d1e1",
+    "appSha256": "57d22afc26f81965f8eec22345a16e8f93eab578730f86985ce85c7f9c0d53a3",
+    "appBytes": 117084470,
+    "testSha256": "e87a4268171e293d9b6ad5cf5ada9c2f0352517febd76f745dc4b28109512f55",
+    "testBytes": 1292047
+  },
+  "entries": [
+    {
+      "entry": "网页版配置中心",
+      "configSuccess": true,
+      "siteCount": 100,
+      "configurationCardFound": true,
+      "dialogShown": true,
+      "dismissedWithBack": true,
+      "formValuesSubmitted": false,
+      "passed": true,
+      "additionalWindowCount": 1,
+      "windowFocused": true,
+      "visibleForMs": 508,
+      "categoryActivityFinishing": false,
+      "currentActivityIsCategory": true,
+      "originalSafeReportSha256": "94bd68261ef124b80f5f27bb4b47eae9e4aec8b8b54d186efd953d098470c803"
+    },
+    {
+      "entry": "网盘线路排序",
+      "configSuccess": true,
+      "siteCount": 100,
+      "configurationCardFound": true,
+      "dialogShown": true,
+      "dismissedWithBack": true,
+      "formValuesSubmitted": false,
+      "passed": true,
+      "additionalWindowCount": 1,
+      "windowFocused": true,
+      "visibleForMs": 506,
+      "categoryActivityFinishing": false,
+      "currentActivityIsCategory": true,
+      "originalSafeReportSha256": "4e1948b3508fc08b1791aaea8f7a9c6ec8f3a2f4ef0506cf24c8855a866b61df"
+    }
+  ],
+  "passed": true,
+  "productionPackageModified": false,
+  "privateRawLogsOrConfigurationBodiesIncluded": false,
+  "coverageLimit": "Dedicated debug package on one Android 10 ARM64 device. Actual VodActivity and SiteViewModel list-detail path; display, continuous focus and Back dismissal verified. Forms were not submitted; page-departure cancellation is covered by offline Android fixtures.",
+  "temporaryDiagnosticMarkers": 0,
+  "backDismissalAssertedByInstrumentation": true
+}

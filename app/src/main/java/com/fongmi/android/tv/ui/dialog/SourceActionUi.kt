@@ -31,6 +31,7 @@ class SourceActionUi private constructor(
     private var actionKey: String?,
     private var isCurrentPage: BooleanSupplier?,
     private var onCancel: Runnable?,
+    private val retainCallingPage: Boolean,
 ) : Supplier<Activity?>, LifecycleEventObserver {
     private val activity = WeakReference(activity)
     private val page = WeakReference(page)
@@ -143,9 +144,12 @@ class SourceActionUi private constructor(
                 val added = WindowInspector.getGlobalWindowViews().filter { it !in before &&
                     (it.layoutParams as? WindowManager.LayoutParams)?.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION }
                 for (view in added) {
+                    // One constructor may query WINDOW_SERVICE more than once.
+                    // Overlapping captures must not reject the window already owned here.
+                    if (view in windows) continue
                     if (!isUsable() || ((hadWindow || windows.isNotEmpty()) && !userAction)) {
                         closeWindow(view, manager)
-                    } else if (view !in windows) {
+                    } else {
                         windows[view] = manager
                         view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                             override fun onViewAttachedToWindow(view: View) = Unit
@@ -180,20 +184,33 @@ class SourceActionUi private constructor(
         private fun constructorKey(frame: StackTraceElement): String = frame.className + "#" + frame.methodName
 
         @JvmStatic
+        @JvmOverloads
         fun start(activity: FragmentActivity, page: LifecycleOwner, actionKey: String,
-                  isCurrentPage: BooleanSupplier, onCancel: Runnable): SourceActionUi? {
+                  isCurrentPage: BooleanSupplier, onCancel: Runnable, retainCallingPage: Boolean = false): SourceActionUi? {
             check(Looper.myLooper() == Looper.getMainLooper())
             active[activity]?.let { previous ->
                 if (!previous.actionFinished || previous.pendingWindows > 0 || previous.windows.isNotEmpty() ||
                     (previous.awaitingLegacyWindow && previous.actionKey == actionKey)) return null
                 previous.cancel()
             }
-            val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel)
+            val request = SourceActionUi(activity, page, actionKey, isCurrentPage, onCancel, retainCallingPage)
             if (!request.isUsable() || !activity.hasWindowFocus()) return null
             active[activity] = request
             activity.lifecycle.addObserver(request)
             if (page !== activity) page.lifecycle.addObserver(request)
             return request
+        }
+
+        /** Old detail providers close their temporary player before posting configuration UI. */
+        @JvmStatic
+        fun shouldRetainCallingPage(activity: FragmentActivity): Boolean {
+            if (Looper.myLooper() != Looper.getMainLooper()) return false
+            val request = active[activity] ?: return false
+            if (!request.retainCallingPage || !request.isUsable()) return false
+            val fromSource = Thread.currentThread().stackTrace.any { frame ->
+                request.sourceNames.any { matchesSource(frame, it) }
+            }
+            return fromSource
         }
 
         @JvmStatic

@@ -118,6 +118,31 @@ public final class SourceActionDialogTest {
         NativeUiEvidence.capture("source-config-home-after-return");
     }
 
+    @Test public void shouldKeepOneLegacyWindowWhenItsConstructorQueriesWindowServiceTwice() {
+        AtomicReference<AlertDialog> shown = new AtomicReference<>();
+        AtomicInteger confirmations = new AtomicInteger();
+        main(() -> model.executeAction(page, page, () -> true, () -> {
+            SourceActionUi.bind(LegacyActionPreviewBridge.class);
+            LegacyActionPreviewBridge.run(() -> {
+                shown.set(LegacyActionPreviewBridge.createDoubleLookupDialog(
+                        LegacyActionPreviewBridge.getConfigActivity(), "Source repeated window lookup", "Done",
+                        (dialog, which) -> confirmations.incrementAndGet()));
+                shown.get().show();
+            }, 0);
+            return Result.empty();
+        }));
+        await("The dialog survives both captures and becomes visible", () -> shown.get() != null
+                && shown.get().isShowing() && device.hasObject(By.text("Source repeated window lookup")));
+        main(() -> {
+            assertTrue("Repeated capture cannot dismiss the same window", shown.get().isShowing());
+            assertEquals(page.getWindow().getAttributes().token, shown.get().getWindow().getAttributes().token);
+        });
+        NativeUiEvidence.capture("source-config-repeated-window-lookup");
+        main(() -> shown.get().getButton(AlertDialog.BUTTON_POSITIVE).performClick());
+        await("Confirm closes the source window and restores its page", () -> !shown.get().isShowing() && page.hasWindowFocus());
+        assertEquals(1, confirmations.get());
+    }
+
     @Test public void shouldCloseVisibleLegacyWindowsWhenTheOwnerPauses() throws Exception {
         AtomicReference<AlertDialog> shown = new AtomicReference<>();
         legacy(new AtomicInteger(), shown, 0, "Visible source configuration");
@@ -125,6 +150,15 @@ public final class SourceActionDialogTest {
         main(page::finish);
         await("home regains focus without a source window", () -> home.hasWindowFocus() && !shown.get().isShowing());
         assertFalse(device.hasObject(By.text("Visible source configuration")));
+    }
+
+    @Test public void shouldAllowAnUnrelatedLegacyActionToFinishItsCaller() {
+        main(() -> model.executeAction(page, page, () -> true, () -> {
+            SourceActionUi.bind(LegacyActionPreviewBridge.class);
+            LegacyActionPreviewBridge.run(() -> LegacyActionPreviewBridge.finishActivity(page), 0);
+            return Result.empty();
+        }));
+        await("Ordinary source actions retain their normal finish behavior", () -> page.isFinishing() && home.hasWindowFocus());
     }
 
     @Test public void shouldPreserveSequentialLegacyDialogsFromOneAction() throws Exception {

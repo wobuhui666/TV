@@ -114,7 +114,7 @@ public class SiteViewModel extends ViewModel {
                     attempt.complete(error == null ? value : null, error);
                     if (error == null && value != null && !value.getVod().getFlags().isEmpty()) onPlayable.accept(value);
                     else action.setValue(value);
-                });
+                }, true);
     }
 
     void executeAction(FragmentActivity owner, LifecycleOwner page, BooleanSupplier isCurrentPage, Callable<Result> callable) {
@@ -127,7 +127,13 @@ public class SiteViewModel extends ViewModel {
 
     private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage,
                                Callable<Result> callable, BiConsumer<Result, Throwable> onResult) {
-        SourceActionUi request = SourceActionUi.start(owner, page, actionKey, isCurrentPage, () -> tasks.cancel(TaskType.ACTION));
+        executeAction(owner, page, actionKey, isCurrentPage, callable, onResult, false);
+    }
+
+    private void executeAction(FragmentActivity owner, LifecycleOwner page, String actionKey, BooleanSupplier isCurrentPage,
+                               Callable<Result> callable, BiConsumer<Result, Throwable> onResult, boolean retainCallingPage) {
+        SourceActionUi request = SourceActionUi.start(owner, page, actionKey, isCurrentPage,
+                () -> tasks.cancel(TaskType.ACTION), retainCallingPage);
         if (request == null) return;
         actionUi = request;
         Runnable restore = Init.enterActivity(request);

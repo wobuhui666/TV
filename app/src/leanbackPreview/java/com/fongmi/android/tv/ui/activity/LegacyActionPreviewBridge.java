@@ -2,6 +2,8 @@ package com.fongmi.android.tv.ui.activity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Looper;
@@ -18,7 +20,20 @@ public final class LegacyActionPreviewBridge {
     public static boolean post(Runnable runnable) { return MAIN.post(runnable); }
     public static void execute(Runnable runnable) { new Thread(runnable, "legacy-source-fixture").start(); }
 
+    public static void finishActivity(Activity activity) { activity.finish(); }
+
     public static AlertDialog createDialog(Activity context, String title, String button, DialogInterface.OnClickListener click) {
+        return new AlertDialog.Builder(context).setTitle(title).setPositiveButton(button, click).create();
+    }
+
+    public static AlertDialog createDoubleLookupDialog(Activity activity, String title, String button, DialogInterface.OnClickListener click) {
+        Context context = new ContextWrapper(activity) {
+            @Override public Object getSystemService(String name) {
+                // Both lookups occur inside Dialog.<init>, before either capture can run.
+                if (Context.WINDOW_SERVICE.equals(name)) activity.getSystemService(name);
+                return super.getSystemService(name);
+            }
+        };
         return new AlertDialog.Builder(context).setTitle(title).setPositiveButton(button, click).create();
     }
 

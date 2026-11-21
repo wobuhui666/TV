@@ -52,6 +52,13 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     @Override
+    public void finish() {
+        // List details now run on this existing page; legacy providers must not close it.
+        if (SourceActionUi.shouldRetainCallingPage(this)) return;
+        super.finish();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         appliedLightTheme = RexTheme.isLight();
         if (appliedLightTheme) setTheme(R.style.Theme_App_Light);

@@ -150,6 +150,39 @@ public final class SourceDetailDialogTest {
         NativeUiEvidence.capture("source-detail-home-after-return");
     }
 
+    @Test public void shouldRetainTheListWhenLegacyDetailFinishesBeforeItsDelayedDialog() {
+        spider.finishBeforeDialog = true;
+        spider.delay = 250;
+        main(() -> type.onItemClick(settings()));
+        await("The source attempts to finish its caller before opening configuration", () -> spider.finishAttempts.get() == 1);
+        assertFalse("The old Handler callback deliberately has no inherited activity scope", spider.finishHadOwnerScope);
+        await("Configuration remains visible on the existing list page", () -> spider.shown != null
+                && spider.shown.isShowing() && device.hasObject(By.text("Legacy proxy engine")));
+        main(() -> {
+            assertFalse("The source cannot finish this existing caller page", page.isFinishing());
+            assertEquals(page.getWindow().getAttributes().token, spider.shown.getWindow().getAttributes().token);
+        });
+        assertNull(playbackIntent.get());
+        NativeUiEvidence.capture("source-detail-retained-after-source-finish");
+        main(spider.shown::dismiss);
+        await("Closing configuration restores list focus", page::hasWindowFocus);
+        assertFalse(page.isFinishing());
+    }
+
+    @Test public void shouldCancelDelayedConfigurationWhenTheUserLeavesAfterSourceFinish() {
+        spider.finishBeforeDialog = true;
+        spider.delay = 1000;
+        main(() -> type.onItemClick(settings()));
+        await("The source finish attempt is intercepted", () -> spider.finishAttempts.get() == 1);
+        assertFalse(page.isFinishing());
+        main(page::finish);
+        await("User navigation still closes the list", home::hasWindowFocus);
+        SystemClock.sleep(1300);
+        assertTrue(spider.shown == null || !spider.shown.isShowing());
+        assertFalse(device.hasObject(By.text("Legacy proxy engine")));
+        assertNull(playbackIntent.get());
+    }
+
     @Test public void shouldNavigatePlayableListDetailsWithoutFetchingThemTwice() {
         main(() -> type.onItemClick(Vod.objectFrom(
                 "{\"vod_id\":\"legacy-movie\",\"vod_name\":\"A video in the same list\"}")));

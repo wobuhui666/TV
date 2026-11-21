@@ -1,0 +1,495 @@
+{
+  "date": "2026-11-19",
+  "topic": "aiwex source configuration dialog caller lifecycle and overlapping captures",
+  "status": "final_code_native_and_android_passed_in_dedicated_debug_package",
+  "configurationUrl": "https://9280.kstore.vip/aiwex.json",
+  "fixCommit": "61485f204ef710016a1358769686008ebf03c8cb",
+  "fix": "Ignore a bound legacy source main-thread finish of the active list-detail caller, and skip already owned windows in overlapping captures.",
+  "productionBaseline": {
+    "observedAtUtc": "2026-11-19T16:55:15.262349+00:00",
+    "package": "com.fongmi.android.tv",
+    "versionName": "5.8.7+20261117.145653",
+    "versionCode": 218090613,
+    "sdk": 29,
+    "abi": "arm64-v8a",
+    "sourceKey": "Wexconfig",
+    "entries": [
+      "网页版配置中心",
+      "网盘线路排序"
+    ],
+    "result": "Both entries returned to Home without a configuration popup.",
+    "detailObserved": {
+      "id": "web",
+      "elapsedMs": 7,
+      "response": "One pseudo-Vod with fallback instructions and no playback flags."
+    },
+    "preferencesChanged": false,
+    "accountsOrCookiesChanged": false,
+    "apksInstalled": false,
+    "coverageLimit": "Observed the existing delivered production APK; the current fix was not installed."
+  },
+  "jvmValidation": {
+    "commit": "834dcb5c2db7f82488d456a7fd80604be88656c9",
+    "runId": 44581420365,
+    "url": "https://github.com/wobuhui666/TV/actions/runs/44581420365",
+    "artifactId": 14561150816,
+    "evidence": "Aggregated JUnit XML from the exact run artifact.",
+    "suites": 199,
+    "tests": 1481,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true,
+    "tasks": [
+      ":app:testLeanbackArm64_v8aDebugUnitTest",
+      ":catvod:testDebugUnitTest",
+      ":quickjs:testDebugUnitTest",
+      ":wasm:testDebugUnitTest"
+    ],
+    "moduleTests": {
+      "app": 1190,
+      "catvod": 244,
+      "quickjs": 28,
+      "wasm": 19
+    }
+  },
+  "previousUiAttempt": {
+    "runId": 44582559040,
+    "attempt": 1,
+    "commit": "aab78be004dd769c99b6944393c7f5bed8510804",
+    "conclusion": "failure",
+    "stage": "Media3 settings plugin dependency resolution",
+    "cause": "Gradle Plugin Portal could not resolve Kotlin 2.2.0 stdlib, plugin API and BOM.",
+    "testsExecuted": 0,
+    "sameCommitAttempt2Passed": true
+  },
+  "publicEvidence": {
+    "screenshotsReviewed": true,
+    "screenshotContent": "Synthetic source titles, artwork and a native dialog; no accounts, QR codes or access tokens.",
+    "privateRawLogsIncluded": false,
+    "configurationBodiesOrCredentialsIncluded": false,
+    "apksIncluded": false
+  },
+  "lintValidation": {
+    "baselineCommit": "854727a4a4255413e9a598bda37471f3177004f5",
+    "commit": "834dcb5c2db7f82488d456a7fd80604be88656c9",
+    "runId": 44581420365,
+    "comparisonPassed": true,
+    "errors": 108,
+    "warnings": 388,
+    "hints": 6,
+    "addedFindingsAfterNormalizingCachedPaths": 0,
+    "removedFindingsAfterNormalizingCachedPaths": 0,
+    "cachePathNote": "The official comparison listed two unchanged warning locations because the baseline reused current-worktree absolute paths. Normalizing both known worktree roots reconciles all 502 findings."
+  },
+  "traceDiagnosis": {
+    "commit": "49fabcaed05a633d778115e99d21b56d9159d8fc",
+    "observation": "An unscoped Guard Handler finishes VodActivity before constructing its delayed dialog. ON_PAUSE cancels the request; the resulting window is rejected because its owner is unusable.",
+    "temporaryTraceRemoval": "Removed in finalCodeCommit; rebuilt APK contains zero temporary trace markers.",
+    "privateRawTraceIncluded": false
+  },
+  "firstNativeCandidate": {
+    "status": "first_candidate_failed",
+    "passed": false,
+    "latestTestCommit": "318a0038b39941b2efac6c90bbd873520aff410e",
+    "buildRunId": 44587398285,
+    "buildUrl": "https://github.com/wobuhui666/TV/actions/runs/44587398285",
+    "package": "com.fongmi.android.tv.sourceprobe.wexdialog",
+    "host": "Debug SourceDialogTestActivity with the production window hook",
+    "requiredChecks": [
+      "Real web configuration popup displays",
+      "Real drive ordering popup displays",
+      "Dismiss and page departure clear the windows"
+    ],
+    "coverageLimit": "The real Guard popup did not appear on the first candidate. Debug-only window/finish tracing is being prepared; acceptance is not complete.",
+    "buildPassed": true,
+    "apkIntegrityVerified": true,
+    "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+    "focusedVisibleMsRequired": 500,
+    "apks": [
+      {
+        "file": "sourceprobe.wexdialog-app-debug.apk",
+        "applicationId": "com.fongmi.android.tv.sourceprobe.wexdialog",
+        "targetPackage": null,
+        "sha256": "a89fa5bff35826fda7894aa23d6213c2126fe92925d35a707ee49ae474fca099",
+        "bytes": 116921853,
+        "zipValid": true,
+        "signatureValidApi29": true,
+        "requiredProbeClassPresent": true,
+        "arm64NativeLibraryCount": 35
+      },
+      {
+        "file": "sourceprobe.wexdialog-test-debug.apk",
+        "applicationId": "com.fongmi.android.tv.sourceprobe.wexdialog.test",
+        "targetPackage": "com.fongmi.android.tv.sourceprobe.wexdialog",
+        "sha256": "b465abcb228cc797de40b9c2689adff6440f7bb24b4fc9ac19b4d3b041fbc905",
+        "bytes": 1285663,
+        "zipValid": true,
+        "signatureValidApi29": true,
+        "requiredProbeClassPresent": true,
+        "arm64NativeLibraryCount": 0
+      }
+    ],
+    "safeReport": "native-first-candidate.json",
+    "realResult": {
+      "configSuccess": true,
+      "configuredSites": 100,
+      "configurationCardFound": true,
+      "dialogShown": false,
+      "categoryActivityFinishing": true,
+      "currentActivityIsAnchor": true,
+      "formValuesSubmitted": false
+    },
+    "setup": {
+      "declaredStoragePermissionsGrantedToDedicatedPackage": true,
+      "initialPermissionPromptAttemptCountedAsPassed": false,
+      "otherPackagesModified": false
+    },
+    "nextDiagnosticCommit": "49fabcaed05a633d778115e99d21b56d9159d8fc"
+  },
+  "previousUiValidation": {
+    "commit": "aab78be004dd769c99b6944393c7f5bed8510804",
+    "mainFixAndRegressionIdenticalToFixCommit": true,
+    "additionalChange": "Updated the expected SourceActionDialogTest count from 8 to 9.",
+    "runId": 44582559040,
+    "attempt": 2,
+    "url": "https://github.com/wobuhui666/TV/actions/runs/44582559040/attempts/2",
+    "artifactId": 14559259433,
+    "artifactName": "tv-ui-verification-44582559040-live-lines-touch-scroll",
+    "artifactSelection": "Selected by ID because attempt 1 uploaded another artifact with the same name.",
+    "package": "com.fongmi.android.tv.preview",
+    "sdk": 34,
+    "focusedUnitTests": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "androidTests": 46,
+    "displays": [
+      {
+        "size": "1920x1080",
+        "density": 320,
+        "tests": 23,
+        "passed": true
+      },
+      {
+        "size": "1280x720",
+        "density": 240,
+        "tests": 23,
+        "passed": true
+      }
+    ],
+    "suitesPerDisplay": [
+      {
+        "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+        "tests": 3,
+        "passed": true
+      },
+      {
+        "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+        "tests": 3,
+        "passed": true
+      },
+      {
+        "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+        "tests": 9,
+        "passed": true
+      },
+      {
+        "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+        "tests": 3,
+        "passed": true
+      },
+      {
+        "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+        "tests": 5,
+        "passed": true
+      }
+    ],
+    "newRegression": {
+      "method": "shouldKeepOneLegacyWindowWhenItsConstructorQueriesWindowServiceTwice",
+      "checks": [
+        "Dialog remains visible after overlapping captures",
+        "Owner window token matches the calling page",
+        "Confirmation runs once",
+        "Dismissal restores page focus"
+      ],
+      "passedAtBothDisplays": true
+    },
+    "screenshots": [
+      "source-config-repeated-window-lookup-1080.png",
+      "source-config-repeated-window-lookup-720.png"
+    ],
+    "coverageLimit": "Offline fixture sources and Java/QuickJS forms; no real Guard execution or native source acceptance.",
+    "passed": true
+  },
+  "uiValidation": {
+    "commit": "61485f204ef710016a1358769686008ebf03c8cb",
+    "runId": 44604117531,
+    "attempt": 1,
+    "url": "https://github.com/wobuhui666/TV/actions/runs/44604117531",
+    "artifactId": 14570910824,
+    "artifactSha256": "6f32f067d27e040140c14ac5373ae7b565950feb195bebb0e1bf2c13ed7b3658",
+    "package": "com.fongmi.android.tv.preview",
+    "sdk": 34,
+    "androidTests": 52,
+    "displays": [
+      {
+        "size": "1920x1080",
+        "density": 320,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 72
+      },
+      {
+        "size": "1280x720",
+        "density": 240,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 61
+      }
+    ],
+    "focusedUnitTests": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "newRegressions": [
+      "Repeated WINDOW_SERVICE lookups preserve one legacy dialog",
+      "Unscoped source Handler finish keeps the list available for its delayed dialog",
+      "User departure after the intercepted source finish cancels delayed UI",
+      "Ordinary source actions can still finish their caller"
+    ],
+    "screenshots": [
+      "source-detail-retained-after-source-finish-1080.png",
+      "source-detail-retained-after-source-finish-720.png"
+    ],
+    "coverageLimit": "Offline production TV home, live lines, source configuration windows and Java/QuickJS forms; no live streams or Exo performance measurement",
+    "passed": true
+  },
+  "nativeSourceValidation": {
+    "status": "final_code_passed",
+    "passed": true,
+    "commit": "61485f204ef710016a1358769686008ebf03c8cb",
+    "safeReport": "native-final.json",
+    "entries": [
+      {
+        "entry": "网页版配置中心",
+        "configSuccess": true,
+        "siteCount": 100,
+        "configurationCardFound": true,
+        "dialogShown": true,
+        "dismissedWithBack": true,
+        "formValuesSubmitted": false,
+        "passed": true,
+        "additionalWindowCount": 1,
+        "windowFocused": true,
+        "visibleForMs": 508,
+        "categoryActivityFinishing": false,
+        "currentActivityIsCategory": true,
+        "originalSafeReportSha256": "94bd68261ef124b80f5f27bb4b47eae9e4aec8b8b54d186efd953d098470c803"
+      },
+      {
+        "entry": "网盘线路排序",
+        "configSuccess": true,
+        "siteCount": 100,
+        "configurationCardFound": true,
+        "dialogShown": true,
+        "dismissedWithBack": true,
+        "formValuesSubmitted": false,
+        "passed": true,
+        "additionalWindowCount": 1,
+        "windowFocused": true,
+        "visibleForMs": 506,
+        "categoryActivityFinishing": false,
+        "currentActivityIsCategory": true,
+        "originalSafeReportSha256": "4e1948b3508fc08b1791aaea8f7a9c6ec8f3a2f4ef0506cf24c8855a866b61df"
+      }
+    ],
+    "coverageLimit": "Dedicated debug package on one Android 10 ARM64 device. Actual VodActivity and SiteViewModel list-detail path; display, continuous focus and Back dismissal verified. Forms were not submitted; page-departure cancellation is covered by offline Android fixtures."
+  },
+  "finalCodeCommit": "61485f204ef710016a1358769686008ebf03c8cb",
+  "finalValidation": {
+    "commit": "61485f204ef710016a1358769686008ebf03c8cb",
+    "nativeBuildRunId": 44604113334,
+    "uiRunId": 44604117531,
+    "status": "passed",
+    "nativeSourcePassed": true,
+    "uiPassed": true
+  },
+  "retentionCandidateUiValidation": {
+    "commit": "af2a394275148c662249673d76629793028bc89d",
+    "runId": 44599557510,
+    "attempt": 1,
+    "url": "https://github.com/wobuhui666/TV/actions/runs/44599557510",
+    "artifactId": 14568436835,
+    "artifactSha256": "8b656d3dd1ad18408f2ca1038bfc250d0f2ffd3a5a6cd028f1894c5448202fa4",
+    "package": "com.fongmi.android.tv.preview",
+    "sdk": 34,
+    "androidTests": 52,
+    "displays": [
+      {
+        "size": "1920x1080",
+        "density": 320,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 65
+      },
+      {
+        "size": "1280x720",
+        "density": 240,
+        "passed": true,
+        "passedTests": 26,
+        "suites": [
+          {
+            "class": "com.fongmi.android.tv.test.HomeTouchScrollTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.test.LiveLineDialogTest",
+            "passed": true,
+            "tests": 3,
+            "expectedTests": 3
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceActionDialogTest",
+            "passed": true,
+            "tests": 10,
+            "expectedTests": 10
+          },
+          {
+            "class": "com.fongmi.android.tv.model.SourceDetailDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          },
+          {
+            "class": "com.fongmi.android.tv.test.SpiderDialogTest",
+            "passed": true,
+            "tests": 5,
+            "expectedTests": 5
+          }
+        ],
+        "capturedFrames": 52
+      }
+    ],
+    "focusedUnitTests": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": true
+    },
+    "newRegressions": [
+      "Repeated WINDOW_SERVICE lookups preserve one legacy dialog",
+      "Unscoped source Handler finish keeps the list available for its delayed dialog",
+      "User departure after the intercepted source finish cancels delayed UI",
+      "Ordinary source actions can still finish their caller"
+    ],
+    "coverageLimit": "Offline production TV home, live lines, source configuration windows and Java/QuickJS forms; no live streams or Exo performance measurement",
+    "passed": true,
+    "screenshotCoverage": "Candidate fixture screenshots were visually verified outside the repository; current public retention images correspond to the final UI commit."
+  }
+}

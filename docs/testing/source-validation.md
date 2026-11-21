@@ -17,6 +17,20 @@ gh workflow run build-validation.yml --ref "$VALIDATION_REF"
 | `tv-validation-sourceprobe-arm64-` | `com.fongmi.android.tv.sourceprobe` | `com.fongmi.android.tv.sourceprobe.test` |
 | `tv-validation-preview-arm64-` | `com.fongmi.android.tv.preview` | `com.fongmi.android.tv.preview.test` |
 
+配置弹窗专项使用 `-f configuration_dialog=true`，只构建独立包 `com.fongmi.android.tv.sourceprobe.wexdialog` 及其 `.test` 包，沿用 `tv-validation-sourceprobe-arm64-` artifact 前缀。常规单元测试和 lint 使用默认验证模式；专项构建不重复这些检查。实际包名以 `build-metadata.json` 为准。
+
+在专用 ARM64 设备安装该 APK 对后，使用下列命令检查用户指定的配置中心。该入口要求 API 29 起，通过返回键关闭弹窗，不提交表单值；摘要保存在应用 externalFiles 的 `aiwex-config-dialog/report.json`。
+
+```bash
+adb -s "$DEVICE_SERIAL" shell am instrument -w -r \
+  -e class com.fongmi.android.tv.ui.activity.AiwexConfigDialogAndroidTest \
+  -e source_config_url https://9280.kstore.vip/aiwex.json \
+  -e source_configuration_entry '网页版配置中心' \
+  com.fongmi.android.tv.sourceprobe.wexdialog.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+`source_configuration_entry` 可省略，默认「网页版配置中心」；仅接受「网页版配置中心」或「网盘线路排序」，按名称精确选择条目。分别运行两次可检查原先失败的两个入口。安全报告会记录所选名称；每次都写入应用 external files 的 `aiwex-config-dialog/report.json`，下一次运行前应先保存上一份报告。
+
 每个 artifact 包含 `*-app-debug.apk`、`*-test-debug.apk` 和 `build-metadata.json`，保留 7 天。元数据包含应用提交、实际 Media3 提交、包名和下载文件 SHA-256。ABI 为 `arm64-v8a`。执行的 Gradle 任务为 `assembleLeanbackArm64_v8aDebug` 和 `assembleLeanbackArm64_v8aDebugAndroidTest`；因此也会编译通用的核心播放/焦点测试。
 
 CI 只使用临时 runner 的默认 Android debug 签名，不读取发布密钥、源配置或设备信息。已有安装若使用另一 debug key，需在本地用原 key 对应用和测试 APK **一起重签**，再覆盖安装；否则 Android 会拒绝升级。不要为解决签名不匹配而卸载需要保留数据的安装。

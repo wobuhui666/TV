@@ -87,6 +87,7 @@ Java/Python 回调在发起调用的工作线程执行；QuickJS 回调回到本
 - preview 设备测试类 `com.fongmi.android.tv.test.SpiderDialogTest`：真实 Java 与 QuickJS 表单、输入验证、二维码、选择器、遥控焦点、异步连续弹窗、任务取消与超时暂停；只使用 loopback HTTP 和虚构登录数据。截图目录为应用 externalFiles 下的 `spider-dialog-verification/`。
 - `com.fongmi.android.tv.model.SourceActionDialogTest`：调用页面归属、重复配置动作、离页取消、旧 Java 自建窗口与后续表单；测试范围和截图见 [issue #119 验证记录](testing/reports/2026-11-15-issue119-ui/README.md)。
 - `com.fongmi.android.tv.model.SourceDetailDialogTest`：旧源在列表详情请求中打开配置窗口；验证真实片库点击、重复点击、离页清理及普通视频复用详情响应后进入播放页。
+- 旧源构造弹窗时可以多次查询窗口服务，同一窗口的重复捕获只登记一次。`SourceActionDialogTest` 覆盖这类构造、窗口归属与确认关闭；`AiwexConfigDialogAndroidTest` 通过验证工作流的 `configuration_dialog` 输入构建独立包 `com.fongmi.android.tv.sourceprobe.wexdialog`，显式传入 `source_config_url=https://9280.kstore.vip/aiwex.json` 后实测配置中心。测试使用返回键退出，不提交表单值，摘要保存在 externalFiles 下的 `aiwex-config-dialog/report.json`。
 
 真实 Python 虚拟机调用还需要包含 Python 原生库的 ARM 测试设备；Python facade 测试不能替代该验证。需要源主动接入上述 API，现有源不会自动出现登录界面。
 
@@ -94,4 +95,4 @@ Java/Python 回调在发起调用的工作线程执行；QuickJS 回调回到本
 
 片库配置操作兼容 `com.github.catvod.spider.*` 中使用 Activity 构造的旧 Android Dialog：窗口绑定到发起操作的页面。Android 10／API 29 及以上还检查新增窗口，清理重复窗口与离开页面后的延迟窗口；较低 API 不包含这项旧窗口清理。离页后在一次操作的超时范围内跟踪尚未返回的首窗与已识别的窗口构造位置，避免长期影响同一来源包中的其他登录或配置表单。自建窗口未经过公共弹窗协议，独立异步回调缺少调用身份，无法精确区分所有未知 JAR 的调用。新源应使用公共接口传递页面、取消和连续交互的生命周期。
 
-旧源也可能把列表条目的 detailContent 当作配置入口。片库先在当前页面执行该请求，没有播放线路时留在片库显示配置窗口；返回视频线路时进入原播放页，复用本次详情响应，避免重复请求。离开片库或切换来源仍会取消排队窗口。
+旧源也可能把列表条目的 detailContent 当作配置入口。片库先在当前页面执行该请求，没有播放线路时留在片库显示配置窗口；返回视频线路时进入原播放页，复用本次详情响应，避免重复请求。部分旧源先关闭临时播放页再延迟弹窗；列表详情请求有效期间，宿主会阻止已绑定源的主线程回调关闭当前片库。用户返回、切换来源和普通 action 请求仍按原流程退出或取消；已经结束或离页的请求不会保留页面。
