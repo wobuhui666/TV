@@ -114,6 +114,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     private final HomeSourceState mHomeSource = new HomeSourceState();
     private HomeSourceState.Request mActionSourceRequest;
     private ViewTreeObserver.OnGlobalFocusChangeListener mCompactContentFocus;
+    private ViewTreeObserver.OnPreDrawListener mCompactFocusAlignment;
     private boolean mPosterHeroVisible;
     private SiteViewModel mViewModel;
     private Result mResult;
@@ -179,6 +180,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 else if (!mTouchBrowsing && mBinding.recycler.getSelectedPosition() > 0) mBinding.recycler.setWindowAlignmentOffset(ResUtil.dp2px(16));
             }, mHomeLayout == BrowseExperienceSettings.HOME_COMPACT);
             mPosterHome.setKeepShelfFocusFallback(() -> requestRecyclerFocus());
+            mPosterHome.setCategoryFocusAlignment(this::alignCurrentCategoryFocus);
             mPosterHome.setSourceListener(this, this::openLibrary);
         }
         mClock = Clock.create(mBinding.clock);
@@ -210,6 +212,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 RecyclerView.ViewHolder holder = mBinding.recycler.findContainingViewHolder(focused);
                 int position = holder == null ? mBinding.recycler.getSelectedPosition() : holder.getBindingAdapterPosition();
                 if (position > 0) setToolbarVisible(false);
+                alignCurrentCategoryFocus();
             };
             mBinding.recycler.getViewTreeObserver().addOnGlobalFocusChangeListener(mCompactContentFocus);
         }
@@ -429,10 +432,16 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                     return;
                 }
                 // Selection may already have focused a native control or Compose host in this row.
-                if (holder.itemView.hasFocus()) return;
+                if (holder.itemView.hasFocus()) {
+                    alignRecyclerFocus(holder, focusTarget, focusRow, current);
+                    return;
+                }
                 // A missing row must finish selection/layout before focus can leave the old row.
                 View focus = findFocusable(holder.itemView);
-                if (focus != null && focus.requestFocus()) return;
+                if (focus != null && focus.requestFocus()) {
+                    alignRecyclerFocus(holder, focusTarget, focusRow, current);
+                    return;
+                }
                 requestNavFocus(current);
             });
             traceRecyclerFocus("selected", focusTarget, current.getAsBoolean(), requestGeneration, RecyclerView.NO_POSITION);
@@ -446,6 +455,61 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
                 + "; selected=" + mBinding.recycler.getSelectedPosition() + "; scrollState=" + mBinding.recycler.getScrollState()
                 + "; holderPosition=" + holderPosition + "; windowFocus=" + (hasWindowFocus() ? 1 : 0)
                 + "; lifecycle=" + getLifecycle().getCurrentState().ordinal() + "; touchBrowsing=" + (mTouchBrowsing ? 1 : 0));
+    }
+
+    private void alignCurrentCategoryFocus() {
+        if (mPosterHome == null || mAdapter == null || mTouchBrowsing || !canRestoreHistoryFocus()) return;
+        View focus = getCurrentFocus();
+        if (focus == null || !isDescendant(mBinding.recycler, focus)) return;
+        RecyclerView.ViewHolder holder = mBinding.recycler.findContainingViewHolder(focus);
+        int position = holder == null ? RecyclerView.NO_POSITION : holder.getBindingAdapterPosition();
+        if (position < 0 || position >= mAdapter.size() || !mPosterHome.isCategory(mAdapter.get(position))) return;
+        long generation = mHistoryFocusGeneration;
+        int cid = VodConfig.getCid();
+        alignRecyclerFocus(holder, position, mAdapter.get(position), () -> generation == mHistoryFocusGeneration
+                && cid == VodConfig.getCid() && !mTouchBrowsing && canRestoreHistoryFocus());
+    }
+
+    private void alignRecyclerFocus(RecyclerView.ViewHolder holder, int position, Object row, BooleanSupplier current) {
+        if (mHomeLayout != BrowseExperienceSettings.HOME_COMPACT) return;
+        clearCompactFocusAlignment();
+        View focus = holder.itemView.findFocus();
+        if (focus == null) return;
+        mCompactFocusAlignment = new ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                if (mCompactFocusAlignment != this) return true;
+                if (!current.getAsBoolean() || mBinding.recycler.isInTouchMode() || getCurrentFocus() != focus
+                        || !mBinding.recycler.hasFocus() || !focus.isAttachedToWindow()
+                        || holder.getBindingAdapterPosition() != position || mBinding.recycler.getSelectedPosition() != position
+                        || position >= mAdapter.size() || mAdapter.get(position) != row
+                        || !(holder instanceof ItemBridgeAdapter.ViewHolder bridge) || bridge.getItem() != row) {
+                    clearCompactFocusAlignment();
+                    return true;
+                }
+                if (mBinding.recycler.isComputingLayout() || mBinding.recycler.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) return true;
+                Rect bounds = new Rect(0, 0, focus.getWidth(), focus.getHeight());
+                mBinding.recycler.offsetDescendantRectToMyCoords(focus, bounds);
+                int top = mBinding.recycler.getPaddingTop();
+                int bottom = mBinding.recycler.getHeight() - mBinding.recycler.getPaddingBottom();
+                clearCompactFocusAlignment();
+                // Oversized focus hosts cannot fit both edges; leave their established keyline intact.
+                if (bounds.height() > bottom - top) return true;
+                int dy = bounds.top < top ? bounds.top - top : bounds.bottom > bottom ? bounds.bottom - bottom : 0;
+                if (dy != 0) mBinding.recycler.scrollBy(0, dy);
+                return true;
+            }
+        };
+        mBinding.recycler.getViewTreeObserver().addOnPreDrawListener(mCompactFocusAlignment);
+        mBinding.recycler.invalidate();
+    }
+
+    private void clearCompactFocusAlignment() {
+        if (mCompactFocusAlignment == null) return;
+        if (mBinding.recycler.getViewTreeObserver().isAlive()) {
+            mBinding.recycler.getViewTreeObserver().removeOnPreDrawListener(mCompactFocusAlignment);
+        }
+        mCompactFocusAlignment = null;
     }
 
     /** Top JetStream nav (点播/直播/搜索/…) — host focus for empty home / Back-to-toolbar. */
@@ -1333,6 +1397,7 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
 
     @Override
     protected void onDestroy() {
+        clearCompactFocusAlignment();
         if (mCompactContentFocus != null && mBinding.recycler.getViewTreeObserver().isAlive()) {
             mBinding.recycler.getViewTreeObserver().removeOnGlobalFocusChangeListener(mCompactContentFocus);
         }

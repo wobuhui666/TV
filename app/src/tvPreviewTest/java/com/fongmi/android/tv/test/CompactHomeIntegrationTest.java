@@ -1,5 +1,6 @@
 package com.fongmi.android.tv.test;
 
+import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Intent;
 import android.os.SystemClock;
@@ -11,6 +12,8 @@ import androidx.leanback.widget.ListRow;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
 import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
@@ -167,25 +170,31 @@ public final class CompactHomeIntegrationTest {
         main(() -> rowView(spotlightPosition()).findViewById(R.id.rexSectionCard).findViewById(R.id.hero).requestFocus());
         boolean light = com.fongmi.android.tv.ui.rex.RexTheme.isLight();
         try {
-            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(false));
+            setHomeTheme(false);
             NativeUiEvidence.capture("library-home-section-cards-dark");
-            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(true));
+            setHomeTheme(true);
             NativeUiEvidence.capture("library-home-section-cards-light");
         } finally {
-            main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+            setHomeTheme(light);
         }
         device.pressDPadDown();
-        await("Down enters the independent preview rail", () -> rowView(spotlightPosition())
-                .findViewById(R.id.rexSectionCard).findViewById(R.id.posters).hasFocus());
+        await("Down enters the independent preview rail", () -> {
+            View rail = spotlightControl(R.id.posters);
+            return rail != null && rail.hasFocus();
+        });
         device.pressDPadUp();
-        await("Up returns to the large artwork", () -> rowView(spotlightPosition())
-                .findViewById(R.id.rexSectionCard).findViewById(R.id.hero).hasFocus());
+        await("Up returns to the large artwork", () -> {
+            View hero = spotlightControl(R.id.hero);
+            return hero != null && hero.hasFocus();
+        });
         device.pressDPadCenter();
         await("Regional section keeps its production destination", () -> routeIs("RexSectionActivity"));
         assertEquals("cn_variety", home.lastNavigation.getStringExtra("section_key"));
         device.pressDPadDown();
-        await("Preview remains reachable after opening a section", () -> rowView(spotlightPosition())
-                .findViewById(R.id.rexSectionCard).findViewById(R.id.posters).hasFocus());
+        await("Preview remains reachable after opening a section", () -> {
+            View rail = spotlightControl(R.id.posters);
+            return rail != null && rail.hasFocus();
+        });
         device.pressDPadCenter();
         await("A small preview opens the library work detail", () -> routeIs("LibraryDetailActivity"));
         main(this::applyEmptySnapshot);
@@ -427,6 +436,36 @@ public final class CompactHomeIntegrationTest {
 
     private int spotlightPosition() {
         return home.pageAdapter().indexOf(HomePreviewFixtures.field(home.controller(), "rexSpotlightRow"));
+    }
+
+    private View spotlightControl(int id) {
+        View row = rowView(spotlightPosition());
+        View card = row == null ? null : row.findViewById(R.id.rexSectionCard);
+        return card == null ? null : card.findViewById(id);
+    }
+
+    private void setHomeTheme(boolean light) {
+        if (com.fongmi.android.tv.ui.rex.RexTheme.isLight() == light) return;
+        TvHomePreviewActivity previous = home;
+        main(() -> com.fongmi.android.tv.ui.rex.RexTheme.setLight(light));
+        await("Theme changes finish the previous Home activity", previous::isDestroyed);
+        await("The recreated Home resumes with its production controller", () -> {
+            for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                if (activity instanceof TvHomePreviewActivity current && current != previous
+                        && current.hasWindowFocus() && current.controller() != null) {
+                    home = current;
+                    return true;
+                }
+            }
+            return false;
+        });
+        await("The recreated Home binds the same section cards", () -> spotlightControl(R.id.hero) != null
+                && spotlightKeys().equals(PosterHomeCatalog.librarySpotlightKeys()));
+        main(() -> home.focusRow(spotlightPosition()));
+        await("The rebound section hero owns actual focus", () -> {
+            View hero = spotlightControl(R.id.hero);
+            return hero != null && hero.hasFocus();
+        });
     }
 
     private ArrayObjectAdapter spotlightAdapter() {

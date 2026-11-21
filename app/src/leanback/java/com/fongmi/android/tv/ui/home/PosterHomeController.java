@@ -67,6 +67,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
     private final Listener listener;
     private final boolean compact;
     private final boolean librarySpotlights;
+    private Runnable categoryFocusAlignment;
     private final PosterKeepShelfController keepShelf;
     private final Object requestTag = new Object();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -199,6 +200,14 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
 
     public void setKeepShelfFocusFallback(Runnable fallback) {
         keepShelf.setFocusFallback(fallback);
+    }
+
+    public void setCategoryFocusAlignment(Runnable alignment) {
+        categoryFocusAlignment = alignment;
+    }
+
+    public boolean isCategory(Object row) {
+        return !librarySpotlights && row == categories;
     }
 
     public void resumeKeepShelf() {
@@ -439,6 +448,7 @@ public final class PosterHomeController implements VodPresenter.OnClickListener 
         footer.empty = heroItems.isEmpty() && shelves.stream().allMatch(shelf -> shelf.items.isEmpty()) && !rexAny();
         notifyRow(footer);
         listener.onHeroChanged(!hero.value.isEmpty());
+        if (categoryFocusAlignment != null) categoryFocusAlignment.run();
     }
 
     private void renderLibrarySpotlights() {
