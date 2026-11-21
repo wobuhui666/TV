@@ -253,6 +253,8 @@ The shared source network interface supports explicit raw-byte HTTP bodies as we
 
 ECH is enabled by default for the integrated shared-client path, including conditional Cloudflare shared configuration when the documented DNS checks allow it. It does not cover every third-party source's independent network stack, WebView, or native MPV, and it is not a mandatory-ECH privacy mode. See [ECH behavior and evidence](docs/ech-validation.md).
 
+The TV build includes a 16:9 launcher banner with the app name and supports the standard TV card interface on Android 7.0 and later. Third-party launchers control card presentation and icon caching; refresh the app card after updating. Individual launcher versions still require verification.
+
 ### TMDB proxy repositories
 
 [The proxy source, wobuhui666/tttt](https://github.com/wobuhui666/tttt), supports Vercel Serverless and Cloudflare Workers. It proxies TMDB metadata and images, with caching and movie/series search-title normalization. The app's default service is `https://t.coolmarket.eu.org/`; its deployment is linked to [zhhshss/tttt](https://github.com/zhhshss/tttt), a private repository requiring access. The public repository was synchronized with the current deployment source on November 17, 2026.
