@@ -168,16 +168,23 @@ class CalendarProvidersAndroidTest {
     }
 
     @Test fun shouldUseLightBackgroundAndDarkTextThenRestoreDarkThemeWithoutLosingDateOrRemoteFocus() {
-        val file = File(activity.cacheDir, "calendar-theme-artwork.png")
         val artwork = Bitmap.createBitmap(640, 360, Bitmap.Config.ARGB_8888)
         artwork.eraseColor(Color.rgb(45, 120, 190))
-        file.outputStream().use { artwork.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val encoded = java.io.ByteArrayOutputStream().also { artwork.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val artworkUrl = "data:image/png;base64," + android.util.Base64.encodeToString(encoded.toByteArray(), android.util.Base64.NO_WRAP)
         artwork.recycle()
         val state = snapshot(provider = "bangumi", mode = "following", connected = true, canFollow = true,
-            followingTitle = true).let { it.copy(preview = it.preview.copy(backdrop = file.toURI().toString(),
+            followingTitle = true).let { it.copy(preview = it.preview.copy(backdrop = artworkUrl,
                 overview = "A fixture overview for checking calendar text contrast.", metadata = listOf("EP 7.5", "2026-11-18"))) }
         submit(state)
         focus("date:$date")
+        await("The fixture scene is decoded before checking appearance") {
+            val bitmap = instrumentation.uiAutomation.takeScreenshot()
+            try {
+                val scene = bitmap.getPixel(bitmap.width * 4 / 5, bitmap.height * 2 / 5)
+                Color.blue(scene) - Color.red(scene) > 15
+            } finally { bitmap.recycle() }
+        }
         for (light in listOf(false, true, false)) {
             main { RexTheme.setLight(light); host.refreshTheme() }
             instrumentation.waitForIdleSync()
@@ -201,14 +208,18 @@ class CalendarProvidersAndroidTest {
                     assertTrue("$tag uses readable ${if (light) "dark" else "light"} glyphs", glyphs > 20)
                 }
                 val bounds = device.findObject(By.res("date:$date"))!!.visibleBounds
-                val capsule = bitmap.getPixel(bounds.centerX(), bounds.top + 4)
+                var capsulePixels = 0
+                for (y in bounds.top until bounds.bottom) for (x in bounds.left until bounds.right) {
+                    val luminance = ColorUtils.calculateLuminance(bitmap.getPixel(x, y))
+                    if (if (light) luminance < .2 else luminance > .7) capsulePixels++
+                }
+                // Accessibility bounds include the minimum touch target outside the painted pill.
                 assertTrue("Focused date uses the inverse theme capsule",
-                    if (light) ColorUtils.calculateLuminance(capsule) < .2 else ColorUtils.calculateLuminance(capsule) > .7)
+                    capsulePixels > bounds.width() * bounds.height() / 5)
             } finally { bitmap.recycle() }
             awaitFocused("date:$date")
             assertEquals(date.toString(), read { host.currentState().selectedDate })
         }
-        file.delete()
     }
 
     private fun snapshot(provider: String = "tmdb", mode: String = "public", connected: Boolean = false,
@@ -223,7 +234,9 @@ class CalendarProvidersAndroidTest {
             weekLabel = "11/16 – 11/22", hasKeeps = connected || provider == "tmdb",
             days = (0..6).map { day ->
                 val current = monday.plusDays(day.toLong())
-                AiringCalendarDay(current.toString(), current.dayOfWeek.name.take(3), current == date, current == date)
+                val labels = intArrayOf(R.string.calendar_monday, R.string.calendar_tuesday, R.string.calendar_wednesday,
+                    R.string.calendar_thursday, R.string.calendar_friday, R.string.calendar_saturday, R.string.calendar_sunday)
+                AiringCalendarDay(current.toString(), activity.getString(labels[day]), current == date, current == date)
             }, items = cards, emptyMessage = emptyMessage,
             preview = cards.firstOrNull()?.let { AiringCalendarPreview(title = it.title, key = it.key) }
                 ?: AiringCalendarPreview())
