@@ -186,7 +186,12 @@ class CalendarProvidersAndroidTest {
             } finally { bitmap.recycle() }
         }
         for (light in listOf(false, true, false)) {
-            main { RexTheme.setLight(light); host.refreshTheme() }
+            main {
+                RexTheme.setLight(light)
+                // The standalone ComponentActivity does not subscribe like the shipping BaseActivity.
+                JetStreamThemeController.refresh()
+                host.refreshTheme()
+            }
             instrumentation.waitForIdleSync()
             val screenshot = File(activity.getExternalFilesDir("native-usability-evidence"),
                 if (light) "calendar-providers-light.png" else "calendar-providers-dark.png")
