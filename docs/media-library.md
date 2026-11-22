@@ -74,6 +74,8 @@ Room 数据库从 38 增至 39，仅增加 `History.mediaRef/mediaSeason/mediaEp
 
 ## 验证
 
+2026-11-22 选集、选源与片源搜索复用：GitHub Actions 的 1564 项单测、API 34 模拟器 88 项首页与媒体库回归及 lint 对比通过，对照运行确认修改前打开详情会把每个片源搜索两次。实体电视帧率和真实片源耗时没有测量，见[选集与选源性能报告](testing/reports/2026-11-22-media-library-performance/README.md)。
+
 2026-11-19 恢复媒体库栏目大卡与 Rex 当期华语榜单，60 项变体专项 JUnit、TV ARM64 Debug 构建及完整包校验通过。目标设备另有 MPV 测试占用，Android 界面回归、Preview／测试包及 lint 本轮未执行；源码、产物和覆盖限制见[首页大卡与新剧数据验证](testing/reports/2026-11-19-library-home/README.md)。
 
 2026-11-19 后续布局修订移除媒体库整排分类／筛选，保留上方小海报，并按综艺、热门剧集、备受欢迎电影、每日新番排列大卡。20 项首页／栏目检查、完整 Java 编译及新版包校验通过；复用的未变 Kotlin／外部 DEX、源码与未执行的 Android 验证范围见[同主题验证记录](testing/reports/2026-11-19-library-home/README.md#当前布局修订)。

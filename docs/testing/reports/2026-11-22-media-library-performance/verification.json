@@ -179,11 +179,11 @@
       "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java",
       "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java"
     ],
-    "gradle_variant_tests": false,
-    "kotlin_compile": false,
-    "apk_build": false,
-    "lint": false,
-    "device_execution": false,
+    "gradle_variant_tests": true,
+    "kotlin_compile": true,
+    "apk_build": true,
+    "lint": true,
+    "device_execution": true,
     "benchmark": {
       "scope": "Local JVM only, one response of 40 search summaries; no network, UI frames or television hardware.",
       "protocol": "200 warm-up iterations, 7 groups of 15 runs, three processes per case with alternating order; summary is the median of the three medians.",
@@ -350,6 +350,92 @@
         "SourceReliabilityStoreAndroidTest": 2
       },
       "total": 88
+    },
+    "github_actions": {
+      "commit": "e59e1dd4257a33159207556590c0c0b0c3d05e5c",
+      "device": {
+        "api": 34,
+        "abis": "x86_64,arm64-v8a",
+        "native_bridge": "libndk_translation.so",
+        "package": "com.fongmi.android.tv.preview",
+        "fixtures": "offline"
+      },
+      "compact_home": {
+        "run": 45065742337,
+        "unit_tests": {
+          "variant": "leanbackArm64_v8aPreview",
+          "classes": 164,
+          "tests": 1273,
+          "failures": 0,
+          "errors": 0
+        },
+        "device_tests": {
+          "expected": 88,
+          "passed": 88,
+          "core": 32,
+          "library": {
+            "LibraryExperienceAndroidTest": 53,
+            "LibraryResourcesControllerAndroidTest": 1,
+            "SourceReliabilityStoreAndroidTest": 2
+          }
+        }
+      },
+      "baseline": {
+        "commit": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+        "run": 45065746619,
+        "unit_tests": 1266,
+        "device_tests": {
+          "expected": 80,
+          "passed": 80
+        }
+      },
+      "control_without_search_reuse": {
+        "commit": "4bc6bc2e6d973741979721958c8a96996c944f7d",
+        "run": 45068027343,
+        "device_tests": {
+          "expected": 88,
+          "passed": 86,
+          "failed": [
+            "refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource",
+            "hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch"
+          ],
+          "observed_search_requests": 4,
+          "expected_search_requests": 2
+        }
+      },
+      "build_validation": {
+        "run": 45065744488,
+        "attempt": 2,
+        "unit_tests": {
+          "app_leanbackArm64_v8aDebug": 1273,
+          "catvod": 244,
+          "quickjs": 28,
+          "wasm": 19,
+          "total": 1564,
+          "failures": 0,
+          "errors": 0
+        },
+        "lint": {
+          "baseline": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+          "errors": [
+            108,
+            108
+          ],
+          "warnings": [
+            388,
+            388
+          ],
+          "new_errors": 0,
+          "listed_new_warnings": 2,
+          "listed_new_warning_file": "app/src/main/AndroidManifest.xml"
+        },
+        "first_attempt": "Lint step failed downloading a Media3 test dependency from Maven Central (rate limited); unit tests and builds had passed."
+      },
+      "not_covered": [
+        "physical television frame time and memory",
+        "real source search latency and time to first frame",
+        "configurations returning more than 2000 search summaries"
+      ]
     }
   }
 }
