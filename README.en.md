@@ -20,7 +20,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 | Home and discovery | Featured artwork, continued viewing, favorites, optional poster-wall home and personal shelf, TMDB/Douban recommendations, and configurable hero rotation. |
 | Poster walls and filters | Source category and folder filters; media type, genre, year, region, and sorting where the page supplies them; consistent poster metadata and filter-panel state. |
 | Search and source selection | Cross-source search, relevance levels, grouped results, optional Smart source selection, per-configuration preferred sources, and episode-aware fallback. |
-| Airing calendar | TV daily schedules for series, anime and variety shows, previous/next weeks, followed titles and title artwork; follow a show from its media-library detail page. |
+| Airing calendar | TMDB, Trakt and Bangumi schedules and title artwork; local follows, Trakt watchlist sync, and Bangumi wish/doing sync. |
 | Media-library details | Compose TV immersive backgrounds, shared theme and fonts, playback/episode/source actions, lazy card lists, and stable focus restoration. |
 | Playback | ExoPlayer/Media3 and MPV; hardware/software options, playback speed, seek acceleration, repeat, aspect ratio, track selection, chapters, and editions when provided. |
 | Playback information | A TV specification capsule showing available input resolution, video/audio codec, dynamic range, bit depth, channel information, and explicit content ratings. |
@@ -58,7 +58,7 @@ Frames from the earlier 90-second cut of the tour, showing the interface as reco
 
 The home screen puts featured artwork and continued viewing within reach. Library and discovery pages lead into search results, title details, and episode selection. Playback controls and settings use the same remote-friendly interaction patterns.
 
-The TV home navigation includes an airing calendar with public schedules and followed titles, a uniform media rail, and artwork and episode information for the focused title. Choose **Follow / Following** on a linked TV title in media-library mode to add or remove it, using existing favorites. The personal calendar groups all known episode dates for the selected week; TMDB dates do not guarantee that a playback source is available. See the [calendar guide](docs/native-discovery.md#追更日历).
+The TV airing calendar offers TMDB, Trakt and Bangumi sources. TMDB uses local favorites; connect Trakt with a TV authorization code or Bangumi with a personal access token to import account follows. **Account → Sync followed titles** refreshes the remote list; the focused title can be followed or removed from Trakt, or paused on Bangumi. Trakt needs an application Client ID. Bangumi public schedules describe the current weekly broadcast listing; its personal calendar uses actual episode dates. Account credentials stay on the device and account lists remain separate from local favorites and WebDAV. See the [calendar guide](docs/native-discovery.md#追更日历).
 
 Live TV brings channel groups and channel selection together. The personal page provides entry points for favorites, history, media push, casting reception, local files, and settings.
 

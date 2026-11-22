@@ -982,6 +982,9 @@ public final class AiringCalendarAndroidTest {
         Bitmap source = displayed.copy(Bitmap.Config.ARGB_8888, false);
         assertNotNull("Read the background's actual decoded scene", source);
         Rect window = hostBounds();
+        int scrim = com.fongmi.android.tv.ui.rex.RexTheme.isLight()
+                ? com.fongmi.android.tv.ui.theme.JetStreamPalette.resolveColor(activity, R.color.jetstream_background)
+                : Color.BLACK;
         int matched = 0;
         try {
             double scale = Math.max((double) window.width() / source.getWidth(), (double) window.height() / source.getHeight());
@@ -993,16 +996,24 @@ public final class AiringCalendarAndroidTest {
                 int sourceX = Math.max(0, Math.min(source.getWidth() - 1, (int) ((point[0] - window.left + cropX) / scale)));
                 int sourceY = Math.max(0, Math.min(source.getHeight() - 1, (int) ((point[1] - window.top + cropY) / scale)));
                 int expected = source.getPixel(sourceX, sourceY), actual = frame.getPixel(point[0], point[1]);
-                int peakSource = Math.max(Color.red(expected), Math.max(Color.green(expected), Color.blue(expected)));
-                int peakFrame = Math.max(Color.red(actual), Math.max(Color.green(actual), Color.blue(actual)));
-                if (peakSource == 0 || peakFrame < 4) continue;
-                // Black readability scrims attenuate the scene; they do not replace its color pattern.
-                double attenuation = (double) peakFrame / peakSource;
-                if (attenuation > 1.05) continue;
-                int tolerance = 6 + (int) Math.round(peakFrame * .04);
-                if (Math.abs(Color.red(actual) - Color.red(expected) * attenuation) <= tolerance
-                        && Math.abs(Color.green(actual) - Color.green(expected) * attenuation) <= tolerance
-                        && Math.abs(Color.blue(actual) - Color.blue(expected) * attenuation) <= tolerance) matched++;
+                int[] original = {Color.red(expected), Color.green(expected), Color.blue(expected)};
+                int[] painted = {Color.red(actual), Color.green(actual), Color.blue(actual)};
+                int[] overlay = {Color.red(scrim), Color.green(scrim), Color.blue(scrim)};
+                int reference = 0;
+                for (int channel = 1; channel < 3; channel++) {
+                    if (Math.abs(original[channel] - overlay[channel]) > Math.abs(original[reference] - overlay[reference])) reference = channel;
+                }
+                int difference = original[reference] - overlay[reference];
+                if (Math.abs(difference) < 8) continue;
+                // Both theme scrims blend the original scene toward the active background.
+                double contribution = (double) (painted[reference] - overlay[reference]) / difference;
+                if (contribution < .02 || contribution > 1.05) continue;
+                boolean retainsScene = true;
+                for (int channel = 0; channel < 3; channel++) {
+                    double blended = overlay[channel] + (original[channel] - overlay[channel]) * contribution;
+                    if (Math.abs(painted[channel] - blended) > 12) retainsScene = false;
+                }
+                if (retainsScene) matched++;
             }
             Log.i("CalendarBackground", "Actual PNG/source correspondences=" + matched + "/9 url=" + url);
             assertTrue("At least six actual screen samples retain the decoded scene's color pattern", matched >= 6);

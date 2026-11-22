@@ -4,6 +4,8 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
+| 2026-11-22 | [媒体库选集与选源性能](reports/2026-11-22-media-library-performance/README.md) | 256 项专项 JVM、生产及设备测试源码编译；选源 JVM 微基准 17.1→3.9 ms，APK、lint 和设备交互未执行 |
+| 2026-11-22 | [首页栏目完整筛选](reports/2026-11-22-home-wall-filters/README.md) | 59 项专项 JUnit、Java／Android 测试源码编译及 25 次真实 TMDB 请求通过；完整 Gradle、APK、lint 和设备 UI 未完成 |
 | 2026-11-21 | [本地功能统一发布](reports/2026-11-21-all-local-release/README.md) | 1557 项全量 JVM、API24／34 日历追剧、API34 首页／媒体库与真实 Parcel 交接通过；lint 新增 Error 0、Warning 3，真实片源和实体电视范围保留 |
 | 2026-11-21 | [桌面横幅与源弹窗联合发布](reports/2026-11-21-combined-release/README.md) | 同提交 1481 项单测、API24／34 横幅 4 项、API34 两尺寸 52 项回归通过；lint 零新增问题，实体电视与真实源限制保留 |
 | 2026-11-19 | [aiwex 配置弹窗回归](reports/2026-11-19-aiwex-config-dialog/README.md) | 最终同代码提交：真实 Guard 双入口弹出与返回键关闭、52 项 Android 与 13 项集中 JVM 回归通过；仅安装独立 debug 包 |

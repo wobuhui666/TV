@@ -43,6 +43,18 @@ public final class RexSections {
         return null;
     }
 
+    /** Entered walls browse the complete catalog; home shelves keep their current feed previews. */
+    public static RexSection forWall(String key) {
+        RexSection section = byKey(key);
+        if (section == null || section.getSource() != RexSection.Source.REXNOW_REGIONAL) return section;
+        String country = "korean".equals(section.getRegion()) ? "KR" : "CN";
+        RexTmdbQuery.Query query = RexTmdbQuery.discover(null, RexTmdbQuery.TV, "popularity.desc");
+        query.params.put("with_origin_country", country);
+        query.params.put("include_adult", "false");
+        if ("variety".equals(section.getCategory())) query.params.put("with_genres", "10764|10767");
+        return RexSection.tmdb(section.getKey(), section.getLabelRes(), query);
+    }
+
     /** Media-library section cards follow the home layout's fixed four topics. */
     public static List<RexSection> librarySpotlights() {
         return List.of(

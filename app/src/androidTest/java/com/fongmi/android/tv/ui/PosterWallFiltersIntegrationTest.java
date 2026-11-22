@@ -94,7 +94,7 @@ public final class PosterWallFiltersIntegrationTest {
     private final AtomicInteger delayedCancelled = new AtomicInteger();
     private final Map<Map<Object, Object>, Map<Object, Object>> savedCaches = new IdentityHashMap<>();
     private OkHttpClient originalClient, originalTmdbClient, fixtureClient;
-    private volatile boolean pagination, rapidFilters, delayedGenres;
+    private volatile boolean pagination, rapidFilters, delayedGenres, delayedMediaGenres;
     private byte[] artwork;
     private boolean prepared;
 
@@ -116,7 +116,7 @@ public final class PosterWallFiltersIntegrationTest {
                         .body(ResponseBody.create(artwork, MediaType.get("image/png"))).build();
                 requests.add(url);
                 boolean hold = pagination && url.encodedPath().endsWith("/movie/top_rated") && "2".equals(url.queryParameter("page"))
-                        || delayedGenres && url.encodedPath().endsWith("/genre/movie/list")
+                        || (delayedGenres || delayedMediaGenres) && url.encodedPath().endsWith("/genre/movie/list")
                         || rapidFilters && url.encodedPath().endsWith("/discover/movie")
                         && !"popularity.desc".equals(url.queryParameter("sort_by"));
                 if (hold) {
@@ -269,8 +269,8 @@ public final class PosterWallFiltersIntegrationTest {
     }
 
     @Test(timeout = 90000)
-    public void regionalAndDoubanWallsFilterOnlyLoadedMetadataWithoutRefetching() throws Exception {
-        for (String key : List.of("cn_series", "douban_movie")) {
+    public void doubanWallsFilterOnlyLoadedMetadataWithoutRefetching() throws Exception {
+        for (String key : List.of("douban_movie", "douban_tv")) {
             RexSectionActivity activity = wall(key);
             await(() -> items(activity).size() == 6, key + " feed is loaded");
             main(() -> assertEquals("No region or media filter can be invented for a fixed feed", List.of(2, 4, 5), panel(activity).getVisibleRows()));
@@ -288,6 +288,123 @@ public final class PosterWallFiltersIntegrationTest {
             capture(activity, "wall-local-filter-" + key);
             finish(activity);
         }
+    }
+
+    @Test(timeout = 120000)
+    public void domesticSeriesBrowsesAllPagesAndSupportsVarietyScriptedAndOtherShowTypes() throws Exception {
+        RexSectionActivity activity = wall("cn_tv");
+        await(() -> items(activity).size() == 20 && panel(activity).getVisibleRows().equals(List.of(2, 3, 4, 5, 6)), "complete TMDB series wall");
+        HttpUrl initial = lastUrl("/discover/tv");
+        assertEquals("CN", initial.queryParameter("with_origin_country"));
+        assertNull(initial.queryParameter("air_date.gte"));
+        assertNull(initial.queryParameter("air_date.lte"));
+        assertNull(initial.queryParameter("without_genres"));
+        assertNull(initial.queryParameter("with_type"));
+        assertEquals("Entering the wall must query the full catalog instead of fetching the small home feed", 0, feedCount());
+        main(() -> assertTrue(activity.onLoadMore("")));
+        await(() -> items(activity).size() == 39, "second full TMDB page with overlap removed");
+        assertEquals("2", lastUrl("/discover/tv").queryParameter("page"));
+
+        choose(activity, 6, "variety");
+        await(() -> "10764|10767".equals(lastUrl("/discover/tv").queryParameter("with_genres")), "Reality or Talk variety query");
+        assertNull(lastUrl("/discover/tv").queryParameter("with_type"));
+        assertNull(lastUrl("/discover/tv").queryParameter("without_genres"));
+        capture(activity, "wall-series-variety");
+        for (String type : List.of("4", "3", "5", "0", "1", "2", "6")) {
+            choose(activity, 6, type);
+            await(() -> type.equals(lastUrl("/discover/tv").queryParameter("with_type")), "TMDB show type " + type);
+            assertNull("Changing show type must clear the variety genre constraint", lastUrl("/discover/tv").queryParameter("with_genres"));
+        }
+        choose(activity, 6, "");
+        await(() -> lastUrl("/discover/tv").queryParameter("with_type") == null, "all show types restored");
+        choose(activity, 2, "10764");
+        await(() -> "10764".equals(lastUrl("/discover/tv").queryParameter("with_genres")), "individual TV genre");
+        choose(activity, 3, "");
+        await(() -> lastUrl("/discover/tv").queryParameter("with_origin_country") == null, "All regions removes the initial domestic country");
+        String year = String.valueOf(LocalDate.now().getYear() - 4);
+        choose(activity, 4, year);
+        await(() -> (year + "-01-01").equals(lastUrl("/discover/tv").queryParameter("first_air_date.gte")), "older series can be discovered");
+        assertEquals(year + "-12-31", lastUrl("/discover/tv").queryParameter("first_air_date.lte"));
+        assertNull(lastUrl("/discover/tv").queryParameter("air_date.gte"));
+        assertNull(lastUrl("/discover/tv").queryParameter("air_date.lte"));
+    }
+
+    @Test(timeout = 90000)
+    public void domesticMovieAndRegionalWallsKeepDefaultsWithoutPreviewDateLimits() throws Exception {
+        RexSectionActivity movies = wall("cn_movie");
+        await(() -> items(movies).size() == 20 && panel(movies).getVisibleRows().contains(2), "complete domestic movie wall");
+        HttpUrl initial = lastUrl("/discover/movie");
+        assertEquals("CN", initial.queryParameter("with_origin_country"));
+        assertNull(initial.queryParameter("primary_release_date.gte"));
+        assertNull(initial.queryParameter("primary_release_date.lte"));
+        String year = String.valueOf(LocalDate.now().getYear() - 4);
+        choose(movies, 4, year);
+        await(() -> (year + "-01-01").equals(lastUrl("/discover/movie").queryParameter("primary_release_date.gte")), "older domestic films are discoverable");
+        assertEquals(year + "-12-31", lastUrl("/discover/movie").queryParameter("primary_release_date.lte"));
+        finish(movies);
+        for (String key : List.of("cn_series", "kr_series", "cn_variety")) {
+            RexSectionActivity activity = wall(key);
+            await(() -> items(activity).size() == 20 && panel(activity).getVisibleRows().contains(6), "remote " + key + " wall");
+            HttpUrl query = lastUrl("/discover/tv");
+            assertEquals(key.equals("kr_series") ? "KR" : "CN", query.queryParameter("with_origin_country"));
+            assertNull(query.queryParameter("air_date.gte"));
+            assertNull(query.queryParameter("air_date.lte"));
+            if (key.equals("cn_variety")) {
+                assertEquals("10764|10767", query.queryParameter("with_genres"));
+                choose(activity, 6, "");
+                await(() -> lastUrl("/discover/tv").queryParameter("with_genres") == null, "variety wall can include other show types");
+            }
+            finish(activity);
+        }
+        assertEquals(0, feedCount());
+    }
+
+    @Test(timeout = 90000)
+    public void trendingSupportsAdvancedFiltersAndRestoresItsOriginalDailyEndpoints() throws Exception {
+        RexSectionActivity activity = wall("trending_day");
+        await(() -> !items(activity).isEmpty(), "daily mixed trends");
+        choose(activity, 1, "movie");
+        await(() -> lastUrlOrNull("/trending/movie/day") != null && panel(activity).getVisibleRows().contains(2), "movie trend filters");
+        choose(activity, 2, "28");
+        await(() -> "28".equals(lastUrl("/discover/movie").queryParameter("with_genres")), "genre criteria use the discover endpoint");
+        choose(activity, 3, "CN");
+        await(() -> "CN".equals(lastUrl("/discover/movie").queryParameter("with_origin_country")), "movie country criterion");
+        choose(activity, 5, "rating");
+        await(() -> "vote_average.desc".equals(lastUrl("/discover/movie").queryParameter("sort_by")), "movie rating order");
+        assertEquals("100", lastUrl("/discover/movie").queryParameter("vote_count.gte"));
+        choose(activity, 2, "");
+        choose(activity, 3, "");
+        final int restoredMoviesAt = requests.size();
+        choose(activity, 5, "");
+        await(() -> requests.stream().skip(restoredMoviesAt).anyMatch(url -> url.encodedPath().endsWith("/trending/movie/day")), "clearing criteria restores actual daily movie trends");
+        choose(activity, 1, "tv");
+        await(() -> panel(activity).getVisibleRows().contains(6), "TV show type filter");
+        choose(activity, 6, "4");
+        await(() -> "4".equals(lastUrl("/discover/tv").queryParameter("with_type")), "scripted TV trend discovery");
+        final int restoredTvAt = requests.size();
+        choose(activity, 6, "");
+        await(() -> requests.stream().skip(restoredTvAt).anyMatch(url -> url.encodedPath().endsWith("/trending/tv/day")), "clearing show type restores actual daily TV trends");
+        choose(activity, 1, "");
+        await(() -> panel(activity).getVisibleRows().equals(List.of(1)), "mixed trends restore the original media-only state");
+        assertEquals("/3/trending/all/day", requests.get(requests.size() - 1).encodedPath());
+        capture(activity, "wall-trending-restored");
+    }
+
+    @Test(timeout = 60000)
+    public void lateMovieGenresCannotReplaceTvChoicesAfterChangingTrendMedia() throws Exception {
+        delayedMediaGenres = true;
+        RexSectionActivity activity = wall("trending_day");
+        await(() -> !items(activity).isEmpty(), "mixed daily trends");
+        choose(activity, 1, "movie");
+        await(() -> delayedStarted.get() == 1, "movie genre request held");
+        choose(activity, 1, "tv");
+        await(() -> panel(activity).getRow(2).stream().anyMatch(option -> option.getValue().equals("10764")), "TV genre catalog arrives first");
+        releaseDelayed.countDown();
+        await(() -> delayedReturned.get() == 1 && fixtureClient.dispatcher().runningCallsCount() == 0, "obsolete movie genres return");
+        main(() -> {
+            assertTrue(panel(activity).getRow(2).stream().anyMatch(option -> option.getValue().equals("10764")));
+            assertFalse("Movie-only Action cannot appear in the TV genre choices", panel(activity).getRow(2).stream().anyMatch(option -> option.getValue().equals("28")));
+        });
     }
 
     @Test(timeout = 60000)
@@ -326,9 +443,10 @@ public final class PosterWallFiltersIntegrationTest {
             main(() -> {
                 List<Integer> visible = panel(activity).getVisibleRows();
                 if (section.getKey().equals("trending_day")) assertEquals(List.of(1), visible);
-                else if (section.getQuery() != null) {
+                else if (section.getQuery() != null || section.getSource() == RexSection.Source.REXNOW_REGIONAL) {
                     assertTrue(visible.contains(2)); assertTrue(visible.contains(3)); assertTrue(visible.contains(5));
                     assertEquals(!section.getKey().equals("now_playing"), visible.contains(4));
+                    assertEquals(section.getSource() == RexSection.Source.REXNOW_REGIONAL || section.getKey().equals("popular_tv") || section.getKey().equals("top_tv"), visible.contains(6));
                 } else {
                     assertFalse(visible.contains(3)); assertTrue(visible.contains(4)); assertTrue(visible.contains(5));
                     assertEquals(section.getKey().equals("anime_daily"), visible.contains(1));
@@ -387,7 +505,7 @@ public final class PosterWallFiltersIntegrationTest {
     }
 
     private void choose(Activity activity, int row, String value) {
-        String group = activity.getString(switch (row) {
+        String defaultGroup = activity.getString(switch (row) {
             case 2 -> R.string.discover_filter_genre;
             case 3 -> R.string.discover_filter_region;
             case 4 -> R.string.discover_filter_year;
@@ -396,16 +514,27 @@ public final class PosterWallFiltersIntegrationTest {
         });
         String summary = value(() -> {
             DiscoverFilterPanel panel = panel(activity);
-            if (!panel.getLabel(row).isEmpty()) return panel.getRow(row).stream().filter(option -> option.isSelected()).findFirst().orElseThrow().getLabel();
+            String group = panel.getLabel(row).isEmpty() ? defaultGroup : panel.getLabel(row);
             if (row == 1) return panel.getRow(row).stream().filter(option -> option.isSelected()).findFirst().orElseThrow().getLabel();
             com.fongmi.android.tv.bean.DiscoverFilterOption selected = panel.getRow(row).stream().filter(option -> option.isSelected()).findFirst().orElse(null);
-            if (selected == null || (row == 2 || row == 3) && selected.getValue().isEmpty()
+            if (selected == null || (row == 2 || row == 3 || row == 6) && selected.getValue().isEmpty()
                     || row == 4 && selected.getStartDate().isEmpty() && selected.getEndDate().isEmpty()) return group;
             return group + " · " + selected.getLabel();
+        });
+        JetStreamChipRow summaryRow = value(() -> activity.findViewById(R.id.summary));
+        main(() -> {
+            summaryRow.setFocusedPosition(panel(activity).getVisibleRows().indexOf(row));
+            assertTrue(summaryRow.requestFocus());
         });
         tapText(value(() -> activity.findViewById(R.id.summary)), summary);
         await(() -> panel(activity).getExpandedRow() == row, "summary maps to actual sparse filter row " + row);
         String label = value(() -> panel(activity).getRow(row).stream().filter(option -> value.equals(option.getValue())).findFirst().orElseThrow().getLabel());
+        JetStreamChipRow optionRow = value(() -> activity.findViewById(R.id.options));
+        main(() -> {
+            List<com.fongmi.android.tv.bean.DiscoverFilterOption> options = panel(activity).getRow(row);
+            for (int i = 0; i < options.size(); i++) if (value.equals(options.get(i).getValue())) optionRow.setFocusedPosition(i);
+            assertTrue(optionRow.requestFocus());
+        });
         tapText(value(() -> activity.findViewById(R.id.options)), label);
         await(() -> panel(activity).getRow(row).stream().anyMatch(option -> value.equals(option.getValue()) && option.isSelected()), "selected actual chip " + row);
     }
@@ -495,7 +624,8 @@ public final class PosterWallFiltersIntegrationTest {
 
     private String response(HttpUrl url) throws Exception {
         String path = url.encodedPath();
-        if (path.endsWith("/genre/movie/list") || path.endsWith("/genre/tv/list")) return "{\"genres\":[{\"id\":28,\"name\":\"动作\"},{\"id\":18,\"name\":\"剧情\"}]}";
+        if (path.endsWith("/genre/movie/list")) return "{\"genres\":[{\"id\":28,\"name\":\"动作\"},{\"id\":18,\"name\":\"剧情\"}]}";
+        if (path.endsWith("/genre/tv/list")) return "{\"genres\":[{\"id\":18,\"name\":\"剧情\"},{\"id\":10759,\"name\":\"动作与冒险\"},{\"id\":10764,\"name\":\"真人秀\"},{\"id\":10767,\"name\":\"脱口秀\"}]}";
         if (path.endsWith("/watch/providers/movie")) return "{\"results\":[{\"provider_id\":420,\"provider_name\":\"Fixture Stream\",\"logo_path\":\"/provider.png\"}]}";
         if (path.contains("/3/")) {
             boolean selected = path.endsWith("/discover/movie") && rapidFilters;

@@ -308,6 +308,63 @@ class AiringCalendarRepositoryTest {
         assertEquals(2, results.last().items.size)
     }
 
+    @Test fun shouldPreserveTraktEpisodeCoordinatesAndLocalDateWhenTmdbUsesAnotherAirDate() {
+        val date = monday
+        val entry = AiringCalendarEntry(media(8), date,
+            episodes = listOf(LibraryMedia.AiringEpisode(2, 7, "Trakt episode", date.toString(), 51)),
+            episodeDetails = listOf(LibraryMedia.Episode(2, 7, "Trakt episode", "Trakt overview", "/trakt.jpg", date.toString(), 51)),
+            provider = CalendarProvider.TRAKT, logo = "https://images.trakt.tv/logo.png", remoteId = 900)
+        repository.loadPublic(date)
+        source.succeed(source.pending.single() as PublicRequest, AiringCalendarPage(listOf(entry)))
+        val focused = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(results.last().items.single(), focused::add)
+        source.succeed(source.pending.single() as DetailRequest, metadata(8, listOf(1, 2, 3)))
+        assertEquals(listOf(2), source.requestedSeasons)
+        source.succeed(source.pending.single() as SeasonRequest, listOf(
+            LibraryMedia.Episode(2, 7, "中文单集", "TMDB overview", "/tmdb.jpg", date.minusDays(1).toString(), 45),
+            LibraryMedia.Episode(2, 8, "Different episode", "", "/other.jpg", date.toString(), 45)))
+        val result = focused.last().entry
+        assertEquals(date, result.date)
+        assertEquals(entry.episodes, result.episodes)
+        assertEquals(listOf(7), result.episodeDetails.map { it.number() })
+        assertEquals(date.toString(), result.episodeDetails.single().airDate())
+        assertEquals("中文单集", result.episodeDetails.single().name())
+        assertEquals("/tmdb.jpg", result.episodeDetails.single().still())
+        assertEquals(51, result.episodeDetails.single().runtime())
+        assertEquals(entry.logo, result.logo)
+        assertEquals(900L, result.remoteId)
+        assertEquals(CalendarProvider.TRAKT, result.provider)
+        assertEquals(result, results.last().items.single())
+        assertFalse(focused.last().loading)
+    }
+
+    @Test fun shouldKeepNativeCalendarIdentitiesAndFocusWithoutRequestingTmdb() {
+        val bangumi = AiringCalendarEntry(Vod().apply { id = "bangumi:subject:77"; name = "动漫" }, monday,
+            provider = CalendarProvider.BANGUMI, scheduleKind = CalendarScheduleKind.WEEKLY)
+        val trakt = AiringCalendarEntry(Vod().apply { id = "trakt:show:99"; name = "Series" }, monday,
+            provider = CalendarProvider.TRAKT)
+        val invalid = bangumi.copy(media = Vod().apply { id = "bangumi:subject:0" })
+        repository.loadPublic(monday)
+        source.succeed(source.pending.single() as PublicRequest, AiringCalendarPage(listOf(
+            bangumi, trakt, invalid, bangumi.copy(date = monday.plusDays(1)),
+            AiringCalendarEntry(media(9, "movie"), monday, provider = CalendarProvider.TRAKT))))
+        assertEquals(listOf(bangumi, trakt), results.last().items)
+        assertEquals(setOf(monday), results.last().knownUpdateDates)
+        val focused = mutableListOf<AiringCalendarFocusResult>()
+        repository.focus(bangumi, focused::add)
+        assertEquals(bangumi, focused.single().entry)
+        assertNull(focused.single().metadata)
+        assertFalse(focused.single().loading)
+        assertEquals(0, source.detailCalls)
+        assertEquals(0, source.seasonCalls)
+    }
+
+    @Test fun shouldKeepProviderFocusKeysIndependentWhilePreservingTmdbKeys() {
+        val entry = AiringCalendarEntry(media(8), monday)
+        assertEquals("tmdb:tv:8|$monday", entry.stableKey)
+        assertEquals(3, CalendarProvider.entries.map { entry.copy(provider = it).stableKey }.toSet().size)
+    }
+
     private fun metadata(id: Long, seasons: List<Int>, extra: String = "") = TmdbLibraryApi.parseMetadata(
         DiscoverMediaKey.of("tv", id), "{\"id\":$id,\"name\":\"作品\",\"seasons\":["
                 + seasons.joinToString(",") { "{\"season_number\":$it,\"episode_count\":0}" }
@@ -332,7 +389,7 @@ class AiringCalendarRepositoryTest {
 
     private sealed interface Request { val tag: Any }
     private data class PublicRequest(val date: LocalDate, val page: Int,
-        val listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>, override val tag: Any) : Request
+        val listener: TmdbLibraryApi.Listener<AiringCalendarPage>, override val tag: Any) : Request
     private data class DetailRequest(val key: DiscoverMediaKey,
         val listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>, override val tag: Any) : Request
     private data class SeasonRequest(val key: DiscoverMediaKey, val number: Int,
@@ -345,7 +402,7 @@ class AiringCalendarRepositoryTest {
         var detailCalls = 0
         var seasonCalls = 0
 
-        override fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>) {
+        override fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<AiringCalendarPage>) {
             publicCalls++
             pending.add(PublicRequest(date, page, listener, tag))
         }
@@ -360,6 +417,9 @@ class AiringCalendarRepositoryTest {
         }
         override fun cancel(tag: Any) { pending.removeAll { it.tag == tag } }
         fun succeed(request: PublicRequest, value: TmdbLibraryApi.Page) {
+            succeed(request, AiringCalendarPage(value.items().map { AiringCalendarEntry(it, request.date) }, value.page(), value.totalPages()))
+        }
+        fun succeed(request: PublicRequest, value: AiringCalendarPage) {
             pending.remove(request)
             request.listener.onSuccess(value)
         }

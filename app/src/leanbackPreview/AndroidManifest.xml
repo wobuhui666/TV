@@ -12,6 +12,9 @@
             android:exported="true" android:screenOrientation="landscape"
             android:configChanges="uiMode"
             android:theme="@style/Theme.App" />
+        <activity android:name=".ui.activity.CalendarThemePreviewActivity"
+            android:exported="false" android:screenOrientation="landscape"
+            android:theme="@style/Theme.App" />
         <activity android:name=".ui.activity.TvHomePreviewActivity"
             android:exported="false" android:screenOrientation="landscape"
             android:theme="@style/Theme.App" />

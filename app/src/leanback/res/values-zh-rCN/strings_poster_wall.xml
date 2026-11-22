@@ -5,4 +5,23 @@
     <string name="poster_wall_filters">筛选</string>
     <string name="poster_wall_all_media">电影和剧集</string>
     <string name="poster_wall_all_update_days">全部更新日</string>
+    <string name="poster_wall_trend_order">趋势</string>
+    <string name="poster_wall_tv_type">节目性质</string>
+    <string name="poster_wall_tv_variety">综艺</string>
+    <string name="poster_wall_tv_scripted">影视剧</string>
+    <string name="poster_wall_tv_reality">真人秀</string>
+    <string name="poster_wall_tv_talk">脱口秀</string>
+    <string name="poster_wall_tv_documentary">纪录片</string>
+    <string name="poster_wall_tv_news">新闻</string>
+    <string name="poster_wall_tv_miniseries">迷你剧</string>
+    <string name="poster_wall_tv_video">视频节目</string>
+    <string name="poster_wall_region_de">德国</string>
+    <string name="poster_wall_region_it">意大利</string>
+    <string name="poster_wall_region_es">西班牙</string>
+    <string name="poster_wall_region_in">印度</string>
+    <string name="poster_wall_region_th">泰国</string>
+    <string name="poster_wall_region_tr">土耳其</string>
+    <string name="poster_wall_region_ru">俄罗斯</string>
+    <string name="poster_wall_region_au">澳大利亚</string>
+    <string name="poster_wall_region_ca">加拿大</string>
 </resources>

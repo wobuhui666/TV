@@ -14,9 +14,14 @@ data class AiringCalendarEntry @JvmOverloads constructor(
     val date: LocalDate,
     val episodes: List<LibraryMedia.AiringEpisode> = emptyList(),
     val keep: Keep? = null,
-    val episodeDetails: List<LibraryMedia.Episode> = emptyList()
+    val episodeDetails: List<LibraryMedia.Episode> = emptyList(),
+    val provider: CalendarProvider = CalendarProvider.TMDB,
+    val scheduleKind: CalendarScheduleKind = CalendarScheduleKind.EXACT,
+    val logo: String = "",
+    val remoteId: Long = 0,
+    val episodeLabel: String = ""
 ) {
-    val stableKey: String get() = "${media.id}|$date"
+    val stableKey: String get() = (if (provider == CalendarProvider.TMDB) "" else "${provider.id}|") + "${media.id}|$date"
 }
 
 data class AiringCalendarResult(

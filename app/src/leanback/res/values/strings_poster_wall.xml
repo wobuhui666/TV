@@ -5,4 +5,23 @@
     <string name="poster_wall_filters">Filters</string>
     <string name="poster_wall_all_media">Movies and series</string>
     <string name="poster_wall_all_update_days">All update days</string>
+    <string name="poster_wall_trend_order">Trending</string>
+    <string name="poster_wall_tv_type">Show type</string>
+    <string name="poster_wall_tv_variety">Variety shows</string>
+    <string name="poster_wall_tv_scripted">Scripted</string>
+    <string name="poster_wall_tv_reality">Reality</string>
+    <string name="poster_wall_tv_talk">Talk shows</string>
+    <string name="poster_wall_tv_documentary">Documentary</string>
+    <string name="poster_wall_tv_news">News</string>
+    <string name="poster_wall_tv_miniseries">Miniseries</string>
+    <string name="poster_wall_tv_video">Video</string>
+    <string name="poster_wall_region_de">Germany</string>
+    <string name="poster_wall_region_it">Italy</string>
+    <string name="poster_wall_region_es">Spain</string>
+    <string name="poster_wall_region_in">India</string>
+    <string name="poster_wall_region_th">Thailand</string>
+    <string name="poster_wall_region_tr">Türkiye</string>
+    <string name="poster_wall_region_ru">Russia</string>
+    <string name="poster_wall_region_au">Australia</string>
+    <string name="poster_wall_region_ca">Canada</string>
 </resources>

@@ -48,7 +48,12 @@ data class AiringCalendarState @JvmOverloads constructor(
     val hasKeeps: Boolean = false,
     val hasMore: Boolean = false,
     val emptyMessage: String = "",
-    val todayDate: String = ""
+    val todayDate: String = "",
+    val provider: String = "tmdb",
+    val connected: Boolean = false,
+    val canFollow: Boolean = false,
+    val followingTitle: Boolean = false,
+    val accountBusy: Boolean = false
 ) {
     class Builder {
         @JvmField var mode = "public"
@@ -64,8 +69,14 @@ data class AiringCalendarState @JvmOverloads constructor(
         @JvmField var hasMore = false
         @JvmField var emptyMessage = ""
         @JvmField var todayDate = ""
+        @JvmField var provider = "tmdb"
+        @JvmField var connected = false
+        @JvmField var canFollow = false
+        @JvmField var followingTitle = false
+        @JvmField var accountBusy = false
 
         fun build() = AiringCalendarState(mode, weekStart, selectedDate, weekLabel,
-            days.toList(), items.toList(), preview, loading, failed, hasKeeps, hasMore, emptyMessage, todayDate)
+            days.toList(), items.toList(), preview, loading, failed, hasKeeps, hasMore, emptyMessage, todayDate,
+            provider, connected, canFollow, followingTitle, accountBusy)
     }
 }

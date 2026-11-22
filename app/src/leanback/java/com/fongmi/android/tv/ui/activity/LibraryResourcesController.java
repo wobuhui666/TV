@@ -52,6 +52,7 @@ final class LibraryResourcesController {
     private boolean movie, running, error, closed, selecting;
     private boolean preparing;
     private record Prepared(Vod source, Flag flag, Episode episode, EpisodeTarget target) { }
+    private record Resolved(Vod source, SmartSourceSelector.FlagSelection selection) { }
     private Prepared prepared;
     private EpisodeTarget lastPreparedTarget;
     private long preparedAttemptAt;
@@ -148,11 +149,13 @@ final class LibraryResourcesController {
         search.start(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names, PosterSourcePrioritySetting.getOrderedKeys(), new DiscoverSourceSearch.Listener() {
             @Override public void onResult(Result result, int returned, int total) {
                 if (closed) return;
+                boolean changed = result == null && !error;
                 if (result == null) error = true;
                 else for (Vod source : result.getList()) {
-                    if (LibrarySourceMatcher.match(source, title, aliases, year, movie, season).matches()) sources.putIfAbsent(LibraryIdentity.sourceKey(source), source);
+                    if (LibrarySourceMatcher.match(source, title, aliases, year, movie, season).matches()
+                            && sources.putIfAbsent(LibraryIdentity.sourceKey(source), source) == null) changed = true;
                 }
-                render();
+                if (changed) render();
                 if (selecting && pending == null) attemptNext();
             }
             @Override public void onComplete(boolean deadline) {
@@ -202,12 +205,12 @@ final class LibraryResourcesController {
                 && !LibraryIdentity.sourceKey(source).equals(originalKey)
                 && !(source.getSiteKey().equals(previousSite) && source.getId().equals(previousId)));
         // Minimal search summaries often omit type/year. The hydrated detail must confirm them before playback.
-        candidates.sort(Comparator.comparingInt((Vod source) -> source.getSiteKey().equals(previousSite) && source.getId().equals(previousId) ? 0 : 1)
+        Vod best = candidates.stream().min(Comparator.comparingInt((Vod source) -> source.getSiteKey().equals(previousSite) && source.getId().equals(previousId) ? 0 : 1)
                 .thenComparingInt(source -> priorities.indexOf(source.getSiteKey()) < 0 ? Integer.MAX_VALUE : priorities.indexOf(source.getSiteKey()))
                 .thenComparing(Comparator.comparingInt((Vod source) -> reliability.score(source)).reversed())
                 .thenComparingInt(source -> configuredOrder.getOrDefault(source.getSiteKey(), Integer.MAX_VALUE))
-                .thenComparing(LibraryIdentity::sourceKey));
-        if (!candidates.isEmpty()) attempt(candidates.get(0), false);
+                .thenComparing(LibraryIdentity::sourceKey)).orElse(null);
+        if (best != null) attempt(best, false);
         else if (!running) selectionFailed(null);
     }
 
@@ -215,24 +218,37 @@ final class LibraryResourcesController {
         attempted.add(LibraryIdentity.sourceKey(candidate));
         int ticket = ++generation;
         Vod cached = hydrated.get(LibraryIdentity.sourceKey(candidate));
+        String requestTitle = title, requestYear = year;
+        List<String> requestAliases = aliases;
+        boolean requestMovie = movie;
+        Integer requestSeason = season;
+        EpisodeTarget requestTarget = target;
+        History requestHistory = history;
+        boolean previous = requestHistory != null && candidate.getSiteKey().equals(previousSite) && candidate.getId().equals(previousId);
+        boolean trusted = manual || candidate.getSiteKey().equals(previousSite) && candidate.getId().equals(previousId)
+                || LibraryIdentity.sourceKey(candidate).equals(originalKey);
         long timeout = manual ? Constant.TIMEOUT_VOD : Math.max(1, Math.min(10_000, selectionDeadline - SystemClock.elapsedRealtime()));
-        ListenableFuture<Vod> request = Task.submit(() -> cached == null ? hydrate(candidate) : cached, timeout, manual);
+        // Freeze the selection context before leaving the main thread. Cancellation/generation
+        // checks below reject results from an older season or a superseded remote action.
+        ListenableFuture<Resolved> request = Task.submit(() -> {
+            Vod selected = cached == null ? hydrate(candidate) : cached;
+            boolean valid = trusted || LibrarySourceMatcher.match(selected, requestTitle, requestAliases, requestYear, requestMovie, requestSeason).automatic();
+            return new Resolved(selected, valid ? find(selected, requestMovie, requestTarget, previous, requestHistory, requestSeason) : null);
+        }, timeout, manual);
         pending = request;
-        Futures.addCallback(request, Task.callback(selected -> App.post(() -> {
+        Futures.addCallback(request, Task.callback(resolved -> App.post(() -> {
             if (closed || !selecting || ticket != generation) return;
             pending = null;
+            Vod selected = resolved.source();
             hydrated.put(LibraryIdentity.sourceKey(candidate), selected);
-            boolean previous = candidate.getSiteKey().equals(previousSite) && candidate.getId().equals(previousId);
-            boolean valid = manual || previous || LibraryIdentity.sourceKey(candidate).equals(originalKey)
-                    || LibrarySourceMatcher.match(selected, title, aliases, year, movie, season).automatic();
-            SmartSourceSelector.FlagSelection selection = valid ? find(selected) : null;
+            SmartSourceSelector.FlagSelection selection = resolved.selection();
             if (selection == null) {
                 if (manual) selectionFailed(selected);
                 else attemptNext();
             } else {
                 boolean preview = preparing;
                 finishSelection();
-                prepared = new Prepared(selected, selection.flag(), selection.episode(), target);
+                prepared = new Prepared(selected, selection.flag(), selection.episode(), requestTarget);
                 if (preview) listener.onPrepared(selected, selection.flag(), selection.episode());
                 else listener.onSelected(selected, selection.flag(), selection.episode());
             }
@@ -255,8 +271,8 @@ final class LibraryResourcesController {
         return item;
     }
 
-    private SmartSourceSelector.FlagSelection find(Vod source) {
-        boolean previous = history != null && source.getSiteKey().equals(previousSite) && source.getId().equals(previousId);
+    private static SmartSourceSelector.FlagSelection find(Vod source, boolean movie, EpisodeTarget target,
+                                                         boolean previous, History history, Integer season) {
         String flagName = previous ? history.getVodFlag() : "";
         if (movie || target == null) {
             return SmartSourceSelector.selectMovie(source, previous ? history.getEpisodeUrl() : "", flagName);
