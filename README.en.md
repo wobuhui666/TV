@@ -6,6 +6,8 @@ TV brings an Apple TV–inspired JetStream interface to Android TV, with a separ
 
 [![TV — watch the 60-second interface tour](docs/media/TV-promo-cover-60s.jpg)](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/iframe)
 
+**New 4K60 promo** (64 s, recorded from the latest release): [4K60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v1.0-4k60/TV-JetStream-Promo-4K60.mp4) · [1080p60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v1.0-4k60/TV-JetStream-Promo-1080p60.mp4) · [release page](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v1.0-4k60)
+
 [Download APKs](https://github.com/wobuhui666/TV/releases) · [Getting started](#getting-started) · [Playback core](docs/player-core-sync.md) · [Report an issue](https://github.com/wobuhui666/TV/issues) · [简体中文](README.md)
 
 [Watch online](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/iframe) · [download the MP4](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/downloads/default.mp4) · 60 seconds · 1080p · H.264/AAC
