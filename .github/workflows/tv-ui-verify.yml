@@ -632,7 +632,7 @@ jobs:
             adb logcat -b all -d -v threadtime > "$out/core-logcat.txt" 2>&1 || true
             library_status=0
             adb shell am instrument -w -r -e native_ui_evidence true \
-              -e class com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest \
+              -e class com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest,com.fongmi.android.tv.ui.activity.LibraryResourcesControllerAndroidTest,com.fongmi.android.tv.source.SourceReliabilityStoreAndroidTest \
               com.fongmi.android.tv.preview.test/androidx.test.runner.AndroidJUnitRunner | tee "$out/library-instrumentation.txt" || library_status=$?
             cat "$out/core-instrumentation.txt" "$out/library-instrumentation.txt" > "$out/instrumentation.txt"
             collect_compact
@@ -648,8 +648,11 @@ jobs:
                        'com.fongmi.android.tv.ui.TmdbConnectionSettingsIntegrationTest': 1,
                        'com.fongmi.android.tv.db.LibraryMigrationAndroidTest': 3,
                        'com.fongmi.android.tv.test.ConscryptLifecycleAndroidTest': 2},
-              'library': {'com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest': 48},
+              'library': {'com.fongmi.android.tv.ui.activity.LibraryExperienceAndroidTest': 53,
+                          'com.fongmi.android.tv.ui.activity.LibraryResourcesControllerAndroidTest': 1,
+                          'com.fongmi.android.tv.source.SourceReliabilityStoreAndroidTest': 2},
           }
+          expected_total = sum(sum(classes.values()) for classes in expected.values())
           groups = []
           for name, status in zip(expected, map(int, sys.argv[1:])):
               output = (root / (name + '-instrumentation.txt')).read_text()
@@ -686,13 +689,13 @@ jobs:
                   and {item['name']: item['sha256'] for item in proof['files']} == checksums \
                   and all(item['readableByTargetUid'] for item in proof['files'])
           summary = {'headSha': os.environ['GITHUB_SHA'], 'passed': len(groups) == 2 and all(group['passed'] for group in groups) and fixture_proof,
-                     'expectedTests': 80, 'completedTests': sum(group['completedTests'] for group in groups),
+                     'expectedTests': expected_total, 'completedTests': sum(group['completedTests'] for group in groups),
                      'passedTests': sum(group['passedTests'] for group in groups),
                      'fixtureReadableByTargetUid': fixture_proof, 'groups': groups}
           (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
           print(json.dumps(summary, indent=2))
           if not summary['passed']:
-              raise SystemExit('Require all 80 compact/library cases and target-UID fixture reads to pass')
+              raise SystemExit(f'Require all {expected_total} compact/library cases and target-UID fixture reads to pass')
           PY
             collect_compact
             upstream_status=0

@@ -25,14 +25,17 @@
 
 打开详情时先用已知标题搜索片源；TMDB 资料或片源详情到达后，原先会停止并重新搜索全部片源，被取消的爬虫请求不响应中断时还会继续占用六个并发名额。现在资料细化后若请求（片源实例、关键词及顺序）不变，则沿用进行中或已完成的搜索，并用已返回的摘要重新核对。标题、别名、季数、片源优先级或配置变化，搜索被 30 秒期限截断，或保留的摘要超过 2000 条时，仍重新搜索；单个片源的失败不再因资料细化而重试。
 
-标题核对原先在主线程对每条搜索结果重新解析作品标题和最多 20 个别名，每次三组查询。现在作品标题与别名在资料变化时解析一次，搜索响应、候选排序和后台详情确认共用；每条结果只解析自身标题。
+标题核对原先在主线程对每条搜索结果重新解析作品标题和最多 20 个别名：剧集第一季解析三组查询，电影一组。现在作品标题与别名在资料变化时解析一次，搜索响应、候选排序和后台详情确认共用；每条结果只解析自身标题。
 
 | 检查 | 结果 |
 | --- | --- |
 | 专项 JVM | 18 个测试类、274 项通过，失败 0：原 16 个类 259 项（新增 3 项，核对预处理结论等价、别名细化后重新接受、未知标题拒绝），`DiscoverSourceSearchTest` 7 项（新增 2 项请求比较），`BoundedSearchBatchTest` 8 项 |
 | 生产源码编译 | `source` 包、`DiscoverSourceSearch`、`BoundedSearchBatch`、`LibraryResourcesController`、`LibraryDetailActivity` 通过 `javac --release 21 -proc:none` |
+| 设备用例源码 | `LibraryExperienceAndroidTest` 新增 3 项：请求相同时每个片源只搜索一次、标题变化后用新关键词重新搜索、片源详情到达后重新核对已返回的摘要；本机只通过 `javac` 源码编译 |
 | 标题匹配微基准 | 一批 40 条搜索结果：1 个别名 5.89 → 1.18 ms，20 个别名 38.16 → 0.68 ms；两种实现接受的条数相同（8 条、10 条） |
 
 微基准在同一份当前类文件上比较 `LibrarySourceMatcher.match(Vod, …)` 与 `PreparedWork.match(PreparedSource)`：预热 200 次，采集 7 组各 15 次的平均耗时，运行三轮并交替顺序，表中为三轮中位值的中位数。一次性的作品预处理另计，1 个别名约 0.12 ms，20 个别名约 0.88 ms。结果只反映本机 JVM 的计算量，电视处理器上的绝对耗时会更高；搜索复用节省的请求数和等待时间取决于片源与网络，没有测量。
 
-本节没有运行完整 Gradle 变体、Kotlin 编译、APK、lint 或设备测试。沿用与重新搜索的判定只有请求比较和标题匹配有 JVM 覆盖，控制器在真实搜索中的行为仍需设备回归。
+本机没有运行完整 Gradle 变体、Kotlin 编译、APK、lint 或设备测试。沿用与重新搜索的判定在 JVM 上只覆盖请求比较和标题匹配；控制器在真实搜索中的行为由上述 3 项设备用例核对，需在隔离 Preview 包执行后才能视为通过。
+
+TV appearance and touch verification 工作流的 `compact_home` 回归原先固定核对 `LibraryExperienceAndroidTest` 48 项，现改为 53 项，并加入 `LibraryResourcesControllerAndroidTest` 1 项和 `SourceReliabilityStoreAndroidTest` 2 项；总数由清单计算，为 88 项。

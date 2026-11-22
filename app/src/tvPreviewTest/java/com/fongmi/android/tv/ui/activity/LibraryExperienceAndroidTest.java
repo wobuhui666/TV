@@ -105,6 +105,7 @@ public final class LibraryExperienceAndroidTest {
     private final List<String> prefetchedEpisodes = java.util.Collections.synchronizedList(new ArrayList<>());
     private final List<String> requestedMedia = java.util.Collections.synchronizedList(new ArrayList<>());
     private final List<String> requestedSites = java.util.Collections.synchronizedList(new ArrayList<>());
+    private final List<String> searchRequests = java.util.Collections.synchronizedList(new ArrayList<>());
     private final AtomicInteger extrasRequests = new AtomicInteger();
     private final AtomicInteger sourceActions = new AtomicInteger();
     private final List<String> requestedFolders = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -190,6 +191,7 @@ public final class LibraryExperienceAndroidTest {
                         catch (InterruptedException error) { Thread.currentThread().interrupt(); throw new IOException(error); }
                     }
                     if (url.queryParameter("ids") != null && url.encodedPath().equals(failedDetailSite)) throw new IOException("Fixture source detail failure");
+                    if (url.queryParameter("wd") != null) searchRequests.add(url.encodedPath() + " " + url.queryParameter("wd"));
                     body = sourceResponse(url).getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 } else {
                     if (tmdbFails) throw new IOException("Offline TMDB failure");
@@ -1127,6 +1129,40 @@ public final class LibraryExperienceAndroidTest {
         });
     }
 
+    @Test public void refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource() {
+        LibraryDetailActivity detail = open(true, false);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        await("Both sources answer", () -> !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        assertEquals("TMDB metadata does not repeat an identical search", List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗"), searches());
+    }
+
+    @Test public void refinedTitleSearchesEverySourceAgainWithTheNewKeyword() {
+        series = true;
+        Vod item = work(); item.setName("锦金钗别传");
+        LibraryDetailActivity detail = (LibraryDetailActivity) instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), LibraryDetailActivity.class)
+                .putExtra("work", item).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); activities.add(detail);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        await("The TMDB title finds both sources", () -> field(detail, "metadata") != null && !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        List<String> requests = searches();
+        assertTrue("The refined title is searched on every source: " + requests, requests.containsAll(List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗")));
+        assertEquals("No request is sent twice: " + requests, requests.size(), new java.util.HashSet<>(requests).size());
+    }
+
+    @Test public void hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch() {
+        series = tmdbFails = true;
+        Vod item = work(); item.setId("fixture-work"); item.setTypeName(""); item.setSite(VodConfig.get().getSite("fixture-a"));
+        LibraryDetailActivity detail = (LibraryDetailActivity) instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), LibraryDetailActivity.class)
+                .putExtra("work", item).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); activities.add(detail);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        // The untyped summary is treated as a film until its detail arrives; only then can the series summary of the other source match.
+        await("The series detail accepts the other source", () -> hasItem(detail, "original:线路一:second")
+                && !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        assertEquals("The source detail does not repeat an identical search", List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗"), searches());
+    }
+
     @Test public void sourceOnlySeriesKeepsOriginalEpisodesWhenTmdbIsUnavailable() {
         series = tmdbFails = true;
         Vod item = work(); item.setId("fixture-work"); item.setTypeName(""); item.setSite(VodConfig.get().getSite("fixture-a"));
@@ -1613,6 +1649,7 @@ public final class LibraryExperienceAndroidTest {
         metadata.put("recommendations", Map.of("results", recommendations));
         return App.gson().toJson(metadata);
     }
+    private List<String> searches() { synchronized (searchRequests) { return searchRequests.stream().sorted().toList(); } }
     private Object field(Object target, String name) { return HomePreviewFixtures.field(target, name); }
     private void set(Object target, String name, Object value) { HomePreviewFixtures.setField(target, name, value); }
     private void main(Runnable action) { instrumentation.runOnMainSync(action); }

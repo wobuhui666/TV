@@ -143,7 +143,9 @@
       "app/src/main/java/com/fongmi/android/tv/model/DiscoverSourceSearch.java": "ca7c493ef22b72d847d3bbe172569379e88b2249efa88f82498f498ef8710e45",
       "app/src/main/java/com/fongmi/android/tv/source/LibrarySourceMatcher.java": "3eeb9ddacbfa08a99930867019b183bde06105bc12749007ccd42c15b7063416",
       "app/src/test/java/com/fongmi/android/tv/model/DiscoverSourceSearchTest.java": "84e82cfe595779e0dd1cf95c8ae8a3bea22f779bfa399cd8deb70ccfb5ba71c8",
-      "app/src/test/java/com/fongmi/android/tv/source/LibrarySourceMatcherPreparedTest.java": "ec4bcf00622e23c85264a4079c9c37bb2c245891975328a7e24130d16548bfaa"
+      "app/src/test/java/com/fongmi/android/tv/source/LibrarySourceMatcherPreparedTest.java": "ec4bcf00622e23c85264a4079c9c37bb2c245891975328a7e24130d16548bfaa",
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java": "b4349b0901b96dd06ce7ec4ccd27a4798f3d25e590d0aa6238c38f799e6a1b3a",
+      ".github/workflows/tv-ui-verify.yml": "f565e07dd46ca7dfd9592e868e625c91c7e6067a6a5382f99bf8ae569ab98a95"
     },
     "junit": {
       "tests": 274,
@@ -331,6 +333,23 @@
           }
         }
       ]
+    },
+    "android_test_source_compile": [
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java"
+    ],
+    "android_tests_added": [
+      "refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource",
+      "refinedTitleSearchesEverySourceAgainWithTheNewKeyword",
+      "hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch"
+    ],
+    "compact_home_expected_tests": {
+      "core": 32,
+      "library": {
+        "LibraryExperienceAndroidTest": 53,
+        "LibraryResourcesControllerAndroidTest": 1,
+        "SourceReliabilityStoreAndroidTest": 2
+      },
+      "total": 88
     }
   }
 }
