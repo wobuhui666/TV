@@ -10,7 +10,7 @@
 
 [在线观看宣传片](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/iframe) / [下载 MP4](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/downloads/default.mp4) · 60 秒 · 1080p · 中文字幕与配乐
 
-**新版 4K60 宣传片**（64 秒，基于最新 Release 实录）：[下载 4K60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-4K60.mp4) / [下载 1080p60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-1080p60.mp4) · [发布页](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.1-apple)
+**新版 Apple 风格宣传片**（64 秒 · 4K60，最新 Release 实机录制，逐帧真实画面、无插帧）：[下载 4K60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-4K60.mp4) / [下载 1080p60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-1080p60.mp4) · [发布页](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.1-apple)
 
 [![TV · JetStream 4K60 宣传片](docs/media/TV-promo-cover-4k60.jpg)](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.1-apple)
 

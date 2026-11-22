@@ -6,7 +6,7 @@ TV brings an Apple TV–inspired JetStream interface to Android TV, with a separ
 
 [![TV — watch the 60-second interface tour](docs/media/TV-promo-cover-60s.jpg)](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/iframe)
 
-**New 4K60 promo** (64 s, recorded from the latest release): [4K60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-4K60.mp4) · [1080p60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-1080p60.mp4) · [release page](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.1-apple)
+**New Apple-style promo** (64 s · 4K60, recorded on the latest release — every frame is a real captured frame, no interpolation): [4K60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-4K60.mp4) · [1080p60 MP4](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.1-apple/TV-JetStream-Promo-1080p60.mp4) · [release page](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.1-apple)
 
 [Download APKs](https://github.com/wobuhui666/TV/releases) · [Getting started](#getting-started) · [Playback core](docs/player-core-sync.md) · [Report an issue](https://github.com/wobuhui666/TV/issues) · [简体中文](README.md)
 
