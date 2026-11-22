@@ -83,7 +83,7 @@ import static org.junit.Assert.*;
 /** Real wall activities, Compose chip clicks and delayed HTTP fixtures; no external API is called. */
 @RunWith(AndroidJUnit4.class)
 public final class PosterWallFiltersIntegrationTest {
-    private static final String[] SETTINGS = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_sk"};
+    private static final String[] SETTINGS = {"tmdb_connection_mode", "tmdb_proxy_url", "browse_bridge_sk", "browse_home_layout_v1"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final List<Activity> launched = new ArrayList<>();
     private final Map<String, Object> savedSettings = new HashMap<>();
@@ -143,6 +143,8 @@ public final class PosterWallFiltersIntegrationTest {
             Setting.putTmdbProxyUrl("https://wall-fixture.invalid/");
             Setting.putTmdbConnectionMode(Setting.TMDB_CUSTOM_PROXY);
             Setting.putBridgeSk("");
+            // Fixed-feed fixtures describe the poster home; compact home narrows Douban walls by media type.
+            com.fongmi.android.tv.setting.BrowseExperienceSettings.putHomeLayout(com.fongmi.android.tv.setting.BrowseExperienceSettings.HOME_POSTERS);
             setField(OkHttp.get(), "client", fixtureClient);
             setField(TmdbNetwork.class, "client", fixtureClient);
         });
@@ -526,7 +528,8 @@ public final class PosterWallFiltersIntegrationTest {
             summaryRow.setFocusedPosition(panel(activity).getVisibleRows().indexOf(row));
             assertTrue(summaryRow.requestFocus());
         });
-        tapText(value(() -> activity.findViewById(R.id.summary)), summary);
+        // Tapping the summary of an already expanded row collapses it.
+        if (value(() -> panel(activity).getExpandedRow()) != row) tapText(value(() -> activity.findViewById(R.id.summary)), summary);
         await(() -> panel(activity).getExpandedRow() == row, "summary maps to actual sparse filter row " + row);
         String label = value(() -> panel(activity).getRow(row).stream().filter(option -> value.equals(option.getValue())).findFirst().orElseThrow().getLabel());
         JetStreamChipRow optionRow = value(() -> activity.findViewById(R.id.options));

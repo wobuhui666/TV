@@ -315,6 +315,7 @@ class CalendarProvidersAndroidTest {
                 requestedAt = SystemClock.uptimeMillis()
                 requests++
             }
+            refreshNodes()
             if (reached()) {
                 if (requests > 1) android.util.Log.w("CalendarProviders", "focus $key needed $requests requests")
                 return
@@ -327,6 +328,12 @@ class CalendarProvidersAndroidTest {
 
     private fun awaitFocused(key: String) = await("Actual remote focus reaches $key") {
         read { host.focusedKey() == key } && device.findObject(By.res(key))?.isFocused == true
+    }
+
+    /** Android 13 and older keep stale nodes after Compose replaces a label; re-applying the service info drops them. */
+    private fun refreshNodes() {
+        val automation = instrumentation.uiAutomation
+        automation.serviceInfo?.let { automation.serviceInfo = it }
     }
 
     private fun assertVisibleText(text: String) = await("Visible label: $text") { device.hasObject(By.text(text)) }
@@ -344,6 +351,7 @@ class CalendarProvidersAndroidTest {
         while (SystemClock.uptimeMillis() < deadline) {
             if (condition()) return
             SystemClock.sleep(50)
+            refreshNodes()
         }
         assertTrue(message, condition())
     }
