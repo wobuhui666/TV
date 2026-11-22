@@ -134,5 +134,203 @@
     "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java",
     "app/src/main/java/com/fongmi/android/tv/bean/RexSection.java",
     "app/src/main/java/com/fongmi/android/tv/api/rex/RexTmdbQuery.java"
-  ]
+  ],
+  "search_reuse": {
+    "note": "Follow-up to the selection changes above, which were committed first; the top-level source_sha256 describes that commit.",
+    "source_sha256": {
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java": "463761ee498062002afb7cccf9f7a4383a065e315b0055740b2248f127934323",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java": "9bd52df4378c67eb759629606c42e51808c3b5904186222f6195170aaacc62ab",
+      "app/src/main/java/com/fongmi/android/tv/model/DiscoverSourceSearch.java": "ca7c493ef22b72d847d3bbe172569379e88b2249efa88f82498f498ef8710e45",
+      "app/src/main/java/com/fongmi/android/tv/source/LibrarySourceMatcher.java": "3eeb9ddacbfa08a99930867019b183bde06105bc12749007ccd42c15b7063416",
+      "app/src/test/java/com/fongmi/android/tv/model/DiscoverSourceSearchTest.java": "84e82cfe595779e0dd1cf95c8ae8a3bea22f779bfa399cd8deb70ccfb5ba71c8",
+      "app/src/test/java/com/fongmi/android/tv/source/LibrarySourceMatcherPreparedTest.java": "ec4bcf00622e23c85264a4079c9c37bb2c245891975328a7e24130d16548bfaa"
+    },
+    "junit": {
+      "tests": 274,
+      "failures": 0,
+      "errors": 0,
+      "test_classes": {
+        "com.fongmi.android.tv.source.EpisodeLabelParserTest": 30,
+        "com.fongmi.android.tv.source.EpisodeNavigatorTest": 26,
+        "com.fongmi.android.tv.source.EpisodeTargetTest": 16,
+        "com.fongmi.android.tv.source.ExplicitEpisodeSelectionTest": 19,
+        "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest": 7,
+        "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest": 20,
+        "com.fongmi.android.tv.source.LibrarySearchIndexTest": 16,
+        "com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest": 11,
+        "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest": 9,
+        "com.fongmi.android.tv.source.MediaMatcherTest": 11,
+        "com.fongmi.android.tv.source.MovieSelectionTest": 6,
+        "com.fongmi.android.tv.source.PosterSourceResultsTest": 31,
+        "com.fongmi.android.tv.source.SearchRelevanceTest": 14,
+        "com.fongmi.android.tv.source.SourceSelectionTest": 9,
+        "com.fongmi.android.tv.source.VarietyEpisodeNavigatorTest": 22,
+        "com.fongmi.android.tv.source.VarietyEpisodeTargetTest": 12,
+        "com.fongmi.android.tv.model.DiscoverSourceSearchTest": 7,
+        "com.fongmi.android.tv.model.BoundedSearchBatchTest": 8
+      }
+    },
+    "production_source_compile": [
+      "app/src/main/java/com/fongmi/android/tv/source/*.java",
+      "app/src/main/java/com/fongmi/android/tv/model/DiscoverSourceSearch.java",
+      "app/src/main/java/com/fongmi/android/tv/model/BoundedSearchBatch.java",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java"
+    ],
+    "gradle_variant_tests": false,
+    "kotlin_compile": false,
+    "apk_build": false,
+    "lint": false,
+    "device_execution": false,
+    "benchmark": {
+      "scope": "Local JVM only, one response of 40 search summaries; no network, UI frames or television hardware.",
+      "protocol": "200 warm-up iterations, 7 groups of 15 runs, three processes per case with alternating order; summary is the median of the three medians.",
+      "summary": [
+        {
+          "aliases": 1,
+          "results": 40,
+          "accepted": 8,
+          "baseline_median_ms": 5.8887,
+          "optimized_median_ms": 1.1755,
+          "prepare_once_median_ms": 0.1175
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "accepted": 10,
+          "baseline_median_ms": 38.1622,
+          "optimized_median_ms": 0.6783,
+          "prepare_once_median_ms": 0.8791
+        }
+      ],
+      "samples": [
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 6.7879,
+            "min": 6.0113,
+            "max": 7.5284
+          },
+          "optimized_ms": {
+            "median": 1.2241,
+            "min": 1.1202,
+            "max": 2.0349
+          },
+          "prepare_once_ms": {
+            "median": 0.1215,
+            "min": 0.1075,
+            "max": 0.169
+          }
+        },
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": true,
+          "baseline_ms": {
+            "median": 5.8887,
+            "min": 5.4475,
+            "max": 6.878
+          },
+          "optimized_ms": {
+            "median": 1.1755,
+            "min": 0.8689,
+            "max": 1.4401
+          },
+          "prepare_once_ms": {
+            "median": 0.1175,
+            "min": 0.0559,
+            "max": 0.2371
+          }
+        },
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 5.8082,
+            "min": 5.434,
+            "max": 6.5914
+          },
+          "optimized_ms": {
+            "median": 1.1161,
+            "min": 1.0228,
+            "max": 1.2794
+          },
+          "prepare_once_ms": {
+            "median": 0.1133,
+            "min": 0.1044,
+            "max": 0.1301
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 38.1622,
+            "min": 36.7459,
+            "max": 47.2321
+          },
+          "optimized_ms": {
+            "median": 0.6724,
+            "min": 0.654,
+            "max": 0.7696
+          },
+          "prepare_once_ms": {
+            "median": 0.8551,
+            "min": 0.8259,
+            "max": 0.9599
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": true,
+          "baseline_ms": {
+            "median": 37.6086,
+            "min": 36.6032,
+            "max": 46.9153
+          },
+          "optimized_ms": {
+            "median": 0.6783,
+            "min": 0.6291,
+            "max": 0.8893
+          },
+          "prepare_once_ms": {
+            "median": 0.8791,
+            "min": 0.8416,
+            "max": 0.9759
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 39.3481,
+            "min": 36.9914,
+            "max": 42.3665
+          },
+          "optimized_ms": {
+            "median": 0.6891,
+            "min": 0.6272,
+            "max": 0.8221
+          },
+          "prepare_once_ms": {
+            "median": 0.8853,
+            "min": 0.8345,
+            "max": 1.8849
+          }
+        }
+      ]
+    }
+  }
 }
