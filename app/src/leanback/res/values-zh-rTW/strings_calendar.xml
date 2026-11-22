@@ -26,4 +26,25 @@
     <string name="calendar_status_today">今日播出</string>
     <string name="calendar_status_upcoming">待播出</string>
     <string name="calendar_runtime_minutes">%1$d 分鐘</string>
+    <string name="calendar_provider">日曆資料源</string>
+    <string name="calendar_account">帳號</string>
+    <string name="calendar_connect">連接帳號</string>
+    <string name="calendar_disconnect">中斷帳號</string>
+    <string name="calendar_sync">同步追劇</string>
+    <string name="calendar_follow">追劇</string>
+    <string name="calendar_unfollow">取消追劇</string>
+    <string name="calendar_pause">擱置</string>
+    <string name="calendar_trakt_client_id">Trakt Client ID</string>
+    <string name="calendar_client_id_required">請在帳號入口設定 Trakt Client ID</string>
+    <string name="calendar_bangumi_token">Bangumi 存取權杖</string>
+    <string name="calendar_bangumi_token_help">在 https://next.bgm.tv/demo/access-token 建立個人存取權杖</string>
+    <string name="calendar_trakt_code">用手機開啟 %1$s，輸入 %2$s</string>
+    <string name="calendar_auth_failed">帳號授權失敗，請重新連接</string>
+    <string name="calendar_auth_expired">授權碼已過期，請重新連接</string>
+    <string name="calendar_connected_required">連接帳號後同步追劇</string>
+    <string name="calendar_weekly">每週放送表</string>
+    <string name="calendar_weekly_scope">Bangumi 公開週表僅提供本週排期</string>
+    <string name="calendar_account_follow_empty">帳號暫無追劇記錄</string>
+    <string name="calendar_action_failed">未能更新追劇，請同步或重新連接後重試</string>
+    <string name="calendar_reconnect">重新連接</string>
 </resources>

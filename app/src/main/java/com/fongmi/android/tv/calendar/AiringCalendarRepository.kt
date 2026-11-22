@@ -10,20 +10,38 @@ import java.time.ZoneId
 import java.util.ArrayDeque
 
 internal interface AiringCalendarSource {
-    fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>)
+    fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<AiringCalendarPage>)
     fun detail(key: DiscoverMediaKey, tag: Any, listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>)
     fun season(key: DiscoverMediaKey, number: Int, tag: Any, listener: TmdbLibraryApi.Listener<List<LibraryMedia.Episode>>)
     fun cancel(tag: Any)
 }
 
-private class TmdbCalendarSource(private val apiKey: String) : AiringCalendarSource {
-    override fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<TmdbLibraryApi.Page>) =
-        TmdbLibraryApi.airingOn(date, page, apiKey, tag, listener)
+private class ProviderCalendarSource(
+    private val apiKey: String,
+    private val provider: CalendarProvider = CalendarProvider.TMDB,
+    private val traktClientId: String = ""
+) : AiringCalendarSource {
+    override fun airingOn(date: LocalDate, page: Int, tag: Any, listener: TmdbLibraryApi.Listener<AiringCalendarPage>) {
+        when (provider) {
+            CalendarProvider.TMDB -> TmdbLibraryApi.airingOn(date, page, apiKey, tag,
+                object : TmdbLibraryApi.Listener<TmdbLibraryApi.Page> {
+                    override fun onSuccess(value: TmdbLibraryApi.Page) = listener.onSuccess(AiringCalendarPage(
+                        value.items().filter { DiscoverMediaKey.parse(it.id)?.isMovie == false }
+                            .map { AiringCalendarEntry(it, date) }, value.page(), value.totalPages()))
+                    override fun onError(error: Exception) = listener.onError(error)
+                })
+            CalendarProvider.TRAKT -> TraktCalendarApi.airingOn(date, page, traktClientId, tag, listener)
+            CalendarProvider.BANGUMI -> BangumiCalendarApi.airingOn(date, page, tag, listener)
+        }
+    }
     override fun detail(key: DiscoverMediaKey, tag: Any, listener: TmdbLibraryApi.Listener<LibraryMedia.Metadata>) =
         TmdbLibraryApi.detail(key, apiKey, tag, listener)
     override fun season(key: DiscoverMediaKey, number: Int, tag: Any, listener: TmdbLibraryApi.Listener<List<LibraryMedia.Episode>>) =
         TmdbLibraryApi.season(key, number, apiKey, tag, listener)
-    override fun cancel(tag: Any) = TmdbLibraryApi.cancel(tag)
+    override fun cancel(tag: Any) {
+        TmdbLibraryApi.cancel(tag)
+        CalendarHttpClient.cancel(tag)
+    }
 }
 
 /** Page-scoped loader. Call on the main thread, matching TMDB's callback delivery. */
@@ -33,7 +51,11 @@ class AiringCalendarRepository internal constructor(
     private val clock: () -> Long = System::currentTimeMillis
 ) {
     constructor(apiKey: String, listener: (AiringCalendarResult) -> Unit) :
-        this(TmdbCalendarSource(apiKey), listener)
+        this(ProviderCalendarSource(apiKey), listener)
+
+    constructor(apiKey: String, provider: CalendarProvider, traktClientId: String,
+        listener: (AiringCalendarResult) -> Unit) :
+        this(ProviderCalendarSource(apiKey, provider, traktClientId), listener)
 
     companion object {
         @JvmField val TIME_ZONE: ZoneId = AiringCalendarIndex.TIME_ZONE
@@ -68,7 +90,7 @@ class AiringCalendarRepository internal constructor(
     private val personal = linkedMapOf<DiscoverMediaKey, Work>()
     private val metadataCache = cache<DiscoverMediaKey, LibraryMedia.Metadata>(64)
     private val seasonCache = cache<String, Map<LocalDate, List<LibraryMedia.Episode>>>(256)
-    private val publicCache = cache<String, TmdbLibraryApi.Page>(64)
+    private val publicCache = cache<String, AiringCalendarPage>(64)
     private var generation = 0
     private var pumping = false
     private var closed = false
@@ -103,8 +125,8 @@ class AiringCalendarRepository internal constructor(
         }
         val ticket = generation
         enqueue(Job("public|$cacheKey", ticket) {
-            source.airingOn(date, requestedPage, tag, object : TmdbLibraryApi.Listener<TmdbLibraryApi.Page> {
-                override fun onSuccess(value: TmdbLibraryApi.Page) {
+            source.airingOn(date, requestedPage, tag, object : TmdbLibraryApi.Listener<AiringCalendarPage> {
+                override fun onSuccess(value: AiringCalendarPage) {
                     if (!current(ticket)) return
                     publicCache[cacheKey] = Cached(clock(), value)
                     addPublic(date, value)
@@ -160,8 +182,8 @@ class AiringCalendarRepository internal constructor(
             else {
                 val jobKey = "indicator|$date"
                 enqueue(Job(jobKey, ticket, Scope.INDICATOR) {
-                    source.airingOn(date, 1, indicatorTag, object : TmdbLibraryApi.Listener<TmdbLibraryApi.Page> {
-                        override fun onSuccess(value: TmdbLibraryApi.Page) {
+                    source.airingOn(date, 1, indicatorTag, object : TmdbLibraryApi.Listener<AiringCalendarPage> {
+                        override fun onSuccess(value: AiringCalendarPage) {
                             if (!current(ticket)) return
                             publicCache[cacheKey] = Cached(clock(), value)
                             rememberUpdateDate(date, value)
@@ -180,7 +202,12 @@ class AiringCalendarRepository internal constructor(
     fun focus(entry: AiringCalendarEntry, listener: (AiringCalendarFocusResult) -> Unit) {
         if (closed) return
         clearFocus()
-        val key = DiscoverMediaKey.parse(entry.media.id)?.takeUnless { it.isMovie } ?: return
+        val key = DiscoverMediaKey.parse(entry.media.id)?.takeUnless { it.isMovie }
+        if (key == null) {
+            listener(AiringCalendarFocusResult(entry, null, false, false))
+            pump()
+            return
+        }
         val personalWork = personal[key]
         val work = personalWork ?: Work(key, entry.keep, entry.media)
         focused = FocusWork(entry, work, focusToken, listener)
@@ -277,7 +304,10 @@ class AiringCalendarRepository internal constructor(
             remarks = detail.rating
             genreText = detail.genres
         }
-        val numbers = AiringCalendarIndex.seasonNumbers(metadata)
+        val base = focused?.takeIf { it.token == focus && it.work === work }?.base
+        val numbers = if (base != null && base.provider != CalendarProvider.TMDB) {
+            base.episodes.map { it.season() }.filter { it >= 0 }.distinct().sorted()
+        } else AiringCalendarIndex.seasonNumbers(metadata)
         val currentSeasons = listOfNotNull(metadata.lastAired()?.season(), metadata.nextAiring()?.season()).toSet()
         // Focus jobs enter the front of the queue, so enqueue current seasons last.
         val ordered = if (focus == null) numbers else numbers.filterNot { it in currentSeasons } +
@@ -308,23 +338,31 @@ class AiringCalendarRepository internal constructor(
         })
     }
 
-    private fun addPublic(date: LocalDate, result: TmdbLibraryApi.Page) {
-        result.items().forEach { media ->
-            val key = DiscoverMediaKey.parse(media.id)
-            if (key != null && !key.isMovie) {
-                val entry = AiringCalendarEntry(media, date)
-                publicItems.putIfAbsent(entry.stableKey, entry)
-            }
+    private fun addPublic(date: LocalDate, result: AiringCalendarPage) {
+        result.items.filter { validPublicEntry(it, date) }.forEach { entry ->
+            publicItems.putIfAbsent(entry.stableKey, entry)
         }
-        page = result.page()
-        totalPages = result.totalPages()
+        page = result.page.coerceAtLeast(1)
+        totalPages = result.totalPages.coerceAtLeast(page)
         rememberUpdateDate(date, result)
     }
 
-    private fun rememberUpdateDate(date: LocalDate, result: TmdbLibraryApi.Page) {
-        val hasItems = result.items().any { DiscoverMediaKey.parse(it.id)?.isMovie == false }
-        if (hasItems || result.page() == 1) {
-            val time = publicCache["$date|${result.page()}"]?.time ?: clock()
+    private fun validPublicEntry(entry: AiringCalendarEntry, date: LocalDate): Boolean {
+        if (entry.date != date) return false
+        val key = DiscoverMediaKey.parse(entry.media.id)
+        if (key != null) return !key.isMovie
+        val prefix = when (entry.provider) {
+            CalendarProvider.BANGUMI -> "bangumi:subject:"
+            CalendarProvider.TRAKT -> "trakt:show:"
+            CalendarProvider.TMDB -> return false
+        }
+        return entry.media.id.startsWith(prefix) && entry.media.id.removePrefix(prefix).toLongOrNull()?.let { it > 0 } == true
+    }
+
+    private fun rememberUpdateDate(date: LocalDate, result: AiringCalendarPage) {
+        val hasItems = result.items.any { validPublicEntry(it, date) }
+        if (hasItems || result.page == 1) {
+            val time = publicCache["$date|${result.page}"]?.time ?: clock()
             updateDates[date] = Cached(time, hasItems)
         }
     }
@@ -391,7 +429,7 @@ class AiringCalendarRepository internal constructor(
     private fun focusResult(focus: FocusWork): AiringCalendarFocusResult {
         val work = focus.work
         val metadata = work.metadata
-        val entry = metadata?.let {
+        val entry = if (focus.base.provider != CalendarProvider.TMDB) enrichedProviderEntry(focus) else metadata?.let {
             AiringCalendarIndex.entries(work.media, work.keep, it, work.seasons,
                 AiringCalendarIndex.weekStart(focus.base.date)).firstOrNull { entry -> entry.date == focus.base.date }
         } ?: if (metadata == null) focus.base else focus.base.copy(episodes = emptyList(), episodeDetails = emptyList())
@@ -400,6 +438,26 @@ class AiringCalendarRepository internal constructor(
         return AiringCalendarFocusResult(entry, metadata,
             queue.any(::relevant) || active.values.any(::relevant),
             failures.values.any(::relevant) || auxiliaryFailures.values.any(::relevant))
+    }
+
+    /** External calendar dates and episode coordinates remain authoritative during TMDB enrichment. */
+    private fun enrichedProviderEntry(focus: FocusWork): AiringCalendarEntry {
+        val base = focus.base
+        val indexed = focus.work.seasons.values.flatMap { it.values.flatten() }
+            .associateBy { it.season() to it.number() }
+        val original = base.episodeDetails.associateBy { it.season() to it.number() }
+        val details = base.episodes.map { episode ->
+            val coordinate = episode.season() to episode.number()
+            val fallback = original[coordinate]
+            val tmdb = indexed[coordinate]
+            LibraryMedia.Episode(episode.season(), episode.number(),
+                tmdb?.name()?.ifBlank { fallback?.name().orEmpty().ifBlank { episode.name() } }
+                    ?: fallback?.name().orEmpty().ifBlank { episode.name() },
+                tmdb?.overview()?.ifBlank { fallback?.overview().orEmpty() } ?: fallback?.overview().orEmpty(),
+                tmdb?.still()?.ifBlank { fallback?.still().orEmpty() } ?: fallback?.still().orEmpty(),
+                base.date.toString(), episode.runtime().takeIf { it > 0 } ?: tmdb?.runtime() ?: fallback?.runtime() ?: 0)
+        }
+        return base.copy(media = focus.work.media, episodeDetails = details)
     }
 
     private fun <K, V> value(cache: Map<K, Cached<V>>, key: K): V? = cache[key]?.takeIf {

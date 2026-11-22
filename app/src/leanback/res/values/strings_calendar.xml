@@ -26,4 +26,25 @@
     <string name="calendar_status_today">Airing today</string>
     <string name="calendar_status_upcoming">Upcoming</string>
     <string name="calendar_runtime_minutes">%1$d min</string>
+    <string name="calendar_provider">Calendar source</string>
+    <string name="calendar_account">Account</string>
+    <string name="calendar_connect">Connect account</string>
+    <string name="calendar_disconnect">Disconnect account</string>
+    <string name="calendar_sync">Sync followed titles</string>
+    <string name="calendar_follow">Follow</string>
+    <string name="calendar_unfollow">Unfollow</string>
+    <string name="calendar_pause">Pause</string>
+    <string name="calendar_trakt_client_id">Trakt Client ID</string>
+    <string name="calendar_client_id_required">Set a Trakt Client ID through Account</string>
+    <string name="calendar_bangumi_token">Bangumi access token</string>
+    <string name="calendar_bangumi_token_help">Create a personal access token at https://next.bgm.tv/demo/access-token</string>
+    <string name="calendar_trakt_code">On your phone, open %1$s and enter %2$s</string>
+    <string name="calendar_auth_failed">Account authorization failed. Please reconnect.</string>
+    <string name="calendar_auth_expired">Authorization code expired. Please reconnect.</string>
+    <string name="calendar_connected_required">Connect an account to sync followed titles</string>
+    <string name="calendar_weekly">Weekly broadcast schedule</string>
+    <string name="calendar_weekly_scope">Bangumi public schedules cover the current week</string>
+    <string name="calendar_account_follow_empty">No followed titles in this account</string>
+    <string name="calendar_action_failed">Unable to update this title. Sync or reconnect and try again.</string>
+    <string name="calendar_reconnect">Reconnect account</string>
 </resources>

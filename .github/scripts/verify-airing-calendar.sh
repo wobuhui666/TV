@@ -4,7 +4,7 @@ set -euo pipefail
 api="${1:?Pass the emulator API level}"
 [[ "$api" == 24 || "$api" == 34 ]] || { printf 'Expected emulator API 24 or 34\n' >&2; exit 1; }
 out="${2:-artifacts/airing-calendar/ui-api-$api}"
-classes=com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest,com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest
+classes=com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest,com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest,com.fongmi.android.tv.ui.activity.CalendarProvidersAndroidTest
 mkdir -p "$out"
 
 collect() {
@@ -61,7 +61,7 @@ if [ "$api" -ge 33 ]; then
 fi
 # Calendar's BeforeClass clears old evidence inside the app; the following suite keeps it.
 run_status=0
-if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$out" '12,4'; then
+if UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh "$classes" "$out" '12,4,6'; then
     run_status=0
 else
     run_status=$?
@@ -79,6 +79,7 @@ run_status = int(sys.argv[3])
 expected = {
     'com.fongmi.android.tv.ui.activity.AiringCalendarAndroidTest': 12,
     'com.fongmi.android.tv.ui.activity.LibraryFollowAndroidTest': 4,
+    'com.fongmi.android.tv.ui.activity.CalendarProvidersAndroidTest': 6,
 }
 path = root / 'suite-summary.json'
 suites = json.loads(path.read_text()) if path.is_file() else {}
@@ -130,6 +131,7 @@ required_images = (
     'calendar-full-background-first.png',
     'calendar-full-background-dark.png', 'calendar-full-background-light.png',
     'library-follow-no-source.png', 'library-follow-calendar.png',
+    'calendar-providers-light.png', 'calendar-providers-dark.png',
 )
 images = []
 for name in required_images:
