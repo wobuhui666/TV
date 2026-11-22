@@ -303,7 +303,27 @@ class CalendarProvidersAndroidTest {
             read { host.currentState() == state } }
     }
 
-    private fun focus(key: String) { main { host.focusKey(key) }; awaitFocused(key) }
+    /** Re-issues the host request like the shipping page does on resume; reports the real state on failure. */
+    private fun focus(key: String) {
+        val deadline = SystemClock.uptimeMillis() + 15000
+        var requests = 0
+        var requestedAt = 0L
+        fun reached() = read { host.focusedKey() == key } && device.findObject(By.res(key))?.isFocused == true
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (SystemClock.uptimeMillis() - requestedAt > 3000) {
+                main { host.focusKey(key) }
+                requestedAt = SystemClock.uptimeMillis()
+                requests++
+            }
+            if (reached()) {
+                if (requests > 1) android.util.Log.w("CalendarProviders", "focus $key needed $requests requests")
+                return
+            }
+            SystemClock.sleep(50)
+        }
+        fail("Actual remote focus reaches $key: focused=${read { host.focusedKey() }}, node=${device.findObject(By.res(key))?.isFocused}, " +
+            "window=${read { host.hasWindowFocus() }}, hostFocus=${read { host.hasFocus() }}, requests=$requests")
+    }
 
     private fun awaitFocused(key: String) = await("Actual remote focus reaches $key") {
         read { host.focusedKey() == key } && device.findObject(By.res(key))?.isFocused == true
