@@ -10,9 +10,9 @@ class BangumiCalendarApiTest {
     private val today = monday.plusDays(5)
 
     @Test fun shouldKeepNativeIdentityAndWeeklyScheduleWithoutInventingEpisodes() {
-        val entry = parse(subject(418229, "\"name_cn\":\"魔法少女育成计划 restart\","
-            + "\"name\":\"魔法少女育成計画 restart\",\"air_date\":\"2026-10-05\","
-            + "\"summary\":\"番剧简介\",\"rating\":{\"score\":6.2}")).items.single()
+        val entry = parse(subject(418229, "\"name_cn\":\"魔法少女育成计划 restart\"," +
+            "\"name\":\"魔法少女育成計画 restart\",\"air_date\":\"2026-10-05\"," +
+            "\"summary\":\"番剧简介\",\"rating\":{\"score\":6.2}")).items.single()
         assertEquals("bangumi:subject:418229", entry.media.id)
         assertNull(DiscoverMediaKey.parse(entry.media.id))
         assertEquals("魔法少女育成计划 restart", entry.media.name)
@@ -30,8 +30,8 @@ class BangumiCalendarApiTest {
     }
 
     @Test fun shouldSelectOfficialWeekdayBucketRatherThanOriginalPremiereWeekday() {
-        val body = "[{\"weekday\":{\"id\":1},\"items\":[${subject(1)}]},"
-            + "{\"weekday\":{\"id\":7},\"items\":[${subject(7, "\"air_date\":\"2026-10-05\"")}]}]"
+        val body = "[{\"weekday\":{\"id\":1},\"items\":[${subject(1)}]}," +
+            "{\"weekday\":{\"id\":7},\"items\":[${subject(7, "\"air_date\":\"2026-10-05\"")}]}]"
         val entry = BangumiCalendarApi.parse(body, monday.plusDays(6), today).items.single()
         assertEquals("bangumi:subject:7", entry.media.id)
         assertEquals(monday.plusDays(6), entry.date)
@@ -86,18 +86,18 @@ class BangumiCalendarApiTest {
     }
 
     @Test fun shouldRejectInvalidIdentifiersInsteadOfTruncatingNumbers() {
-        val body = "[{\"weekday\":{\"id\":1},\"items\":["
-            + "{\"id\":-1,\"type\":2,\"name\":\"bad\"},"
-            + "{\"id\":1.5,\"type\":2,\"name\":\"bad\"},"
-            + "{\"id\":\"2\",\"type\":2,\"name\":\"bad\"},"
-            + "{\"id\":9223372036854775808,\"type\":2,\"name\":\"bad\"},${subject(8)}]}]"
+        val body = "[{\"weekday\":{\"id\":1},\"items\":[" +
+            "{\"id\":-1,\"type\":2,\"name\":\"bad\"}," +
+            "{\"id\":1.5,\"type\":2,\"name\":\"bad\"}," +
+            "{\"id\":\"2\",\"type\":2,\"name\":\"bad\"}," +
+            "{\"id\":9223372036854775808,\"type\":2,\"name\":\"bad\"},${subject(8)}]}]"
         assertEquals(listOf("bangumi:subject:8"), BangumiCalendarApi.parse(body, monday, today).items.map { it.media.id })
     }
 
     @Test fun shouldTolerateMalformedOptionalFieldsAndSkipMalformedBuckets() {
-        val body = "[null,4,{\"weekday\":null},{\"weekday\":{\"id\":1.5},\"items\":[${subject(1)}]},"
-            + "{\"weekday\":{\"id\":1},\"items\":[null,[],"
-            + subject(2, "\"images\":null,\"rating\":{\"score\":{}},\"air_date\":\"2026-02-31\",\"summary\":[]") + "]}]"
+        val body = "[null,4,{\"weekday\":null},{\"weekday\":{\"id\":1.5},\"items\":[${subject(1)}]}," +
+            "{\"weekday\":{\"id\":1},\"items\":[null,[]," +
+            subject(2, "\"images\":null,\"rating\":{\"score\":{}},\"air_date\":\"2026-02-31\",\"summary\":[]") + "]}]"
         val entry = BangumiCalendarApi.parse(body, monday, today).items.single()
         assertEquals("bangumi:subject:2", entry.media.id)
         assertEquals("", entry.media.pic)
@@ -129,11 +129,11 @@ class BangumiCalendarApiTest {
     }
 
     @Test fun shouldIgnoreUnusableWeekdayBucketsAndMalformedNamesWithoutCoercingValues() {
-        val body = "[{\"weekday\":{\"id\":\"1\"},\"items\":[${subject(1)}]},"
-            + "{\"weekday\":{\"id\":8},\"items\":[${subject(2)}]},"
-            + "{\"weekday\":{\"id\":1},\"items\":["
-            + subject(3, "\"name_cn\":{},\"name\":42") + ","
-            + subject(4, "\"name_cn\":null,\"name\":\"有效原名\"") + "]}]"
+        val body = "[{\"weekday\":{\"id\":\"1\"},\"items\":[${subject(1)}]}," +
+            "{\"weekday\":{\"id\":8},\"items\":[${subject(2)}]}," +
+            "{\"weekday\":{\"id\":1},\"items\":[" +
+            subject(3, "\"name_cn\":{},\"name\":42") + "," +
+            subject(4, "\"name_cn\":null,\"name\":\"有效原名\"") + "]}]"
         val entries = BangumiCalendarApi.parse(body, monday, today).items
         assertEquals(listOf("bangumi:subject:4"), entries.map { it.media.id })
         assertEquals("有效原名", entries.single().media.name)
@@ -151,6 +151,6 @@ class BangumiCalendarApiTest {
 
     private fun feed(vararg subjects: String) = "[{\"weekday\":{\"id\":1},\"items\":[${subjects.joinToString(",")}]}]"
 
-    private fun subject(id: Int, fields: String = "") = "{\"id\":$id,\"type\":2,\"name\":\"作品$id\""
-        + (if (fields.isEmpty()) "" else ",$fields") + "}"
+    private fun subject(id: Int, fields: String = "") = "{\"id\":$id,\"type\":2,\"name\":\"作品$id\"" +
+        (if (fields.isEmpty()) "" else ",$fields") + "}"
 }

@@ -172,9 +172,9 @@ class BangumiAccountApiTest {
         "{\"data\":[${data.joinToString(",")}],\"total\":$total,\"offset\":$offset,\"limit\":50}"
 
     private fun collection(id: Int, status: Int, subjectType: Int = 2) =
-        "{\"subject_id\":$id,\"subject_type\":$subjectType,\"type\":$status,\"private\":true,\"ep_status\":5,"
-            + "\"subject\":{\"id\":$id,\"name\":\"原名$id\",\"name_cn\":\"中文作品$id\","
-            + "\"images\":{\"common\":\"http://lain.bgm.tv/$id.jpg\"}}}"
+        "{\"subject_id\":$id,\"subject_type\":$subjectType,\"type\":$status,\"private\":true,\"ep_status\":5," +
+            "\"subject\":{\"id\":$id,\"name\":\"原名$id\",\"name_cn\":\"中文作品$id\"," +
+            "\"images\":{\"common\":\"http://lain.bgm.tv/$id.jpg\"}}}"
 
     private fun episode(id: Int, sort: String, date: String, type: Int = 0, subject: Int = 8) =
         "{\"id\":$id,\"subject_id\":$subject,\"type\":$type,\"sort\":$sort,\"airdate\":\"$date\"}"
