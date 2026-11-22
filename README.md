@@ -10,9 +10,9 @@
 
 [在线观看宣传片](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/iframe) / [下载 MP4](https://customer-nkorbwmhxz04cbfd.cloudflarestream.com/b941aa27d5013806eb8fcab30cce4807/downloads/default.mp4) · 60 秒 · 1080p · 中文字幕与配乐
 
-**新版 4K60 宣传片**（64 秒，基于最新 Release 实录）：[下载 4K60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v1.0-4k60/TV-JetStream-Promo-4K60.mp4) / [下载 1080p60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v1.0-4k60/TV-JetStream-Promo-1080p60.mp4) · [发布页](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v1.0-4k60)
+**新版 4K60 宣传片**（64 秒，基于最新 Release 实录）：[下载 4K60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.0-apple/TV-JetStream-Promo-4K60.mp4) / [下载 1080p60](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/download/v2.0-apple/TV-JetStream-Promo-1080p60.mp4) · [发布页](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.0-apple)
 
-[![TV · JetStream 4K60 宣传片](docs/media/TV-promo-cover-4k60.jpg)](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v1.0-4k60)
+[![TV · JetStream 4K60 宣传片](docs/media/TV-promo-cover-4k60.jpg)](https://github.com/5q68fs6b86-netizen/TV-JetStream-Promo/releases/tag/v2.0-apple)
 
 宣传片由模拟器实录制作，使用演示片库展示界面，不提供影片资源或订阅服务。演示片段为 Sintel © Blender Foundation（CC BY 3.0）；完整[素材来源与署名](docs/media/CREDITS.md)。
 
