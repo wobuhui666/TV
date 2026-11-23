@@ -31,13 +31,16 @@ internal object CalendarAccountHttp {
         try {
             require(url.isHttps && url.host in setOf("api.trakt.tv", "auth.trakt.tv", "api.bgm.tv") &&
                 url.username.isEmpty() && url.password.isEmpty()) { "Invalid calendar account endpoint" }
-            val request = Request.Builder().url(url).tag(tag).apply {
-                headers.forEach { (name, value) -> header(name, value) }
-                method(method, body?.toRequestBody("application/json; charset=utf-8".toMediaType()))
-            }.build()
-            client.request(request, tag, parser, listener)
+            client.request(build(url, tag, headers, body, method), tag, parser, listener)
         } catch (error: Exception) { client.reject(tag, error, listener) }
     }
+
+    /** Bangumi answers 415 to a charset parameter, so JSON bodies are sent as bytes with the bare media type. */
+    internal fun build(url: HttpUrl, tag: Any, headers: Map<String, String>, body: String?, method: String): Request =
+        Request.Builder().url(url).tag(tag).apply {
+            headers.forEach { (name, value) -> header(name, value) }
+            method(method, body?.toByteArray(Charsets.UTF_8)?.toRequestBody("application/json".toMediaType()))
+        }.build()
 
     fun cancel(tag: Any) = client.cancel(tag)
 }

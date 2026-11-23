@@ -143,6 +143,18 @@ class CalendarHttpClientTest {
         } finally { client.close(); close(transport) }
     }
 
+    @Test fun shouldSendAccountJsonBodiesWithoutACharsetParameter() {
+        val url = "https://api.bgm.tv/v0/users/-/collections/8".toHttpUrl()
+        val write = CalendarAccountHttp.build(url, Any(), mapOf("Authorization" to "Bearer fixture"),
+            "{\"type\":4,\"comment\":\"搁置\"}", "PATCH")
+        assertEquals("PATCH", write.method)
+        assertEquals("application/json", write.body!!.contentType().toString())
+        val sent = okio.Buffer().also { write.body!!.writeTo(it) }.readUtf8()
+        assertEquals("{\"type\":4,\"comment\":\"搁置\"}", sent)
+        assertEquals("Bearer fixture", write.header("Authorization"))
+        assertNull(CalendarAccountHttp.build(url, Any(), emptyMap(), null, "GET").body)
+    }
+
     @Test fun shouldParseRetryAfterWithoutInventingRapidRetryIntervals() {
         assertEquals(120_000L, CalendarRequestClient.retryDelay("120", 0))
         assertEquals(120_000L, CalendarRequestClient.retryDelay("Thu, 01 Jan 1970 00:02:00 GMT", 0))

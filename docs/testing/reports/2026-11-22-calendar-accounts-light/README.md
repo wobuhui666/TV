@@ -2,21 +2,21 @@
 
 关联 [Issue #118](https://github.com/wobuhui666/TV/issues/118)。使用与账号配置见[追更日历](../../../native-discovery.md#追更日历)。
 
-- 验证快照：`faa561c5a77cf808fc446eb567493e9f6da69bd4`（基准 `e81c1364f8` 加当时全部未提交修改，仅推送到 `verify/wall-filters-calendar-light-20261122`）。
-- [GitHub Actions 验证](https://github.com/wobuhui666/TV/actions/runs/45054846949)：Ubuntu runner、JDK 21、Python 3.10、Android SDK 37.0；Media3 固定提交 `342f6590e02ac390e0bd6b4488b8a1bff55747c1` 与仓库固定补丁。本机 2 GB 内存无法完成 Gradle 编译，全部结果来自云端。
+- 验证快照：`b223afe44b2b552db447f8a0da0c598ee3877321`（基准 `e81c1364f8` 加当时全部未提交修改，仅推送到 `verify/wall-filters-calendar-light-20261122`）。
+- [GitHub Actions 验证](https://github.com/wobuhui666/TV/actions/runs/45207644467)：Ubuntu runner、JDK 21、Python 3.10、Android SDK 37.0；Media3 固定提交 `342f6590e02ac390e0bd6b4488b8a1bff55747c1` 与仓库固定补丁。本机 2 GB 内存无法完成 Gradle 编译，全部结果来自云端。
 - 界面使用隔离包 `com.fongmi.android.tv.preview`，x86_64 模拟器 API 24、34，1920×1080 / density 320，离线夹具，不访问账号服务。
 
 | 检查 | API 34 | API 24 |
 | --- | --- | --- |
-| 日历、账号与 TMDB 接口专项 JVM | 115 项通过 | 115 项通过 |
+| 日历、账号与 TMDB 接口专项 JVM | 117 项通过 | 117 项通过 |
 | TV ARM64 debug、preview 与测试 APK | 构建通过 | 构建通过 |
 | Android lint 新增错误门槛 | 通过，错误 108→108 | 通过 |
-| 真实日历页 `AiringCalendarAndroidTest` | 12／12 | 12／12（第三次尝试；第二次 11／12） |
+| 真实日历页 `AiringCalendarAndroidTest` | 12／12 | 12／12 |
 | 本地追剧 `LibraryFollowAndroidTest` | 4／4 | 4／4 |
 | 数据源、账号与主题信号 `CalendarProvidersAndroidTest` | 7／7 | 7／7 |
 | 截图检查 | 22／22 | 22／22 |
 
-API 34 一次通过。**API 24 不稳定**：同一快照、同一运行内三次尝试，第一次模拟器启动后 `adb: device offline` 超时而未执行测试；第二次真实日历页 `shouldKeepEmptyDatesNavigable` 在空日期上按“上”后焦点没有回到页眉（其余 22 项通过）；第三次 23 项全部通过。上表 API 24 一列取第三次尝试，不代表该用例在 API 24 上稳定。
+本快照的运行在 API 24、34 上都一次通过。**API 24 仍不稳定**：上一个快照 `faa561c5`（与本快照只差下文的两处 Bangumi 修正）在同一运行内试了三次——第一次模拟器启动后 `adb: device offline` 超时而未执行测试；第二次真实日历页 `shouldKeepEmptyDatesNavigable` 在空日期上按“上”后焦点没有回到页眉（其余 22 项通过）；第三次 23 项全部通过。本次通过的 API 24 运行里仍有两次焦点请求发了第二次才生效，上表不代表这些用例在 API 24 上稳定。
 
 ## 主题刷新信号测试宿主
 
@@ -42,39 +42,54 @@ API 34 一次通过。**API 24 不稳定**：同一快照、同一运行内三�
 
 覆盖范围限于未连接状态的操作列表（连接账号、Trakt Client ID、取消）。已连接状态的同步／断开项、Client ID 与令牌输入框、Trakt 设备码对话框没有做像素或焦点检查。
 
-## Bangumi 真实接口对照（未登录）
+## Bangumi 真实接口与账号只读验证
 
-11 月 23 日以应用相同的 User-Agent 向 `api.bgm.tv` 发出 17 个 GET 请求（不跟随重定向），按应用的解析规则核对响应，没有使用账号令牌。核对脚本是解析规则的 Python 对照，不是运行应用内的 Kotlin 类。[脱敏摘要](bangumi-live-summary.json)只含状态码和数量。
+11 月 23 日以应用相同的 User-Agent 向 `api.bgm.tv` 发出 22 个 GET 请求（不跟随重定向），按应用的解析规则核对响应。账号部分使用一个真实账号的个人访问令牌，全程只读，没有发出 POST 或 PATCH。核对脚本是解析规则的 Python 对照，不是运行应用内的 Kotlin 类。[脱敏摘要](bangumi-live-summary.json)只含状态码和数量；令牌与用户名没有写入仓库、报告或 GitHub。
 
 | 请求 | 结果 |
 | --- | --- |
-| 公开排期 `/calendar` | HTTP 200，7 个星期分组，按应用规则保留 112 部动画 |
-| 单集 `/v0/episodes` | 一部 1,230 集的长篇以 `limit=200` 取完 7 页，分页字段全部通过应用的完整性检查；1,221 集有日期，9 集的 `airdate` 只有年份，按规则跳过 |
-| 账号 `/v0/me` | 不带令牌、带无效令牌均为 401 |
-| 收藏列表与单条收藏 | 一个公开账号「想看」「在看」的首页：HTTP 200，`limit=50` 被接受，80 行全部通过解析；已收藏条目 200，未收藏条目 404，与应用把 404 视为未收藏一致 |
+| 账号 `/v0/me` | 真实令牌返回 200 和用户名；不带令牌、带无效令牌均为 401 |
+| 账号「想看」「在看」列表 | 真实令牌返回 200，分页字段通过应用的完整性检查；该账号所有状态下都没有动画收藏，导入结果为空 |
+| 公开账号的同一列表（未登录） | 「想看」「在看」首页 200，`limit=50` 被接受，80 行全部通过解析 |
+| 单条收藏 | 已收藏条目 200（公开账号）；未收藏条目 404（公开账号、真实令牌各一次），与应用把 404 视为未收藏一致 |
+| 公开排期 `/calendar` | HTTP 200，7 个星期分组，按应用规则保留 113 部动画 |
+| 单集 `/v0/episodes` | 一部 1,230 集的长篇以 `limit=200` 取完 7 页，分页字段全部通过完整性检查；1,221 集有日期，9 集的 `airdate` 只有年份，按规则跳过 |
 
-发现三处实现或测试夹具与真实接口不一致，生产代码均未修改：
+真实账号只验证到「令牌被接受、空列表可导入」。账号没有收藏，因此非空私有列表的解析、已关注作品的单集日期和成人条目仍没有真实私有数据可验；追剧、搁置等写入没有执行；应用内的令牌输入、Keystore 保存和连接流程没有连真实服务运行。
 
-1. **成人条目过滤在真实列表上不生效。** 收藏列表里的条目没有 `nsfw` 字段（80 条中 0 条；官方 OpenAPI 的收藏条目结构同样没有，完整条目接口才有）。`BangumiAccountApi.parseCollections` 靠该字段排除成人条目，`BangumiAccountApiTest` 相应用例的夹具给条目加了这个字段。登录后列表是否返回成人条目，需要真实令牌确认。
-2. **账号条目没有简介。** 收藏列表提供的是 `short_summary`（80 条都有），应用读取 `summary`（0 条）。按代码路径，Bangumi「我的追更」的焦点作品不显示简介；未在设备上复现。公开排期的 112 部同样没有 `summary` 文本。
-3. **令牌失效时没有重新连接提示。** 带无效令牌时，原本公开的单集和收藏接口也返回 401。按代码路径，令牌失效后个人日历只显示通用的加载失败与重试；未在设备上复现。
+### 参照 Kazumi 的对照与修正
 
-另外，单集响应带有官方规范未列出的 `subject_id`，应用用它核对条目身份，本次 1,230 行都带有。写入接口只对照了官方规范：`POST`、`PATCH /v0/users/-/collections/{subject_id}`，没有删除收藏的接口，与应用以「搁置」代替取消一致。
+按要求以 [Kazumi](https://github.com/Predidit/Kazumi) `635cd58d` 的 Bangumi 实现为参照。两者授权方式相同：用户在 `next.bgm.tv/demo/access-token` 生成个人访问令牌，以 `/v0/me` 校验后保存，不使用 OAuth 应用的 App ID 与 Secret。
+
+| 项目 | Kazumi | 本应用 | 处理 |
+| --- | --- | --- | --- |
+| 收藏条目简介 | 读 `short_summary` | 只读 `summary`；真实列表 80 条中 0 条有该字段、80 条有 `short_summary` | 已修正：缺少 `summary` 时回退到 `short_summary` |
+| 令牌被拒（401） | 提示令牌无效或已过期 | 显示通用的加载失败与重试 | 已修正：提示重新连接，保留本机同步列表，不再发送单集请求 |
+| 成人条目 | 不过滤 | 靠条目的 `nsfw` 字段过滤；真实列表和官方 OpenAPI 的收藏条目都没有该字段，过滤不生效 | 未修改；登录后列表是否返回成人条目未能验证 |
+| 写入收藏 | 一律 `POST` | 新增 `POST`、已有 `PATCH` | 两者都符合官方规范；未实测 |
+| 请求节奏 | 收藏分页间隔 200 ms、并发 3 | 单集请求并发 4、无间隔 | 未修改；关注较多时是否触发限流未能验证 |
+
+两处修正各补一条单测（`BangumiAccountApiTest` 17 项、`AccountCalendarLoaderTest` 7 项），随本快照在 GHA 通过。重新连接提示在刷新关注列表时判断，刚同步后的五分钟内令牌失效仍显示加载失败；提示在界面上的呈现没有界面用例覆盖，也没有用失效的真实令牌在应用里复现。
+
+另外，单集响应带有官方规范未列出的 `subject_id`，应用用它核对条目身份，本次 1,230 行都带有。官方规范没有删除收藏的接口，与应用以「搁置」代替取消一致。
 
 ## 未验证
 
-- **真实账号授权与远端写入尚未实测。** 未使用真实 Trakt Client ID 或任何用户令牌；Trakt 设备码授权、令牌刷新、Bangumi 令牌登录，以及关注、取消关注、暂停等写入远端账号的操作，都只有 JVM 接口合同测试和离线界面夹具，不能视为真实账号实测。下面的 Bangumi 对照没有读取任何私有收藏，也没有发出 POST 或 PATCH。
+- **远端写入尚未实测。** Trakt 和 Bangumi 的追剧、取消追剧、搁置都没有对真实账号执行，只有 JVM 接口合同测试和离线界面夹具。
+- **Trakt 真实账号授权尚未实测。** 未使用真实 Trakt Client ID 或令牌；设备码授权与令牌刷新只有合同测试。
+- **Bangumi 真实账号只做了上面的只读验证。** 令牌在真实服务上被接受，但账号没有收藏，且没有在应用界面里完成连接；不能视为应用内授权流程或非空列表的实测。
 - 播放器内核、实体电视及真实片源播放不在本次 x86_64 模拟器范围。
 
 ## 过程记录
 
-专项 JVM 覆盖 UTC 换日、原生服务身份、逐集合并、分页完整性、失败时保留账号快照、取消后的迟到响应、私有请求缓存隔离、限流、授权数据解析及收藏状态更新规则。执行任务：`:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.calendar.*' --tests com.fongmi.android.tv.api.TmdbLibraryApiTest`、`:app:assembleLeanbackArm64_v8aDebug`、`:app:assembleLeanbackArm64_v8aPreview`、`:app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview`、`:app:lintLeanbackArm64_v8aDebug`。完整变体单测、基准对比 lint 与安装包见[首页栏目完整筛选验证](../2026-11-22-home-wall-filters/README.md)，两者使用同一快照。
+专项 JVM 覆盖 UTC 换日、原生服务身份、逐集合并、分页完整性、失败时保留账号快照、取消后的迟到响应、私有请求缓存隔离、限流、授权数据解析及收藏状态更新规则。执行任务：`:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.calendar.*' --tests com.fongmi.android.tv.api.TmdbLibraryApiTest`、`:app:assembleLeanbackArm64_v8aDebug`、`:app:assembleLeanbackArm64_v8aPreview`、`:app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview`、`:app:lintLeanbackArm64_v8aDebug`。本快照的完整变体单测（1,354 项通过）、基准对比 lint（新增错误 0）与安装包来自[构建运行](https://github.com/wobuhui666/TV/actions/runs/45207621752)，安装包路径见[首页栏目完整筛选验证](../2026-11-22-home-wall-filters/README.md#安装包)。
 
 | 运行 | 结果 |
 | --- | --- |
 | [44981756244](https://github.com/wobuhui666/TV/actions/runs/44981756244)（旧宿主） | API 34 通过；API 24 的数据源用例 6 项中 4 项焦点或文字断言超时 |
 | [45028366076](https://github.com/wobuhui666/TV/actions/runs/45028366076) | 首次尝试 API 24 因 Maven Central HTTP 429 未编译；重跑后 API 24 数据源用例 7 项中 1 项焦点断言超时 |
 | [45048254959](https://github.com/wobuhui666/TV/actions/runs/45048254959) | API 34 通过；API 24 数据源用例 7 项中 1 项未读到已更新的“暂停”文字 |
-| [45054846949](https://github.com/wobuhui666/TV/actions/runs/45054846949) | 最终快照。API 34 通过；API 24 第一次模拟器离线，第二次真实日历页 1 项焦点断言失败，第三次全部通过 |
+| [45054846949](https://github.com/wobuhui666/TV/actions/runs/45054846949) | 快照 `faa561c5`。API 34 通过；API 24 第一次模拟器离线，第二次真实日历页 1 项焦点断言失败，第三次全部通过 |
+| [45207644467](https://github.com/wobuhui666/TV/actions/runs/45207644467) | 快照 `b223afe4`，增加 Bangumi 两处修正。API 24、34 均一次通过 |
 
-API 24 上数据源用例的修正都在测试侧：焦点请求按正式页面恢复焦点的方式重发，并在轮询时刷新无障碍节点缓存。API 24 通过的第三次尝试中，仍有两次焦点请求（日期、账号按钮各一次）发了两次才生效，第二次尝试中有一次；API 34 没有出现。连同 `shouldKeepEmptyDatesNavigable` 的偶发失败，说明 API 24 模拟器上日历宿主的单次焦点请求或方向键导航偶尔会丢失。原因没有定位，是模拟器负载还是页面焦点逻辑的竞态尚不清楚，生产焦点代码未修改；测试的重发会掩盖这一现象，判断 API 24 焦点可靠性时应以此为准。
+API 24 上数据源用例的修正都在测试侧：焦点请求按正式页面恢复焦点的方式重发，并在轮询时刷新无障碍节点缓存。API 24 每次通过的运行里都有焦点请求要发第二次才生效：`faa561c5` 的第二次尝试 1 次、第三次尝试 2 次，`b223afe4` 的运行 2 次；API 34 没有出现。连同 `shouldKeepEmptyDatesNavigable` 的偶发失败，说明 API 24 模拟器上日历宿主的单次焦点请求或方向键导航偶尔会丢失。原因没有定位，是模拟器负载还是页面焦点逻辑的竞态尚不清楚，生产焦点代码未修改；测试的重发会掩盖这一现象，判断 API 24 焦点可靠性时应以此为准。

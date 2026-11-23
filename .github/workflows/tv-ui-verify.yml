@@ -214,7 +214,7 @@ jobs:
               'com.fongmi.android.tv.calendar.AiringCalendarRepositoryTest': 19,
               'com.fongmi.android.tv.calendar.BangumiAccountApiTest': 17,
               'com.fongmi.android.tv.calendar.BangumiCalendarApiTest': 15,
-              'com.fongmi.android.tv.calendar.CalendarHttpClientTest': 6,
+              'com.fongmi.android.tv.calendar.CalendarHttpClientTest': 7,
               'com.fongmi.android.tv.calendar.TraktAccountApiTest': 14,
               'com.fongmi.android.tv.calendar.TraktCalendarApiTest': 12,
           }

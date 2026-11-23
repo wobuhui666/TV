@@ -1,11 +1,11 @@
 {
-  "checkedAt": "2026-11-23T01:14:40.545285+00:00",
+  "checkedAt": "2026-11-23T15:02:00.771180+00:00",
   "userAgent": "wobuhui666/TV/5.8.7 (Android) (https://github.com/wobuhui666/TV)",
   "method": "GET only; redirects not followed; Python mirror of the Kotlin parser rules, not the shipped classes",
   "calendar": {
     "status": 200,
     "weekdayBuckets": 7,
-    "animeTitles": 112,
+    "animeTitles": 113,
     "withSummaryText": 0,
     "weekdayCounts": {
       "1": 14,
@@ -13,7 +13,7 @@
       "3": 12,
       "4": 11,
       "5": 14,
-      "6": 24,
+      "6": 25,
       "7": 27
     },
     "contract": "ok"
@@ -124,12 +124,52 @@
       ]
     }
   },
-  "account": "not-run: no access token was available",
+  "account": {
+    "meStatus": 200,
+    "usernamePresent": true,
+    "followsContract": "ok",
+    "collectionPages": 2,
+    "collectionLimitsReturned": [
+      50
+    ],
+    "importedAny": false,
+    "subjectFields": {
+      "subjectsInspected": 0,
+      "withNsfwKey": 0,
+      "withSummaryKey": 0,
+      "withShortSummaryKey": 0
+    },
+    "adultSubjectsFilteredByParser": 0,
+    "rowsSkippedByParser": 0,
+    "everyStatusList": {
+      "status": 200,
+      "anyRows": false,
+      "subjectFields": {
+        "subjectsInspected": 0,
+        "withNsfwKey": 0,
+        "withSummaryKey": 0,
+        "withShortSummaryKey": 0
+      }
+    },
+    "collectionStatus": {
+      "subjectsOutsideFollows": [
+        404
+      ]
+    },
+    "week": {
+      "weekStart": "2026-11-23",
+      "failedSubjects": 0,
+      "rateLimited": false,
+      "subjectsNotQueried": 0,
+      "entriesAny": false,
+      "rowsSkippedForWrongSubjectOrType": 0
+    }
+  },
   "traffic": {
-    "requests": 17,
-    "status200": 12,
+    "requests": 22,
+    "status200": 16,
     "status401": 4,
-    "status404": 1
+    "status404": 2
   },
   "specification": {
     "source": "https://bangumi.github.io/api/dist.json",
@@ -149,9 +189,18 @@
     "collectionDeleteEndpoint": false
   },
   "limits": [
-    "No access token was used: no private collection was read and no POST or PATCH was sent.",
-    "The parser rules were mirrored in a Python script; the shipped Kotlin classes were not run against the live service.",
-    "Write endpoints were compared with the published specification only.",
+    "One real account, read with a personal access token. GET requests only: no POST or PATCH was sent.",
+    "The account holds no anime collection in any status, so only the authorized empty-list path was exercised: non-empty private lists, dated episodes of followed titles and adult subjects were not.",
+    "The parser rules were mirrored in a Python script; the shipped Kotlin classes, the token dialog and Keystore storage were not run against the live service.",
+    "Write endpoints were compared with the published specification and Kazumi's requests only.",
     "Bangumi's weekly feed has no exact-date query."
-  ]
+  ],
+  "reference": {
+    "project": "Predidit/Kazumi",
+    "commit": "635cd58d3ac7731085d0c64846ceefa52bc167bd",
+    "authorization": "personal access token from next.bgm.tv/demo/access-token, checked with GET /v0/me; no OAuth application",
+    "collectionSummaryField": "short_summary",
+    "collectionWrite": "POST /v0/users/-/collections/{subject_id}",
+    "filtersAdultCollections": false
+  }
 }

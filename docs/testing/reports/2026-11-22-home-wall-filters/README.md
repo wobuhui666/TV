@@ -47,12 +47,14 @@
 
 ## 安装包
 
-从构建运行下载的 ARM64 Debug 包，SHA-256 与产物内 `build-metadata.json` 一致；`Release/` 被 Git 忽略。
+ARM64 Debug 包来自后续快照 `b223afe44b2b552db447f8a0da0c598ee3877321` 的[构建运行](https://github.com/wobuhui666/TV/actions/runs/45207621752)，SHA-256 与产物内 `build-metadata.json` 一致；`Release/` 被 Git 忽略。该快照在上面的验证快照之上只增加了追更日历 Bangumi 的两处修正（见[日历报告](../2026-11-22-calendar-accounts-light/README.md#参照-kazumi-的对照与修正)），同一运行中 TV 变体 1,354 项单测通过、lint 新增错误 0。海报墙界面回归没有在该快照上重跑，两个快照之间没有海报墙相关改动。
 
 | 文件 | 包名 | SHA-256 |
 | --- | --- | --- |
-| `Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-sourceprobe.apk` | `com.fongmi.android.tv.sourceprobe` | `09c1f3d00fc9122cf3b10a481818b1668355edd6960f84b0b972f75ce35707a0` |
-| `Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-preview.apk` | `com.fongmi.android.tv.preview` | `a4585ca1dd54a07a87d8d8ebebefd79f6081646d9132aec9643067eb0b1536cd` |
+| `Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-sourceprobe.apk` | `com.fongmi.android.tv.sourceprobe` | `fc679c363153218c15a2c6ae250b5ffb093d03688e457f08a7d2558542108411` |
+| `Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-preview.apk` | `com.fongmi.android.tv.preview` | `422cb488762dbfe2a57ccdeafd2b6c4f188bbd2ab619b15bd078c3e4537bcfa4` |
+
+同目录下文件名带 `20261122` 的两个包来自上面的验证快照，不含这两处修正。
 
 未覆盖：安装包没有装到实体电视或 ARM64 设备上运行，界面结果仅来自 x86_64 模拟器；没有构建正式签名的 Release 包。
 
