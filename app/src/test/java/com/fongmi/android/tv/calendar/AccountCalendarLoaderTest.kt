@@ -38,9 +38,25 @@ class AccountCalendarLoaderTest {
         assertEquals(old, source.scheduledFollows)
         source.schedule.onSuccess(AiringCalendarResult(listOf(entry(8)), false, false))
         assertTrue(results.last().failed)
+        assertFalse(results.last().unauthorized)
         assertEquals(old, source.stored)
         assertFalse(results.last().loading)
         assertEquals(1, results.last().items.size)
+    }
+
+    @Test fun shouldAskToReconnectWithoutQueryingDatesWhenTheServiceRejectsTheSavedToken() {
+        val old = listOf(follow(8))
+        source.stored = old
+        loader.load(provider, monday, true)
+        source.token.onSuccess(CalendarAccountToken("expired"))
+        source.import.onError(CalendarAccountHttpException(401))
+        assertTrue(results.last().unauthorized)
+        assertFalse(results.last().loading)
+        assertTrue(results.last().hasKeeps)
+        assertTrue(results.last().items.isEmpty())
+        assertEquals("No dated request is sent with a rejected token", 0, source.weeks)
+        assertEquals(0, source.saves)
+        assertEquals(old, source.stored)
     }
 
     @Test fun shouldRejectLateImportsAndDatesAfterProviderOrWeekChanges() {

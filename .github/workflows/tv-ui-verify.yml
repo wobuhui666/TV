@@ -209,10 +209,10 @@ jobs:
           output = pathlib.Path('artifacts/airing-calendar/focused-unit')
           expected = {
               'com.fongmi.android.tv.api.TmdbLibraryApiTest': 20,
-              'com.fongmi.android.tv.calendar.AccountCalendarLoaderTest': 6,
+              'com.fongmi.android.tv.calendar.AccountCalendarLoaderTest': 7,
               'com.fongmi.android.tv.calendar.AiringCalendarIndexTest': 7,
               'com.fongmi.android.tv.calendar.AiringCalendarRepositoryTest': 19,
-              'com.fongmi.android.tv.calendar.BangumiAccountApiTest': 16,
+              'com.fongmi.android.tv.calendar.BangumiAccountApiTest': 17,
               'com.fongmi.android.tv.calendar.BangumiCalendarApiTest': 15,
               'com.fongmi.android.tv.calendar.CalendarHttpClientTest': 6,
               'com.fongmi.android.tv.calendar.TraktAccountApiTest': 14,

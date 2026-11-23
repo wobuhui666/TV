@@ -67,7 +67,8 @@ object BangumiCalendarApi {
             listOf("large", "common", "medium", "small").asSequence()
                 .map { image(images.string(it)) }.firstOrNull { it.isNotBlank() }
         }.orEmpty().ifBlank { image(item.string("image")) }
-        content = item.string("summary")
+        // Collection lists carry short_summary; only the full subject has summary.
+        content = item.string("summary").ifBlank { item.string("short_summary") }
         year = localDate(item.string("air_date").ifBlank { item.string("date") })?.year?.toString().orEmpty()
         remarks = rating(item.obj("rating")?.get("score") ?: item.get("score"))
     }

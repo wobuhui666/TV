@@ -1,0 +1,157 @@
+{
+  "checkedAt": "2026-11-23T01:14:40.545285+00:00",
+  "userAgent": "wobuhui666/TV/5.8.7 (Android) (https://github.com/wobuhui666/TV)",
+  "method": "GET only; redirects not followed; Python mirror of the Kotlin parser rules, not the shipped classes",
+  "calendar": {
+    "status": 200,
+    "weekdayBuckets": 7,
+    "animeTitles": 112,
+    "withSummaryText": 0,
+    "weekdayCounts": {
+      "1": 14,
+      "2": 10,
+      "3": 12,
+      "4": 11,
+      "5": 14,
+      "6": 24,
+      "7": 27
+    },
+    "contract": "ok"
+  },
+  "episodes": {
+    "limitRequested": 200,
+    "declaredEpisodes": 1350,
+    "fullSubjectHasNsfwKey": true,
+    "sampleSubject": 899,
+    "contract": "ok",
+    "pages": [
+      {
+        "offset": 0,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 200,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 400,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 600,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 800,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 1000,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 1200,
+        "status": 200,
+        "rows": 30,
+        "total": 1230,
+        "limitReturned": 200
+      }
+    ],
+    "rows": {
+      "rows": 1230,
+      "dated": 1221,
+      "skippedUnparsedDate": 9
+    }
+  },
+  "authentication": {
+    "meWithoutToken": 401,
+    "meWithInvalidToken": 401,
+    "episodesWithInvalidToken": 401,
+    "collectionsWithInvalidToken": 401
+  },
+  "publicCollections": {
+    "profile": "one public profile; its name and titles are not recorded",
+    "limitRequested": 50,
+    "contract": "ok",
+    "pages": [
+      {
+        "type": 1,
+        "status": 200,
+        "rows": 50,
+        "limitReturned": 50,
+        "hasNextPage": true
+      },
+      {
+        "type": 3,
+        "status": 200,
+        "rows": 30,
+        "limitReturned": 50,
+        "hasNextPage": false
+      }
+    ],
+    "subjectFields": {
+      "subjectsInspected": 80,
+      "withNsfwKey": 0,
+      "withSummaryKey": 0,
+      "withShortSummaryKey": 80
+    },
+    "rowsSkippedByParser": 0,
+    "collectionStatus": {
+      "listedSubject": {
+        "status": 200,
+        "contract": "ok"
+      },
+      "subjectsOutsideTheLists": [
+        404
+      ]
+    }
+  },
+  "account": "not-run: no access token was available",
+  "traffic": {
+    "requests": 17,
+    "status200": 12,
+    "status401": 4,
+    "status404": 1
+  },
+  "specification": {
+    "source": "https://bangumi.github.io/api/dist.json",
+    "infoVersion": "2026-07-24",
+    "collectionsLimitMaximum": 50,
+    "episodesLimitMaximum": 200,
+    "collectionSubjectLists": {
+      "nsfw": false,
+      "summary": false,
+      "short_summary": true
+    },
+    "episodeListsSubjectId": false,
+    "collectionWriteMethods": [
+      "PATCH",
+      "POST"
+    ],
+    "collectionDeleteEndpoint": false
+  },
+  "limits": [
+    "No access token was used: no private collection was read and no POST or PATCH was sent.",
+    "The parser rules were mirrored in a Python script; the shipped Kotlin classes were not run against the live service.",
+    "Write endpoints were compared with the published specification only.",
+    "Bangumi's weekly feed has no exact-date query."
+  ]
+}

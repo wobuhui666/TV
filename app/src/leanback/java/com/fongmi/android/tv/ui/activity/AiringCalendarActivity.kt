@@ -247,10 +247,12 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                 AiringCalendarItem(it.stableKey, it.media.name, it.media.pic, episodeLabel(it),
                     episodeStill(it), actualBackdrop(it))
             },
-            preview = preview, loading = result.loading, failed = result.failed,
+            // A rejected token is shown as a reconnect prompt; retrying the same token cannot help.
+            preview = preview, loading = result.loading, failed = result.failed && !result.unauthorized,
             hasKeeps = result.hasKeeps, hasMore = mode == "public" && result.page < result.totalPages,
             emptyMessage = getString(when {
                 remoteFollowing() && CalendarAccountStore.token(provider) == null -> R.string.calendar_connected_required
+                remoteFollowing() && result.unauthorized -> R.string.calendar_auth_failed
                 mode == "public" && provider == CalendarProvider.TRAKT && CalendarAccountStore.traktClientId.isBlank() -> R.string.calendar_client_id_required
                 mode == "public" && provider == CalendarProvider.BANGUMI && weekStart != AiringCalendarRepository.weekStart(today) -> R.string.calendar_weekly_scope
                 remoteFollowing() && !result.hasKeeps -> R.string.calendar_account_follow_empty

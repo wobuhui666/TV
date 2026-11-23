@@ -12,7 +12,7 @@
     "app/src/leanback/res/values-zh-rTW/strings_poster_wall.xml": "3fbf2607354608a8d5aa34be0b396549530b892a8cbf45141ee7eea9f49fc29f",
     "app/src/test/java/com/fongmi/android/tv/api/rex/RexWallQueryTest.java": "d89bf162ec52714ad7779b37bb61569773027ad2dea4578f1205af39d848d701",
     "app/src/test/java/com/fongmi/android/tv/ui/rex/RexHomeCatalogTest.java": "49307bcbdf65f84f368d59e2b550e313957919c6c25394927d2bac4b331de186",
-    "app/src/androidTest/java/com/fongmi/android/tv/ui/PosterWallFiltersIntegrationTest.java": "2e39fc9cc42f7db184d89cf8c41cb6a3b2b38481feef666cc9fc6620355bdd1d"
+    "app/src/androidTest/java/com/fongmi/android/tv/ui/PosterWallFiltersIntegrationTest.java": "c6707c14b3e18c7a3e68f8afb1b5fbd287a6b02f53d67dfc31cdf987f0f75e84"
   },
   "environment": {
     "jdk": "21",
@@ -1321,9 +1321,132 @@
     ]
   },
   "limits": {
+    "scope": "Local host only (about 1.9 GiB memory)",
     "full_gradle_variant_completed": false,
     "apk_built_or_installed": false,
     "android_ui_executed": false,
-    "reason": "Full Gradle compilation exceeded available host memory; the separate Android device was running an existing MPV instrumentation session."
+    "reason": "Full Gradle compilation exceeded available host memory; the separate Android device was running an existing MPV instrumentation session.",
+    "superseded_by": "github_actions: the complete Gradle checks, APK build, baseline lint comparison and emulator UI run were done on GitHub Actions. The APKs were downloaded and checksummed but not installed on a physical device."
+  },
+  "github_actions": {
+    "repository": "wobuhui666/TV",
+    "branch": "verify/wall-filters-calendar-light-20261122",
+    "snapshot_commit": "faa561c5a77cf808fc446eb567493e9f6da69bd4",
+    "snapshot_note": "Snapshot commit on top of base e81c1364f8 containing the uncommitted working tree; pushed only to the verification branch, not to the working branch.",
+    "build_validation": {
+      "run": 45054922909,
+      "attempts": 2,
+      "conclusion": "success",
+      "first_attempt_failure": "Maven Central HTTP 429 while resolving a Media3 test dependency during the baseline lint build",
+      "tv_unit_tests": {
+        "task": ":app:testLeanbackArm64_v8aDebugUnitTest",
+        "suites": 170,
+        "tests": 1352,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "focused": {
+          "RexWallQueryTest": 17,
+          "RexTmdbQueryTest": 20,
+          "RexHomeCatalogTest": 10,
+          "PosterHomeCatalogTest": 12
+        }
+      },
+      "all_module_unit_tests": {
+        "suites": 208,
+        "tests": 1643,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "assemble": [
+        ":app:assembleLeanbackArm64_v8aDebug",
+        ":app:assembleLeanbackArm64_v8aDebugAndroidTest"
+      ],
+      "lint": {
+        "task": ":app:lintLeanbackArm64_v8aDebug",
+        "baseline": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+        "baseline_counts": {
+          "Error": 108,
+          "Warning": 388,
+          "Hint": 6
+        },
+        "current_counts": {
+          "Error": 108,
+          "Warning": 393,
+          "Hint": 6
+        },
+        "new_errors": 0,
+        "new_warnings": 8,
+        "clean_full_lint": false,
+        "note": "A full lint without a baseline fails on 108 errors that already exist at the base commit (run 45028363714)."
+      }
+    },
+    "apks": [
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.sourceprobe",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "09c1f3d00fc9122cf3b10a481818b1668355edd6960f84b0b972f75ce35707a0",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-sourceprobe.apk"
+      },
+      {
+        "file": "preview-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.preview",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "a4585ca1dd54a07a87d8d8ebebefd79f6081646d9132aec9643067eb0b1536cd",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-preview.apk"
+      }
+    ],
+    "ui_regression": {
+      "run": 45054858821,
+      "device": "GitHub Actions x86_64 emulator, API 34, google_apis, pixel_2 profile",
+      "package": "com.fongmi.android.tv.preview",
+      "network": "Synthetic TMDB and feed fixtures through an OkHttp interceptor; no real TMDB key",
+      "PosterWallFiltersIntegrationTest": {
+        "tests": 11,
+        "failures": 0
+      },
+      "TrackPresentationTest": {
+        "tests": 1,
+        "failures": 0
+      },
+      "run_conclusion": "failure",
+      "unrelated_failures_in_same_step": [
+        "NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults: ordinary search results page did not open in time",
+        "HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration: expected JSON lacks the mediaRef field"
+      ],
+      "unrelated_failures_note": "Neither test nor the code they exercise is changed by this work. Both fail with the same assertions at the base commit, so they are pre-existing and were left untouched.",
+      "earlier_attempts": [
+        {
+          "run": 45028368089,
+          "result": "stopped before the emulator: workflow did not install lxml for the Python source checks"
+        },
+        {
+          "run": 45048264552,
+          "result": "5 of 11 wall tests failed: the test re-tapped an already expanded summary chip (collapsing it) and did not pin the poster home layout that its Douban fixtures assume"
+        }
+      ],
+      "screenshots": [
+        "screenshots/wall-series-variety.png",
+        "screenshots/wall-trending-media.png",
+        "screenshots/wall-trending-restored.png",
+        "screenshots/wall-local-filter-douban_movie.png",
+        "screenshots/wall-filters-expanded.png"
+      ],
+      "base_commit_control": {
+        "run": 45062921427,
+        "snapshot_commit": "660ee280bee6b9823f7a949120562e6b94f2ef8b",
+        "content": "Base e81c1364f8 plus only the app-responsiveness.yml Python fixture setup",
+        "result": "Tests run: 9, Failures: 2 (the same two tests, same assertions)"
+      }
+    },
+    "not_covered": [
+      "Physical TV or ARM64 device UI run",
+      "Release-signed APK",
+      "Clean full lint without baseline"
+    ]
   }
 }

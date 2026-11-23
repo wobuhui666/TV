@@ -31,7 +31,9 @@ data class AiringCalendarResult(
     val page: Int = 1,
     val totalPages: Int = 1,
     val hasKeeps: Boolean = false,
-    val knownUpdateDates: Set<LocalDate> = emptySet()
+    val knownUpdateDates: Set<LocalDate> = emptySet(),
+    /** The account service rejected the saved token; retrying cannot succeed until the user reconnects. */
+    val unauthorized: Boolean = false
 )
 
 data class AiringCalendarFocusResult(

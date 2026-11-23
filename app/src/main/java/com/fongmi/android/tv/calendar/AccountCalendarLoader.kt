@@ -76,7 +76,12 @@ internal class AccountCalendarLoader internal constructor(
                         schedule(provider, week, follows, value, ticket, false)
                     }
                     override fun onError(error: Exception) {
-                        if (current(ticket)) schedule(provider, week, source.follows(provider), value, ticket, true)
+                        if (!current(ticket)) return
+                        // A rejected token fails every dated request too; keep the snapshot and ask to reconnect.
+                        if (error is CalendarAccountHttpException && error.status == 401) {
+                            listener(AiringCalendarResult(emptyList(), false, true,
+                                hasKeeps = source.follows(provider).isNotEmpty(), unauthorized = true))
+                        } else schedule(provider, week, source.follows(provider), value, ticket, true)
                     }
                 }
                 try { source.following(provider, value, tag, callback) }

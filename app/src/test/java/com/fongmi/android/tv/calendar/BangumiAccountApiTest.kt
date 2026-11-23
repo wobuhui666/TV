@@ -24,6 +24,14 @@ class BangumiAccountApiTest {
         assertNull(value.nextOffset)
     }
 
+    @Test fun shouldUseTheShortSummaryOfCollectionRowsWhichHaveNoFullSummary() {
+        val listed = collection(1, 3).replace("\"name\":\"原名1\"", "\"name\":\"原名1\",\"short_summary\":\"列表简介\"")
+        val both = collection(2, 3).replace("\"name\":\"原名2\"",
+            "\"name\":\"原名2\",\"summary\":\"完整简介\",\"short_summary\":\"列表简介\"")
+        val parsed = BangumiAccountApi.parseCollections(page(listOf(listed, both, collection(3, 3))), 0).items
+        assertEquals(listOf("列表简介", "完整简介", ""), parsed.map { it.media.content })
+    }
+
     @Test fun shouldAdvancePaginationUsingRawCountWhenSomeRowsAreFiltered() {
         val value = BangumiAccountApi.parseCollections(page(listOf(collection(1, 2), collection(2, 3)), total = 4), 0)
         assertEquals(listOf(2L), value.items.map { it.remoteId })

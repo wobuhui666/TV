@@ -48,7 +48,7 @@ TV 包在手机或触屏设备上浏览首页时，手指滑动及惯性滚动�
 
 没有可播放来源也能添加追剧。未关联 TMDB、没有公布日期或该周没有更新的收藏，可通过 **全部收藏** 查看和管理。请求失败提供重试，部分失败保留已加载内容；排期来自 TMDB，不表示片源已经上线。播出状态按日期显示，未知播出小时不补写时间；缺少评分、播出网络或简介时省略。焦点作品可显示透明艺术标题，缺图或加载失败时显示完整文字标题。
 
-切换到 Trakt 或 Bangumi 后，点 **账号 → 连接账号**：Trakt 先配置应用 Client ID，再用手机打开电视显示的授权地址并输入授权码；Bangumi 使用 [官方令牌页面](https://next.bgm.tv/demo/access-token) 生成个人访问令牌并粘贴。Trakt 应用注册使用 Redirect URI `urn:ietf:wg:oauth:2.0:oob`，不需要 Client Secret；构建时可用 `traktClientId` 或 `TRAKT_CLIENT_ID` 预置 Client ID。Trakt 授权过期时自动刷新；失效或撤销后重新连接。
+切换到 Trakt 或 Bangumi 后，点 **账号 → 连接账号**：Trakt 先配置应用 Client ID，再用手机打开电视显示的授权地址并输入授权码；Bangumi 使用 [官方令牌页面](https://next.bgm.tv/demo/access-token) 生成个人访问令牌并粘贴。Trakt 应用注册使用 Redirect URI `urn:ietf:wg:oauth:2.0:oob`，不需要 Client Secret；构建时可用 `traktClientId` 或 `TRAKT_CLIENT_ID` 预置 Client ID。Trakt 授权过期时自动刷新；失效或撤销后重新连接。服务拒绝已保存的令牌时，**我的追更** 提示重新连接，本机同步列表保留。
 
 **账号 → 同步追剧** 将 Trakt 电视剧 watchlist、Bangumi 动画「想看／在看」列表导入当前数据源的 **我的追更**。进入个人日历时最多每五分钟刷新列表；手动同步立即刷新。只有完整获取所有分页后才替换本机账号快照，失败保留旧列表，单集请求部分失败保留成功排期。远端列表和本地收藏独立保存，不上传本地全部收藏，也不自动删除远端项目。
 
