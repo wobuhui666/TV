@@ -189,10 +189,11 @@
     "collectionDeleteEndpoint": false
   },
   "limits": [
-    "One real account, read with a personal access token. GET requests only: no POST or PATCH was sent.",
-    "The account holds no anime collection in any status, so only the authorized empty-list path was exercised: non-empty private lists, dated episodes of followed titles and adult subjects were not.",
-    "The parser rules were mirrored in a Python script; the shipped Kotlin classes, the token dialog and Keystore storage were not run against the live service.",
-    "Write endpoints were compared with the published specification and Kazumi's requests only.",
+    "One real account and one subject. The account had no anime collection before the write check.",
+    "Writes: one POST (new private 'doing') and one PATCH ('doing' to 'on hold'). Resuming a paused title and Trakt writes were not sent.",
+    "The paused collection stays on the account: Bangumi has no delete endpoint.",
+    "The requests and parser rules were mirrored in Python scripts; the shipped Kotlin classes, the token dialog and Keystore storage were not run against the live service.",
+    "Adult subjects and accounts with many follows (rate limiting) were not covered.",
     "Bangumi's weekly feed has no exact-date query."
   ],
   "reference": {
@@ -202,5 +203,83 @@
     "collectionSummaryField": "short_summary",
     "collectionWrite": "POST /v0/users/-/collections/{subject_id}",
     "filtersAdultCollections": false
+  },
+  "write": {
+    "scope": "One subject on one real account, with the owner's permission. The subject id and title are not recorded.",
+    "rejectedAttempt": {
+      "checkedAt": "2026-11-23T22:26:31.422946+00:00",
+      "contentType": "application/json; charset=utf-8 (what the app sent before the fix)",
+      "add": {
+        "method": "POST",
+        "status": 415,
+        "appTreatsAsSuccess": false
+      },
+      "pause": {
+        "method": "PATCH",
+        "status": 415,
+        "appTreatsAsSuccess": false
+      },
+      "collectionCreated": false
+    },
+    "acceptedAttempt": {
+      "contentType": "application/json",
+      "checkedAt": "2026-11-23T22:29:00.225787+00:00",
+      "subjects": 1,
+      "preRead": 404,
+      "followsBefore": 0,
+      "add": {
+        "method": "POST",
+        "status": 202,
+        "appTreatsAsSuccess": true
+      },
+      "afterAdd": {
+        "status": 200,
+        "type": 3,
+        "private": true,
+        "subjectIdMatches": true,
+        "rate": 0,
+        "epStatus": 0,
+        "statusWithoutToken": 404
+      },
+      "import": {
+        "follows": 1,
+        "containsNewFollow": true,
+        "subjectHasNsfwKey": false,
+        "subjectHasSummaryKey": false,
+        "shortSummaryNonBlank": true,
+        "hasCover": true,
+        "subjectIdMatches": true
+      },
+      "week": {
+        "episodesStatus": 200,
+        "rows": 25,
+        "entriesThisWeek": 1,
+        "paginationComplete": true
+      },
+      "pause": {
+        "method": "PATCH",
+        "status": 204,
+        "appTreatsAsSuccess": true
+      },
+      "afterPause": {
+        "status": 200,
+        "type": 4,
+        "privateKept": true,
+        "rate": 0,
+        "epStatus": 0
+      },
+      "followsAfterPause": 0,
+      "requests": {
+        "GET": 13,
+        "POST": 1,
+        "PATCH": 1,
+        "statuses": [
+          200,
+          202,
+          204,
+          404
+        ]
+      }
+    }
   }
 }

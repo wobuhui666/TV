@@ -202,7 +202,9 @@ public final class AiringCalendarAndroidTest {
             LocalDate initial = LocalDate.parse(state().getSelectedDate());
             assertEquals(LocalDate.now(AiringCalendarRepository.TIME_ZONE), initial);
             assertEquals(7, state().getDays().size());
-            LocalDate monday = LocalDate.parse(state().getWeekStart());
+            // The Today action is hidden while today is selected, so on a Tuesday start one day later.
+            LocalDate weekStart = LocalDate.parse(state().getWeekStart());
+            LocalDate monday = weekStart.plusDays(1).equals(initial) ? initial : weekStart;
             focus("date:" + monday);
             await("Date focus selects Monday", () -> state().getSelectedDate().equals(monday.toString()) && !state().getLoading());
             device.pressDPadRight();
