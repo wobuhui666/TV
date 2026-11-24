@@ -2,13 +2,13 @@
 
 关联 [Issue #118](https://github.com/wobuhui666/TV/issues/118)。使用与账号配置见[追更日历](../../../native-discovery.md#追更日历)。
 
-- 验证快照：`b223afe44b2b552db447f8a0da0c598ee3877321`（基准 `e81c1364f8` 加当时全部未提交修改，仅推送到 `verify/wall-filters-calendar-light-20261122`）。
-- [GitHub Actions 验证](https://github.com/wobuhui666/TV/actions/runs/45207644467)：Ubuntu runner、JDK 21、Python 3.10、Android SDK 37.0；Media3 固定提交 `342f6590e02ac390e0bd6b4488b8a1bff55747c1` 与仓库固定补丁。本机 2 GB 内存无法完成 Gradle 编译，全部结果来自云端。
+- 验证快照：`3cc09a73e489beadeb93e0154bea93a925f7b879`（基准 `e81c1364f8` 加当时全部未提交修改，仅推送到 `verify/wall-filters-calendar-light-20261122`）。
+- [GitHub Actions 验证](https://github.com/wobuhui666/TV/actions/runs/45284538946)：Ubuntu runner、JDK 21、Python 3.10、Android SDK 37.0；Media3 固定提交 `342f6590e02ac390e0bd6b4488b8a1bff55747c1` 与仓库固定补丁。本机 2 GB 内存无法完成 Gradle 编译，全部结果来自云端。
 - 界面使用隔离包 `com.fongmi.android.tv.preview`，x86_64 模拟器 API 24、34，1920×1080 / density 320，离线夹具，不访问账号服务。
 
 | 检查 | API 34 | API 24 |
 | --- | --- | --- |
-| 日历、账号与 TMDB 接口专项 JVM | 117 项通过 | 117 项通过 |
+| 日历、账号与 TMDB 接口专项 JVM | 118 项通过 | 118 项通过 |
 | TV ARM64 debug、preview 与测试 APK | 构建通过 | 构建通过 |
 | Android lint 新增错误门槛 | 通过，错误 108→108 | 通过 |
 | 真实日历页 `AiringCalendarAndroidTest` | 12／12 | 12／12 |
@@ -16,7 +16,7 @@
 | 数据源、账号与主题信号 `CalendarProvidersAndroidTest` | 7／7 | 7／7 |
 | 截图检查 | 22／22 | 22／22 |
 
-本快照的运行在 API 24、34 上都一次通过。**API 24 仍不稳定**：上一个快照 `faa561c5`（与本快照只差下文的两处 Bangumi 修正）在同一运行内试了三次——第一次模拟器启动后 `adb: device offline` 超时而未执行测试；第二次真实日历页 `shouldKeepEmptyDatesNavigable` 在空日期上按“上”后焦点没有回到页眉（其余 22 项通过）；第三次 23 项全部通过。本次通过的 API 24 运行里仍有两次焦点请求发了第二次才生效，上表不代表这些用例在 API 24 上稳定。
+本快照的运行在 API 24、34 上都一次通过，且两端都没有出现焦点请求重发。**API 24 仍不能视为稳定**：快照 `faa561c5` 在同一运行内试了三次——第一次模拟器启动后 `adb: device offline` 超时而未执行测试；第二次真实日历页 `shouldKeepEmptyDatesNavigable` 在空日期上按“上”后焦点没有回到页眉（其余 22 项通过）；第三次 23 项全部通过。随后三个快照的 API 24 运行各一次，结果见过程记录。
 
 ## 主题刷新信号测试宿主
 
@@ -85,7 +85,7 @@
 | 写入收藏 | 一律 `POST` | 新增 `POST`、已有 `PATCH` | 两者都符合官方规范；`POST` 新增与 `PATCH` 搁置各实测一次 |
 | 请求节奏 | 收藏分页间隔 200 ms、并发 3 | 单集请求并发 4、无间隔 | 未修改；关注较多时是否触发限流未能验证 |
 
-两处修正各补一条单测（`BangumiAccountApiTest` 17 项、`AccountCalendarLoaderTest` 7 项），随本快照在 GHA 通过。重新连接提示在刷新关注列表时判断，刚同步后的五分钟内令牌失效仍显示加载失败；提示在界面上的呈现没有界面用例覆盖，也没有用失效的真实令牌在应用里复现。
+这两处和上面的请求头修正各补一条单测（`BangumiAccountApiTest` 17 项、`AccountCalendarLoaderTest` 7 项、`CalendarHttpClientTest` 7 项），随本快照在 GHA 通过。重新连接提示在刷新关注列表时判断，刚同步后的五分钟内令牌失效仍显示加载失败；提示在界面上的呈现没有界面用例覆盖，也没有用失效的真实令牌在应用里复现。
 
 另外，单集响应带有官方规范未列出的 `subject_id`，应用用它核对条目身份，本次 1,230 行都带有。官方规范没有删除收藏的接口，与应用以「搁置」代替取消一致。
 
@@ -98,7 +98,7 @@
 
 ## 过程记录
 
-专项 JVM 覆盖 UTC 换日、原生服务身份、逐集合并、分页完整性、失败时保留账号快照、取消后的迟到响应、私有请求缓存隔离、限流、授权数据解析及收藏状态更新规则。执行任务：`:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.calendar.*' --tests com.fongmi.android.tv.api.TmdbLibraryApiTest`、`:app:assembleLeanbackArm64_v8aDebug`、`:app:assembleLeanbackArm64_v8aPreview`、`:app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview`、`:app:lintLeanbackArm64_v8aDebug`。本快照的完整变体单测（1,354 项通过）、基准对比 lint（新增错误 0）与安装包来自[构建运行](https://github.com/wobuhui666/TV/actions/runs/45207621752)，安装包路径见[首页栏目完整筛选验证](../2026-11-22-home-wall-filters/README.md#安装包)。
+专项 JVM 覆盖 UTC 换日、原生服务身份、逐集合并、分页完整性、失败时保留账号快照、取消后的迟到响应、私有请求缓存隔离、限流、授权数据解析及收藏状态更新规则。执行任务：`:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.calendar.*' --tests com.fongmi.android.tv.api.TmdbLibraryApiTest`、`:app:assembleLeanbackArm64_v8aDebug`、`:app:assembleLeanbackArm64_v8aPreview`、`:app:assembleLeanbackArm64_v8aPreviewAndroidTest -PtvPreview`、`:app:lintLeanbackArm64_v8aDebug`。本快照的完整变体单测（1,355 项通过）、基准对比 lint（新增错误 0）与安装包来自[构建运行](https://github.com/wobuhui666/TV/actions/runs/45284521006)，安装包路径见[首页栏目完整筛选验证](../2026-11-22-home-wall-filters/README.md#安装包)。
 
 | 运行 | 结果 |
 | --- | --- |
@@ -106,6 +106,8 @@
 | [45028366076](https://github.com/wobuhui666/TV/actions/runs/45028366076) | 首次尝试 API 24 因 Maven Central HTTP 429 未编译；重跑后 API 24 数据源用例 7 项中 1 项焦点断言超时 |
 | [45048254959](https://github.com/wobuhui666/TV/actions/runs/45048254959) | API 34 通过；API 24 数据源用例 7 项中 1 项未读到已更新的“暂停”文字 |
 | [45054846949](https://github.com/wobuhui666/TV/actions/runs/45054846949) | 快照 `faa561c5`。API 34 通过；API 24 第一次模拟器离线，第二次真实日历页 1 项焦点断言失败，第三次全部通过 |
-| [45207644467](https://github.com/wobuhui666/TV/actions/runs/45207644467) | 快照 `b223afe4`，增加 Bangumi 两处修正。API 24、34 均一次通过 |
+| [45207644467](https://github.com/wobuhui666/TV/actions/runs/45207644467) | 快照 `b223afe4`，增加 Bangumi 简介与重新连接两处修正。API 24、34 均一次通过 |
+| [45281097875](https://github.com/wobuhui666/TV/actions/runs/45281097875) | 快照 `404dbe4d`，增加请求头修正。API 24、34 都在 `shouldNavigateDatesAndWeeksWithRemoteInEveryExperienceMode` 失败：用例固定走到周二再点“今天”，而选中今天时该按钮不显示，运行时东八区正是周二 |
+| [45284538946](https://github.com/wobuhui666/TV/actions/runs/45284538946) | 快照 `3cc09a73`，用例在周二顺延一天。API 24、34 均一次通过 |
 
-API 24 上数据源用例的修正都在测试侧：焦点请求按正式页面恢复焦点的方式重发，并在轮询时刷新无障碍节点缓存。API 24 每次通过的运行里都有焦点请求要发第二次才生效：`faa561c5` 的第二次尝试 1 次、第三次尝试 2 次，`b223afe4` 的运行 2 次；API 34 没有出现。连同 `shouldKeepEmptyDatesNavigable` 的偶发失败，说明 API 24 模拟器上日历宿主的单次焦点请求或方向键导航偶尔会丢失。原因没有定位，是模拟器负载还是页面焦点逻辑的竞态尚不清楚，生产焦点代码未修改；测试的重发会掩盖这一现象，判断 API 24 焦点可靠性时应以此为准。
+API 24 上数据源用例的修正都在测试侧：焦点请求按正式页面恢复焦点的方式重发，并在轮询时刷新无障碍节点缓存。API 24 通过的运行里多次出现焦点请求要发第二次才生效：`faa561c5` 的第二次尝试 1 次、第三次尝试 2 次，`b223afe4` 2 次，`404dbe4d` 与 `3cc09a73` 0 次；API 34 没有出现。连同 `shouldKeepEmptyDatesNavigable` 的偶发失败，说明 API 24 模拟器上日历宿主的单次焦点请求或方向键导航偶尔会丢失。原因没有定位，是模拟器负载还是页面焦点逻辑的竞态尚不清楚，生产焦点代码未修改；测试的重发会掩盖这一现象，判断 API 24 焦点可靠性时应以此为准。

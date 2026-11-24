@@ -1388,16 +1388,16 @@
         "application_id": "com.fongmi.android.tv.sourceprobe",
         "abi": "arm64-v8a",
         "build_type": "debug",
-        "sha256": "fc679c363153218c15a2c6ae250b5ffb093d03688e457f08a7d2558542108411",
-        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-sourceprobe.apk"
+        "sha256": "0598e8bbda13ba212d03c0b4a74d92a0750926c567cc70525b43a482628132bb",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261124-arm64-debug-sourceprobe.apk"
       },
       {
         "file": "preview-app-debug.apk",
         "application_id": "com.fongmi.android.tv.preview",
         "abi": "arm64-v8a",
         "build_type": "debug",
-        "sha256": "422cb488762dbfe2a57ccdeafd2b6c4f188bbd2ab619b15bd078c3e4537bcfa4",
-        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-preview.apk"
+        "sha256": "f79dc8fcb13385d2763e9b8740b09cc78e18fb55c23b0e541882784584d270c7",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261124-arm64-debug-preview.apk"
       }
     ],
     "ui_regression": {
@@ -1468,24 +1468,43 @@
         "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-preview.apk",
         "snapshot_commit": "faa561c5a77cf808fc446eb567493e9f6da69bd4",
         "run": 45054922909
+      },
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.sourceprobe",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "fc679c363153218c15a2c6ae250b5ffb093d03688e457f08a7d2558542108411",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-sourceprobe.apk",
+        "snapshot_commit": "b223afe44b2b552db447f8a0da0c598ee3877321",
+        "run": 45207621752
+      },
+      {
+        "file": "preview-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.preview",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "422cb488762dbfe2a57ccdeafd2b6c4f188bbd2ab619b15bd078c3e4537bcfa4",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-preview.apk",
+        "snapshot_commit": "b223afe44b2b552db447f8a0da0c598ee3877321",
+        "run": 45207621752
       }
     ],
     "followup_build": {
-      "snapshot_commit": "b223afe44b2b552db447f8a0da0c598ee3877321",
-      "run": 45207621752,
+      "snapshot_commit": "3cc09a73e489beadeb93e0154bea93a925f7b879",
+      "run": 45284521006,
       "attempts": 1,
       "conclusion": "success",
-      "difference_from_snapshot": "Airing-calendar Bangumi changes only (list summary fallback and reconnect prompt); no poster-wall source changed.",
+      "difference_from_snapshot": "Airing-calendar changes only: Bangumi list summary fallback, reconnect prompt, JSON content type without charset, and one calendar test date fix. No poster-wall source changed.",
       "tv_unit_tests": {
         "suites": 170,
-        "tests": 1354,
+        "tests": 1355,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       "all_module_unit_tests": {
-        "suites": 208,
-        "tests": 1645,
+        "tests": 1646,
         "failures": 0,
         "errors": 0,
         "skipped": 0
