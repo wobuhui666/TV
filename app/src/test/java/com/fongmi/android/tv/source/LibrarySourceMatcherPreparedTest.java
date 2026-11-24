@@ -9,6 +9,8 @@ import org.junit.Test;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class LibrarySourceMatcherPreparedTest {
     private record Target(String title, List<String> aliases, String year, boolean movie, Integer season) { }
@@ -51,6 +53,33 @@ public class LibrarySourceMatcherPreparedTest {
                 }
             }
         }
+    }
+
+    @Test public void shouldGiveTheSameVerdictWhenOnePreparedWorkJudgesSummariesDirectly() {
+        List<String> aliases = List.of("Joy of Life", "慶餘年");
+        var work = LibrarySourceMatcher.prepareWork("庆余年", aliases, "2019", false, 1);
+        for (String title : List.of("庆余年", "Joy of Life", "慶餘年 第一季", "庆余年 第二季", "庆余年 / 影评", "余年")) {
+            for (String year : List.of("", "2019", "2024")) for (String type : List.of("电影", "电视剧", "")) {
+                Vod source = source(title, year, type);
+                LibrarySourceMatcher.Match expected = LibrarySourceMatcher.match(source, "庆余年", aliases, "2019", false, 1);
+                assertEquals(title + " / " + year + " / " + type, expected, work.match(source));
+                assertEquals(title + " / " + year + " / " + type, expected, work.match(LibrarySourceMatcher.prepareSource(source)));
+            }
+        }
+    }
+
+    @Test public void shouldAcceptAKeptSummaryOnceRefinedAliasesNameIt() {
+        var summary = LibrarySourceMatcher.prepareSource(source("Joy of Life", "", "电视剧"));
+        assertFalse(LibrarySourceMatcher.prepareWork("庆余年", List.of(), "2019", false, 1).match(summary).matches());
+        assertTrue(LibrarySourceMatcher.prepareWork("庆余年", List.of("Joy of Life"), "2019", false, 1).match(summary).matches());
+        assertFalse(LibrarySourceMatcher.prepareWork("庆余年", List.of("Joy of Life"), "2019", false, 2).match(
+                LibrarySourceMatcher.prepareSource(source("Joy of Life 第一季", "", "电视剧"))).matches());
+    }
+
+    @Test public void shouldRejectEverySourceBeforeAWorkTitleIsKnown() {
+        var unknown = LibrarySourceMatcher.prepareWork("", List.of(), "", false, null);
+        assertEquals(new LibrarySourceMatcher.Match(false, false, 0), unknown.match(source("庆余年", "2019", "电视剧")));
+        assertEquals(new LibrarySourceMatcher.Match(false, false, 0), unknown.match((Vod) null));
     }
 
     @Test public void shouldKeepLaterSeasonYearRulesAndImplicitFirstSeasonDistinct() {

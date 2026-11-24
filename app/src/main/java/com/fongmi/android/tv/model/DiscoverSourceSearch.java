@@ -27,6 +27,7 @@ public final class DiscoverSourceSearch {
     private final AtomicLong generation = new AtomicLong();
     private CallTimeout deadline;
     private SiteApi.SearchRequest request;
+    private List<Query> plan = List.of();
     private int returned;
 
     public void start(List<Site> sites, List<String> keywords, Listener listener) {
@@ -40,7 +41,8 @@ public final class DiscoverSourceSearch {
         returned = 0;
         List<Job> jobs = new ArrayList<>();
         String scope = SourceHealthManager.currentScope();
-        for (Query query : queries(sites, keywords, priorityKeys)) {
+        plan = queries(sites, keywords, priorityKeys);
+        for (Query query : plan) {
             jobs.add(new Job(query.site, query.keyword,
                     SourceHealthManager.attempt(scope, query.site.getKey(), SourceHealthManager.Phase.SEARCH)));
         }
@@ -100,6 +102,20 @@ public final class DiscoverSourceSearch {
         // With no chosen source this is the original keyword-first configuration order.
         for (String name : names) for (Site site : remaining.values()) queries.add(new Query(site, name));
         return queries;
+    }
+
+    /** Whether these arguments would send exactly the requests of the search started last. */
+    public boolean covers(List<Site> sites, List<String> keywords, List<String> priorityKeys) {
+        return same(plan, queries(sites, keywords, priorityKeys));
+    }
+
+    static boolean same(List<Query> first, List<Query> second) {
+        if (first.size() != second.size()) return false;
+        for (int i = 0; i < first.size(); i++) {
+            // Instances rather than keys: a reloaded configuration may give a key to another site.
+            if (first.get(i).site != second.get(i).site || !first.get(i).keyword.equals(second.get(i).keyword)) return false;
+        }
+        return true;
     }
 
     public void stop() {

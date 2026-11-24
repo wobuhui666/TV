@@ -29,7 +29,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
-| 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
+| 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配、搜索复用与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
 | 首页栏目完整筛选 | [完整片库、综艺／节目性质与 TMDB 真实内容验证](testing/reports/2026-11-22-home-wall-filters/README.md) |
 | 追更日历账号与浅色模式 | [主题刷新信号、账号页浅色像素与焦点、未实测范围](testing/reports/2026-11-22-calendar-accounts-light/README.md) |
 | 媒体库片源兼容性 | [100源对照、瓜子实播与字段／选集修复](testing/reports/2026-11-19-library-source-compatibility/README.md) |

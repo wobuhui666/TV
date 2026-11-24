@@ -652,7 +652,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
                     bindLogo(value);
                     if (!identityLocked && !movie() && value.seasons().stream().noneMatch(season -> season.number() == selectedSeason)) selectedSeason = value.seasons().stream().filter(season -> season.number() > 0).mapToInt(LibraryMedia.Season::number).min().orElse(1);
                     bindWork(); renderPeople();
-                    if (!resources.isSelecting() && !playbackActive) { configureResources(); resources.start(); }
+                    if (!resources.isSelecting() && !playbackActive) { configureResources(); resources.refresh(); }
                     loadEpisodes();
                     if (resumeRequested) { resumeRequested = false; play(null, "play"); }
                 }
@@ -714,7 +714,7 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
         if (isInactive() || key != null) return;
         work = source;
         bindWork(); renderOriginalEpisodes(source);
-        if (!resources.isSelecting() && !playbackActive) { configureResources(); resources.start(); }
+        if (!resources.isSelecting() && !playbackActive) { configureResources(); resources.refresh(); }
         if (!identityLocked) loadMetadata();
     }
 

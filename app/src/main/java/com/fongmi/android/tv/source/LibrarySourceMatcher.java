@@ -23,7 +23,8 @@ public final class LibrarySourceMatcher {
         return match(source, work.getName(), aliases, work.getYear(), "movie".equals(work.getTypeName()), null);
     }
 
-    static PreparedSource prepareSource(Vod source) {
+    /** Parses one search summary; the result can be matched again whenever the work's metadata is refined. */
+    public static PreparedSource prepareSource(Vod source) {
         if (source == null || source.isFolder() || source.isAction()) return new PreparedSource(false, MediaIdentity.Kind.UNKNOWN, false, null, null);
         // These two season parsers intentionally remain separate: title safety uses SearchRelevance.
         return new PreparedSource(true, MediaMatcher.kind(source.getTypeName()), hasPlayback(source), MediaMatcher.extractSeason(source.getName()),
@@ -51,7 +52,8 @@ public final class LibrarySourceMatcher {
         return prepareWork(work.getName(), aliases, work.getYear(), "movie".equals(work.getTypeName()), null);
     }
 
-    static PreparedWork prepareWork(String title, List<String> aliases, String year, boolean movie, Integer season) {
+    /** Parses the title and its aliases once, so each source of a search costs a single title parse. */
+    public static PreparedWork prepareWork(String title, List<String> aliases, String year, boolean movie, Integer season) {
         year = releaseYear(year);
         SearchRelevance.PreparedQuery withYear = SearchRelevance.prepareQuery(new SearchRelevance.Query(title, aliases, year, season));
         SearchRelevance.PreparedQuery withoutYear = movie ? withYear
@@ -74,7 +76,7 @@ public final class LibrarySourceMatcher {
         return new Match(matches, automatic, titleMatch.score());
     }
 
-    static final class PreparedSource {
+    public static final class PreparedSource {
         private final boolean accepted;
         private final MediaIdentity.Kind kind;
         private final boolean hasPlayback;
@@ -85,7 +87,8 @@ public final class LibrarySourceMatcher {
         }
     }
 
-    static final class PreparedWork {
+    /** Immutable, so a selection may keep using it on a worker after the page moves to other metadata. */
+    public static final class PreparedWork {
         private final boolean movie;
         private final Integer season;
         private final SearchRelevance.PreparedQuery withYear, withoutYear, implicitFirst;
@@ -94,5 +97,8 @@ public final class LibrarySourceMatcher {
             this.movie = movie; this.season = season; this.withYear = withYear;
             this.withoutYear = withoutYear; this.implicitFirst = implicitFirst;
         }
+
+        public Match match(Vod source) { return match(prepareSource(source)); }
+        public Match match(PreparedSource source) { return LibrarySourceMatcher.match(source, this); }
     }
 }

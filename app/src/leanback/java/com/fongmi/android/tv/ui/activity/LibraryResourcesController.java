@@ -47,12 +47,19 @@ final class LibraryResourcesController {
     private final Map<String, Vod> sources = new LinkedHashMap<>();
     private final Map<String, Vod> hydrated = new LinkedHashMap<>();
     private final Set<String> attempted = new HashSet<>();
-    private String title = "", year = "", previousSite = "", previousId = "", originalKey = "";
+    private String title = "", previousSite = "", previousId = "", originalKey = "";
     private List<String> aliases = List.of();
+    private LibrarySourceMatcher.PreparedWork work = LibrarySourceMatcher.prepareWork("", List.of(), "", false, null);
     private boolean movie, running, error, closed, selecting;
     private boolean preparing;
     private record Prepared(Vod source, Flag flag, Episode episode, EpisodeTarget target) { }
     private record Resolved(Vod source, SmartSourceSelector.FlagSelection selection) { }
+    private record Found(Vod source, LibrarySourceMatcher.PreparedSource summary) { }
+    /** Beyond this many summaries, refined metadata searches again rather than holding them all. */
+    private static final int FOUND_LIMIT = 2000;
+    private final List<Found> found = new ArrayList<>();
+    /** Whether found holds every summary of a search that no deadline has cut short. */
+    private boolean reusable;
     private Prepared prepared;
     private EpisodeTarget lastPreparedTarget;
     private long preparedAttemptAt;
@@ -70,13 +77,14 @@ final class LibraryResourcesController {
 
     void metadata(String title, List<String> aliases, String year, boolean movie, Integer season, History history, Vod original) {
         cancelSelection(); prepared = null;
-        this.title = title; this.aliases = List.copyOf(aliases); this.year = year; this.movie = movie; this.season = season;
+        this.title = title; this.aliases = List.copyOf(aliases); this.movie = movie; this.season = season;
+        // Search responses, candidate ranking and detail confirmation reuse this one parse of the title and aliases.
+        work = LibrarySourceMatcher.prepareWork(title, this.aliases, year, movie, season);
         this.history = history == null ? null : history.copy();
         previousSite = history == null ? "" : history.getSiteKey();
         previousId = history == null ? "" : history.getVodId();
         originalKey = original == null ? "" : LibraryIdentity.sourceKey(original);
-        sources.entrySet().removeIf(entry -> !entry.getKey().equals(originalKey)
-                && !LibrarySourceMatcher.match(entry.getValue(), title, aliases, year, movie, season).matches());
+        sources.entrySet().removeIf(entry -> !entry.getKey().equals(originalKey) && !work.match(entry.getValue()).matches());
     }
 
     void seed(List<Vod> items) {
@@ -141,19 +149,17 @@ final class LibraryResourcesController {
         preparedAttemptAt = 0;
         search.stop();
         running = true; error = false;
-        List<String> names = new ArrayList<>();
-        if (!movie && season != null && season > 1) names.add(title + " 第" + season + "季");
-        names.add(title);
-        if (!aliases.isEmpty()) names.add(aliases.get(0));
+        found.clear(); reusable = true;
         render();
-        search.start(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names, PosterSourcePrioritySetting.getOrderedKeys(), new DiscoverSourceSearch.Listener() {
+        search.start(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names(), PosterSourcePrioritySetting.getOrderedKeys(), new DiscoverSourceSearch.Listener() {
             @Override public void onResult(Result result, int returned, int total) {
                 if (closed) return;
                 boolean changed = result == null && !error;
                 if (result == null) error = true;
                 else for (Vod source : result.getList()) {
-                    if (LibrarySourceMatcher.match(source, title, aliases, year, movie, season).matches()
-                            && sources.putIfAbsent(LibraryIdentity.sourceKey(source), source) == null) changed = true;
+                    LibrarySourceMatcher.PreparedSource summary = LibrarySourceMatcher.prepareSource(source);
+                    keep(source, summary);
+                    if (work.match(summary).matches() && sources.putIfAbsent(LibraryIdentity.sourceKey(source), source) == null) changed = true;
                 }
                 if (changed) render();
                 if (selecting && pending == null) attemptNext();
@@ -161,11 +167,48 @@ final class LibraryResourcesController {
             @Override public void onComplete(boolean deadline) {
                 if (closed) return;
                 running = false; error |= deadline;
+                // Sources that never answered deserve a new attempt once the metadata is refined.
+                if (deadline) forget();
                 render();
                 if (selecting && pending == null) attemptNext();
             }
         });
     }
+
+    /**
+     * Refined metadata rarely changes the requests. An identical search keeps running, or stays
+     * complete, and its summaries are matched again instead of asking every source a second time.
+     */
+    void refresh() {
+        if (!reusable || !search.covers(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names(), PosterSourcePrioritySetting.getOrderedKeys())) {
+            start();
+            return;
+        }
+        if (preparing) cancelSelection();
+        prepared = null;
+        preparedAttemptAt = 0;
+        for (Found item : found) {
+            if (work.match(item.summary()).matches()) sources.putIfAbsent(LibraryIdentity.sourceKey(item.source()), item.source());
+        }
+        render();
+        if (selecting && pending == null) attemptNext();
+    }
+
+    private List<String> names() {
+        List<String> names = new ArrayList<>();
+        if (!movie && season != null && season > 1) names.add(title + " 第" + season + "季");
+        names.add(title);
+        if (!aliases.isEmpty()) names.add(aliases.get(0));
+        return names;
+    }
+
+    private void keep(Vod source, LibrarySourceMatcher.PreparedSource summary) {
+        if (!reusable) return;
+        if (found.size() < FOUND_LIMIT) found.add(new Found(source, summary));
+        else forget();
+    }
+
+    private void forget() { found.clear(); reusable = false; }
 
     void choose(EpisodeTarget target, Vod manual) {
         cancelSelection();
@@ -201,7 +244,7 @@ final class LibraryResourcesController {
         for (int i = 0; i < VodConfig.get().getSites().size(); i++) configuredOrder.putIfAbsent(VodConfig.get().getSites().get(i).getKey(), i);
         SourceReliabilityStore reliability = new SourceReliabilityStore();
         candidates.removeIf(source -> attempted.contains(LibraryIdentity.sourceKey(source))
-                || !LibrarySourceMatcher.match(source, title, aliases, year, movie, season).matches()
+                || !work.match(source).matches()
                 && !LibraryIdentity.sourceKey(source).equals(originalKey)
                 && !(source.getSiteKey().equals(previousSite) && source.getId().equals(previousId)));
         // Minimal search summaries often omit type/year. The hydrated detail must confirm them before playback.
@@ -218,8 +261,7 @@ final class LibraryResourcesController {
         attempted.add(LibraryIdentity.sourceKey(candidate));
         int ticket = ++generation;
         Vod cached = hydrated.get(LibraryIdentity.sourceKey(candidate));
-        String requestTitle = title, requestYear = year;
-        List<String> requestAliases = aliases;
+        LibrarySourceMatcher.PreparedWork requestWork = work;
         boolean requestMovie = movie;
         Integer requestSeason = season;
         EpisodeTarget requestTarget = target;
@@ -232,7 +274,7 @@ final class LibraryResourcesController {
         // checks below reject results from an older season or a superseded remote action.
         ListenableFuture<Resolved> request = Task.submit(() -> {
             Vod selected = cached == null ? hydrate(candidate) : cached;
-            boolean valid = trusted || LibrarySourceMatcher.match(selected, requestTitle, requestAliases, requestYear, requestMovie, requestSeason).automatic();
+            boolean valid = trusted || requestWork.match(selected).automatic();
             return new Resolved(selected, valid ? find(selected, requestMovie, requestTarget, previous, requestHistory, requestSeason) : null);
         }, timeout, manual);
         pending = request;
@@ -323,7 +365,7 @@ final class LibraryResourcesController {
     }
 
     void close() {
-        closed = true; cancelSelection(); search.stop();
+        closed = true; cancelSelection(); search.stop(); found.clear();
         if (browsing != null) browsing.cancel(true);
         browsing = null;
     }
