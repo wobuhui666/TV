@@ -29,6 +29,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| 合并发布与按钮居中 | [Release 195 合并后验证、固定尺寸按钮内容居中的前后对照](testing/reports/2026-11-24-integrated-release/README.md) |
 | 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配、搜索复用与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
 | 首页栏目完整筛选 | [完整片库、综艺／节目性质与 TMDB 真实内容验证](testing/reports/2026-11-22-home-wall-filters/README.md) |
 | 追更日历账号与浅色模式 | [主题刷新信号、账号页浅色像素与焦点、未实测范围](testing/reports/2026-11-22-calendar-accounts-light/README.md) |
