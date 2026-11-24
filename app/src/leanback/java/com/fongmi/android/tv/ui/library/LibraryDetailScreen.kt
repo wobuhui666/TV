@@ -530,7 +530,8 @@ private fun PrimaryPlayButton(state: LibraryDetailState, modifier: Modifier, onC
 private fun DetailIconAction(key: String, label: String, icon: Int, modifier: Modifier,
     selected: Boolean = false, onAction: (String, String) -> Unit) {
     TvActionButton(onClick = { onAction(key, key) }, modifier = modifier.size(44.dp).semantics { contentDescription = label; this.selected = selected },
-        selected = selected, shape = CircleShape, contentPadding = PaddingValues(10.dp), focusedScale = 1.04f) {
+        selected = selected, shape = CircleShape, contentPadding = PaddingValues(10.dp), focusedScale = 1.04f,
+        contentModifier = Modifier.fillMaxSize()) {
         Icon(painterResource(icon), null, Modifier.size(22.dp))
     }
 }
@@ -543,7 +544,8 @@ private fun DetailFollowAction(selected: Boolean, modifier: Modifier, onAction: 
             contentDescription = label
             this.selected = selected
         }.width(116.dp).height(44.dp),
-        selected = selected, shape = CircleShape, contentPadding = PaddingValues(horizontal = 12.dp), focusedScale = 1.04f) {
+        selected = selected, shape = CircleShape, contentPadding = PaddingValues(horizontal = 12.dp), focusedScale = 1.04f,
+        contentModifier = Modifier.fillMaxSize()) {
         Icon(painterResource(if (selected) R.drawable.msr_favorite else R.drawable.msr_favorite_border), null, Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Text(label, modifier = Modifier.testTag("followLabel"), style = MaterialTheme.typography.labelMedium,

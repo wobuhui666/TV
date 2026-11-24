@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -310,7 +311,8 @@ class JetStreamPushView @JvmOverloads constructor(
         TvActionButton(
             onClick = { if (listener?.onCopyAddress() == true) showCopied() },
             modifier = Modifier.size(if (compact) 44.dp else 52.dp),
-            contentPadding = PaddingValues(10.dp)
+            contentPadding = PaddingValues(10.dp),
+            contentModifier = Modifier.fillMaxSize()
         ) {
             Icon(
                 painterResource(if (copied) R.drawable.msr_check else R.drawable.msr_content_copy),
@@ -334,7 +336,8 @@ class JetStreamPushView @JvmOverloads constructor(
             modifier = Modifier.height(if (compact) 52.dp else 56.dp)
                 .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier),
             selected = pushed,
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+            contentModifier = Modifier.fillMaxHeight()
         ) {
             Icon(
                 painterResource(if (pushed) R.drawable.msr_check else R.drawable.msr_content_paste),
