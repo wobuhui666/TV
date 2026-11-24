@@ -5,12 +5,14 @@ import com.github.catvod.utils.Prefers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public final class SourceReliabilityStore {
 
     private static final String PREFIX = "source_reliability_";
     private static final int MIN_SCORE = -3;
     private static final int MAX_SCORE = 3;
+    private static final Pattern INVALID_KEY = Pattern.compile("[^a-zA-Z0-9._-]");
     private final Map<String, Integer> memory;
     private final boolean persistent;
 
@@ -32,9 +34,7 @@ public final class SourceReliabilityStore {
         if (key == null || key.isEmpty()) return 0;
         if (!persistent) return memory.getOrDefault(key, 0);
         try {
-            int value = Math.clamp(Prefers.getInt(PREFIX + key, 0), MIN_SCORE, MAX_SCORE);
-            remember(key);
-            return value;
+            return Math.clamp(Prefers.getInt(PREFIX + key, 0), MIN_SCORE, MAX_SCORE);
         } catch (Throwable ignored) {
             return memory.getOrDefault(key, 0);
         }
@@ -77,7 +77,7 @@ public final class SourceReliabilityStore {
     }
 
     private String key(Vod item) {
-        return (item.getSiteKey() + "_" + item.getId()).replaceAll("[^a-zA-Z0-9._-]", "_");
+        return INVALID_KEY.matcher(item.getSiteKey() + "_" + item.getId()).replaceAll("_");
     }
 
     private void remember(String key) {

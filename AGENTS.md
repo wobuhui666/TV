@@ -37,6 +37,8 @@ Avoid unnecessary secondary labels and descriptions. Let the layout do the expla
 
 Tests use JUnit4 under `app/src/test/java`. Name test classes `*Test` and test methods with clear behavior statements, e.g. `shouldRejectImageMimeFormat`. Add or update tests when changing parsing, playback guard logic, database policies, or fallback behavior. Run the closest variant test before broader builds.
 
+When changing TMDB queries or filters, also validate against live TMDB content using `tmdbApiKey` from ignored `local.properties` or `TMDB_API_KEY`. Record sanitized results and coverage limits; never copy the key into source code, documentation, or test logs.
+
 ## Commit & Pull Request Guidelines
 
 Recent commits use short subjects, sometimes imperative (`Enhance...`) and sometimes concise fixes (`bugfix`, `fix ui`). Prefer a clear imperative subject under 72 characters and keep each commit scoped to one logical change. Pull requests should describe the user-visible impact, list tested Gradle commands, link related issues, and include screenshots or recordings for UI changes.

@@ -1697,8 +1697,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         List<Episode> choices = List.copyOf(mEpisodeItems);
         String source = getHistoryKey();
         String flag = mHistory == null ? "" : mHistory.getVodFlag();
-        VodSelectionDialog.show(this, getString(R.string.vod_control_episodes), choices.stream().map(Episode::getName).toList(),
-                Math.max(0, findEpisodeSelectedPosition()), position -> {
+        VodSelectionDialog.show(this, getString(R.string.vod_control_episodes), choices.size(),
+                Math.max(0, findEpisodeSelectedPosition()), position -> choices.get(position).getName(), position -> {
                     Episode episode = choices.get(position);
                     if (!source.equals(getHistoryKey()) || mHistory == null || !flag.equals(mHistory.getVodFlag()) || !mEpisodeItems.contains(episode)) return;
                     if (!episode.isSelected()) {
@@ -1713,8 +1713,8 @@ public class VideoActivity extends PlaybackActivity implements VodPlaybackHost, 
         if (mFlagItems.size() < 2 || mVod == null) return;
         List<Flag> choices = List.copyOf(mFlagItems);
         String source = getHistoryKey();
-        VodSelectionDialog.show(this, getString(R.string.vod_control_line), choices.stream().map(Flag::getShow).toList(),
-                Math.max(0, mFlagSelectedPos), position -> {
+        VodSelectionDialog.show(this, getString(R.string.vod_control_line), choices.size(),
+                Math.max(0, mFlagSelectedPos), position -> choices.get(position).getShow(), position -> {
                     if (!source.equals(getHistoryKey()) || !mFlagItems.contains(choices.get(position))) return;
                     cancelPendingSeek();
                     mVod.selectFlag(choices.get(position));

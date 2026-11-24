@@ -41,6 +41,7 @@ import com.fongmi.android.tv.source.MediaIdentity;
 import com.fongmi.android.tv.source.MediaMatcher;
 import com.fongmi.android.tv.ui.base.BaseActivity;
 import com.fongmi.android.tv.ui.dialog.ContentDialog;
+import com.fongmi.android.tv.ui.dialog.VodSelectionDialog;
 import com.fongmi.android.tv.ui.dialog.PosterSourcePriorityDialog;
 import com.fongmi.android.tv.ui.library.LibraryDetailBadge;
 import com.fongmi.android.tv.ui.library.LibraryDetailChoice;
@@ -499,22 +500,28 @@ public final class LibraryDetailActivity extends BaseActivity implements Library
             if (originalSource == null) return;
             Flag flag = originalSource.getFlags().stream().filter(item -> item.getFlag().equals(originalFlag)).findFirst().orElse(null);
             if (flag == null) return;
+            List<Episode> values = List.copyOf(flag.getEpisodes());
             int current = 0;
-            if (history != null) for (int i = 0; i < flag.getEpisodes().size(); i++) if (flag.getEpisodes().get(i).getUrl().equals(history.getEpisodeUrl())) current = i;
-            new MaterialAlertDialogBuilder(this).setTitle(R.string.library_all_episodes)
-                    .setSingleChoiceItems(flag.getEpisodes().stream().map(Episode::getName).toArray(String[]::new), current, (dialog, position) -> {
-                        dialog.dismiss(); originalPage = position / ORIGINAL_PAGE_SIZE;
-                        focusAfterRender(originalKey(flag, flag.getEpisodes().get(position)));
-                    }).show();
+            if (history != null) for (int i = 0; i < values.size(); i++) if (values.get(i).getUrl().equals(history.getEpisodeUrl())) current = i;
+            VodSelectionDialog.show(this, getString(R.string.library_all_episodes), values.size(), current,
+                    position -> values.get(position).getName(), position -> {
+                        if (isInactive()) return;
+                        originalPage = position / ORIGINAL_PAGE_SIZE;
+                        focusAfterRender(originalKey(flag, values.get(position)));
+                    });
             return;
         }
         if (episodes.isEmpty()) return;
-        new MaterialAlertDialogBuilder(this).setTitle(R.string.library_all_episodes)
-                .setSingleChoiceItems(episodes.stream().map(item -> getString(R.string.library_episode_title, item.number(), item.name())).toArray(String[]::new),
-                        currentEpisodeIndex(), (dialog, position) -> {
-                            dialog.dismiss(); catalogPage = position / CATALOG_PAGE_SIZE;
-                            focusAfterRender(episodeKey(episodes.get(position)));
-                        }).show();
+        List<LibraryMedia.Episode> values = List.copyOf(episodes);
+        int season = selectedSeason;
+        VodSelectionDialog.show(this, getString(R.string.library_all_episodes), values.size(), currentEpisodeIndex(),
+                position -> getString(R.string.library_episode_title, values.get(position).number(), values.get(position).name()),
+                position -> {
+                    if (isInactive() || selectedSeason != season) return;
+                    catalogPage = position / CATALOG_PAGE_SIZE;
+                    cataloguePositioned = true;
+                    focusAfterRender(episodeKey(values.get(position)));
+                });
     }
 
     private void chooseEpisode(String itemKey) {

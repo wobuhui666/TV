@@ -3,7 +3,7 @@ package com.fongmi.android.tv.ui.library
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -46,11 +47,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -172,47 +178,58 @@ internal fun LibraryDetailScreen(
     val scope = rememberCoroutineScope()
     registry.topInsetPx = with(androidx.compose.ui.platform.LocalDensity.current) { 36.dp.roundToPx() }
     val sections = remember(state) { detailSections(state) }
-    val focusModifier: @Composable (String) -> Modifier = { key ->
-        val requester = remember(key) { FocusRequester() }
-        DisposableEffect(key) {
-            registry.targets[key] = requester
-            if (key == "seasonSelector") registry.targets["season"] = requester
-            onDispose {
-                registry.targets.remove(key)
-                if (key == "seasonSelector") registry.targets.remove("season")
-            }
-        }
-        Modifier.focusRequester(requester).onFocusChanged {
-            if (it.isFocused) {
-                detailFocusLocation(key, state, sections)?.takeIf { it.second >= 0 }?.let { location ->
-                    registry.lastFocused[sections[location.first]] = key
+    val currentState = rememberUpdatedState(state)
+    val currentSections = rememberUpdatedState(sections)
+    val currentOnFocused = rememberUpdatedState(onFocused)
+    // Source results update the page frequently. Keep each card's modifier/callback stable
+    // and read the latest navigation data only when a focus or key event arrives.
+    val focusModifier: @Composable (String) -> Modifier = remember(registry, scope, hostView, listState) {
+        { key ->
+            val requester = remember(key) { FocusRequester() }
+            DisposableEffect(key) {
+                registry.targets[key] = requester
+                if (key == "seasonSelector") registry.targets["season"] = requester
+                onDispose {
+                    registry.targets.remove(key)
+                    if (key == "seasonSelector") registry.targets.remove("season")
                 }
-                onFocused(key)
             }
-        }.onPreviewKeyEvent { event ->
-            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
-                val sound = when (event.key) {
-                    Key.DirectionUp -> SoundEffectConstants.NAVIGATION_UP
-                    Key.DirectionDown -> SoundEffectConstants.NAVIGATION_DOWN
-                    Key.DirectionLeft -> SoundEffectConstants.NAVIGATION_LEFT
-                    Key.DirectionRight -> SoundEffectConstants.NAVIGATION_RIGHT
-                    else -> null
-                }
-                sound?.let(hostView::playSoundEffect)
-            }
-            val down = event.key == Key.DirectionDown
-            val up = event.key == Key.DirectionUp
-            if (!down && !up) false else {
-                val next = detailVerticalTarget(key, down, state, sections, registry)
-                if (next == null) false else {
-                    if (event.type == KeyEventType.KeyDown) {
-                        registry.focusJob?.cancel()
-                        registry.focusJob = scope.launch { focusDetailTarget(next, state, sections, listState, registry) }
+            Modifier.focusRequester(requester).onFocusChanged {
+                if (it.isFocused) {
+                    val state = currentState.value
+                    val sections = currentSections.value
+                    detailFocusLocation(key, state, sections)?.takeIf { it.second >= 0 }?.let { location ->
+                        registry.lastFocused[sections[location.first]] = key
                     }
-                    true
+                    currentOnFocused.value(key)
                 }
-            }
-        }.testTag(key)
+            }.onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) {
+                    val sound = when (event.key) {
+                        Key.DirectionUp -> SoundEffectConstants.NAVIGATION_UP
+                        Key.DirectionDown -> SoundEffectConstants.NAVIGATION_DOWN
+                        Key.DirectionLeft -> SoundEffectConstants.NAVIGATION_LEFT
+                        Key.DirectionRight -> SoundEffectConstants.NAVIGATION_RIGHT
+                        else -> null
+                    }
+                    sound?.let(hostView::playSoundEffect)
+                }
+                val down = event.key == Key.DirectionDown
+                val up = event.key == Key.DirectionUp
+                if (!down && !up) false else {
+                    val state = currentState.value
+                    val sections = currentSections.value
+                    val next = detailVerticalTarget(key, down, state, sections, registry)
+                    if (next == null) false else {
+                        if (event.type == KeyEventType.KeyDown) {
+                            registry.focusJob?.cancel()
+                            registry.focusJob = scope.launch { focusDetailTarget(next, state, sections, listState, registry) }
+                        }
+                        true
+                    }
+                }
+            }.testTag(key)
+        }
     }
     var handledFocusToken by remember(state.identity) { mutableIntStateOf(-1) }
     LaunchedEffect(state.identity, focusRequest.token, state.resources.size, state.episodes.size) {
@@ -606,8 +623,7 @@ private fun EpisodeSection(state: LibraryDetailState, registry: DetailFocusRegis
 
 @Composable
 private fun EpisodeCard(item: LibraryDetailItem, modifier: Modifier, onAction: () -> Unit) {
-    val interactions = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val focused by interactions.collectIsFocusedAsState()
+    val interactions = remember { MutableInteractionSource() }
     val onClick = { if (item.enabled) onAction() }
     Card(onClick = onClick,
         modifier = modifier.tvTouchInput(true, onClick, null, interactions).semantics {
@@ -625,7 +641,7 @@ private fun EpisodeCard(item: LibraryDetailItem, modifier: Modifier, onAction: (
         border = CardDefaults.border(border = Border.None, focusedBorder = Border.None),
         interactionSource = interactions
     ) {
-        EpisodeArtwork(item, focused)
+        EpisodeArtwork(item, interactions)
         Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (item.airDate.isNotBlank()) Text(item.airDate, style = MaterialTheme.typography.labelSmall,
@@ -647,14 +663,27 @@ private fun EpisodeCard(item: LibraryDetailItem, modifier: Modifier, onAction: (
 }
 
 @Composable
-private fun EpisodeArtwork(item: LibraryDetailItem, focused: Boolean) {
-    val outline = when {
-        focused -> MaterialTheme.colorScheme.primary
-        item.selected -> MaterialTheme.colorScheme.primary.copy(alpha = .45f)
-        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = .1f)
-    }
+private fun EpisodeArtwork(item: LibraryDetailItem, interactions: MutableInteractionSource) {
+    val focused = interactions.collectIsFocusedAsState()
+    val accent = MaterialTheme.colorScheme.primary
+    val restingOutline = if (item.selected) accent.copy(alpha = .45f)
+        else MaterialTheme.colorScheme.onSurface.copy(alpha = .1f)
     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(DetailCardShape)
-        .border(BorderStroke(if (focused) 2.dp else 1.dp, outline), DetailCardShape)) {
+        .drawWithCache {
+            val thin = 1.dp.toPx()
+            val thick = 2.dp.toPx()
+            val radius = 12.dp.toPx()
+            onDrawWithContent {
+                drawContent()
+                // Focus invalidates drawing only, leaving text layout and the image untouched.
+                val width = if (focused.value) thick else thin
+                val inset = width / 2f
+                drawRoundRect(color = if (focused.value) accent else restingOutline,
+                    topLeft = Offset(inset, inset),
+                    size = Size((size.width - width).coerceAtLeast(0f), (size.height - width).coerceAtLeast(0f)),
+                    cornerRadius = CornerRadius((radius - inset).coerceAtLeast(0f)), style = Stroke(width))
+            }
+        }) {
         if (item.image.isNotBlank()) {
             DetailArtwork(item.image, null, Modifier.fillMaxSize(), placeholderColor = MaterialTheme.colorScheme.surfaceVariant)
         } else {

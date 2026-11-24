@@ -1,0 +1,285 @@
+{
+  "checkedAt": "2026-11-23T15:02:00.771180+00:00",
+  "userAgent": "wobuhui666/TV/5.8.7 (Android) (https://github.com/wobuhui666/TV)",
+  "method": "GET only; redirects not followed; Python mirror of the Kotlin parser rules, not the shipped classes",
+  "calendar": {
+    "status": 200,
+    "weekdayBuckets": 7,
+    "animeTitles": 113,
+    "withSummaryText": 0,
+    "weekdayCounts": {
+      "1": 14,
+      "2": 10,
+      "3": 12,
+      "4": 11,
+      "5": 14,
+      "6": 25,
+      "7": 27
+    },
+    "contract": "ok"
+  },
+  "episodes": {
+    "limitRequested": 200,
+    "declaredEpisodes": 1350,
+    "fullSubjectHasNsfwKey": true,
+    "sampleSubject": 899,
+    "contract": "ok",
+    "pages": [
+      {
+        "offset": 0,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 200,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 400,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 600,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 800,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 1000,
+        "status": 200,
+        "rows": 200,
+        "total": 1230,
+        "limitReturned": 200
+      },
+      {
+        "offset": 1200,
+        "status": 200,
+        "rows": 30,
+        "total": 1230,
+        "limitReturned": 200
+      }
+    ],
+    "rows": {
+      "rows": 1230,
+      "dated": 1221,
+      "skippedUnparsedDate": 9
+    }
+  },
+  "authentication": {
+    "meWithoutToken": 401,
+    "meWithInvalidToken": 401,
+    "episodesWithInvalidToken": 401,
+    "collectionsWithInvalidToken": 401
+  },
+  "publicCollections": {
+    "profile": "one public profile; its name and titles are not recorded",
+    "limitRequested": 50,
+    "contract": "ok",
+    "pages": [
+      {
+        "type": 1,
+        "status": 200,
+        "rows": 50,
+        "limitReturned": 50,
+        "hasNextPage": true
+      },
+      {
+        "type": 3,
+        "status": 200,
+        "rows": 30,
+        "limitReturned": 50,
+        "hasNextPage": false
+      }
+    ],
+    "subjectFields": {
+      "subjectsInspected": 80,
+      "withNsfwKey": 0,
+      "withSummaryKey": 0,
+      "withShortSummaryKey": 80
+    },
+    "rowsSkippedByParser": 0,
+    "collectionStatus": {
+      "listedSubject": {
+        "status": 200,
+        "contract": "ok"
+      },
+      "subjectsOutsideTheLists": [
+        404
+      ]
+    }
+  },
+  "account": {
+    "meStatus": 200,
+    "usernamePresent": true,
+    "followsContract": "ok",
+    "collectionPages": 2,
+    "collectionLimitsReturned": [
+      50
+    ],
+    "importedAny": false,
+    "subjectFields": {
+      "subjectsInspected": 0,
+      "withNsfwKey": 0,
+      "withSummaryKey": 0,
+      "withShortSummaryKey": 0
+    },
+    "adultSubjectsFilteredByParser": 0,
+    "rowsSkippedByParser": 0,
+    "everyStatusList": {
+      "status": 200,
+      "anyRows": false,
+      "subjectFields": {
+        "subjectsInspected": 0,
+        "withNsfwKey": 0,
+        "withSummaryKey": 0,
+        "withShortSummaryKey": 0
+      }
+    },
+    "collectionStatus": {
+      "subjectsOutsideFollows": [
+        404
+      ]
+    },
+    "week": {
+      "weekStart": "2026-11-23",
+      "failedSubjects": 0,
+      "rateLimited": false,
+      "subjectsNotQueried": 0,
+      "entriesAny": false,
+      "rowsSkippedForWrongSubjectOrType": 0
+    }
+  },
+  "traffic": {
+    "requests": 22,
+    "status200": 16,
+    "status401": 4,
+    "status404": 2
+  },
+  "specification": {
+    "source": "https://bangumi.github.io/api/dist.json",
+    "infoVersion": "2026-07-24",
+    "collectionsLimitMaximum": 50,
+    "episodesLimitMaximum": 200,
+    "collectionSubjectLists": {
+      "nsfw": false,
+      "summary": false,
+      "short_summary": true
+    },
+    "episodeListsSubjectId": false,
+    "collectionWriteMethods": [
+      "PATCH",
+      "POST"
+    ],
+    "collectionDeleteEndpoint": false
+  },
+  "limits": [
+    "One real account and one subject. The account had no anime collection before the write check.",
+    "Writes: one POST (new private 'doing') and one PATCH ('doing' to 'on hold'). Resuming a paused title and Trakt writes were not sent.",
+    "The paused collection stays on the account: Bangumi has no delete endpoint.",
+    "The requests and parser rules were mirrored in Python scripts; the shipped Kotlin classes, the token dialog and Keystore storage were not run against the live service.",
+    "Adult subjects and accounts with many follows (rate limiting) were not covered.",
+    "Bangumi's weekly feed has no exact-date query."
+  ],
+  "reference": {
+    "project": "Predidit/Kazumi",
+    "commit": "635cd58d3ac7731085d0c64846ceefa52bc167bd",
+    "authorization": "personal access token from next.bgm.tv/demo/access-token, checked with GET /v0/me; no OAuth application",
+    "collectionSummaryField": "short_summary",
+    "collectionWrite": "POST /v0/users/-/collections/{subject_id}",
+    "filtersAdultCollections": false
+  },
+  "write": {
+    "scope": "One subject on one real account, with the owner's permission. The subject id and title are not recorded.",
+    "rejectedAttempt": {
+      "checkedAt": "2026-11-23T22:26:31.422946+00:00",
+      "contentType": "application/json; charset=utf-8 (what the app sent before the fix)",
+      "add": {
+        "method": "POST",
+        "status": 415,
+        "appTreatsAsSuccess": false
+      },
+      "pause": {
+        "method": "PATCH",
+        "status": 415,
+        "appTreatsAsSuccess": false
+      },
+      "collectionCreated": false
+    },
+    "acceptedAttempt": {
+      "contentType": "application/json",
+      "checkedAt": "2026-11-23T22:29:00.225787+00:00",
+      "subjects": 1,
+      "preRead": 404,
+      "followsBefore": 0,
+      "add": {
+        "method": "POST",
+        "status": 202,
+        "appTreatsAsSuccess": true
+      },
+      "afterAdd": {
+        "status": 200,
+        "type": 3,
+        "private": true,
+        "subjectIdMatches": true,
+        "rate": 0,
+        "epStatus": 0,
+        "statusWithoutToken": 404
+      },
+      "import": {
+        "follows": 1,
+        "containsNewFollow": true,
+        "subjectHasNsfwKey": false,
+        "subjectHasSummaryKey": false,
+        "shortSummaryNonBlank": true,
+        "hasCover": true,
+        "subjectIdMatches": true
+      },
+      "week": {
+        "episodesStatus": 200,
+        "rows": 25,
+        "entriesThisWeek": 1,
+        "paginationComplete": true
+      },
+      "pause": {
+        "method": "PATCH",
+        "status": 204,
+        "appTreatsAsSuccess": true
+      },
+      "afterPause": {
+        "status": 200,
+        "type": 4,
+        "privateKept": true,
+        "rate": 0,
+        "epStatus": 0
+      },
+      "followsAfterPause": 0,
+      "requests": {
+        "GET": 13,
+        "POST": 1,
+        "PATCH": 1,
+        "statuses": [
+          200,
+          202,
+          204,
+          404
+        ]
+      }
+    }
+  }
+}

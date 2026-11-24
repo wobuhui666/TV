@@ -71,6 +71,31 @@ public class SourceSelectionTest {
     }
 
     @Test
+    public void preservesFirstSourceWhenMatchingScoresTie() {
+        Vod first = vod("Show", "site-a", "a");
+        Vod second = vod("Show", "site-b", "b");
+        addEpisode(first, "01", "a1");
+        addEpisode(second, "01", "b1");
+
+        assertSame(first, SmartSourceSelector.selectSource(List.of(first, second), EpisodeTarget.of(1), "other", null));
+        assertSame(second, SmartSourceSelector.selectSource(List.of(second, first), EpisodeTarget.of(1), "other", null));
+    }
+
+    @Test
+    public void preservesFirstLineWhenMatchingScoresTie() {
+        Vod source = vod("Show", "site-a", "a");
+        Flag first = new Flag("first");
+        Flag second = new Flag("second");
+        first.getEpisodes().add(Episode.create("01", "a1"));
+        second.getEpisodes().add(Episode.create("01", "b1"));
+        source.setFlags(List.of(first, second));
+
+        assertSame(first, SmartSourceSelector.selectFlag(source, EpisodeTarget.of(1), "", null).flag());
+        source.setFlags(List.of(second, first));
+        assertSame(second, SmartSourceSelector.selectFlag(source, EpisodeTarget.of(1), "", null).flag());
+    }
+
+    @Test
     public void allowsUndetailedCandidateForDeferredEpisodeValidation() {
         Vod missing = vod("同名", "site-a", "a");
         Vod pending = vod("同名", "site-b", "b");

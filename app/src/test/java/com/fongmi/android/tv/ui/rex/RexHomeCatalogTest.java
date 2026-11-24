@@ -28,6 +28,31 @@ public class RexHomeCatalogTest {
     }
 
     @Test
+    public void regionalWallsUsePaginatedCatalogsWhileHomeKeepsItsFeed() {
+        for (String key : List.of("cn_tv", "cn_series", "kr_series", "cn_variety")) {
+            RexSection home = RexSections.byKey(key);
+            RexSection wall = RexSections.forWall(key);
+            assertEquals(RexSection.Source.REXNOW_REGIONAL, home.getSource());
+            assertEquals(RexSection.Source.TMDB_DISCOVER, wall.getSource());
+            assertEquals(home.getKey(), wall.getKey());
+            assertEquals(home.getLabelRes(), wall.getLabelRes());
+            assertEquals("discover/tv", wall.getQuery().path);
+            assertEquals(key.equals("kr_series") ? "KR" : "CN", wall.getQuery().params.get("with_origin_country"));
+            org.junit.Assert.assertFalse(wall.getQuery().params.containsKey("air_date.gte"));
+            org.junit.Assert.assertFalse(wall.getQuery().params.containsKey("first_air_date.gte"));
+            assertEquals(key.equals("cn_variety") ? "10764|10767" : null, wall.getQuery().params.get("with_genres"));
+        }
+    }
+
+    @Test
+    public void otherWallsKeepTheirExistingSourcesAndUnknownKeysStayAbsent() {
+        for (String key : List.of("cn_movie", "trending_day", "douban_movie", "anime_daily")) {
+            assertEquals(RexSections.byKey(key).getSource(), RexSections.forWall(key).getSource());
+        }
+        org.junit.Assert.assertNull(RexSections.forWall("unknown"));
+    }
+
+    @Test
     public void spotlightsPickLandscapeFirst() {
         RexFeedResult result = new RexFeedResult(section("a", 20), List.of(vod("1", "tv", false), vod("2", "tv", true)));
         List<RexFeedResult> spots = RexHomeCatalog.spotlights(List.of(result));

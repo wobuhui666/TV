@@ -104,7 +104,7 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
     val host = LocalView.current
     val registry = remember { CalendarFocusRegistry() }
     val scope = rememberCoroutineScope()
-    val contextKey = "${state.mode}:${state.weekStart}:${state.selectedDate}"
+    val contextKey = "${state.provider}:${state.mode}:${state.weekStart}:${state.selectedDate}"
     val row = remember(contextKey) {
         registry.rows.getOrPut(contextKey) { LazyListState() }.also {
             if (registry.rows.size > 24) {
@@ -124,9 +124,12 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
     val showToday = state.todayDate.isNotBlank() && state.todayDate != state.selectedDate
     val headers = buildList {
         add("mode:public"); add("mode:following")
+        add("provider")
+        if (state.provider != "tmdb") add("account")
         add("week:previous"); add("week:next")
         if (showToday) add("today")
-        if (state.mode == "following") add("keeps")
+        if (state.mode == "following" && state.provider == "tmdb") add("keeps")
+        if (state.canFollow) add("follow")
     }
     val footers = buildList { if (state.failed) add("retry"); if (state.hasMore) add("loadMore") }
     val date = "date:${state.selectedDate}"
@@ -216,7 +219,7 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
             .filter { it }.take(1).collect { onAction("loadMore", "") }
     }
     JetStreamTheme {
-        CompositionLocalProvider(LocalContentColor provides Color.White) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onBackground) {
             Box(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }.pointerInput(focusRequest.token) {
                 awaitPointerEventScope {
                     while (true) if (awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed && !it.previousPressed }) {
@@ -230,9 +233,9 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
                 CalendarBackdrop(state.preview.backdrop, motion, Modifier.fillMaxSize())
                 Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 28.dp)) {
                     Row(Modifier.fillMaxWidth().height(48.dp).focusGroup().testTag("calendarPrimaryHeader"),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(stringResource(R.string.calendar_title), Modifier.testTag("calendarTitle"),
-                            fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onBackground)
                         Row(Modifier.calendarGlass().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             CalendarGlassButton(stringResource(R.string.calendar_public), focus("mode:public"), state.mode == "public") {
                                 registry.pendingDate = null; onAction("mode", "public")
@@ -241,13 +244,19 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
                                 registry.pendingDate = null; onAction("mode", "following")
                             }
                         }
+                        CalendarGlassButton(when (state.provider) { "trakt" -> "Trakt"; "bangumi" -> "Bangumi"; else -> "TMDB" },
+                            focus("provider")) { onAction("provider", "") }
+                        if (state.provider != "tmdb") CalendarGlassButton(stringResource(R.string.calendar_account), focus("account"), state.connected) {
+                            onAction("account", "")
+                        }
+                        if (state.accountBusy) CircularProgressIndicator(Modifier.size(18.dp), color = MaterialTheme.colorScheme.onBackground, strokeWidth = 2.dp)
                         Spacer(Modifier.weight(1f))
                         Row(Modifier.calendarGlass().padding(horizontal = 3.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             CalendarGlassButton("‹", focus("week:previous").semantics {
                                 contentDescription = host.context.getString(R.string.calendar_previous_week)
                             }) { registry.pendingDate = null; onAction("week", "previous") }
-                            Text(state.weekLabel, Modifier.widthIn(max = 180.dp), color = Color.White,
+                            Text(state.weekLabel, Modifier.widthIn(max = 180.dp), color = MaterialTheme.colorScheme.onBackground,
                                 fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Clip)
                             CalendarGlassButton("›", focus("week:next").semantics {
                                 contentDescription = host.context.getString(R.string.calendar_next_week)
@@ -256,17 +265,25 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
                         if (showToday) CalendarGlassButton(stringResource(R.string.calendar_today), focus("today")) {
                             registry.pendingDate = null; onAction("today", "")
                         }
-                        if (state.mode == "following") CalendarGlassButton("☆", focus("keeps").semantics {
+                        if (state.mode == "following" && state.provider == "tmdb") CalendarGlassButton("☆", focus("keeps").semantics {
                             contentDescription = host.context.getString(R.string.calendar_all_keeps)
                         }) { onAction("keeps", "") }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Row(Modifier.width(484.dp).height(40.dp).focusGroup().testTag("calendarDateHeader"),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        state.days.forEach { day ->
-                            CalendarDateCell(day, day.date == state.selectedDate, Modifier.width(64.dp).then(focus("date:${day.date}"))) {
-                                onAction("date", day.date); registry.pendingDate = day.date
+                    Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.width(484.dp).height(40.dp).focusGroup().testTag("calendarDateHeader"),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            state.days.forEach { day ->
+                                CalendarDateCell(day, day.date == state.selectedDate, Modifier.width(64.dp).then(focus("date:${day.date}"))) {
+                                    onAction("date", day.date); registry.pendingDate = day.date
+                                }
                             }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        if (state.canFollow) CalendarGlassButton(stringResource(if (state.followingTitle)
+                            if (state.provider == "bangumi") R.string.calendar_pause else R.string.calendar_unfollow
+                            else R.string.calendar_follow), focus("follow"), state.followingTitle) {
+                            if (!state.accountBusy) onAction("follow", "")
                         }
                     }
                     Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.CenterStart) {
@@ -283,7 +300,9 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
                         }
                         if (state.items.isNotEmpty() && (state.loading || footers.isNotEmpty())) item(key = "calendarFooter") {
                             Column(Modifier.width(120.dp).padding(top = 34.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                if (state.loading) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                                if (state.loading) CircularProgressIndicator(Modifier.size(24.dp), color = MaterialTheme.colorScheme.onBackground, strokeWidth = 2.dp)
+                                if (state.failed) Text(stringResource(R.string.calendar_partial_failed),
+                                    color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, maxLines = 2)
                                 if (state.failed) CalendarGlassButton(stringResource(R.string.calendar_retry), focus("retry")) { onAction("retry", "") }
                                 if (state.hasMore) CalendarGlassButton(stringResource(R.string.calendar_load_more), focus("loadMore")) {
                                     if (!state.loading) onAction("loadMore", "")
@@ -297,14 +316,15 @@ internal fun AiringCalendarScreen(state: AiringCalendarState, focusRequest: Cale
     }
 }
 
-private fun Modifier.calendarGlass() = background(Color.White.copy(alpha = .09f), RoundedCornerShape(22.dp))
-    .border(1.dp, Color.White.copy(alpha = .13f), RoundedCornerShape(22.dp))
+@Composable
+private fun Modifier.calendarGlass() = background(MaterialTheme.colorScheme.onBackground.copy(alpha = .06f), RoundedCornerShape(22.dp))
+    .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = .13f), RoundedCornerShape(22.dp))
 
 @Composable
 private fun CalendarGlassButton(label: String, modifier: Modifier, selected: Boolean = false, onClick: () -> Unit) {
     CalendarNavigationSurface(onClick, selected, RoundedCornerShape(18.dp), modifier.height(36.dp)) {
         Box(Modifier.height(36.dp).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-            Text(label, color = Color.White, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
+            Text(label, color = LocalContentColor.current, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
         }
     }
 }
@@ -330,20 +350,22 @@ private fun CalendarDateCell(day: AiringCalendarDay, selected: Boolean, modifier
 private fun CalendarNavigationSurface(onClick: () -> Unit, selected: Boolean,
     shape: RoundedCornerShape, modifier: Modifier, compactDate: Boolean = false, content: @Composable BoxScope.() -> Unit) {
     val interactions = remember { MutableInteractionSource() }
-    val focusedText = if (compactDate) Color(0xFF101114) else Color.White
+    val foreground = MaterialTheme.colorScheme.onBackground
+    val background = MaterialTheme.colorScheme.background
+    val focusedText = if (compactDate) background else foreground
     Surface(onClick = onClick, modifier = modifier.tvTouchInput(true, onClick, interactionSource = interactions),
         shape = ClickableSurfaceDefaults.shape(shape = shape),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) Color.White.copy(alpha = if (compactDate) .14f else .16f) else Color.Transparent,
-            focusedContainerColor = if (compactDate) Color.White else Color.White.copy(alpha = if (selected) .16f else .08f),
-            pressedContainerColor = if (compactDate) Color.White else Color.White.copy(alpha = .20f),
-            contentColor = if (compactDate && !selected) Color.White.copy(alpha = .5f) else Color.White,
+            containerColor = if (selected) foreground.copy(alpha = if (compactDate) .12f else .10f) else Color.Transparent,
+            focusedContainerColor = if (compactDate) foreground else foreground.copy(alpha = if (selected) .12f else .08f),
+            pressedContainerColor = if (compactDate) foreground else foreground.copy(alpha = .16f),
+            contentColor = if (compactDate && !selected) foreground.copy(alpha = .65f) else foreground,
             focusedContentColor = focusedText, pressedContentColor = focusedText
         ),
         border = ClickableSurfaceDefaults.border(
             border = Border.None,
-            focusedBorder = if (compactDate) Border.None else Border(BorderStroke(2.dp, Color.White), shape = shape)
+            focusedBorder = if (compactDate) Border.None else Border(BorderStroke(2.dp, foreground), shape = shape)
         ), interactionSource = interactions) {
         CompositionLocalProvider(LocalContentColor provides androidx.tv.material3.LocalContentColor.current) {
             content()
@@ -356,11 +378,11 @@ private fun CalendarEmpty(state: AiringCalendarState, focus: @Composable (String
     onAction: (String, String) -> Unit, modifier: Modifier) {
     Column(modifier.testTag("calendarEmpty"), verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        if (state.loading) CircularProgressIndicator(Modifier.size(26.dp), color = Color.White, strokeWidth = 2.dp)
+        if (state.loading) CircularProgressIndicator(Modifier.size(26.dp), color = MaterialTheme.colorScheme.onBackground, strokeWidth = 2.dp)
         else {
             Text(if (state.failed) stringResource(R.string.calendar_load_failed) else state.emptyMessage.ifBlank {
                 stringResource(if (state.mode == "following" && !state.hasKeeps) R.string.calendar_empty_following else R.string.calendar_empty_day)
-            }, color = Color.White, fontSize = 14.sp, maxLines = 2)
+            }, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, maxLines = 2)
             if (state.failed) CalendarGlassButton(stringResource(R.string.calendar_retry), focus("retry")) { onAction("retry", "") }
             if (state.hasMore) CalendarGlassButton(stringResource(R.string.calendar_load_more), focus("loadMore")) { onAction("loadMore", "") }
         }
