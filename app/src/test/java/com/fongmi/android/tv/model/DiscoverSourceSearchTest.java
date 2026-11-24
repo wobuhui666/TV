@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -68,6 +69,33 @@ public class DiscoverSourceSearchTest {
         assertTrue(DiscoverSourceSearch.queries(null, List.of("title"), List.of("a")).isEmpty());
         assertTrue(DiscoverSourceSearch.queries(List.of(site("a")), null, List.of("a")).isEmpty());
         assertTrue(DiscoverSourceSearch.queries(List.of(site("a")), Arrays.asList(null, "", " "), List.of("a")).isEmpty());
+    }
+
+    @Test
+    public void identicalRequestsAreRecognisedSoRefinedMetadataNeedsNoSecondSearch() {
+        List<Site> sites = List.of(site("a"), site("b"));
+        List<DiscoverSourceSearch.Query> started = DiscoverSourceSearch.queries(sites, List.of("title", "alias"), List.of("b"));
+
+        assertTrue(DiscoverSourceSearch.same(started, DiscoverSourceSearch.queries(new ArrayList<>(sites),
+                List.of(" title", "alias", "title"), List.of("b", "missing"))));
+        assertTrue(DiscoverSourceSearch.same(List.of(), DiscoverSourceSearch.queries(sites, List.of(), List.of("b"))));
+    }
+
+    @Test
+    public void changedKeywordsOrderOrSiteInstancesRequireANewSearch() {
+        List<Site> sites = List.of(site("a"), site("b"));
+        List<DiscoverSourceSearch.Query> started = DiscoverSourceSearch.queries(sites, List.of("title", "alias"), List.of("b"));
+
+        for (List<String> keywords : List.of(List.of("title"), List.of("title", "other"), List.of("alias", "title"),
+                List.of("title 第2季", "title", "alias"))) {
+            assertFalse(keywords.toString(), DiscoverSourceSearch.same(started, DiscoverSourceSearch.queries(sites, keywords, List.of("b"))));
+        }
+        assertFalse("priority order", DiscoverSourceSearch.same(started, DiscoverSourceSearch.queries(sites, List.of("title", "alias"), List.of())));
+        assertFalse("removed site", DiscoverSourceSearch.same(started,
+                DiscoverSourceSearch.queries(List.of(sites.get(1)), List.of("title", "alias"), List.of("b"))));
+        // A reloaded configuration creates new sites, even when it keeps their keys.
+        assertFalse("reloaded sites", DiscoverSourceSearch.same(started,
+                DiscoverSourceSearch.queries(List.of(site("a"), site("b")), List.of("title", "alias"), List.of("b"))));
     }
 
     private static Site site(String key) { return Site.get(key, key); }

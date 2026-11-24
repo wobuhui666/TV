@@ -83,6 +83,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private final Map<String, Integer> trackIdsByGroupId;
     private final MpvSeekPreroll seekPreroll = new MpvSeekPreroll();
     private final MpvVideoOutputRecovery videoOutputRecovery = new MpvVideoOutputRecovery();
+    private final MpvVideoPath videoPath = new MpvVideoPath();
     private boolean outputReloadPending;
     private boolean awaitingOutputStart;
     private boolean recoveryHasVideo;
@@ -868,6 +869,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 readVideoSize();
                 // DV metadata may surface late (HLS) or via track switch; policy is idempotent.
                 if (applyDolbyPolicy()) return;
+                reportVideoPath();
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_PLAYBACK_RESTART -> {
@@ -877,6 +879,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 if (!finishResumeSeek()) return;
                 seekAfterLoadIfNeeded();
                 readRuntimeState();
+                // The first reconfiguration can precede the first decoded frame.
+                if (!videoPath.isReported()) reportVideoPath();
                 updateBufferingState();
                 invalidateState();
             }
@@ -1062,6 +1066,12 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         } else {
             MpvLogCollector.log("MpvPlayer", "暂未取得视频尺寸，不能据此判断为纯音频");
         }
+    }
+
+    /** A wrong picture on one device depends on which of these paths decoded and converted it. */
+    private void reportVideoPath() {
+        String line = videoPath.changed(MpvVideoPath.describe(name -> propString(name, null), selectedVideoDolbyProfile()));
+        if (line != null) MpvLogCollector.log("MpvPlayer", "视频链路: " + line);
     }
 
     PlaybackSpecs getPlaybackSpecs() {
@@ -1363,6 +1373,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     private void beginVideoOutputPlayback() {
         videoOutputRecovery.beginPlayback();
+        videoPath.reset();
         pendingResumeSeekMs = C.TIME_UNSET;
         outputReloadPending = false;
         awaitingOutputStart = false;
@@ -1454,6 +1465,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
             loading = true;
             playerError = null;
             playbackState = Player.STATE_BUFFERING;
+            // A decoder switch that leaves the path unchanged is worth seeing in the log too.
+            videoPath.reset();
             applyOptions.run();
             if (!rebindVideoOutputForDecoderChange(reason)) {
                 fail(new PlaybackException(reason + "时重绑视频输出失败", null,

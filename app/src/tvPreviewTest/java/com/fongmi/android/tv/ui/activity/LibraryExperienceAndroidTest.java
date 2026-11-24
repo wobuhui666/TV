@@ -45,6 +45,7 @@ import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.source.LibraryIdentity;
 import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.custom.JetStreamVodCardRootLayout;
+import com.fongmi.android.tv.ui.dialog.VodSelectionDialog;
 import com.fongmi.android.tv.ui.library.LibraryDetailState;
 import com.fongmi.android.tv.ui.library.LibraryDetailView;
 import com.fongmi.android.tv.ui.theme.JetStreamPalette;
@@ -104,6 +105,7 @@ public final class LibraryExperienceAndroidTest {
     private final List<String> prefetchedEpisodes = java.util.Collections.synchronizedList(new ArrayList<>());
     private final List<String> requestedMedia = java.util.Collections.synchronizedList(new ArrayList<>());
     private final List<String> requestedSites = java.util.Collections.synchronizedList(new ArrayList<>());
+    private final List<String> searchRequests = java.util.Collections.synchronizedList(new ArrayList<>());
     private final AtomicInteger extrasRequests = new AtomicInteger();
     private final AtomicInteger sourceActions = new AtomicInteger();
     private final List<String> requestedFolders = java.util.Collections.synchronizedList(new ArrayList<>());
@@ -113,6 +115,7 @@ public final class LibraryExperienceAndroidTest {
     private boolean series, anime, noSources, tmdbFails, holdDetails, holdSearch, summaryTypesMissing;
     private boolean directPrefetch, fallbackLogo, reorderedEpisodes, generatedEpisodes, absoluteEpisodes, holdLink;
     private boolean multipleSeasons, holdSecondSeason, multipleLines, longSeason, mixedQualities;
+    private int longSeasonCount = 35;
     private boolean folderSearch, snapshotTaken;
     private String failedDetailSite = "", failedPlaybackSite = "", heldDetailSite = "";
 
@@ -188,6 +191,7 @@ public final class LibraryExperienceAndroidTest {
                         catch (InterruptedException error) { Thread.currentThread().interrupt(); throw new IOException(error); }
                     }
                     if (url.queryParameter("ids") != null && url.encodedPath().equals(failedDetailSite)) throw new IOException("Fixture source detail failure");
+                    if (url.queryParameter("wd") != null) searchRequests.add(url.encodedPath() + " " + url.queryParameter("wd"));
                     body = sourceResponse(url).getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 } else {
                     if (tmdbFails) throw new IOException("Offline TMDB failure");
@@ -966,6 +970,65 @@ public final class LibraryExperienceAndroidTest {
         } finally { AppDatabase.get().getHistoryDao().delete(VodConfig.getCid(), saved.getKey()); }
     }
 
+    @Test public void allEpisodesPickerJumpsAcrossALongSeasonWithoutChangingResumeTarget() {
+        series = longSeason = true;
+        longSeasonCount = 1200;
+        History saved = new History(); saved.setKey("fixture-b@@@fixture-work@@@" + VodConfig.getCid()); saved.setCid(VodConfig.getCid());
+        saved.setVodName(work().getName()); saved.setVodPic(work().getPic()); saved.setVodFlag("线路一"); saved.setVodRemarks("第1199集"); saved.setEpisodeUrl("episode-1199");
+        saved.setMediaRef("tmdb:tv:101"); saved.setMediaSeason(1); saved.setMediaEpisode(1199); saved.setPosition(120_000); saved.setDuration(2_700_000);
+        saved.setCreateTime(System.currentTimeMillis()); AppDatabase.get().getHistoryDao().insertOrUpdate(saved);
+        try {
+            LibraryDetailActivity detail = open(true, false);
+            await("The saved episode range loads", () -> hasItem(detail, "episode:1:1199"));
+            String resumeHint = state(detail).getPlayHint();
+            click(detail, "episodePicker");
+            VodSelectionDialog[] picker = new VodSelectionDialog[1];
+            await("Episode picker opens", () -> {
+                main(() -> picker[0] = (VodSelectionDialog) detail.getSupportFragmentManager().findFragmentByTag("vod-selection"));
+                return picker[0] != null && picker[0].getDialog() != null && picker[0].getDialog().isShowing();
+            });
+            RecyclerView recycler = picker[0].getDialog().findViewById(R.id.recycler);
+            main(() -> {
+                assertEquals(1200, recycler.getAdapter().getItemCount());
+                assertTrue("Only visible episode rows are attached", recycler.getChildCount() < 50);
+            });
+            await("The saved episode owns picker focus", () -> {
+                boolean[] ready = new boolean[1];
+                main(() -> {
+                    RecyclerView.ViewHolder holder = recycler.findViewHolderForAdapterPosition(1198);
+                    ready[0] = holder != null && holder.itemView.hasFocus();
+                });
+                return ready[0];
+            });
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
+            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER);
+            await("The chosen episode gains actual detail focus", () -> "episode:1:1200".equals(focused(detail))
+                    && detail.hasWindowFocus());
+            assertEquals("Browsing keeps the resume episode", Integer.valueOf(1199), field(detail, "selectedEpisode"));
+            assertEquals(resumeHint, state(detail).getPlayHint());
+            assertEquals("Browsing never starts playback", 0, plays.get());
+        } finally { AppDatabase.get().getHistoryDao().delete(VodConfig.getCid(), saved.getKey()); }
+    }
+
+    @Test public void indexedEpisodePickerFormatsOnlyVisibleLabelsAndKeepsSelectedIndex() {
+        LibraryDetailActivity detail = open(false, false);
+        AtomicInteger formatted = new AtomicInteger();
+        AtomicInteger selected = new AtomicInteger(-1);
+        main(() -> VodSelectionDialog.show(detail, "Episodes", 10_000, 9998,
+                position -> { formatted.incrementAndGet(); return "Episode " + (position + 1); }, selected::set));
+        UiObject2 current = device.wait(Until.findObject(By.text("Episode 9999")), 10_000);
+        assertNotNull("The selected distant episode is visible", current);
+        await("The selected episode owns focus", () -> {
+            UiObject2 node = device.findObject(By.text("Episode 9999"));
+            return node != null && node.isFocused();
+        });
+        assertTrue("Opening the picker formats a bounded number of labels", formatted.get() < 200);
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_DOWN);
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_DPAD_CENTER);
+        await("The last row returns its original index", () -> selected.get() == 9999);
+        assertTrue("Navigation still formats only visible labels", formatted.get() < 200);
+    }
+
     @Test public void browsingEpisodesWithTheRemoteKeepsTheResumeTargetAndTime() {
         series = true;
         History saved = new History(); saved.setKey("fixture-b@@@fixture-work@@@" + VodConfig.getCid()); saved.setCid(VodConfig.getCid());
@@ -1064,6 +1127,40 @@ public final class LibraryExperienceAndroidTest {
             assertTrue(search.findViewById(R.id.filterSeries).isSelected());
             assertFalse(search.findViewById(R.id.filter).isSelected());
         });
+    }
+
+    @Test public void refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource() {
+        LibraryDetailActivity detail = open(true, false);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        await("Both sources answer", () -> !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        assertEquals("TMDB metadata does not repeat an identical search", List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗"), searches());
+    }
+
+    @Test public void refinedTitleSearchesEverySourceAgainWithTheNewKeyword() {
+        series = true;
+        Vod item = work(); item.setName("锦金钗别传");
+        LibraryDetailActivity detail = (LibraryDetailActivity) instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), LibraryDetailActivity.class)
+                .putExtra("work", item).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); activities.add(detail);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        await("The TMDB title finds both sources", () -> field(detail, "metadata") != null && !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        List<String> requests = searches();
+        assertTrue("The refined title is searched on every source: " + requests, requests.containsAll(List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗")));
+        assertEquals("No request is sent twice: " + requests, requests.size(), new java.util.HashSet<>(requests).size());
+    }
+
+    @Test public void hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch() {
+        series = tmdbFails = true;
+        Vod item = work(); item.setId("fixture-work"); item.setTypeName(""); item.setSite(VodConfig.get().getSite("fixture-a"));
+        LibraryDetailActivity detail = (LibraryDetailActivity) instrumentation.startActivitySync(new Intent(instrumentation.getTargetContext(), LibraryDetailActivity.class)
+                .putExtra("work", item).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); activities.add(detail);
+        LibraryResourcesController resources = (LibraryResourcesController) field(detail, "resources");
+        // The untyped summary is treated as a film until its detail arrives; only then can the series summary of the other source match.
+        await("The series detail accepts the other source", () -> hasItem(detail, "original:线路一:second")
+                && !resources.isRunning() && resources.snapshot().size() == 2);
+        instrumentation.waitForIdleSync();
+        assertEquals("The source detail does not repeat an identical search", List.of("/fixture-a 锦金钗", "/fixture-b 锦金钗"), searches());
     }
 
     @Test public void sourceOnlySeriesKeepsOriginalEpisodesWhenTmdbIsUnavailable() {
@@ -1512,7 +1609,7 @@ public final class LibraryExperienceAndroidTest {
         if (url.encodedPath().contains("/season/")) {
             List<Map<String, Object>> episodes = new ArrayList<>();
             if (longSeason) {
-                for (int i = 1; i <= 35; i++) episodes.add(Map.of("episode_number", i, "name", "长季故事 " + i,
+                for (int i = 1; i <= longSeasonCount; i++) episodes.add(Map.of("episode_number", i, "name", "长季故事 " + i,
                         "runtime", 45, "air_date", "2026-01-01", "still_path", "/series-episode.jpg",
                         "overview", "一场相遇改变了原本平静的生活，新的故事由此展开。"));
                 return App.gson().toJson(Map.of("episodes", episodes));
@@ -1530,7 +1627,7 @@ public final class LibraryExperienceAndroidTest {
         metadata.put("production_countries", List.of(Map.of("name", anime ? "日本" : series ? "中国大陆" : "美国")));
         metadata.put("seasons", multipleSeasons
                 ? List.of(Map.of("season_number", 1, "episode_count", 4), Map.of("season_number", 2, "episode_count", 4))
-                : List.of(Map.of("season_number", 1, "episode_count", longSeason ? 35 : anime ? 12 : 30)));
+                : List.of(Map.of("season_number", 1, "episode_count", longSeason ? longSeasonCount : anime ? 12 : 30)));
         if (series) {
             metadata.put("original_language", anime ? "ja" : "zh"); metadata.put("in_production", true);
             metadata.put("last_episode_to_air", Map.of("season_number", 1, "episode_number", 4, "air_date", "2026-10-22"));
@@ -1552,6 +1649,7 @@ public final class LibraryExperienceAndroidTest {
         metadata.put("recommendations", Map.of("results", recommendations));
         return App.gson().toJson(metadata);
     }
+    private List<String> searches() { synchronized (searchRequests) { return searchRequests.stream().sorted().toList(); } }
     private Object field(Object target, String name) { return HomePreviewFixtures.field(target, name); }
     private void set(Object target, String name, Object value) { HomePreviewFixtures.setField(target, name, value); }
     private void main(Runnable action) { instrumentation.runOnMainSync(action); }

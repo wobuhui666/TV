@@ -21,6 +21,7 @@ import com.fongmi.android.tv.utils.ResUtil;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ import java.util.Set;
 /** Compact, palette-backed wall filters; remote lists query the server, feeds filter their own items. */
 final class PosterWallFilterController implements DiscoverFilterPanelPresenter.Listener {
 
-    private static final int MEDIA = 1, GENRE = 2, REGION = 3, YEAR = 4, SORT = 5;
+    private static final int MEDIA = 1, GENRE = 2, REGION = 3, YEAR = 4, SORT = 5, TV_TYPE = 6;
     private static final java.util.regex.Pattern RATING = java.util.regex.Pattern.compile("[0-9]+(?:\\.[0-9]+)?分?");
     private static final java.util.regex.Pattern RELEASE_YEAR = java.util.regex.Pattern.compile("\\d{4}");
     private final ViewGroup container;
@@ -39,27 +40,35 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
     private final DiscoverFilterPanel panel = new DiscoverFilterPanel();
     private final DiscoverFilterPanelPresenter presenter = new DiscoverFilterPanelPresenter(this);
     private final Presenter.ViewHolder holder;
+    private final Map<String, List<DiscoverFacet>> genreLists = new HashMap<>();
     private List<DiscoverFacet> remoteGenres = List.of();
     private List<Vod> localItems = List.of();
     private Map<String, List<Vod>> weekly = Map.of();
-    private String mediaType = "", genre = "", region = "", dateStart = "", dateEnd = "", sort = "", weekday = "";
+    private String mediaType = "", genre = "", region = "", dateStart = "", dateEnd = "", sort = "", weekday = "", tvType = "";
+    private int genreGeneration;
     private boolean closed;
 
     PosterWallFilterController(ViewGroup container, RexTmdbQuery.Query original, Runnable changed) {
         this.container = container;
-        this.original = original;
+        this.original = original == null ? null : RexWallQuery.browse(original);
+        if (original != null) {
+            region = original.params.getOrDefault("with_origin_country", "");
+            tvType = "10764|10767".equals(original.params.get("with_genres")) ? "variety" : original.params.getOrDefault("with_type", "");
+        }
         this.changed = changed;
+        panel.setRowCount(7);
+        panel.setLabel(TV_TYPE, text(R.string.poster_wall_tv_type));
         holder = presenter.onCreateViewHolder(container);
         container.addView(holder.view);
         holder.view.setPadding(0, ResUtil.dp2px(4), 0, ResUtil.dp2px(4));
         holder.view.findViewById(R.id.filterTitle).setVisibility(View.GONE);
         holder.view.findViewById(R.id.filterHint).setVisibility(View.GONE);
         update();
-        if (original != null && !isTrending() && !original.params.containsKey("with_genres")) loadGenres();
+        if (hasRemoteGenres()) loadGenres();
     }
 
     RexTmdbQuery.Query query() {
-        return RexWallQuery.apply(original, mediaType, genre, region, dateStart, dateEnd, sort);
+        return RexWallQuery.apply(original, mediaType, genre, region, dateStart, dateEnd, sort, tvType);
     }
 
     void setLocalItems(List<Vod> items, Map<String, List<Vod>> groups) {
@@ -101,14 +110,31 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
 
     private boolean isTrending() { return original != null && original.path.startsWith("trending/"); }
 
+    private String effectiveMediaType() { return isTrending() ? mediaType : original == null ? "" : original.fallbackMediaType; }
+
+    private boolean hasRemoteGenres() { return original != null && !effectiveMediaType().isEmpty() && !original.params.containsKey("with_genres"); }
+
+    private boolean hasAdvancedTrendFilters() {
+        return !genre.isEmpty() || !region.isEmpty() || !dateStart.isEmpty() || !dateEnd.isEmpty() || !sort.isEmpty() || !tvType.isEmpty();
+    }
+
     private void loadGenres() {
-        DiscoverApi.fetchGenres(original.fallbackMediaType, BuildConfig.TMDB_API_KEY, tag, new DiscoverApi.FacetListener() {
+        int ticket = ++genreGeneration;
+        DiscoverApi.cancel(tag);
+        String type = effectiveMediaType();
+        remoteGenres = genreLists.getOrDefault(type, List.of());
+        if (!hasRemoteGenres() || genreLists.containsKey(type)) {
+            update();
+            return;
+        }
+        DiscoverApi.fetchGenres(type, BuildConfig.TMDB_API_KEY, tag, new DiscoverApi.FacetListener() {
             @Override public void onSuccess(List<DiscoverFacet> items) {
-                if (closed) return;
-                remoteGenres = items;
+                if (closed || ticket != genreGeneration || !type.equals(effectiveMediaType())) return;
+                remoteGenres = List.copyOf(items);
+                genreLists.put(type, remoteGenres);
                 update();
             }
-            @Override public void onError(Exception error) { if (!closed) update(); }
+            @Override public void onError(Exception error) { if (!closed && ticket == genreGeneration) update(); }
         });
     }
 
@@ -118,7 +144,8 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
         if (isTrending()) {
             panel.setRow(MEDIA, List.of(option("", text(R.string.poster_wall_all_media), mediaType),
                     option("movie", text(R.string.discover_media_movie), mediaType), option("tv", text(R.string.discover_media_tv), mediaType)));
-        } else {
+        }
+        if (!isTrending() || !mediaType.isEmpty()) {
             if (!weekly.isEmpty()) {
                 panel.setLabel(MEDIA, text(R.string.poster_wall_update_day));
                 List<DiscoverFilterOption> days = new ArrayList<>();
@@ -139,11 +166,13 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
             List<DiscoverFilterOption> years = yearOptions();
             if (years.size() > 1) panel.setRow(YEAR, years);
             List<DiscoverFilterOption> sorts = new ArrayList<>();
-            sorts.add(option("", text(R.string.poster_wall_original_order), sort));
-            if (original != null) sorts.add(option(DiscoverQuery.SORT_POPULAR, text(R.string.discover_sort_popular), sort));
+            int defaultSortLabel = isTrending() ? hasAdvancedTrendFilters() ? R.string.discover_sort_popular : R.string.poster_wall_trend_order : R.string.poster_wall_original_order;
+            sorts.add(option("", text(defaultSortLabel), sort));
+            if (original != null && (!isTrending() || !hasAdvancedTrendFilters() || DiscoverQuery.SORT_POPULAR.equals(sort))) sorts.add(option(DiscoverQuery.SORT_POPULAR, text(R.string.discover_sort_popular), sort));
             if (original != null || localItems.stream().anyMatch(item -> rating(item) >= 0)) sorts.add(option(DiscoverQuery.SORT_RATING, text(R.string.discover_sort_rating), sort));
             if (original != null || localItems.stream().anyMatch(item -> !releaseYear(item).isEmpty())) sorts.add(option(DiscoverQuery.SORT_LATEST, text(R.string.discover_sort_latest), sort));
             if (sorts.size() > 1) panel.setRow(SORT, sorts);
+            if (RexTmdbQuery.TV.equals(effectiveMediaType())) panel.setRow(TV_TYPE, tvTypeOptions());
         }
         container.setVisibility(panel.getVisibleRows().isEmpty() ? View.GONE : View.VISIBLE);
         presenter.onBindViewHolder(holder, panel);
@@ -154,7 +183,19 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
                 option("HK", text(R.string.discover_region_hk), region), option("TW", text(R.string.discover_region_tw), region),
                 option("US", text(R.string.discover_region_us), region), option("JP", text(R.string.discover_region_jp), region),
                 option("KR", text(R.string.discover_region_kr), region), option("GB", text(R.string.discover_region_gb), region),
-                option("FR", text(R.string.discover_region_fr), region));
+                option("FR", text(R.string.discover_region_fr), region), option("DE", text(R.string.poster_wall_region_de), region),
+                option("IT", text(R.string.poster_wall_region_it), region), option("ES", text(R.string.poster_wall_region_es), region),
+                option("IN", text(R.string.poster_wall_region_in), region), option("TH", text(R.string.poster_wall_region_th), region),
+                option("TR", text(R.string.poster_wall_region_tr), region), option("RU", text(R.string.poster_wall_region_ru), region),
+                option("AU", text(R.string.poster_wall_region_au), region), option("CA", text(R.string.poster_wall_region_ca), region));
+    }
+
+    private List<DiscoverFilterOption> tvTypeOptions() {
+        return List.of(option("", text(R.string.discover_all), tvType),
+                option("variety", text(R.string.poster_wall_tv_variety), tvType), option("4", text(R.string.poster_wall_tv_scripted), tvType),
+                option("3", text(R.string.poster_wall_tv_reality), tvType), option("5", text(R.string.poster_wall_tv_talk), tvType),
+                option("0", text(R.string.poster_wall_tv_documentary), tvType), option("1", text(R.string.poster_wall_tv_news), tvType),
+                option("2", text(R.string.poster_wall_tv_miniseries), tvType), option("6", text(R.string.poster_wall_tv_video), tvType));
     }
 
     private List<DiscoverFilterOption> yearOptions() {
@@ -206,15 +247,24 @@ final class PosterWallFilterController implements DiscoverFilterPanelPresenter.L
             case REGION -> !region.equals(option.getValue());
             case YEAR -> !dateStart.equals(option.getStartDate()) || !dateEnd.equals(option.getEndDate());
             case SORT -> !sort.equals(option.getValue());
+            case TV_TYPE -> !tvType.equals(option.getValue());
             default -> false;
         };
         if (!differs) return;
         switch (row) {
-            case MEDIA -> { if (isTrending()) mediaType = option.getValue(); else weekday = option.getValue(); }
-            case GENRE -> genre = option.getValue();
+            case MEDIA -> {
+                if (isTrending()) {
+                    mediaType = option.getValue();
+                    genre = tvType = "";
+                    if (mediaType.isEmpty()) region = dateStart = dateEnd = sort = "";
+                    loadGenres();
+                } else weekday = option.getValue();
+            }
+            case GENRE -> { genre = option.getValue(); if (!genre.isEmpty() && "variety".equals(tvType)) tvType = ""; }
             case REGION -> region = option.getValue();
             case YEAR -> { dateStart = option.getStartDate(); dateEnd = option.getEndDate(); }
             case SORT -> sort = option.getValue();
+            case TV_TYPE -> { tvType = option.getValue(); if ("variety".equals(tvType)) genre = ""; }
             default -> { return; }
         }
         update();

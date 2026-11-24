@@ -27,7 +27,8 @@ public final class SmartSourceSelector {
 
     public static Vod selectSource(List<Vod> sources, EpisodeTarget target, String currentSite, SourceReliabilityStore reliability, String preferredFlag) {
         if (sources == null || target == null) return null;
-        List<Candidate> candidates = new ArrayList<>();
+        Vod bestSource = null;
+        int bestScore = Integer.MIN_VALUE;
         for (Vod source : sources) {
             if (source == null) continue;
             FlagSelection flag = selectFlag(source, target, preferredFlag, reliability);
@@ -38,26 +39,29 @@ public final class SmartSourceSelector {
             int coverage = flag == null ? 0 : flag.coverage;
             int score = (sameSite ? 1000 : 0) + coverage * 10 + source.getFlags().size() + reliabilityScore;
             if (flag != null) score += target.score(flag.episode()) * 1000;
-            candidates.add(new Candidate(source, score));
+            if (bestSource == null || score > bestScore) {
+                bestSource = source;
+                bestScore = score;
+            }
         }
-        candidates.sort(Comparator.comparingInt(Candidate::score).reversed());
-        return candidates.isEmpty() ? null : candidates.get(0).source;
+        return bestSource;
     }
 
     public static FlagSelection selectFlag(Vod source, EpisodeTarget target, String preferredFlag, SourceReliabilityStore reliability) {
-        if (source == null || target == null) return null;
-        List<FlagSelection> matches = new ArrayList<>();
+        if (source == null || target == null || source.getFlags().isEmpty()) return null;
+        FlagSelection best = null;
+        Integer season = MediaMatcher.identity(source).getSeason();
+        int reliabilityScore = reliability == null ? 0 : reliability.score(source);
         for (Flag flag : source.getFlags()) {
-            Episode episode = findEpisode(flag, target, MediaMatcher.identity(source).getSeason());
+            Episode episode = findEpisode(flag, target, season);
             if (episode == null) continue;
             int score = flag.getFlag().equals(preferredFlag) ? 100 : 0;
             score += Math.min(flag.getEpisodes().size(), 1000);
             score += target.score(episode) * 1000;
-            score += reliability == null ? 0 : reliability.score(source);
-            matches.add(new FlagSelection(flag, episode, score, flag.getEpisodes().size()));
+            score += reliabilityScore;
+            if (best == null || score > best.score()) best = new FlagSelection(flag, episode, score, flag.getEpisodes().size());
         }
-        matches.sort(Comparator.comparingInt(FlagSelection::score).reversed());
-        return matches.isEmpty() ? null : matches.get(0);
+        return best;
     }
 
     public static Episode findEpisode(Flag flag, EpisodeTarget target) {
@@ -238,6 +242,4 @@ public final class SmartSourceSelector {
     public record FlagSelection(Flag flag, Episode episode, int score, int coverage) {
     }
 
-    private record Candidate(Vod source, int score) {
-    }
 }

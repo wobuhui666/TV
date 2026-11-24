@@ -1,0 +1,441 @@
+{
+  "tested_commit": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+  "working_tree_changes": true,
+  "source_sha256": {
+    "app/src/leanback/java/com/fongmi/android/tv/ui/library/LibraryDetailScreen.kt": "860bdf1d5ca5f672ed10173f95839b517fe89b1d1999c8d7bb7aea271bc16eaf",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/dialog/VodSelectionDialog.kt": "e33723f4e50197cf234fcff93c7dd89b1f4ec486584a30b2bc149f1de73d531c",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java": "52a580076e498e47366a9692b553c106ea0d4432350c7ff5c92c4dece5e77a23",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/VideoActivity.java": "2980a4d99b49a591f1fed784e2fa16ffbe281657031631d5bf9a4541baffd566",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java": "a93e60a6acabedb1c9769e4b199e5b49dd4a49e784ffceda4a3dda51c92986c6",
+    "app/src/main/java/com/fongmi/android/tv/source/SourceReliabilityStore.java": "6709458e212debfa84a6cc0b02aa0fa855cd31b428fbb7401439f35368b61aa6",
+    "app/src/main/java/com/fongmi/android/tv/source/SmartSourceSelector.java": "ab90d8801f50330643926304e330c526ec0b22c057e95dbedef53d0720788ff5",
+    "app/src/test/java/com/fongmi/android/tv/source/SourceSelectionTest.java": "147f2519c478ea642647ca759ba257e6e0619cf219aeec5abcf581790567c964",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java": "ad856f8b2517de45e6fefa4f062fb47dd405d16606360ee1cfeaab47a39ba32d",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryResourcesControllerAndroidTest.kt": "c419728f7e2792419b4a67162b9993bbf4778c91b1cb8d5802ca56d0735dd433",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/source/SourceReliabilityStoreAndroidTest.kt": "22a7b60ef24fc9cc93e204884ff220565ab9d5a35267580d4fd6c5a84b900c33"
+  },
+  "environment": {
+    "os": "Linux x86_64",
+    "jdk": "21",
+    "kotlin": "2.2.21",
+    "compose_compiler": "2.2.21",
+    "android_sdk": "37.0",
+    "variant_dependencies": "leanbackArm64_v8aDebug",
+    "memory_gib": 1.9
+  },
+  "junit": {
+    "tests": 256,
+    "failures": 0,
+    "errors": 0,
+    "test_classes": [
+      "com.fongmi.android.tv.source.EpisodeLabelParserTest",
+      "com.fongmi.android.tv.source.EpisodeNavigatorTest",
+      "com.fongmi.android.tv.source.EpisodeTargetTest",
+      "com.fongmi.android.tv.source.ExplicitEpisodeSelectionTest",
+      "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest",
+      "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest",
+      "com.fongmi.android.tv.source.LibrarySearchIndexTest",
+      "com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest",
+      "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest",
+      "com.fongmi.android.tv.source.MediaMatcherTest",
+      "com.fongmi.android.tv.source.MovieSelectionTest",
+      "com.fongmi.android.tv.source.PosterSourceResultsTest",
+      "com.fongmi.android.tv.source.SearchRelevanceTest",
+      "com.fongmi.android.tv.source.SourceSelectionTest",
+      "com.fongmi.android.tv.source.VarietyEpisodeNavigatorTest",
+      "com.fongmi.android.tv.source.VarietyEpisodeTargetTest"
+    ]
+  },
+  "production_source_compile": true,
+  "android_test_source_compile": true,
+  "apk_build": false,
+  "lint": false,
+  "device_execution": false,
+  "benchmark": {
+    "samples": {
+      "baseline": [
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 17.0589,
+          "min_ms": 16.0144,
+          "max_ms": 21.2514,
+          "selected_first_source": true
+        },
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 17.5141,
+          "min_ms": 15.0018,
+          "max_ms": 23.1608,
+          "selected_first_source": true
+        },
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 16.9663,
+          "min_ms": 16.0585,
+          "max_ms": 19.8568,
+          "selected_first_source": true
+        }
+      ],
+      "optimized": [
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 3.944,
+          "min_ms": 3.1801,
+          "max_ms": 4.838,
+          "selected_first_source": true
+        },
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 3.6903,
+          "min_ms": 3.1843,
+          "max_ms": 4.9721,
+          "selected_first_source": true
+        },
+        {
+          "sources": 120,
+          "lines_per_source": 12,
+          "episodes_per_line": 3,
+          "median_ms": 4.1346,
+          "min_ms": 3.2618,
+          "max_ms": 8.9036,
+          "selected_first_source": true
+        }
+      ]
+    },
+    "baseline_median_ms": 17.0589,
+    "optimized_median_ms": 3.944,
+    "scope": "Local JVM only; no network, decoding, UI frames or persistent preferences. Identical current dependencies and fixture; selector source differs.",
+    "optimized_selector_bytecode_sha256": "0aec600ac47b854e253eb0bb2b655f88d42ef93e54e6450ffeddf1bd65d94aad",
+    "baseline_selector_bytecode_sha256": "0b54988d62f39a315cc9afa5859758e23e67cd85a87d9b38eadf1a409e9e534c"
+  },
+  "audit": {
+    "home": "Reviewed shelf diffs, artwork lifecycle and cached color extraction; no new changes. No device performance measurement.",
+    "search": "Reviewed background matching, batched arrivals, list diffing and cancellation; no new changes. No device performance measurement.",
+    "detail": "Draw-only episode focus outline, stable navigation callbacks, lazy indexed picker and reduced resource refreshes.",
+    "selection": "Worker-thread episode matching with captured context; single-pass winner selection and read-only score lookups."
+  },
+  "android_test_sources": [
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryResourcesControllerAndroidTest.kt",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/source/SourceReliabilityStoreAndroidTest.kt",
+    "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java",
+    "app/src/androidTest/java/com/fongmi/android/tv/test/NativeUiEvidence.java",
+    "app/src/leanbackPreview/java/com/fongmi/android/tv/ui/activity/HomePreviewFixtures.java",
+    "app/src/leanbackPreview/java/com/fongmi/android/tv/ui/activity/RexPreviewFixtures.java",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java",
+    "app/src/main/java/com/fongmi/android/tv/bean/RexSection.java",
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexTmdbQuery.java"
+  ],
+  "search_reuse": {
+    "note": "Follow-up to the selection changes above, which were committed first; the top-level source_sha256 describes that commit.",
+    "source_sha256": {
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java": "463761ee498062002afb7cccf9f7a4383a065e315b0055740b2248f127934323",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java": "9bd52df4378c67eb759629606c42e51808c3b5904186222f6195170aaacc62ab",
+      "app/src/main/java/com/fongmi/android/tv/model/DiscoverSourceSearch.java": "ca7c493ef22b72d847d3bbe172569379e88b2249efa88f82498f498ef8710e45",
+      "app/src/main/java/com/fongmi/android/tv/source/LibrarySourceMatcher.java": "3eeb9ddacbfa08a99930867019b183bde06105bc12749007ccd42c15b7063416",
+      "app/src/test/java/com/fongmi/android/tv/model/DiscoverSourceSearchTest.java": "84e82cfe595779e0dd1cf95c8ae8a3bea22f779bfa399cd8deb70ccfb5ba71c8",
+      "app/src/test/java/com/fongmi/android/tv/source/LibrarySourceMatcherPreparedTest.java": "ec4bcf00622e23c85264a4079c9c37bb2c245891975328a7e24130d16548bfaa",
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java": "b4349b0901b96dd06ce7ec4ccd27a4798f3d25e590d0aa6238c38f799e6a1b3a",
+      ".github/workflows/tv-ui-verify.yml": "f565e07dd46ca7dfd9592e868e625c91c7e6067a6a5382f99bf8ae569ab98a95"
+    },
+    "junit": {
+      "tests": 274,
+      "failures": 0,
+      "errors": 0,
+      "test_classes": {
+        "com.fongmi.android.tv.source.EpisodeLabelParserTest": 30,
+        "com.fongmi.android.tv.source.EpisodeNavigatorTest": 26,
+        "com.fongmi.android.tv.source.EpisodeTargetTest": 16,
+        "com.fongmi.android.tv.source.ExplicitEpisodeSelectionTest": 19,
+        "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest": 7,
+        "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest": 20,
+        "com.fongmi.android.tv.source.LibrarySearchIndexTest": 16,
+        "com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest": 11,
+        "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest": 9,
+        "com.fongmi.android.tv.source.MediaMatcherTest": 11,
+        "com.fongmi.android.tv.source.MovieSelectionTest": 6,
+        "com.fongmi.android.tv.source.PosterSourceResultsTest": 31,
+        "com.fongmi.android.tv.source.SearchRelevanceTest": 14,
+        "com.fongmi.android.tv.source.SourceSelectionTest": 9,
+        "com.fongmi.android.tv.source.VarietyEpisodeNavigatorTest": 22,
+        "com.fongmi.android.tv.source.VarietyEpisodeTargetTest": 12,
+        "com.fongmi.android.tv.model.DiscoverSourceSearchTest": 7,
+        "com.fongmi.android.tv.model.BoundedSearchBatchTest": 8
+      }
+    },
+    "production_source_compile": [
+      "app/src/main/java/com/fongmi/android/tv/source/*.java",
+      "app/src/main/java/com/fongmi/android/tv/model/DiscoverSourceSearch.java",
+      "app/src/main/java/com/fongmi/android/tv/model/BoundedSearchBatch.java",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryResourcesController.java",
+      "app/src/leanback/java/com/fongmi/android/tv/ui/activity/LibraryDetailActivity.java"
+    ],
+    "gradle_variant_tests": true,
+    "kotlin_compile": true,
+    "apk_build": true,
+    "lint": true,
+    "device_execution": true,
+    "benchmark": {
+      "scope": "Local JVM only, one response of 40 search summaries; no network, UI frames or television hardware.",
+      "protocol": "200 warm-up iterations, 7 groups of 15 runs, three processes per case with alternating order; summary is the median of the three medians.",
+      "summary": [
+        {
+          "aliases": 1,
+          "results": 40,
+          "accepted": 8,
+          "baseline_median_ms": 5.8887,
+          "optimized_median_ms": 1.1755,
+          "prepare_once_median_ms": 0.1175
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "accepted": 10,
+          "baseline_median_ms": 38.1622,
+          "optimized_median_ms": 0.6783,
+          "prepare_once_median_ms": 0.8791
+        }
+      ],
+      "samples": [
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 6.7879,
+            "min": 6.0113,
+            "max": 7.5284
+          },
+          "optimized_ms": {
+            "median": 1.2241,
+            "min": 1.1202,
+            "max": 2.0349
+          },
+          "prepare_once_ms": {
+            "median": 0.1215,
+            "min": 0.1075,
+            "max": 0.169
+          }
+        },
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": true,
+          "baseline_ms": {
+            "median": 5.8887,
+            "min": 5.4475,
+            "max": 6.878
+          },
+          "optimized_ms": {
+            "median": 1.1755,
+            "min": 0.8689,
+            "max": 1.4401
+          },
+          "prepare_once_ms": {
+            "median": 0.1175,
+            "min": 0.0559,
+            "max": 0.2371
+          }
+        },
+        {
+          "aliases": 1,
+          "results": 40,
+          "matching": 8,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 5.8082,
+            "min": 5.434,
+            "max": 6.5914
+          },
+          "optimized_ms": {
+            "median": 1.1161,
+            "min": 1.0228,
+            "max": 1.2794
+          },
+          "prepare_once_ms": {
+            "median": 0.1133,
+            "min": 0.1044,
+            "max": 0.1301
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 38.1622,
+            "min": 36.7459,
+            "max": 47.2321
+          },
+          "optimized_ms": {
+            "median": 0.6724,
+            "min": 0.654,
+            "max": 0.7696
+          },
+          "prepare_once_ms": {
+            "median": 0.8551,
+            "min": 0.8259,
+            "max": 0.9599
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": true,
+          "baseline_ms": {
+            "median": 37.6086,
+            "min": 36.6032,
+            "max": 46.9153
+          },
+          "optimized_ms": {
+            "median": 0.6783,
+            "min": 0.6291,
+            "max": 0.8893
+          },
+          "prepare_once_ms": {
+            "median": 0.8791,
+            "min": 0.8416,
+            "max": 0.9759
+          }
+        },
+        {
+          "aliases": 20,
+          "results": 40,
+          "matching": 10,
+          "optimized_first": false,
+          "baseline_ms": {
+            "median": 39.3481,
+            "min": 36.9914,
+            "max": 42.3665
+          },
+          "optimized_ms": {
+            "median": 0.6891,
+            "min": 0.6272,
+            "max": 0.8221
+          },
+          "prepare_once_ms": {
+            "median": 0.8853,
+            "min": 0.8345,
+            "max": 1.8849
+          }
+        }
+      ]
+    },
+    "android_test_source_compile": [
+      "app/src/tvPreviewTest/java/com/fongmi/android/tv/ui/activity/LibraryExperienceAndroidTest.java"
+    ],
+    "android_tests_added": [
+      "refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource",
+      "refinedTitleSearchesEverySourceAgainWithTheNewKeyword",
+      "hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch"
+    ],
+    "compact_home_expected_tests": {
+      "core": 32,
+      "library": {
+        "LibraryExperienceAndroidTest": 53,
+        "LibraryResourcesControllerAndroidTest": 1,
+        "SourceReliabilityStoreAndroidTest": 2
+      },
+      "total": 88
+    },
+    "github_actions": {
+      "commit": "e59e1dd4257a33159207556590c0c0b0c3d05e5c",
+      "device": {
+        "api": 34,
+        "abis": "x86_64,arm64-v8a",
+        "native_bridge": "libndk_translation.so",
+        "package": "com.fongmi.android.tv.preview",
+        "fixtures": "offline"
+      },
+      "compact_home": {
+        "run": 45065742337,
+        "unit_tests": {
+          "variant": "leanbackArm64_v8aPreview",
+          "classes": 164,
+          "tests": 1273,
+          "failures": 0,
+          "errors": 0
+        },
+        "device_tests": {
+          "expected": 88,
+          "passed": 88,
+          "core": 32,
+          "library": {
+            "LibraryExperienceAndroidTest": 53,
+            "LibraryResourcesControllerAndroidTest": 1,
+            "SourceReliabilityStoreAndroidTest": 2
+          }
+        }
+      },
+      "baseline": {
+        "commit": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+        "run": 45065746619,
+        "unit_tests": 1266,
+        "device_tests": {
+          "expected": 80,
+          "passed": 80
+        }
+      },
+      "control_without_search_reuse": {
+        "commit": "4bc6bc2e6d973741979721958c8a96996c944f7d",
+        "run": 45068027343,
+        "device_tests": {
+          "expected": 88,
+          "passed": 86,
+          "failed": [
+            "refinedMetadataKeepsTheSourceSearchThatAlreadyAsksEverySource",
+            "hydratedSourceDetailMatchesEarlierSummariesAgainWithoutASecondSearch"
+          ],
+          "observed_search_requests": 4,
+          "expected_search_requests": 2
+        }
+      },
+      "build_validation": {
+        "run": 45065744488,
+        "attempt": 2,
+        "unit_tests": {
+          "app_leanbackArm64_v8aDebug": 1273,
+          "catvod": 244,
+          "quickjs": 28,
+          "wasm": 19,
+          "total": 1564,
+          "failures": 0,
+          "errors": 0
+        },
+        "lint": {
+          "baseline": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+          "errors": [
+            108,
+            108
+          ],
+          "warnings": [
+            388,
+            388
+          ],
+          "new_errors": 0,
+          "listed_new_warnings": 2,
+          "listed_new_warning_file": "app/src/main/AndroidManifest.xml"
+        },
+        "first_attempt": "Lint step failed downloading a Media3 test dependency from Maven Central (rate limited); unit tests and builds had passed."
+      },
+      "not_covered": [
+        "physical television frame time and memory",
+        "real source search latency and time to first frame",
+        "configurations returning more than 2000 search summaries"
+      ]
+    }
+  }
+}

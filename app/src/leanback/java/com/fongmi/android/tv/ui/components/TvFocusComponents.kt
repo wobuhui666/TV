@@ -6,8 +6,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
@@ -67,6 +70,9 @@ fun TvActionButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
     interactionSource: MutableInteractionSource? = null,
     focusedScale: Float = JetStreamAnimations.FocusScaleSmall,
+    // TV Button wraps its content and pins it to the top-start corner. When [modifier] fixes
+    // a dimension, pass the matching fill here so the content stays centered in the button.
+    contentModifier: Modifier? = null,
     content: @Composable RowScope.() -> Unit
 ) {
     val active = enabled && LocalTvContentActive.current
@@ -105,7 +111,8 @@ fun TvActionButton(
             ProvideTextStyle(MaterialTheme.typography.labelLarge.copy(
                 platformStyle = PlatformTextStyle(includeFontPadding = false)
             )) {
-                content()
+                if (contentModifier == null) content()
+                else Row(contentModifier, Arrangement.Center, Alignment.CenterVertically, content)
             }
         }
     }

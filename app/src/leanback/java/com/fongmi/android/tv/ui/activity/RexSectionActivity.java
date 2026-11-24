@@ -70,7 +70,7 @@ public class RexSectionActivity extends BaseActivity implements VodPresenter.OnC
 
     @Override
     protected void initView(Bundle savedInstanceState) {
-        section = RexSections.byKey(getIntent().getStringExtra("section_key"));
+        section = RexSections.forWall(getIntent().getStringExtra("section_key"));
         if (section == null) {
             finish();
             return;

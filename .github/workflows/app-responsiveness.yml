@@ -43,6 +43,7 @@ jobs:
       RESPONSIVENESS_REVISION: ${{ matrix.revision }}
       TV_POLISH_TESTS: ${{ inputs.polish }}
       TMDB_API_KEY: ${{ inputs.polish && 'synthetic-wall-fixture-key' || '' }}
+      TV_LIVE_PYTHON_FIXTURES: ${{ github.workspace }}/.live-python-fixtures/packs/live-python-20261107-a09dd575
     steps:
       - name: Free runner space for Android builds and emulator
         run: |
@@ -70,6 +71,15 @@ jobs:
         with:
           java-version: '21'
           distribution: temurin
+      - name: Checkout the immutable live Python regression fixtures
+        if: matrix.revision == 'optimized'
+        uses: actions/checkout@v4
+        with:
+          repository: zhhshss/tv-python-sources
+          ref: 25ff7031e94b14c94ce7e8894394f04f3c1a0907
+          path: .live-python-fixtures
+          fetch-depth: 1
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
@@ -109,6 +119,7 @@ jobs:
       - name: Verify Python and JavaScript source compatibility and release versions
         if: matrix.revision == 'optimized'
         run: |
+          python -m pip install lxml pycryptodome pywasm==1.0.8 numpy==1.26.2
           python -B -m unittest discover -s chaquo/src/test/python -v
           node quickjs/src/test/js/net.test.cjs
           node quickjs/src/test/js/dialog.test.cjs

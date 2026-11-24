@@ -1,0 +1,1531 @@
+{
+  "base_commit": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+  "verified_at_utc": "2026-11-22T02:43:08.515983+00:00",
+  "working_tree": true,
+  "source_sha256": {
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexWallQuery.java": "747b5268c2da40d5cbbbf0da69de438ad668891967cd8ef513c12a62bba2d9f1",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/PosterWallFilterController.java": "a124455db960b4e9a70a3dfc5fd14717c0cc6c44387fe3e7166395d620ff0e7d",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/activity/RexSectionActivity.java": "96b958a07563c1945176329abe74301f0cf26147b3c36decad9a4b4bcf44ffb5",
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexSections.java": "93dc93cbd2008456fb697d16e5b1654263a032fd7d15274a773ab2182c2c19a8",
+    "app/src/leanback/res/values/strings_poster_wall.xml": "0b099130139800b623c3c6d9e869f3dd2cdbd2465616c1d0975c177a8ffd8517",
+    "app/src/leanback/res/values-zh-rCN/strings_poster_wall.xml": "5161ddc8b2b3dce11c5c5394e8acc2bd85098464a794e75c626d6181b0d6b2ec",
+    "app/src/leanback/res/values-zh-rTW/strings_poster_wall.xml": "3fbf2607354608a8d5aa34be0b396549530b892a8cbf45141ee7eea9f49fc29f",
+    "app/src/test/java/com/fongmi/android/tv/api/rex/RexWallQueryTest.java": "d89bf162ec52714ad7779b37bb61569773027ad2dea4578f1205af39d848d701",
+    "app/src/test/java/com/fongmi/android/tv/ui/rex/RexHomeCatalogTest.java": "49307bcbdf65f84f368d59e2b550e313957919c6c25394927d2bac4b331de186",
+    "app/src/androidTest/java/com/fongmi/android/tv/ui/PosterWallFiltersIntegrationTest.java": "c6707c14b3e18c7a3e68f8afb1b5fbd287a6b02f53d67dfc31cdf987f0f75e84"
+  },
+  "environment": {
+    "jdk": "21",
+    "sdk": "37.0",
+    "gradle": "9.1.0",
+    "agp": "9.0.1",
+    "memory_gib": 1.9,
+    "swap_gib": 2
+  },
+  "focused_junit": {
+    "tests": 59,
+    "failures": 0,
+    "runner": "JDK JUnitCore 4.13.2 with the real TV ARM64 debug unit-test runtime classpath and AGP returnDefaultValues=true Android jar",
+    "classes": [
+      "RexWallQueryTest",
+      "RexTmdbQueryTest",
+      "RexHomeCatalogTest",
+      "PosterHomeCatalogTest"
+    ]
+  },
+  "compilation": {
+    "production_java_exit": 0,
+    "unit_java_exit": 0,
+    "android_test_java_exit": 0,
+    "android_test_methods": 11,
+    "scope": "Changed Java files, current Gradle-generated R.jar and real resolved variant dependencies; existing local Java/Kotlin outputs supply unchanged classes. No complete Gradle variant or APK was produced.",
+    "r_jar_sha256": "fe183e6615496d62145f41c5150cb0c4f5d964cb15cd2935bc75370d167d0356"
+  },
+  "home_sources": {
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeCatalog.java": {
+      "unchanged_from_head": true,
+      "sha256": "d9c4da4ce33fb03f87e3a97c2819cf803c6336ec5ede13880ee550515462101e"
+    },
+    "app/src/leanback/java/com/fongmi/android/tv/ui/home/PosterHomeController.java": {
+      "unchanged_from_head": true,
+      "sha256": "ce27d20f41f0b0f6944afc2b9b53b81baeffd19b66170a46e1e19f13bfd3fb14"
+    },
+    "app/src/main/java/com/fongmi/android/tv/api/rex/RexTmdbQuery.java": {
+      "unchanged_from_head": true,
+      "sha256": "d83a273df164cb1ecc2dd2e6e4a547cd12b897b66f0cc46c0eea9a3a1135f495"
+    },
+    "app/src/leanback/java/com/fongmi/android/tv/ui/rex/RexFeedLoader.java": {
+      "unchanged_from_head": true,
+      "sha256": "799d86d61e5d067b287481262fc10803627f3dabd32a726d5fd4454c79bfff00"
+    }
+  },
+  "tmdb": {
+    "http_checks": 25,
+    "initial_sample_date_utc": "2026-11-21",
+    "followup": {
+      "sampled_at_utc": "2026-11-22T02:01:50.494038+00:00",
+      "checks": [
+        {
+          "case": "cn_tv_type_0",
+          "id": 311949,
+          "title": "世界战史",
+          "type": "Documentary",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 99,
+              "name": "Documentary"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_1",
+          "id": 250425,
+          "title": "睡前消息合集",
+          "type": "News",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 10763,
+              "name": "News"
+            },
+            {
+              "id": 99,
+              "name": "Documentary"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_2",
+          "id": 128963,
+          "title": "Honkai Impact 3rd Animation",
+          "type": "Miniseries",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 16,
+              "name": "Animation"
+            },
+            {
+              "id": 10759,
+              "name": "Action & Adventure"
+            },
+            {
+              "id": 18,
+              "name": "Drama"
+            },
+            {
+              "id": 10765,
+              "name": "Sci-Fi & Fantasy"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_3",
+          "id": 154770,
+          "title": "Hello Saturday",
+          "type": "Reality",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 10764,
+              "name": "Reality"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_4",
+          "id": 110181,
+          "title": "The God of War Dominates",
+          "type": "Scripted",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 10759,
+              "name": "Action & Adventure"
+            },
+            {
+              "id": 10765,
+              "name": "Sci-Fi & Fantasy"
+            },
+            {
+              "id": 16,
+              "name": "Animation"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_5",
+          "id": 237020,
+          "title": "Lecture Room",
+          "type": "Talk Show",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 10767,
+              "name": "Talk"
+            },
+            {
+              "id": 99,
+              "name": "Documentary"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_type_6",
+          "id": 310751,
+          "title": "哆啦A梦TV版",
+          "type": "Video",
+          "origin_country": [
+            "CN"
+          ],
+          "genres": [
+            {
+              "id": 10762,
+              "name": "Kids"
+            },
+            {
+              "id": 16,
+              "name": "Animation"
+            }
+          ]
+        },
+        {
+          "case": "cn_tv_page_2",
+          "endpoint": "discover/tv",
+          "params": {
+            "with_origin_country": "CN",
+            "include_adult": "false",
+            "sort_by": "popularity.desc",
+            "language": "zh-CN",
+            "page": "2"
+          },
+          "page": 2,
+          "count": 20,
+          "total_results": 20001,
+          "ids": [
+            112191,
+            307853,
+            231620,
+            257161,
+            300146,
+            104716,
+            223348,
+            76572,
+            88639,
+            249356,
+            107116,
+            101172,
+            40521,
+            33773,
+            219934,
+            330037,
+            112732,
+            89861,
+            131040,
+            88939
+          ],
+          "all_items_match_requested_genres": null
+        },
+        {
+          "case": "cn_tv_variety_page_2",
+          "endpoint": "discover/tv",
+          "params": {
+            "with_origin_country": "CN",
+            "with_genres": "10764|10767",
+            "include_adult": "false",
+            "sort_by": "popularity.desc",
+            "language": "zh-CN",
+            "page": "2"
+          },
+          "page": 2,
+          "count": 20,
+          "total_results": 1587,
+          "ids": [
+            203003,
+            103147,
+            216487,
+            89620,
+            201453,
+            109096,
+            121876,
+            195648,
+            106621,
+            313500,
+            197906,
+            93550,
+            107467,
+            126544,
+            204253,
+            219497,
+            79330,
+            97199,
+            103863,
+            91914
+          ],
+          "all_items_match_requested_genres": true
+        }
+      ]
+    },
+    "queries": [
+      {
+        "case": "tv_genres",
+        "endpoint": "genre/tv/list",
+        "params": {
+          "language": "zh-CN",
+          "page": "1"
+        },
+        "total_results": null,
+        "total_pages": null,
+        "count": 16,
+        "samples": [],
+        "genres": [
+          {
+            "id": 10759,
+            "name": "动作冒险"
+          },
+          {
+            "id": 16,
+            "name": "动画"
+          },
+          {
+            "id": 35,
+            "name": "喜剧"
+          },
+          {
+            "id": 80,
+            "name": "犯罪"
+          },
+          {
+            "id": 99,
+            "name": "纪录"
+          },
+          {
+            "id": 18,
+            "name": "剧情"
+          },
+          {
+            "id": 10751,
+            "name": "家庭"
+          },
+          {
+            "id": 10762,
+            "name": "儿童"
+          },
+          {
+            "id": 9648,
+            "name": "悬疑"
+          },
+          {
+            "id": 10763,
+            "name": "新闻"
+          },
+          {
+            "id": 10764,
+            "name": "真人秀"
+          },
+          {
+            "id": 10765,
+            "name": "Sci-Fi & Fantasy"
+          },
+          {
+            "id": 10766,
+            "name": "肥皂剧"
+          },
+          {
+            "id": 10767,
+            "name": "脱口秀"
+          },
+          {
+            "id": 10768,
+            "name": "War & Politics"
+          },
+          {
+            "id": 37,
+            "name": "西部"
+          }
+        ]
+      },
+      {
+        "case": "movie_genres",
+        "endpoint": "genre/movie/list",
+        "params": {
+          "language": "zh-CN",
+          "page": "1"
+        },
+        "total_results": null,
+        "total_pages": null,
+        "count": 19,
+        "samples": [],
+        "genres": [
+          {
+            "id": 28,
+            "name": "动作"
+          },
+          {
+            "id": 12,
+            "name": "冒险"
+          },
+          {
+            "id": 16,
+            "name": "动画"
+          },
+          {
+            "id": 35,
+            "name": "喜剧"
+          },
+          {
+            "id": 80,
+            "name": "犯罪"
+          },
+          {
+            "id": 99,
+            "name": "纪录"
+          },
+          {
+            "id": 18,
+            "name": "剧情"
+          },
+          {
+            "id": 10751,
+            "name": "家庭"
+          },
+          {
+            "id": 14,
+            "name": "奇幻"
+          },
+          {
+            "id": 36,
+            "name": "历史"
+          },
+          {
+            "id": 27,
+            "name": "恐怖"
+          },
+          {
+            "id": 10402,
+            "name": "音乐"
+          },
+          {
+            "id": 9648,
+            "name": "悬疑"
+          },
+          {
+            "id": 10749,
+            "name": "爱情"
+          },
+          {
+            "id": 878,
+            "name": "科幻"
+          },
+          {
+            "id": 10770,
+            "name": "电视电影"
+          },
+          {
+            "id": 53,
+            "name": "惊悚"
+          },
+          {
+            "id": 10752,
+            "name": "战争"
+          },
+          {
+            "id": 37,
+            "name": "西部"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_all",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 20001,
+        "total_pages": 1001,
+        "count": 20,
+        "samples": [
+          {
+            "id": 154770,
+            "title": "你好，星期六",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2022-01-01"
+          },
+          {
+            "id": 74561,
+            "title": "明星大侦探",
+            "genre_ids": [
+              80,
+              9648,
+              10764
+            ],
+            "date": "2016-03-27"
+          },
+          {
+            "id": 110181,
+            "title": "武神主宰",
+            "genre_ids": [
+              10759,
+              10765,
+              16
+            ],
+            "date": "2020-03-07"
+          },
+          {
+            "id": 237020,
+            "title": "百家讲坛：专题集",
+            "genre_ids": [
+              10767,
+              99
+            ],
+            "date": "2001-07-09"
+          },
+          {
+            "id": 49036,
+            "title": "乡村爱情",
+            "genre_ids": [
+              10751,
+              35
+            ],
+            "date": "2006-09-30"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_variety",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_genres": "10764|10767",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 1587,
+        "total_pages": 80,
+        "count": 20,
+        "samples": [
+          {
+            "id": 154770,
+            "title": "你好，星期六",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2022-01-01"
+          },
+          {
+            "id": 74561,
+            "title": "明星大侦探",
+            "genre_ids": [
+              80,
+              9648,
+              10764
+            ],
+            "date": "2016-03-27"
+          },
+          {
+            "id": 237020,
+            "title": "百家讲坛：专题集",
+            "genre_ids": [
+              10767,
+              99
+            ],
+            "date": "2001-07-09"
+          },
+          {
+            "id": 137726,
+            "title": "毛雪汪",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2021-11-01"
+          },
+          {
+            "id": 98031,
+            "title": "奔跑吧",
+            "genre_ids": [
+              35,
+              10764
+            ],
+            "date": "2014-10-10"
+          }
+        ],
+        "all_items_match_requested_genres": true
+      },
+      {
+        "case": "cn_movies_all",
+        "endpoint": "discover/movie",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 20001,
+        "total_pages": 1001,
+        "count": 20,
+        "samples": [
+          {
+            "id": 1419406,
+            "title": "捕风追影",
+            "genre_ids": [
+              28,
+              80,
+              18,
+              53
+            ],
+            "date": "2025-08-16"
+          },
+          {
+            "id": 1280738,
+            "title": "火遮眼",
+            "genre_ids": [
+              28,
+              80,
+              53
+            ],
+            "date": "2026-06-10"
+          },
+          {
+            "id": 980477,
+            "title": "哪吒之魔童闹海",
+            "genre_ids": [
+              16,
+              28,
+              14,
+              12
+            ],
+            "date": "2025-01-29"
+          },
+          {
+            "id": 1491920,
+            "title": "功夫女足",
+            "genre_ids": [
+              28,
+              35,
+              14
+            ],
+            "date": "2026-07-11"
+          },
+          {
+            "id": 615453,
+            "title": "哪吒之魔童降世",
+            "genre_ids": [
+              16,
+              14,
+              12
+            ],
+            "date": "2019-07-26"
+          }
+        ]
+      },
+      {
+        "case": "cn_movies_2020",
+        "endpoint": "discover/movie",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "primary_release_date.gte": "2020-01-01",
+          "primary_release_date.lte": "2020-12-31",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 1214,
+        "total_pages": 61,
+        "count": 20,
+        "samples": [
+          {
+            "id": 604822,
+            "title": "急先锋",
+            "genre_ids": [
+              28,
+              12,
+              35,
+              80,
+              53
+            ],
+            "date": "2020-01-22"
+          },
+          {
+            "id": 458576,
+            "title": "怪物猎人",
+            "genre_ids": [
+              28,
+              14
+            ],
+            "date": "2020-12-03"
+          },
+          {
+            "id": 508935,
+            "title": "八佰",
+            "genre_ids": [
+              10752,
+              36,
+              18,
+              28
+            ],
+            "date": "2020-08-14"
+          },
+          {
+            "id": 757860,
+            "title": "晴雅集",
+            "genre_ids": [
+              28,
+              18,
+              14,
+              9648,
+              878
+            ],
+            "date": "2020-12-24"
+          },
+          {
+            "id": 635389,
+            "title": "姜子牙",
+            "genre_ids": [
+              16,
+              28,
+              14,
+              12
+            ],
+            "date": "2020-10-01"
+          }
+        ]
+      },
+      {
+        "case": "trend_day_all",
+        "endpoint": "trending/all/day",
+        "params": {
+          "language": "zh-CN",
+          "page": "1"
+        },
+        "total_results": 10000,
+        "total_pages": 500,
+        "count": 20,
+        "samples": [
+          {
+            "id": 1300968,
+            "title": "饥饿游戏：收获日出",
+            "genre_ids": [
+              878,
+              28,
+              12
+            ],
+            "date": "2026-11-18"
+          },
+          {
+            "id": 300523,
+            "title": "罪蓝之路",
+            "genre_ids": [
+              80,
+              9648
+            ],
+            "date": "2026-11-20"
+          },
+          {
+            "id": 1595124,
+            "title": "童话继姊妹",
+            "genre_ids": [
+              16,
+              10751,
+              35
+            ],
+            "date": "2026-11-20"
+          },
+          {
+            "id": 1368337,
+            "title": "奥德赛",
+            "genre_ids": [
+              12,
+              28,
+              14
+            ],
+            "date": "2026-07-15"
+          },
+          {
+            "id": 1568060,
+            "title": "完美说谎者",
+            "genre_ids": [
+              18,
+              10749,
+              53
+            ],
+            "date": "2026-11-20"
+          }
+        ]
+      },
+      {
+        "case": "trend_day_tv",
+        "endpoint": "trending/tv/day",
+        "params": {
+          "language": "zh-CN",
+          "page": "1"
+        },
+        "total_results": 10000,
+        "total_pages": 500,
+        "count": 20,
+        "samples": [
+          {
+            "id": 300523,
+            "title": "罪蓝之路",
+            "genre_ids": [
+              80,
+              9648
+            ],
+            "date": "2026-11-20"
+          },
+          {
+            "id": 247718,
+            "title": "MobLand",
+            "genre_ids": [
+              80,
+              18
+            ],
+            "date": "2025-03-30"
+          },
+          {
+            "id": 103540,
+            "title": "Percy Jackson and the Olympians",
+            "genre_ids": [
+              10759,
+              10765,
+              18,
+              10751
+            ],
+            "date": "2023-12-19"
+          },
+          {
+            "id": 117488,
+            "title": "黄蜂",
+            "genre_ids": [
+              18,
+              9648
+            ],
+            "date": "2021-11-14"
+          },
+          {
+            "id": 259909,
+            "title": "嗜血法医：杀魔复生",
+            "genre_ids": [
+              80,
+              18,
+              9648
+            ],
+            "date": "2025-07-13"
+          }
+        ]
+      },
+      {
+        "case": "trend_day_movie",
+        "endpoint": "trending/movie/day",
+        "params": {
+          "language": "zh-CN",
+          "page": "1"
+        },
+        "total_results": 10000,
+        "total_pages": 500,
+        "count": 20,
+        "samples": [
+          {
+            "id": 1300968,
+            "title": "饥饿游戏：收获日出",
+            "genre_ids": [
+              878,
+              28,
+              12
+            ],
+            "date": "2026-11-18"
+          },
+          {
+            "id": 1368337,
+            "title": "奥德赛",
+            "genre_ids": [
+              12,
+              28,
+              14
+            ],
+            "date": "2026-07-15"
+          },
+          {
+            "id": 1595124,
+            "title": "童话继姊妹",
+            "genre_ids": [
+              16,
+              10751,
+              35,
+              12,
+              14
+            ],
+            "date": "2026-11-20"
+          },
+          {
+            "id": 1568060,
+            "title": "完美说谎者",
+            "genre_ids": [
+              18,
+              10749,
+              53
+            ],
+            "date": "2026-11-20"
+          },
+          {
+            "id": 1003596,
+            "title": "复仇者联盟5",
+            "genre_ids": [
+              878,
+              28,
+              12
+            ],
+            "date": "2026-12-16"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_0",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "0",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 2108,
+        "total_pages": 106,
+        "count": 20,
+        "samples": [
+          {
+            "id": 311949,
+            "title": "世界战史",
+            "genre_ids": [
+              99
+            ],
+            "date": "2019-08-01"
+          },
+          {
+            "id": 235970,
+            "title": "影响：改革开放40年的中国电影",
+            "genre_ids": [
+              99
+            ],
+            "date": "2018-11-19"
+          },
+          {
+            "id": 244043,
+            "title": "食贫道",
+            "genre_ids": [
+              99
+            ],
+            "date": "2023-09-18"
+          },
+          {
+            "id": 309374,
+            "title": "十个勤天巡回演唱会",
+            "genre_ids": [
+              10764
+            ],
+            "date": ""
+          },
+          {
+            "id": 271305,
+            "title": "传奇故事",
+            "genre_ids": [
+              99,
+              10763,
+              9648
+            ],
+            "date": "2005-07-22"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_1",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "1",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 19,
+        "total_pages": 1,
+        "count": 19,
+        "samples": [
+          {
+            "id": 250425,
+            "title": "睡前消息",
+            "genre_ids": [
+              10763,
+              99
+            ],
+            "date": "2019-07-12"
+          },
+          {
+            "id": 296012,
+            "title": "五星体育F1转播",
+            "genre_ids": [],
+            "date": ""
+          },
+          {
+            "id": 339905,
+            "title": "e顿饭的事儿",
+            "genre_ids": [],
+            "date": "2026-10-14"
+          },
+          {
+            "id": 254219,
+            "title": "新闻联播",
+            "genre_ids": [
+              10763
+            ],
+            "date": "1978-01-01"
+          },
+          {
+            "id": 214687,
+            "title": "军武零距离",
+            "genre_ids": [
+              99
+            ],
+            "date": "2019-08-04"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_2",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "2",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 888,
+        "total_pages": 45,
+        "count": 20,
+        "samples": [
+          {
+            "id": 128963,
+            "title": "崩坏3 动画短片集",
+            "genre_ids": [
+              16,
+              10759,
+              18,
+              10765
+            ],
+            "date": "2018-04-24"
+          },
+          {
+            "id": 225008,
+            "title": "漫长的季节",
+            "genre_ids": [
+              80,
+              18,
+              9648
+            ],
+            "date": "2023-04-22"
+          },
+          {
+            "id": 75129,
+            "title": "屌丝男士",
+            "genre_ids": [
+              35
+            ],
+            "date": "2012-10-10"
+          },
+          {
+            "id": 285143,
+            "title": "灿如繁星",
+            "genre_ids": [
+              18
+            ],
+            "date": "2026-07-05"
+          },
+          {
+            "id": 271629,
+            "title": "锦衣夜行",
+            "genre_ids": [
+              18
+            ],
+            "date": "2024-09-16"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_3",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "3",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 1151,
+        "total_pages": 58,
+        "count": 20,
+        "samples": [
+          {
+            "id": 154770,
+            "title": "你好，星期六",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2022-01-01"
+          },
+          {
+            "id": 74561,
+            "title": "明星大侦探",
+            "genre_ids": [
+              80,
+              9648,
+              10764
+            ],
+            "date": "2016-03-27"
+          },
+          {
+            "id": 137726,
+            "title": "毛雪汪",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2021-11-01"
+          },
+          {
+            "id": 98031,
+            "title": "奔跑吧",
+            "genre_ids": [
+              35,
+              10764
+            ],
+            "date": "2014-10-10"
+          },
+          {
+            "id": 126398,
+            "title": "五十公里桃花坞",
+            "genre_ids": [
+              10764
+            ],
+            "date": "2021-05-23"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_4",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "4",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 20001,
+        "total_pages": 1001,
+        "count": 20,
+        "samples": [
+          {
+            "id": 110181,
+            "title": "武神主宰",
+            "genre_ids": [
+              10759,
+              10765,
+              16
+            ],
+            "date": "2020-03-07"
+          },
+          {
+            "id": 49036,
+            "title": "乡村爱情",
+            "genre_ids": [
+              10751,
+              35
+            ],
+            "date": "2006-09-30"
+          },
+          {
+            "id": 217772,
+            "title": "猪猪侠",
+            "genre_ids": [
+              16,
+              10762,
+              10765,
+              10759
+            ],
+            "date": "2006-07-01"
+          },
+          {
+            "id": 155256,
+            "title": "开心超人联盟",
+            "genre_ids": [
+              10762,
+              16,
+              35,
+              10765,
+              10759
+            ],
+            "date": "2010-07-02"
+          },
+          {
+            "id": 19530,
+            "title": "霹雳布袋戏",
+            "genre_ids": [
+              10759,
+              18
+            ],
+            "date": "1988-06-01"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_5",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "5",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 168,
+        "total_pages": 9,
+        "count": 20,
+        "samples": [
+          {
+            "id": 237020,
+            "title": "百家讲坛：专题集",
+            "genre_ids": [
+              10767,
+              99
+            ],
+            "date": "2001-07-09"
+          },
+          {
+            "id": 136377,
+            "title": "天天向上",
+            "genre_ids": [
+              10767,
+              10764
+            ],
+            "date": "2008-08-04"
+          },
+          {
+            "id": 223348,
+            "title": "开讲啦",
+            "genre_ids": [
+              10767
+            ],
+            "date": "2012-08-27"
+          },
+          {
+            "id": 201453,
+            "title": "甜蜜的任务",
+            "genre_ids": [
+              10767,
+              35
+            ],
+            "date": "2019-02-04"
+          },
+          {
+            "id": 93550,
+            "title": "奇葩说",
+            "genre_ids": [
+              10767,
+              10764
+            ],
+            "date": "2014-11-22"
+          }
+        ]
+      },
+      {
+        "case": "cn_tv_type_6",
+        "endpoint": "discover/tv",
+        "params": {
+          "language": "zh-CN",
+          "page": "1",
+          "with_origin_country": "CN",
+          "with_type": "6",
+          "sort_by": "popularity.desc"
+        },
+        "total_results": 211,
+        "total_pages": 11,
+        "count": 20,
+        "samples": [
+          {
+            "id": 310751,
+            "title": "哆啦A梦TV版",
+            "genre_ids": [
+              10762,
+              16
+            ],
+            "date": "1979-04-02"
+          },
+          {
+            "id": 103085,
+            "title": "熊出没之丛林总动员",
+            "genre_ids": [
+              16,
+              10762,
+              35,
+              10766
+            ],
+            "date": "2013-07-13"
+          },
+          {
+            "id": 87590,
+            "title": "李卫当官",
+            "genre_ids": [
+              35,
+              80
+            ],
+            "date": "2002-07-01"
+          },
+          {
+            "id": 233607,
+            "title": "前夜",
+            "genre_ids": [
+              18,
+              9648
+            ],
+            "date": "2023-08-29"
+          },
+          {
+            "id": 280564,
+            "title": "记忆管理局",
+            "genre_ids": [
+              16,
+              10759
+            ],
+            "date": "2026-08-02"
+          }
+        ]
+      }
+    ]
+  },
+  "limits": {
+    "scope": "Local host only (about 1.9 GiB memory)",
+    "full_gradle_variant_completed": false,
+    "apk_built_or_installed": false,
+    "android_ui_executed": false,
+    "reason": "Full Gradle compilation exceeded available host memory; the separate Android device was running an existing MPV instrumentation session.",
+    "superseded_by": "github_actions: the complete Gradle checks, APK build, baseline lint comparison and emulator UI run were done on GitHub Actions. The APKs were downloaded and checksummed but not installed on a physical device."
+  },
+  "github_actions": {
+    "repository": "wobuhui666/TV",
+    "branch": "verify/wall-filters-calendar-light-20261122",
+    "snapshot_commit": "faa561c5a77cf808fc446eb567493e9f6da69bd4",
+    "snapshot_note": "Snapshot commit on top of base e81c1364f8 containing the uncommitted working tree; pushed only to the verification branch, not to the working branch.",
+    "build_validation": {
+      "run": 45054922909,
+      "attempts": 2,
+      "conclusion": "success",
+      "first_attempt_failure": "Maven Central HTTP 429 while resolving a Media3 test dependency during the baseline lint build",
+      "tv_unit_tests": {
+        "task": ":app:testLeanbackArm64_v8aDebugUnitTest",
+        "suites": 170,
+        "tests": 1352,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "focused": {
+          "RexWallQueryTest": 17,
+          "RexTmdbQueryTest": 20,
+          "RexHomeCatalogTest": 10,
+          "PosterHomeCatalogTest": 12
+        }
+      },
+      "all_module_unit_tests": {
+        "suites": 208,
+        "tests": 1643,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "assemble": [
+        ":app:assembleLeanbackArm64_v8aDebug",
+        ":app:assembleLeanbackArm64_v8aDebugAndroidTest"
+      ],
+      "lint": {
+        "task": ":app:lintLeanbackArm64_v8aDebug",
+        "baseline": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+        "baseline_counts": {
+          "Error": 108,
+          "Warning": 388,
+          "Hint": 6
+        },
+        "current_counts": {
+          "Error": 108,
+          "Warning": 393,
+          "Hint": 6
+        },
+        "new_errors": 0,
+        "new_warnings": 8,
+        "clean_full_lint": false,
+        "note": "A full lint without a baseline fails on 108 errors that already exist at the base commit (run 45028363714)."
+      }
+    },
+    "apks": [
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.sourceprobe",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "0598e8bbda13ba212d03c0b4a74d92a0750926c567cc70525b43a482628132bb",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261124-arm64-debug-sourceprobe.apk"
+      },
+      {
+        "file": "preview-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.preview",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "f79dc8fcb13385d2763e9b8740b09cc78e18fb55c23b0e541882784584d270c7",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261124-arm64-debug-preview.apk"
+      }
+    ],
+    "ui_regression": {
+      "run": 45054858821,
+      "device": "GitHub Actions x86_64 emulator, API 34, google_apis, pixel_2 profile",
+      "package": "com.fongmi.android.tv.preview",
+      "network": "Synthetic TMDB and feed fixtures through an OkHttp interceptor; no real TMDB key",
+      "PosterWallFiltersIntegrationTest": {
+        "tests": 11,
+        "failures": 0
+      },
+      "TrackPresentationTest": {
+        "tests": 1,
+        "failures": 0
+      },
+      "run_conclusion": "failure",
+      "unrelated_failures_in_same_step": [
+        "NativeBrowseIntegrationTest#searchReleasesOffscreenViewsAndKeepsLoadedPagesAndLateResults: ordinary search results page did not open in time",
+        "HistoryActionsIntegrationTest#legacyHomeClearRunsInTheQueueAndKeepsTheCapturedConfiguration: expected JSON lacks the mediaRef field"
+      ],
+      "unrelated_failures_note": "Neither test nor the code they exercise is changed by this work. Both fail with the same assertions at the base commit, so they are pre-existing and were left untouched.",
+      "earlier_attempts": [
+        {
+          "run": 45028368089,
+          "result": "stopped before the emulator: workflow did not install lxml for the Python source checks"
+        },
+        {
+          "run": 45048264552,
+          "result": "5 of 11 wall tests failed: the test re-tapped an already expanded summary chip (collapsing it) and did not pin the poster home layout that its Douban fixtures assume"
+        }
+      ],
+      "screenshots": [
+        "screenshots/wall-series-variety.png",
+        "screenshots/wall-trending-media.png",
+        "screenshots/wall-trending-restored.png",
+        "screenshots/wall-local-filter-douban_movie.png",
+        "screenshots/wall-filters-expanded.png"
+      ],
+      "base_commit_control": {
+        "run": 45062921427,
+        "snapshot_commit": "660ee280bee6b9823f7a949120562e6b94f2ef8b",
+        "content": "Base e81c1364f8 plus only the app-responsiveness.yml Python fixture setup",
+        "result": "Tests run: 9, Failures: 2 (the same two tests, same assertions)"
+      }
+    },
+    "not_covered": [
+      "Physical TV or ARM64 device UI run",
+      "Release-signed APK",
+      "Clean full lint without baseline"
+    ],
+    "previous_apks": [
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.sourceprobe",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "09c1f3d00fc9122cf3b10a481818b1668355edd6960f84b0b972f75ce35707a0",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-sourceprobe.apk",
+        "snapshot_commit": "faa561c5a77cf808fc446eb567493e9f6da69bd4",
+        "run": 45054922909
+      },
+      {
+        "file": "preview-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.preview",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "a4585ca1dd54a07a87d8d8ebebefd79f6081646d9132aec9643067eb0b1536cd",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261122-arm64-debug-preview.apk",
+        "snapshot_commit": "faa561c5a77cf808fc446eb567493e9f6da69bd4",
+        "run": 45054922909
+      },
+      {
+        "file": "sourceprobe-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.sourceprobe",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "fc679c363153218c15a2c6ae250b5ffb093d03688e457f08a7d2558542108411",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-sourceprobe.apk",
+        "snapshot_commit": "b223afe44b2b552db447f8a0da0c598ee3877321",
+        "run": 45207621752
+      },
+      {
+        "file": "preview-app-debug.apk",
+        "application_id": "com.fongmi.android.tv.preview",
+        "abi": "arm64-v8a",
+        "build_type": "debug",
+        "sha256": "422cb488762dbfe2a57ccdeafd2b6c4f188bbd2ab619b15bd078c3e4537bcfa4",
+        "local_copy": "Release/apk/TV-home-wall-filters-calendar-light-20261123-arm64-debug-preview.apk",
+        "snapshot_commit": "b223afe44b2b552db447f8a0da0c598ee3877321",
+        "run": 45207621752
+      }
+    ],
+    "followup_build": {
+      "snapshot_commit": "3cc09a73e489beadeb93e0154bea93a925f7b879",
+      "run": 45284521006,
+      "attempts": 1,
+      "conclusion": "success",
+      "difference_from_snapshot": "Airing-calendar changes only: Bangumi list summary fallback, reconnect prompt, JSON content type without charset, and one calendar test date fix. No poster-wall source changed.",
+      "tv_unit_tests": {
+        "suites": 170,
+        "tests": 1355,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "all_module_unit_tests": {
+        "tests": 1646,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "lint": {
+        "baseline": "e81c1364f8cbebc50afccd01c16fc035bf838f99",
+        "baseline_counts": {
+          "Error": 108,
+          "Warning": 389,
+          "Hint": 6
+        },
+        "current_counts": {
+          "Error": 108,
+          "Warning": 394,
+          "Hint": 6
+        },
+        "new_errors": 0,
+        "new_warnings": 8
+      },
+      "poster_wall_ui_regression_rerun": false,
+      "apks": "github_actions.apks"
+    }
+  }
+}

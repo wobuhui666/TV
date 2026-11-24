@@ -73,16 +73,19 @@ import com.bumptech.glide.request.transition.Transition
 import com.fongmi.android.tv.ui.components.TvFocusableSurface
 import com.fongmi.android.tv.ui.library.DetailArtwork
 import com.fongmi.android.tv.ui.theme.JetStreamAnimations
+import com.fongmi.android.tv.ui.theme.RexTheme
 import com.fongmi.android.tv.utils.ImgUtil
 import kotlin.math.roundToInt
 
 /** Keep the previous frame until new artwork is decoded, then fade two cached image layers. */
 @Composable
 internal fun CalendarBackdrop(url: String, motion: Boolean, modifier: Modifier) {
+    val background = MaterialTheme.colorScheme.background
+    val scrim = if (RexTheme.isLight) background else Color.Black
     var displayed by remember { mutableStateOf("") }
     var status by remember(url) { mutableStateOf(if (url.isBlank()) "unavailable" else "loading") }
     LaunchedEffect(url) { if (url.isBlank()) displayed = "" }
-    Box(modifier.background(Color(0xFF101114)).testTag("calendarBackdrop").semantics {
+    Box(modifier.background(background).testTag("calendarBackdrop").semantics {
         contentDescription = url
         stateDescription = status
     }) {
@@ -97,17 +100,17 @@ internal fun CalendarBackdrop(url: String, motion: Boolean, modifier: Modifier) 
         Box(Modifier.fillMaxSize().drawWithCache {
             // Strong scrims keep foreground text readable over the brightest source images.
             val vertical = Brush.verticalGradient(
-                0f to Color.Black.copy(alpha = .90f),
-                .18f to Color.Black.copy(alpha = .90f),
-                .48f to Color.Black.copy(alpha = .42f),
-                .72f to Color.Black.copy(alpha = .82f),
-                1f to Color.Black.copy(alpha = .98f)
+                0f to scrim.copy(alpha = .90f),
+                .18f to scrim.copy(alpha = .90f),
+                .48f to scrim.copy(alpha = .42f),
+                .72f to scrim.copy(alpha = .82f),
+                1f to scrim.copy(alpha = .98f)
             )
             val horizontal = Brush.horizontalGradient(
-                0f to Color.Black.copy(alpha = .94f),
-                .32f to Color.Black.copy(alpha = .86f),
-                .56f to Color.Black.copy(alpha = .62f),
-                1f to Color.Black.copy(alpha = .18f)
+                0f to scrim.copy(alpha = .94f),
+                .32f to scrim.copy(alpha = .86f),
+                .56f to scrim.copy(alpha = .62f),
+                1f to scrim.copy(alpha = .18f)
             )
             onDrawBehind { drawRect(vertical); drawRect(horizontal) }
         })
@@ -117,6 +120,7 @@ internal fun CalendarBackdrop(url: String, motion: Boolean, modifier: Modifier) 
 @Composable
 internal fun CalendarHero(preview: AiringCalendarPreview, motion: Boolean, modifier: Modifier,
     onLogoFailed: () -> Unit) {
+    val foreground = MaterialTheme.colorScheme.onBackground
     var logoStatus by remember(preview.key, preview.logo) {
         mutableStateOf(if (preview.logo.isBlank()) "unavailable" else "loading")
     }
@@ -124,6 +128,7 @@ internal fun CalendarHero(preview: AiringCalendarPreview, motion: Boolean, modif
         "aired" -> stringResource(R.string.calendar_status_aired)
         "today" -> stringResource(R.string.calendar_status_today)
         "upcoming" -> stringResource(R.string.calendar_status_upcoming)
+        "weekly" -> stringResource(R.string.calendar_weekly)
         else -> ""
     }
     val chips = (listOf(status) + preview.metadata).filter(String::isNotBlank).distinct()
@@ -144,17 +149,17 @@ internal fun CalendarHero(preview: AiringCalendarPreview, motion: Boolean, modif
             if (chips.isNotEmpty()) FlowRow(Modifier.fillMaxWidth().testTag("calendarPreviewMetadata"),
                 horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), maxLines = 2) {
                 chips.forEachIndexed { index, chip ->
-                    androidx.compose.foundation.layout.Row(Modifier.background(Color.White.copy(alpha = .13f), RoundedCornerShape(7.dp))
+                    androidx.compose.foundation.layout.Row(Modifier.background(foreground.copy(alpha = .09f), RoundedCornerShape(7.dp))
                         .padding(horizontal = 9.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        if (chip == status) Box(Modifier.size(4.dp).background(Color.White, CircleShape))
+                        if (chip == status) Box(Modifier.size(4.dp).background(foreground, CircleShape))
                         Text(chip, Modifier.testTag("calendarPreviewMetadataText:$index"),
-                            color = Color.White, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 1)
+                            color = foreground, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 1)
                     }
                 }
             }
             if (preview.overview.isNotBlank()) Text(preview.overview,
-                Modifier.fillMaxWidth().testTag("calendarPreviewOverview"), color = Color.White.copy(alpha = .93f),
+                Modifier.fillMaxWidth().testTag("calendarPreviewOverview"), color = foreground.copy(alpha = .93f),
                 fontSize = 14.sp, lineHeight = 18.sp, maxLines = if (motion) 2 else 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -178,7 +183,7 @@ private fun CalendarHeroTitle(title: String, motion: Boolean) {
             Modifier.fillMaxWidth().testTag("calendarPreviewTitle").then(if (motion) Modifier.basicMarquee(
                 iterations = Int.MAX_VALUE, initialDelayMillis = 2500, repeatDelayMillis = 2500, velocity = 18.dp
             ) else Modifier),
-            color = Color.White, style = style.copy(fontSize = font, lineHeight = (font.value * 1.13f).sp),
+            color = MaterialTheme.colorScheme.onBackground, style = style.copy(fontSize = font, lineHeight = (font.value * 1.13f).sp),
             maxLines = if (motion) 1 else 2, softWrap = !motion, overflow = TextOverflow.Clip,
             onTextLayout = { result ->
                 if (!motion && (result.hasVisualOverflow || result.lineCount > 1) && font.value > 24f) {
@@ -191,6 +196,8 @@ private fun CalendarHeroTitle(title: String, motion: Boolean) {
 @Composable
 internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, motion: Boolean,
     modifier: Modifier, onClick: () -> Unit) {
+    val foreground = MaterialTheme.colorScheme.onBackground
+    val background = MaterialTheme.colorScheme.background
     val interactions = remember(item.key) { MutableInteractionSource() }
     val focused by interactions.collectIsFocusedAsState()
     val scale by animateFloatAsState(
@@ -219,7 +226,7 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
                 onDrawWithContent {
                     drawContent()
                     // Draw after the artwork using the Surface's actual interaction.
-                    if (focused) drawRoundRect(Color.White, topLeft = Offset(inset, inset),
+                    if (focused) drawRoundRect(foreground, topLeft = Offset(inset, inset),
                         size = Size((size.width - strokeWidth).coerceAtLeast(0f), (size.height - strokeWidth).coerceAtLeast(0f)),
                         cornerRadius = CornerRadius(radius, radius), style = Stroke(strokeWidth))
                 }
@@ -236,9 +243,9 @@ internal fun CalendarMediaCard(item: AiringCalendarItem, landscape: Boolean, mot
         Text(item.title, Modifier.fillMaxWidth().then(if (focused && motion) Modifier.basicMarquee(
             iterations = Int.MAX_VALUE, initialDelayMillis = 2200, repeatDelayMillis = 2200, velocity = 16.dp
         ) else Modifier).drawWithCache {
-            val fade = Brush.horizontalGradient(.85f to Color.Transparent, 1f to Color(0xFF101114).copy(alpha = .3f))
+            val fade = Brush.horizontalGradient(.85f to Color.Transparent, 1f to background.copy(alpha = .3f))
             onDrawWithContent { drawContent(); if (!focused) drawRect(fade) }
-        }, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 1, overflow = TextOverflow.Clip)
+        }.testTag("calendarCardTitle:${item.key}"), color = foreground, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 1, overflow = TextOverflow.Clip)
     }
 }
 
