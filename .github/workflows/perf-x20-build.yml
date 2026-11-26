@@ -1,0 +1,189 @@
+name: Build profileable X20 performance package
+
+# Verification-only workflow. It lives on the verify/perf-x20 branch and is never merged.
+# It builds the release build type under a separate application ID so the package installs
+# beside the production app on the test device, signs it with one throwaway key kept in the
+# Actions cache (so later builds install over earlier ones), and marks it profileable so
+# simpleperf and atrace can attribute time inside the release code.
+
+on:
+  push:
+    branches: ['verify/perf-x20']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-x20-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      PERF_APPLICATION_ID: com.fongmi.android.tv.perf
+      # At or above every published version code, so the in-app updater never prompts.
+      TV_VERSION_CODE: '2099999999'
+      PYTHONDONTWRITEBYTECODE: '1'
+
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Name the build after its commit
+        run: echo "TV_VERSION_NAME=5.8.7-perf.${GITHUB_SHA::10}" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Android SDK 37.0
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Checkout Media3 fork
+        uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare composite, SDK 37.0 and the profileable release manifest
+        run: |
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          test -d .media3/build-logic
+          test -d .media3/build-logic-settings
+          test -f .media3/libraries/ui_danmaku/build.gradle.kts
+          for module in lib-inspector test-data test-utils test-utils-robolectric; do
+            test -f ".github/media3-stubs/$module/build.gradle"
+          done
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/tv-sdk-compat.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                      }
+                  }
+              }
+          }
+          GRADLE
+          test ! -e app/src/release/AndroidManifest.xml
+          mkdir -p app/src/release
+          cat > app/src/release/AndroidManifest.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              <application>
+                  <profileable android:shell="true" tools:targetApi="q" />
+              </application>
+          </manifest>
+          XML
+          chmod +x ./gradlew
+
+      - name: Restore the throwaway signing key
+        id: signing
+        uses: actions/cache@v4
+        with:
+          path: .perf-signing
+          key: perf-x20-signing-v1
+
+      - name: Create the throwaway signing key once
+        if: steps.signing.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .perf-signing
+          keytool -genkeypair -keystore .perf-signing/perf.jks -storetype PKCS12 \
+            -storepass android -keypass android -alias perf \
+            -dname 'CN=TV X20 performance throwaway,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 3650
+
+      - name: Configure signing
+        run: |
+          test ! -f local.properties
+          {
+            echo "storeFile=$GITHUB_WORKSPACE/.perf-signing/perf.jks"
+            echo "keyAlias=perf"
+            echo "keyPassword=android"
+            echo "storePassword=android"
+          } > local.properties
+
+      - name: Build the release-type package
+        env:
+          # The same service keys as the published release, so the pages load the same content.
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TRAKT_CLIENT_ID: ${{ vars.TRAKT_CLIENT_ID || secrets.TRAKT_CLIENT_ID }}
+          ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
+          TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/tv-sdk-compat.init.gradle" -PtvApplicationId="$PERF_APPLICATION_ID" \
+            :app:assembleLeanbackArm64_v8aRelease --no-daemon --build-cache --max-workers=2 --console=plain
+
+      - name: Verify package, signature and profileable flag
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, shutil, subprocess
+          tools = pathlib.Path(os.environ['ANDROID_HOME']) / 'build-tools/37.0.0'
+          apks = list(pathlib.Path('app/build/outputs/apk/leanbackArm64_v8a/release').glob('*.apk'))
+          if len(apks) != 1:
+              raise SystemExit('Expected exactly one release APK, found ' + str(len(apks)))
+          source = apks[0]
+          badging = subprocess.check_output([str(tools / 'aapt2'), 'dump', 'badging', str(source)], text=True)
+          package = re.search(r"^package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging, re.MULTILINE)
+          if package is None or package.group(1) != os.environ['PERF_APPLICATION_ID']:
+              raise SystemExit('Unexpected application ID')
+          if 'application-debuggable' in badging:
+              raise SystemExit('The performance package must not be debuggable')
+          manifest = subprocess.check_output([str(tools / 'aapt2'), 'dump', 'xmltree', '--file', 'AndroidManifest.xml', str(source)], text=True)
+          if not re.search(r'E: profileable[^\n]*\n\s*A: [^\n]*shell[^\n]*=true', manifest):
+              raise SystemExit('The release manifest is not profileable from shell')
+          signed = subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(source)], text=True)
+          certificate = re.search(r'(?:Signer #[0-9]+|V[0-9]+ Signer): certificate SHA-256 digest: (\S+)', signed)
+          if certificate is None:
+              raise SystemExit('No signing certificate reported: ' + signed)
+          destination = pathlib.Path('perf-x20')
+          destination.mkdir()
+          output = destination / 'tv-perf-arm64.apk'
+          shutil.copyfile(source, output)
+          digest = hashlib.sha256()
+          with output.open('rb') as stream:
+              for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                  digest.update(chunk)
+          metadata = {
+              'applicationCommit': os.environ['GITHUB_SHA'],
+              'media3Commit': subprocess.check_output(['git', '-C', os.environ['MEDIA3_SOURCE_DIR'], 'rev-parse', 'HEAD'], text=True).strip(),
+              'applicationId': package.group(1), 'versionCode': package.group(2), 'versionName': package.group(3),
+              'abi': 'arm64-v8a', 'buildType': 'release', 'profileable': True, 'debuggable': False,
+              'signingCertificateSha256': certificate.group(1).lower(),
+              'file': output.name, 'size': output.stat().st_size, 'sha256': digest.hexdigest(),
+          }
+          (destination / 'build-metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          print(json.dumps(metadata, indent=2))
+          PY
+
+      - name: Upload the performance package
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-x20-${{ github.run_id }}
+          path: perf-x20/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
