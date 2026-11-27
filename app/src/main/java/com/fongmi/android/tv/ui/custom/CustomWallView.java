@@ -1,7 +1,7 @@
 package com.fongmi.android.tv.ui.custom;
 
 import android.content.Context;
-import android.graphics.drawable.Drawable;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
@@ -17,12 +17,20 @@ import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.ui.PlayerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestBuilder;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.signature.ObjectKey;
 import com.fongmi.android.tv.R;
+import com.fongmi.android.tv.api.config.WallConfig;
 import com.fongmi.android.tv.databinding.ViewWallBinding;
 import com.fongmi.android.tv.event.ConfigEvent;
 import com.fongmi.android.tv.event.RefreshEvent;
 import com.fongmi.android.tv.setting.Setting;
 import com.fongmi.android.tv.utils.FileUtil;
+import com.fongmi.android.tv.utils.GlideWarmup;
+import com.fongmi.android.tv.utils.ImgUtil;
 import com.fongmi.android.tv.utils.WallColorUtil;
 
 import org.greenrobot.eventbus.EventBus;
@@ -65,6 +73,7 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
 
     private void refresh() {
         stop();
+        ImgUtil.clear(binding.image);
         load();
         theme();
     }
@@ -88,10 +97,10 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
     private void load() {
         int wall = Setting.getWall();
         int type = Setting.getWallType();
-        if (isBuiltIn(wall, type)) loadRes(WALL_PAPERS[wall]);
+        if (isBuiltIn(wall, type)) loadWallpaper(WALL_PAPERS[wall], false);
         else if (type == TYPE_VIDEO) loadVideo(FileUtil.getWall(wall));
         else if (type == TYPE_GIF) loadGif(FileUtil.getWall(wall));
-        else loadImage();
+        else loadWallpaper(FileUtil.getWallCache(), true);
     }
 
     protected void theme() {
@@ -102,22 +111,12 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
         if (Setting.getThemeColor() == Setting.THEME_FOLLOW_WALLPAPER) RefreshEvent.theme();
     }
 
-    private void loadRes(int resId) {
-        binding.image.setImageResource(resId);
-    }
-
-    private void loadImage() {
-        Drawable cache = cache();
-        if (cache != null) binding.image.setImageDrawable(cache);
-        else binding.image.setImageResource(R.drawable.wallpaper_1);
-    }
-
     private void loadVideo(File file) {
         ensurePlayer();
         ensureVideoView();
         video.setPlayer(player);
         video.setVisibility(VISIBLE);
-        binding.image.setImageDrawable(cache());
+        loadWallpaper(FileUtil.getWallCache(), false);
         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)));
         player.prepare();
     }
@@ -125,12 +124,24 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
     private void loadGif(File file) {
         drawable = gif(file);
         if (drawable != null) binding.image.setImageDrawable(drawable);
-        else loadImage();
+        else loadWallpaper(FileUtil.getWallCache(), true);
     }
 
-    private Drawable cache() {
-        File file = FileUtil.getWallCache();
-        return file.exists() ? Drawable.createFromPath(file.getAbsolutePath()) : null;
+    private void loadWallpaper(Object model, boolean fallback) {
+        if (GlideWarmup.defer(binding.image, () -> loadWallpaper(model, fallback), () -> {
+            if (fallback) binding.image.setImageResource(R.drawable.wallpaper_1);
+            else if (model instanceof Integer resource) binding.image.setImageResource(resource);
+        })) return;
+        RequestBuilder<Bitmap> request = wallpaper(model);
+        if (model instanceof File) request.signature(new ObjectKey(WallConfig.get().snapshotVersion()));
+        if (fallback) request.error(wallpaper(R.drawable.wallpaper_1));
+        request.into(binding.image);
+    }
+
+    private RequestBuilder<Bitmap> wallpaper(Object model) {
+        // One decode for concurrent full-screen views. ImageView applies centerCrop at draw time.
+        return Glide.with(getContext().getApplicationContext()).asBitmap().load(model)
+                .override(Target.SIZE_ORIGINAL).dontTransform().dontAnimate().diskCacheStrategy(DiskCacheStrategy.NONE);
     }
 
     private GifDrawable gif(File file) {
@@ -188,6 +199,7 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
     public void onDestroy(@NonNull LifecycleOwner owner) {
         EventBus.getDefault().unregister(this);
         if (drawable != null) drawable.recycle();
+        if (binding != null) ImgUtil.clear(binding.image);
         if (video != null) removeView(video);
         if (player != null) player.release();
         drawable = null;

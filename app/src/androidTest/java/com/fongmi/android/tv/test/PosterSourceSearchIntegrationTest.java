@@ -71,10 +71,16 @@ public final class PosterSourceSearchIntegrationTest {
         Collector collector = new Collector(query, a.getKey(), List.of(a.getKey(), b.getKey()));
 
         // The repeated keyword must not create a third round of requests.
-        instrumentation.runOnMainSync(() -> search.start(List.of(a, b), List.of("沙丘", "Dune", "沙丘"), collector));
+        AtomicInteger prepared = new AtomicInteger();
+        instrumentation.runOnMainSync(() -> search.start(List.of(a, b), List.of("沙丘", "Dune", "沙丘"), List.of(),
+                result -> {
+                    if (Looper.myLooper() != Looper.getMainLooper()) prepared.incrementAndGet();
+                    return result;
+                }, collector));
         await(collector.complete, "Two-site alias search did not complete", 15);
         instrumentation.waitForIdleSync();
         collector.assertHealthy(4);
+        assertEquals("All four responses must be prepared off main", 4, prepared.get());
 
         List<PosterSourceResults.Candidate> candidates = collector.results.snapshot(true);
         assertEquals("Two distinct IDs from each of two sites must survive", 4, candidates.size());

@@ -589,10 +589,9 @@ class JetStreamDiscoverShelfImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ShapeableImageView(context, attrs, defStyleAttr) {
+) : AppCompatImageView(context, attrs, defStyleAttr) {
 
     init {
-        shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(jetStreamDp(10)).build()
         background = jetStreamImagePlaceholderDrawable(cornerRadiusDp = 10)
         scaleType = ScaleType.CENTER_CROP
         clipToOutline = true
@@ -631,10 +630,9 @@ open class JetStreamPosterImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ShapeableImageView(context, attrs, defStyleAttr) {
+) : AppCompatImageView(context, attrs, defStyleAttr) {
 
     init {
-        shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(jetStreamDp(POSTER_CORNER_RADIUS_DP)).build()
         background = jetStreamImagePlaceholderDrawable(cornerRadiusDp = POSTER_CORNER_RADIUS_DP)
         scaleType = ScaleType.CENTER_CROP
         clipToOutline = true
@@ -645,10 +643,9 @@ class JetStreamPosterOverlayImageView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : ShapeableImageView(context, attrs, defStyleAttr) {
+) : AppCompatImageView(context, attrs, defStyleAttr) {
 
     init {
-        shapeAppearanceModel = shapeAppearanceModel.toBuilder().setAllCornerSizes(jetStreamDp(POSTER_CORNER_RADIUS_DP)).build()
         background = jetStreamImagePlaceholderDrawable(cornerRadiusDp = POSTER_CORNER_RADIUS_DP, colorRes = R.color.jetstream_overlay_surface)
         scaleType = ScaleType.CENTER
         clipToOutline = true
@@ -1374,14 +1371,12 @@ private fun MaterialTextView.applyJetStreamLabelText(
     defaultTextStyle: Int? = null
 ) {
     val typedArray = context.obtainStyledAttributes(attrs, intArrayOf(android.R.attr.textColor, android.R.attr.textSize, android.R.attr.textAppearance, android.R.attr.textStyle), defStyleAttr, 0)
-    val hasTextColor = typedArray.hasValue(0)
     val hasTextSize = typedArray.hasValue(1)
     val hasTextAppearance = typedArray.hasValue(2)
     val hasTextStyle = typedArray.hasValue(3)
     bindJetStreamTextColor(typedArray, defaultTextColorRes)
     typedArray.recycle()
 
-    if (!hasTextColor) setTextColor(jetStreamColorStateList(defaultTextColorRes))
     if (!hasTextSize && !hasTextAppearance) setTextSize(TypedValue.COMPLEX_UNIT_SP, defaultTextSizeSp)
     if (defaultTextStyle != null && !hasTextStyle) setTypeface(typeface, defaultTextStyle)
     includeFontPadding = false
@@ -1522,49 +1517,23 @@ private fun View.hasNoPadding(): Boolean {
 
 private fun View.jetStreamMediaItemBackground(): StateListDrawable {
     return StateListDrawable().withJetStreamFocusMotion().apply {
-        addState(intArrayOf(android.R.attr.state_focused), jetStreamMediaItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_pressed), jetStreamMediaItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_selected), jetStreamMediaItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_checked), jetStreamMediaItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_activated), jetStreamMediaItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(), jetStreamMediaItemDrawable(R.color.jetstream_surface_container, R.color.jetstream_outline_variant, 0))
-    }
-}
-
-private fun View.jetStreamMediaItemDrawable(colorRes: Int, strokeColorRes: Int, strokeWidthDp: Int): GradientDrawable {
-    return GradientDrawable().apply {
-        cornerRadius = jetStreamDp(18)
-        setColor(jetStreamColor(colorRes))
-        setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
-    }.also { drawable ->
-        bindJetStreamTheme {
-            drawable.setColor(jetStreamColor(colorRes))
-            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
-        }
+        addState(intArrayOf(android.R.attr.state_focused), jetStreamChipDrawable(18, R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
+        addState(intArrayOf(android.R.attr.state_pressed), jetStreamChipDrawable(18, R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
+        addState(intArrayOf(android.R.attr.state_selected), jetStreamChipDrawable(18, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(android.R.attr.state_checked), jetStreamChipDrawable(18, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(android.R.attr.state_activated), jetStreamChipDrawable(18, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(), jetStreamChipDrawable(18, R.color.jetstream_surface_container, R.color.jetstream_outline_variant, 0))
     }
 }
 
 private fun View.jetStreamRoundItemBackground(): StateListDrawable {
     return StateListDrawable().withJetStreamFocusMotion().apply {
-        addState(intArrayOf(android.R.attr.state_focused), jetStreamRoundItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_pressed), jetStreamRoundItemDrawable(R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
-        addState(intArrayOf(android.R.attr.state_selected), jetStreamRoundItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_checked), jetStreamRoundItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(android.R.attr.state_activated), jetStreamRoundItemDrawable(R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
-        addState(intArrayOf(), jetStreamRoundItemDrawable(R.color.jetstream_surface_container, R.color.jetstream_outline_variant, 0))
-    }
-}
-
-private fun View.jetStreamRoundItemDrawable(colorRes: Int, strokeColorRes: Int, strokeWidthDp: Int): GradientDrawable {
-    return GradientDrawable().apply {
-        cornerRadius = jetStreamDp(12)
-        setColor(jetStreamColor(colorRes))
-        setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
-    }.also { drawable ->
-        bindJetStreamTheme {
-            drawable.setColor(jetStreamColor(colorRes))
-            drawable.setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
-        }
+        addState(intArrayOf(android.R.attr.state_focused), jetStreamChipDrawable(12, R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
+        addState(intArrayOf(android.R.attr.state_pressed), jetStreamChipDrawable(12, R.color.jetstream_primary_container, R.color.jetstream_primary, 2))
+        addState(intArrayOf(android.R.attr.state_selected), jetStreamChipDrawable(12, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(android.R.attr.state_checked), jetStreamChipDrawable(12, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(android.R.attr.state_activated), jetStreamChipDrawable(12, R.color.jetstream_secondary_container, R.color.jetstream_secondary, 1))
+        addState(intArrayOf(), jetStreamChipDrawable(12, R.color.jetstream_surface_container, R.color.jetstream_outline_variant, 0))
     }
 }
 
@@ -1582,8 +1551,6 @@ private fun View.jetStreamChipBackground(cornerRadiusDp: Int): StateListDrawable
 private fun View.jetStreamChipDrawable(cornerRadiusDp: Int, colorRes: Int, strokeColorRes: Int, strokeWidthDp: Int): GradientDrawable {
     return GradientDrawable().apply {
         cornerRadius = jetStreamDp(cornerRadiusDp)
-        setColor(jetStreamColor(colorRes))
-        setStroke(jetStreamDpInt(strokeWidthDp), jetStreamColor(strokeColorRes))
     }.also { drawable ->
         bindJetStreamTheme {
             drawable.setColor(jetStreamColor(colorRes))
