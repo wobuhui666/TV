@@ -105,9 +105,7 @@ internal fun jetStreamTypeface(context: Context): Typeface? {
  * 应用品牌字体，保留当前字重/斜体样式。在文本样式辅助函数末尾调用。
  */
 internal fun TextView.applyJetStreamTypeface() {
-    val family = jetStreamTypeface(context) ?: return
-    val style = typeface?.style ?: Typeface.NORMAL
-    if (style == Typeface.NORMAL) typeface = family else setTypeface(family, style)
+    LibraryViews.applyTypeface(this)
 }
 
 /** Theme-aware cursor and selection for TV text input; the shared drawable is white. */

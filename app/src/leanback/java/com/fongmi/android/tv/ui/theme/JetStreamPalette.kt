@@ -182,12 +182,19 @@ object JetStreamPalette {
     @JvmStatic
     fun current(): JetStreamAccentPalette {
         val value = Setting.getThemeColor()
+        return accent(value, wallpaperSeed(value), RexTheme.isLight)
+    }
+
+    private fun wallpaperSeed(value: Int): Int =
+        if (value == Setting.THEME_FOLLOW_WALLPAPER) Setting.getWallColor().takeIf { it != 0 } ?: STAR_BLUE_SEED else 0
+
+    private fun accent(value: Int, seed: Int, light: Boolean): JetStreamAccentPalette {
         val palette = when (value) {
             Setting.THEME_DEFAULT -> defaultPalette
-            Setting.THEME_FOLLOW_WALLPAPER -> wallpaperPalette()
+            Setting.THEME_FOLLOW_WALLPAPER -> fromSeed(value, R.string.theme_follow_wallpaper, seed)
             else -> fixedPresets.firstOrNull { it.value == value } ?: fromSeed(value, R.string.setting_custom, value)
         }
-        return if (RexTheme.isLight) lightAccent(palette) else palette
+        return if (light) lightAccent(palette) else palette
     }
 
     private fun lightAccent(palette: JetStreamAccentPalette): JetStreamAccentPalette {
@@ -217,19 +224,25 @@ object JetStreamPalette {
         return current().labelRes
     }
 
+    private data class Presentation(val theme: Int, val seed: Int, val light: Boolean, val palette: JetStreamAccentPalette)
+    @Volatile private var lastPresentation: Presentation? = null
+
     // Focus is deliberately neutral across presets. The chosen theme remains an
     // accent for supplementary information, never a tint over the artwork.
     private fun presentationPalette(): JetStreamAccentPalette {
-        val accent = current()
-        if (RexTheme.isLight) return accent.copy(
+        val theme = Setting.getThemeColor()
+        val seed = wallpaperSeed(theme)
+        val light = RexTheme.isLight
+        lastPresentation?.let { if (it.theme == theme && it.seed == seed && it.light == light) return it.palette }
+        val accent = accent(theme, seed, light)
+        val palette = if (light) accent.copy(
             primary = ON_SURFACE, onPrimary = SURFACE,
             primaryContainer = SURFACE_CONTAINER_HIGHEST, onPrimaryContainer = ON_SURFACE,
             secondary = ON_SURFACE_VARIANT, onSecondary = SURFACE,
             secondaryContainer = SURFACE_CONTAINER_HIGH, onSecondaryContainer = ON_SURFACE,
             tertiary = accent.primary, onTertiary = accent.onPrimary,
             tertiaryContainer = accent.primaryContainer, onTertiaryContainer = accent.onPrimaryContainer
-        )
-        return accent.copy(
+        ) else accent.copy(
             primary = 0xFFF2F2F2.toInt(), onPrimary = 0xFF17181C.toInt(),
             primaryContainer = 0xFF41454E.toInt(), onPrimaryContainer = 0xFFF2F2F2.toInt(),
             secondary = 0xFFD2D3D8.toInt(), onSecondary = 0xFF17181C.toInt(),
@@ -237,6 +250,8 @@ object JetStreamPalette {
             tertiary = accent.primary, onTertiary = accent.onPrimary,
             tertiaryContainer = accent.primaryContainer, onTertiaryContainer = accent.onPrimaryContainer
         )
+        lastPresentation = Presentation(theme, seed, light, palette)
+        return palette
     }
 
     @JvmStatic

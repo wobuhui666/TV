@@ -143,6 +143,12 @@ final class LibraryResourcesController {
         return first == null ? second == null : first.sameSelection(second);
     }
 
+    private static List<Found> prepareResults(Result result) {
+        List<Found> summaries = new ArrayList<>(result.getList().size());
+        for (Vod source : result.getList()) summaries.add(new Found(source, LibrarySourceMatcher.prepareSource(source)));
+        return summaries;
+    }
+
     void start() {
         if (preparing) cancelSelection();
         prepared = null;
@@ -151,15 +157,16 @@ final class LibraryResourcesController {
         running = true; error = false;
         found.clear(); reusable = true;
         render();
-        search.start(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names(), PosterSourcePrioritySetting.getOrderedKeys(), new DiscoverSourceSearch.Listener() {
-            @Override public void onResult(Result result, int returned, int total) {
+        search.start(PosterSourcePrioritySetting.orderSites(VodConfig.get().getSites()), names(), PosterSourcePrioritySetting.getOrderedKeys(),
+                LibraryResourcesController::prepareResults, new DiscoverSourceSearch.ResultListener<>() {
+            @Override public void onResult(List<Found> result, int returned, int total) {
                 if (closed) return;
                 boolean changed = result == null && !error;
                 if (result == null) error = true;
-                else for (Vod source : result.getList()) {
-                    LibrarySourceMatcher.PreparedSource summary = LibrarySourceMatcher.prepareSource(source);
-                    keep(source, summary);
-                    if (work.match(summary).matches() && sources.putIfAbsent(LibraryIdentity.sourceKey(source), source) == null) changed = true;
+                else for (Found item : result) {
+                    keep(item);
+                    Vod source = item.source();
+                    if (work.match(item.summary()).matches() && sources.putIfAbsent(LibraryIdentity.sourceKey(source), source) == null) changed = true;
                 }
                 if (changed) render();
                 if (selecting && pending == null) attemptNext();
@@ -202,9 +209,9 @@ final class LibraryResourcesController {
         return names;
     }
 
-    private void keep(Vod source, LibrarySourceMatcher.PreparedSource summary) {
+    private void keep(Found item) {
         if (!reusable) return;
-        if (found.size() < FOUND_LIMIT) found.add(new Found(source, summary));
+        if (found.size() < FOUND_LIMIT) found.add(item);
         else forget();
     }
 

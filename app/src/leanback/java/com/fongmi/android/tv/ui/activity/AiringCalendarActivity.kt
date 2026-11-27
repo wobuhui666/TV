@@ -110,8 +110,9 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
     private fun acceptResult(value: AiringCalendarResult) {
         if (!isFinishing && !isDestroyed) {
             result = value
-            val retained = selectedEntries().firstOrNull { it.stableKey == previewKey }
-            if (retained == null) setPreview(selectedEntries().firstOrNull())
+            val entries = selectedEntries()
+            val retained = entries.firstOrNull { it.stableKey == previewKey }
+            if (retained == null) setPreview(entries.firstOrNull())
             else if (enrichmentKey != retained.stableKey) setPreview(retained)
             else preview = previewFor(retained, metadataFor(retained))
             render()
@@ -229,6 +230,9 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
 
     private fun render() {
         if (!::binding.isInitialized) return
+        val entries = selectedEntries()
+        val selected = entries.firstOrNull { it.stableKey == previewKey }
+        val connected = provider != CalendarProvider.TMDB && CalendarAccountStore.token(provider) != null
         val end = weekStart.plusDays(6)
         val range = if (weekStart.year == end.year) {
             "${weekStart.format(DATE_FORMAT)} – ${end.format(DATE_FORMAT)}"
@@ -243,7 +247,7 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                 AiringCalendarDay(date.toString(), getString(WEEKDAYS[offset]), date == today,
                     date in result.knownUpdateDates)
             },
-            items = selectedEntries().map {
+            items = entries.map {
                 AiringCalendarItem(it.stableKey, it.media.name, it.media.pic, episodeLabel(it),
                     episodeStill(it), actualBackdrop(it))
             },
@@ -251,7 +255,7 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
             preview = preview, loading = result.loading, failed = result.failed && !result.unauthorized,
             hasKeeps = result.hasKeeps, hasMore = mode == "public" && result.page < result.totalPages,
             emptyMessage = getString(when {
-                remoteFollowing() && CalendarAccountStore.token(provider) == null -> R.string.calendar_connected_required
+                remoteFollowing() && !connected -> R.string.calendar_connected_required
                 remoteFollowing() && result.unauthorized -> R.string.calendar_auth_failed
                 mode == "public" && provider == CalendarProvider.TRAKT && CalendarAccountStore.traktClientId.isBlank() -> R.string.calendar_client_id_required
                 mode == "public" && provider == CalendarProvider.BANGUMI && weekStart != AiringCalendarRepository.weekStart(today) -> R.string.calendar_weekly_scope
@@ -260,10 +264,8 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                 else -> R.string.calendar_empty_day
             }),
             todayDate = today.toString(), provider = provider.id,
-            connected = provider != CalendarProvider.TMDB && CalendarAccountStore.token(provider) != null,
-            canFollow = provider != CalendarProvider.TMDB && CalendarAccountStore.token(provider) != null &&
-                selectedEntries().firstOrNull { it.stableKey == previewKey }?.remoteId?.let { it > 0 } == true,
-            followingTitle = selectedEntries().firstOrNull { it.stableKey == previewKey }?.let { entry ->
+            connected = connected, canFollow = connected && (selected?.remoteId ?: 0) > 0,
+            followingTitle = selected?.takeIf { connected }?.let { entry ->
                 CalendarAccountStore.follows(provider).any { it.remoteId == entry.remoteId }
             } == true, accountBusy = accountBusy
         ))

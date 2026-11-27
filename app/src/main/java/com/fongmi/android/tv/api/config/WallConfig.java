@@ -20,10 +20,18 @@ import com.github.catvod.utils.Path;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class WallConfig extends BaseConfig {
 
     private static final String TAG = WallConfig.class.getSimpleName();
+
+    private final AtomicLong snapshotVersion = new AtomicLong();
+
+    public long snapshotVersion() {
+        return snapshotVersion.get();
+    }
 
     public static WallConfig get() {
         return Loader.INSTANCE;
@@ -99,11 +107,21 @@ public class WallConfig extends BaseConfig {
     }
 
     private void setSnapshot(File file) throws Throwable {
-        Bitmap bitmap = Glide.with(App.get()).asBitmap().frame(0).load(file).override(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()).skipMemoryCache(true).diskCacheStrategy(DiskCacheStrategy.NONE).submit().get();
-        try (FileOutputStream fos = new FileOutputStream(FileUtil.getWallCache())) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+        File cache = FileUtil.getWallCache();
+        File temp = File.createTempFile("wallpaper-", ".jpg", cache.getParentFile());
+        var request = Glide.with(App.get()).asBitmap().frame(0).load(file)
+                .override(ResUtil.getScreenWidth(), ResUtil.getScreenHeight()).skipMemoryCache(true)
+                .diskCacheStrategy(DiskCacheStrategy.NONE).submit();
+        try {
+            Bitmap bitmap = request.get();
+            try (FileOutputStream fos = new FileOutputStream(temp)) {
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)) throw new IOException("Wallpaper encoding failed");
+            }
+            if (!temp.renameTo(cache)) throw new IOException("Wallpaper cache replacement failed");
+            snapshotVersion.incrementAndGet();
         } finally {
-            bitmap.recycle();
+            temp.delete();
+            Glide.with(App.get()).clear(request);
         }
     }
 
