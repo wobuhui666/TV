@@ -118,6 +118,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private long pendingStartPositionMs;
     private long pendingSeekAfterLoadMs;
     private long pendingResumeSeekMs = C.TIME_UNSET;
+    private boolean verifyPlaylistStart;
     private @Nullable String suspendedVideoTrack;
     private long audioOffsetMs;
     private long textOffsetMs;
@@ -423,6 +424,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         long targetMs = positionMs == C.TIME_UNSET ? 0 : Math.max(0, positionMs);
         if (durationMs > 0) targetMs = Math.min(targetMs, durationMs);
         this.positionMs = targetMs;
+        verifyPlaylistStart = false;
         if (playbackState == Player.STATE_ENDED && mediaItem != null && mediaItem.localConfiguration != null) {
             // At EOF libmpv has closed the file. Reopen it to make replay seekable.
             beginVideoOutputPlayback();
@@ -821,7 +823,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         restoreSuspendedVideoTrack();
         pendingSeekAfterLoadMs = startPositionMs > 0 && MpvLoadFile.deferInitialSeek(url)
                 ? startPositionMs : C.TIME_UNSET;
-        pendingResumeSeekMs = C.TIME_UNSET;
+        verifyPlaylistStart = startPositionMs > 0 && MpvLoadFile.networkPlaylist(url);
+        pendingResumeSeekMs = verifyPlaylistStart ? startPositionMs : C.TIME_UNSET;
         awaitingOutputStart = true;
         command(MpvLoadFile.command(url, startPositionMs));
         command("set", "pause", playWhenReady ? "no" : "yes");
@@ -876,7 +879,16 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 if (!fileLoaded) return;
                 if (recoverVideoOutputIfNeeded()) return;
                 if (outputReloadPending) restorePlaybackControls();
-                if (!finishResumeSeek()) return;
+                if (verifyPlaylistStart) {
+                    verifyPlaylistStart = false;
+                    // A playlist may ignore mpv's per-file start. Retry once with the existing
+                    // exact seek after native playback has actually restarted at the wrong time.
+                    if (!finishResumeSeek()) {
+                        pendingSeekAfterLoadMs = pendingResumeSeekMs;
+                        seekAfterLoadIfNeeded();
+                        return;
+                    }
+                } else if (!finishResumeSeek()) return;
                 seekAfterLoadIfNeeded();
                 readRuntimeState();
                 // The first reconfiguration can precede the first decoded frame.
@@ -1374,6 +1386,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void beginVideoOutputPlayback() {
         videoOutputRecovery.beginPlayback();
         videoPath.reset();
+        verifyPlaylistStart = false;
         pendingResumeSeekMs = C.TIME_UNSET;
         outputReloadPending = false;
         awaitingOutputStart = false;
