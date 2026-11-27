@@ -184,7 +184,8 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
             mPosterHome.setSourceListener(this, this::openLibrary);
         }
         mClock = Clock.create(mBinding.clock);
-        mBinding.progressLayout.showProgress();
+        // The poster home is already browsable while a source configuration loads.
+        if (mPosterHome == null) mBinding.progressLayout.showProgress();
         PermissionUtil.requestNotify(this);
         DLNARendererService.start(this);
         Updater.create().start(this);
@@ -197,8 +198,6 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
         initConfig();
         setTitle();
         setLogo();
-        // The discovery wall can be browsed before a playback source has been configured.
-        if (mPosterHome != null) mBinding.progressLayout.showContent();
     }
 
     @Override
