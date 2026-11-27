@@ -1,6 +1,5 @@
 package com.fongmi.android.tv.ui.presenter;
 
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,12 +34,10 @@ public final class PosterKeepPresenter extends Presenter {
         binding.getRoot().getLayoutParams().width = ResUtil.dp2px(132);
         binding.poster.getLayoutParams().height = ResUtil.dp2px(176);
         binding.image.getLayoutParams().height = ResUtil.dp2px(176);
-        binding.year.setVisibility(View.GONE);
-        binding.remark.setVisibility(View.GONE);
         TouchFocus.bind(binding.getRoot());
         binding.getRoot().setOnFocusChangeListener((view, focused) -> {
             JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 0);
-            binding.metadata.setVisibility(focused ? View.VISIBLE : View.INVISIBLE);
+            binding.metadata.show(focused);
         });
         return new Holder(binding);
     }
@@ -50,9 +47,7 @@ public final class PosterKeepPresenter extends Presenter {
         AdapterVodRectBinding binding = ((Holder) viewHolder).binding;
         Keep item = (Keep) object;
         binding.name.setText(item.getVodName());
-        binding.site.setText(item.getSiteName());
-        binding.site.setVisibility(TextUtils.isEmpty(item.getSiteName()) ? View.GONE : View.VISIBLE);
-        binding.metadata.setVisibility(binding.getRoot().hasFocus() ? View.VISIBLE : View.INVISIBLE);
+        binding.metadata.bind("", "", item.getSiteName());
         binding.getRoot().setOnClickListener(view -> listener.onKeepClick(item, binding.image));
         binding.getRoot().setOnLongClickListener(view -> {
             listener.onKeepClick(item, binding.image);
