@@ -133,8 +133,8 @@ public class CustomWallView extends FrameLayout implements DefaultLifecycleObser
             else if (model instanceof Integer resource) binding.image.setImageResource(resource);
         })) return;
         RequestBuilder<Bitmap> request = wallpaper(model);
-        if (model instanceof File) request.signature(new ObjectKey(WallConfig.get().snapshotVersion()));
-        if (fallback) request.error(wallpaper(R.drawable.wallpaper_1));
+        if (model instanceof File) request = request.signature(new ObjectKey(WallConfig.get().snapshotVersion()));
+        if (fallback) request = request.error(wallpaper(R.drawable.wallpaper_1));
         request.into(binding.image);
     }
 

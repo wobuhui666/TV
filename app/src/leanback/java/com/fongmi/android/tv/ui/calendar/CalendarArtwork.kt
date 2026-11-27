@@ -89,7 +89,7 @@ internal fun CalendarBackdrop(url: String, motion: Boolean, modifier: Modifier) 
     val fade = remember(url) { Animatable(if (url == displayed) 1f else 0f) }
     LaunchedEffect(url, status, motion) {
         if (status == "loaded") {
-            if (motion) fade.animateTo(1f, tween(350)) else fade.snapTo(1f)
+            if (motion && displayed.isNotEmpty() && displayed != url) fade.animateTo(1f, tween(350)) else fade.snapTo(1f)
             displayed = url
         } else if (status == "unavailable") displayed = ""
     }

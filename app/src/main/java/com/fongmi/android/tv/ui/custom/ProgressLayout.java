@@ -199,6 +199,12 @@ public class ProgressLayout extends RelativeLayout {
 
     private void showView(View view) {
         view.animate().cancel();
+        if (!view.isLaidOut()) {
+            view.setAlpha(1f);
+            view.setTranslationY(0f);
+            view.setVisibility(VISIBLE);
+            return;
+        }
         if (!Util.isLeanback()) {
             view.setAlpha(0f);
             view.setVisibility(VISIBLE);
@@ -213,7 +219,7 @@ public class ProgressLayout extends RelativeLayout {
 
     private void hideView(View view) {
         view.animate().cancel();
-        if (!Util.isLeanback()) {
+        if (!Util.isLeanback() || !view.isLaidOut()) {
             view.setVisibility(INVISIBLE);
             return;
         }
@@ -226,7 +232,7 @@ public class ProgressLayout extends RelativeLayout {
 
     private void showStateView(View view) {
         view.animate().cancel();
-        if (!Util.isLeanback()) {
+        if (!Util.isLeanback() || !view.isLaidOut()) {
             view.setVisibility(VISIBLE);
             return;
         }
