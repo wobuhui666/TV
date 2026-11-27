@@ -6,10 +6,22 @@ import java.util.Locale;
 final class MpvLoadFile {
     private MpvLoadFile() { }
 
+    /** Explicit network playlists can start decoding at the resume segment before UI callbacks run. */
+    static boolean networkPlaylist(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase(Locale.ROOT);
+        if (!lower.startsWith("http://") && !lower.startsWith("https://")) return false;
+        int query = lower.indexOf('?');
+        int fragment = lower.indexOf('#');
+        int end = query < 0 ? lower.length() : query;
+        if (fragment >= 0) end = Math.min(end, fragment);
+        return lower.substring(0, end).endsWith(".m3u8");
+    }
+
     static boolean deferInitialSeek(String url) {
         if (url == null || url.isEmpty()) return false;
         String lower = url.toLowerCase(Locale.US);
-        return lower.contains(".m3u8") || lower.startsWith("http://") || lower.startsWith("https://");
+        return !networkPlaylist(url) && (lower.contains(".m3u8") || lower.startsWith("http://") || lower.startsWith("https://"));
     }
 
     static String[] command(String url, long startPositionMs) {
