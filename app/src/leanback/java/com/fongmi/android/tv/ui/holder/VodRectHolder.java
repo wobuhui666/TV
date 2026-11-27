@@ -22,7 +22,7 @@ public class VodRectHolder extends BaseVodHolder {
         this.listener = listener;
         binding.getRoot().setOnFocusChangeListener((view, focused) -> {
             JetStreamAnimator.animateFocus(view, focused, JetStreamAnimator.FOCUS_SCALE_CARD, 0);
-            binding.metadata.setVisibility(focused ? View.VISIBLE : View.INVISIBLE);
+            binding.metadata.show(focused);
         });
     }
 
@@ -35,12 +35,7 @@ public class VodRectHolder extends BaseVodHolder {
 
     @Override
     public void initView(Vod item) {
-        binding.metadata.setVisibility(binding.getRoot().hasFocus() ? View.VISIBLE : View.INVISIBLE);
         binding.name.setText(item.getName());
-        binding.year.setText(item.getYear());
-        binding.site.setText(item.getSiteName());
-        binding.site.setVisibility(item.getSiteName().isEmpty() ? View.GONE : item.getSiteVisible());
-        binding.year.setVisibility(item.getYearVisible());
         binding.name.setVisibility(item.getNameVisible());
         updateSourceSummary(item);
         binding.getRoot().setOnClickListener(v -> listener.onItemClick(item, binding.image));
@@ -50,13 +45,8 @@ public class VodRectHolder extends BaseVodHolder {
 
     @Override
     public void updateSourceSummary(Vod item) {
-        binding.remark.setText(item.getSourceSummary());
-        binding.remark.setVisibility(item.getRemarkVisible());
-        boolean year = binding.year.getVisibility() == View.VISIBLE;
-        boolean remark = binding.remark.getVisibility() == View.VISIBLE;
-        boolean site = binding.site.getVisibility() == View.VISIBLE;
-        binding.yearSeparator.setVisibility(year && (remark || site) ? View.VISIBLE : View.GONE);
-        binding.sourceSeparator.setVisibility(site && remark ? View.VISIBLE : View.GONE);
+        binding.metadata.bind(item.getYearVisible() == View.VISIBLE ? item.getYear() : "",
+                item.getRemarkVisible() == View.VISIBLE ? item.getSourceSummary() : "", item.getSiteName());
     }
 
     @Override
