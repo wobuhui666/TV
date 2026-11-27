@@ -91,3 +91,7 @@ print(json.dumps(result, indent=2))
 if not passed:
     raise SystemExit('Require all three library detail handoff Android tests, no failures or skips')
 PY
+
+UPSTREAM_NATIVE_UI_EVIDENCE=false bash .github/scripts/verify-upstream-features.sh \
+    'com.fongmi.android.tv.test.PosterSourceSearchIntegrationTest,com.fongmi.android.tv.ui.home.PosterKeepShelfIntegrationTest' \
+    "$out/x20-source-and-cards" '5,7'
