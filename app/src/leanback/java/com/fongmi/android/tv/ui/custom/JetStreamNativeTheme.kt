@@ -17,10 +17,12 @@ import java.util.WeakHashMap
 object JetStreamNativeTheme {
     private val attachedViews = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
     private var started = false
+    private var generation = 0L
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onThemeEvent(event: RefreshEvent) {
         if (event.type != RefreshEvent.Type.THEME) return
+        generation++
         // Dialog windows are outside the Activity content tree.
         attachedViews.toList().forEach { view -> bindings(view)?.forEach { it() } }
     }
@@ -45,13 +47,15 @@ object JetStreamNativeTheme {
         val updates = bindings(view) ?: mutableListOf<() -> Unit>().also {
             view.setTag(R.id.jetstream_theme_bindings, it)
             view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                private var lastGeneration = generation
+
                 override fun onViewAttachedToWindow(view: View) {
                     attachedViews.add(view)
-                    // RecyclerView may reattach a cached holder after the theme event.
-                    bindings(view)?.forEach { update -> update() }
+                    if (lastGeneration != generation) bindings(view)?.forEach { it() }
                 }
 
                 override fun onViewDetachedFromWindow(view: View) {
+                    lastGeneration = generation
                     attachedViews.remove(view)
                 }
             })

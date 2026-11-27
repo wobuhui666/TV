@@ -31,6 +31,8 @@ import com.fongmi.android.tv.bean.Keep;
 import com.fongmi.android.tv.bean.PosterKeepShelfState;
 import com.fongmi.android.tv.db.AppDatabase;
 import com.fongmi.android.tv.setting.BrowseExperienceSettings;
+import com.fongmi.android.tv.setting.ExperienceMode;
+import com.fongmi.android.tv.setting.ExperienceSettings;
 import com.fongmi.android.tv.test.NativeUiEvidence;
 import com.fongmi.android.tv.ui.activity.DiscoverDetailActivity;
 import com.fongmi.android.tv.ui.activity.KeepActivity;
@@ -67,7 +69,7 @@ public final class PosterKeepShelfIntegrationTest {
 
     private static final int FIRST_CID = -910_701;
     private static final int SECOND_CID = -910_702;
-    private static final String[] PREFERENCES = {"browse_poster_home", "browse_poster_keep_shelf"};
+    private static final String[] PREFERENCES = {"tv_experience_mode_v1", "browse_home_layout_v1", "browse_poster_home", "browse_poster_keep_shelf"};
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final Map<String, Object> preferences = new HashMap<>();
     private final List<Keep> inserted = new ArrayList<>();
@@ -94,6 +96,7 @@ public final class PosterKeepShelfIntegrationTest {
             for (String key : PREFERENCES) if (previous.containsKey(key)) preferences.put(key, previous.get(key));
             prepared = true;
             setConfig(FIRST_CID);
+            ExperienceSettings.putMode(ExperienceMode.CLASSIC);
             BrowseExperienceSettings.putPosterHomeEnabled(true);
             BrowseExperienceSettings.putPosterKeepShelfEnabled(true);
         });
@@ -237,7 +240,8 @@ public final class PosterKeepShelfIntegrationTest {
             controller.refresh();
         });
         await(() -> !state().isVisible() && navigation.hasFocus(), "empty row hands focus back to navigation");
-        assertEquals(1, focusFallbacks.get());
+        // Leanback may have already moved focus to navigation when its focused row disappeared.
+        assertTrue("Focus recovery runs at most once", focusFallbacks.get() <= 1);
         assertFalse(value(() -> visible(R.id.keepPosters)));
         assertFalse(value(controller::isFocusable));
     }

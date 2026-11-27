@@ -15,11 +15,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 /** Poster search shares the global spider budget and has a whole-session deadline. */
 public final class DiscoverSourceSearch {
-    public interface Listener {
-        void onResult(Result result, int returned, int total);
+    public interface Listener extends ResultListener<Result> {}
+
+    public interface ResultListener<T> {
+        void onResult(T result, int returned, int total);
         void onComplete(boolean deadline);
     }
 
@@ -35,6 +38,11 @@ public final class DiscoverSourceSearch {
     }
 
     public void start(List<Site> sites, List<String> keywords, List<String> priorityKeys, Listener listener) {
+        start(sites, keywords, priorityKeys, Function.identity(), listener);
+    }
+
+    public <T> void start(List<Site> sites, List<String> keywords, List<String> priorityKeys,
+                          Function<Result, T> prepare, ResultListener<T> listener) {
         stop();
         long current = generation.get();
         SiteApi.SearchRequest currentRequest = request = new SiteApi.SearchRequest();
@@ -70,10 +78,17 @@ public final class DiscoverSourceSearch {
                     if (generation.get() != current) return;
                     // Health checks include hashing and connectivity IPC; keep them on the worker.
                     job.attempt.complete(result, error);
+                    T prepared;
+                    try {
+                        prepared = result == null ? null : prepare.apply(result);
+                    } catch (RuntimeException malformed) {
+                        prepared = null;
+                    }
+                    T value = prepared;
                     App.post(() -> {
                         if (generation.get() != current) return;
-                        listener.onResult(result, ++returned, jobs.size());
-                        if (returned == jobs.size()) {
+                        listener.onResult(value, ++returned, jobs.size());
+                        if (generation.get() == current && returned == jobs.size()) {
                             stop();
                             listener.onComplete(false);
                         }

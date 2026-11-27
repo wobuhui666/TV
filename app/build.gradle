@@ -39,6 +39,11 @@ def tvCoexist = tvApplicationId != tvDefaultApplicationId
 android {
     namespace = 'com.fongmi.android.tv'
 
+    // Android's themed TextViews open these font files during their first layout.
+    androidResources {
+        noCompress += ['misans_regular.ttf', 'misans_medium.ttf', 'misans_semibold.ttf']
+    }
+
     compileSdk libs.versions.compileSdk.get().toInteger()
 
     defaultConfig {

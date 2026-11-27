@@ -4,7 +4,7 @@ package com.fongmi.android.tv.ui.calendar
 
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -33,13 +33,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -83,19 +83,29 @@ internal fun CalendarBackdrop(url: String, motion: Boolean, modifier: Modifier) 
     val background = MaterialTheme.colorScheme.background
     val scrim = if (RexTheme.isLight) background else Color.Black
     var displayed by remember { mutableStateOf("") }
-    var status by remember(url) { mutableStateOf(if (url.isBlank()) "unavailable" else "loading") }
-    LaunchedEffect(url) { if (url.isBlank()) displayed = "" }
+    var status by remember(url) {
+        mutableStateOf(when (url) { "" -> "unavailable"; displayed -> "loaded"; else -> "loading" })
+    }
+    val fade = remember(url) { Animatable(if (url == displayed) 1f else 0f) }
+    LaunchedEffect(url, status, motion) {
+        if (status == "loaded") {
+            if (motion && displayed.isNotEmpty() && displayed != url) fade.animateTo(1f, tween(350)) else fade.snapTo(1f)
+            displayed = url
+        } else if (status == "unavailable") displayed = ""
+    }
     Box(modifier.background(background).testTag("calendarBackdrop").semantics {
         contentDescription = url
         stateDescription = status
     }) {
-        if (url.isNotBlank()) DetailArtwork(url, null, Modifier.fillMaxSize().alpha(0f),
-            onLoadResult = { loaded ->
-                status = if (loaded) "loaded" else "unavailable"
-                displayed = if (loaded) url else ""
+        // Keep the previous target alive during the fade. The incoming target becomes the
+        // displayed one with the same key, so its decoded image never needs a second request.
+        val layers = listOf(displayed, url).filter { it.isNotBlank() }.distinct()
+        for (artwork in layers) key(artwork) {
+            DetailArtwork(artwork, null, Modifier.fillMaxSize().graphicsLayer {
+                alpha = if (artwork == displayed) 1f else fade.value
+            }, onLoadResult = { loaded ->
+                if (artwork == url) status = if (loaded) "loaded" else "unavailable"
             })
-        Crossfade(displayed, Modifier.fillMaxSize(), animationSpec = tween(if (motion) 350 else 0), label = "calendarBackdrop") {
-            if (it.isNotBlank()) DetailArtwork(it, null, Modifier.fillMaxSize())
         }
         Box(Modifier.fillMaxSize().drawWithCache {
             // Strong scrims keep foreground text readable over the brightest source images.

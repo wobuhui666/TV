@@ -12,12 +12,21 @@ public class MpvLoadFileTest {
         assertEquals(-1, Integer.parseInt(command[3]));
         assertFalse(MpvLoadFile.deferInitialSeek(url));
     }
-    @Test public void httpAndHlsKeepTheirPostLoadSeekInsteadOfStartOptions() {
-        for (String url : new String[]{"https://media.test/file.mp4", "HTTP://media.test/stream", "file:///cache/PLAYLIST.M3U8"}) {
+    @Test public void opaqueHttpAndLocalPlaylistsKeepTheirPostLoadSeek() {
+        for (String url : new String[]{"https://media.test/file.mp4", "HTTP://media.test/stream", "https://media.test/resolve?name=stream.m3u8", "file:///cache/PLAYLIST.M3U8"}) {
             assertTrue(MpvLoadFile.deferInitialSeek(url));
             assertArrayEquals(new String[]{"loadfile", url, "replace"}, MpvLoadFile.command(url, 8_000));
         }
     }
+    @Test public void networkPlaylistPassesResumeToNativeDemuxerAtLoadTime() {
+        String url = "HTTPS://media.test/movie/INDEX.M3U8?quality=high#t";
+        assertTrue(MpvLoadFile.networkPlaylist(url));
+        assertFalse(MpvLoadFile.deferInitialSeek(url));
+        assertArrayEquals(new String[]{"loadfile", url, "replace", "-1", "start=68.125"},
+                MpvLoadFile.command(url, 68_125));
+        assertArrayEquals(new String[]{"loadfile", url, "replace"}, MpvLoadFile.command(url, 0));
+    }
+
     @Test public void startAtZeroAndUnsetPositionDoNotNeedOptionalArguments() {
         for (long position : new long[]{0, -1, Long.MIN_VALUE + 1})
             assertArrayEquals(new String[]{"loadfile", "/data/local.mp4", "replace"}, MpvLoadFile.command("/data/local.mp4", position));
