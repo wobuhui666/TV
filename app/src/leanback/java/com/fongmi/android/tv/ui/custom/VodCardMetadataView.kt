@@ -3,6 +3,7 @@ package com.fongmi.android.tv.ui.custom
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import androidx.appcompat.widget.LinearLayoutCompat
 import com.fongmi.android.tv.databinding.ViewVodCardMetadataBinding
 
@@ -15,11 +16,11 @@ class VodCardMetadataView(context: Context, attrs: AttributeSet?) : LinearLayout
     private var remark = ""
     private var site = ""
 
-    fun bind(year: String, remark: String, site: String) {
+    fun bind(year: String, remark: String, site: String?) {
         this.year = year
         this.remark = remark
-        this.site = site
-        if (visibility == VISIBLE) render()
+        this.site = site.orEmpty()
+        show((parent as? View)?.hasFocus() == true)
     }
 
     fun show(focused: Boolean) {
@@ -28,15 +29,13 @@ class VodCardMetadataView(context: Context, attrs: AttributeSet?) : LinearLayout
     }
 
     private fun render() {
-        with(labels) {
-            year.text = this@VodCardMetadataView.year
-            remark.text = this@VodCardMetadataView.remark
-            site.text = this@VodCardMetadataView.site
-            year.visibility = if (year.text.isNotEmpty()) VISIBLE else GONE
-            remark.visibility = if (remark.text.isNotEmpty()) VISIBLE else GONE
-            site.visibility = if (site.text.isNotEmpty()) VISIBLE else GONE
-            yearSeparator.visibility = if (year.visibility == VISIBLE && (remark.visibility == VISIBLE || site.visibility == VISIBLE)) VISIBLE else GONE
-            sourceSeparator.visibility = if (remark.visibility == VISIBLE && site.visibility == VISIBLE) VISIBLE else GONE
-        }
+        labels.year.text = year
+        labels.remark.text = remark
+        labels.site.text = site
+        labels.year.visibility = if (year.isNotEmpty()) VISIBLE else GONE
+        labels.remark.visibility = if (remark.isNotEmpty()) VISIBLE else GONE
+        labels.site.visibility = if (site.isNotEmpty()) VISIBLE else GONE
+        labels.yearSeparator.visibility = if (year.isNotEmpty() && (remark.isNotEmpty() || site.isNotEmpty())) VISIBLE else GONE
+        labels.sourceSeparator.visibility = if (remark.isNotEmpty() && site.isNotEmpty()) VISIBLE else GONE
     }
 }
