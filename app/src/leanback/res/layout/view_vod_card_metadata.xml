@@ -15,7 +15,7 @@
         android:layout_marginEnd="4dp"
         android:gravity="center"
         android:importantForAccessibility="no"
-        android:text="·"
+        android:text="@string/tv_metadata_separator"
         android:textSize="12sp"
         android:visibility="gone" />
     <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView
@@ -35,7 +35,7 @@
         android:layout_marginEnd="4dp"
         android:gravity="center"
         android:importantForAccessibility="no"
-        android:text="·"
+        android:text="@string/tv_metadata_separator"
         android:textSize="12sp"
         android:visibility="gone" />
     <com.fongmi.android.tv.ui.custom.JetStreamSupportingLabelTextView

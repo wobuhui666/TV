@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tv_metadata_separator" translatable="false">·</string>
     <string name="tv_search_results_title">Results for “%1$s”</string>
     <string name="tv_search_result_count">%1$d matches · %2$d sources</string>
     <string name="tv_search_waiting">Searching your enabled sources…</string>
