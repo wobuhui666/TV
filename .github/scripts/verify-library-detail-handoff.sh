@@ -4,6 +4,7 @@ set -euo pipefail
 out=artifacts/library-detail-handoff
 class=com.fongmi.android.tv.playback.vod.LibraryDetailHandoffAndroidTest
 mkdir -p "$out/unit-tests"
+adb shell settings put secure immersive_mode_confirmations confirmed
 
 python3 - "$out" <<'PY'
 import json, os, pathlib, shutil, subprocess, sys, xml.etree.ElementTree as ET
