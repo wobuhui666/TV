@@ -1,0 +1,49 @@
+{
+  "matchingFeatures": 408,
+  "homographyInliers": 363,
+  "evaluatedPixels": 462091,
+  "transforms": {
+    "identity": {
+      "exposureGain": 0.10000000149011612,
+      "exposureOffset": 0.4632601737976074,
+      "medianAbsoluteChannelError": 62.631343841552734,
+      "meanAbsoluteChannelError": 63.680023193359375
+    },
+    "RGB red/blue swap": {
+      "exposureGain": 1.2444820404052734,
+      "exposureOffset": 0.1011572778224945,
+      "medianAbsoluteChannelError": 17.351978302001953,
+      "meanAbsoluteChannelError": 19.228736877441406
+    },
+    "BT.709 Cb/Cr swap": {
+      "exposureGain": 1.2136671543121338,
+      "exposureOffset": 0.06117969751358032,
+      "medianAbsoluteChannelError": 14.715462684631348,
+      "meanAbsoluteChannelError": 15.46121883392334
+    },
+    "BT.601 Cb/Cr swap": {
+      "exposureGain": 1.2030290365219116,
+      "exposureOffset": 0.044019609689712524,
+      "medianAbsoluteChannelError": 13.466188430786133,
+      "meanAbsoluteChannelError": 14.18875503540039
+    },
+    "BT.709 chroma inversion": {
+      "exposureGain": 1.1892424589666124,
+      "exposureOffset": 0.1227005608026055,
+      "medianAbsoluteChannelError": 18.568865511256174,
+      "meanAbsoluteChannelError": 21.10498847367391
+    },
+    "709 decoded as 601": {
+      "exposureGain": 0.10000000149011612,
+      "exposureOffset": 0.46443822979927063,
+      "medianAbsoluteChannelError": 62.4277229309082,
+      "meanAbsoluteChannelError": 63.51734161376953
+    },
+    "601 decoded as 709": {
+      "exposureGain": 0.10000000149011612,
+      "exposureOffset": 0.46213796734809875,
+      "medianAbsoluteChannelError": 62.82130813598633,
+      "meanAbsoluteChannelError": 63.86055374145508
+    }
+  }
+}

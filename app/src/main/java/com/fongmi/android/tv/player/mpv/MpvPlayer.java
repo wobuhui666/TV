@@ -3,7 +3,9 @@ package com.fongmi.android.tv.player.mpv;
 import android.content.Context;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.os.Build;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -29,6 +31,7 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 
 import com.fongmi.android.tv.App;
+import com.fongmi.android.tv.BuildConfig;
 import com.fongmi.android.tv.bean.Sub;
 import com.fongmi.android.tv.cache.CacheLease;
 import com.fongmi.android.tv.player.PlaybackSpecs;
@@ -87,6 +90,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private boolean outputReloadPending;
     private boolean awaitingOutputStart;
     private boolean recoveryHasVideo;
+    private int audioUnderruns;
 
     private PlaybackParameters playbackParameters;
     private TrackSelectionParameters trackSelectionParameters;
@@ -311,6 +315,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     @Override
     protected ListenableFuture<?> handleRelease() {
         if (closed) return Futures.immediateVoidFuture();
+        reportPlaybackDiagnostics("release", 0);
         closed = true;
         MpvLogCollector.log("MpvPlayer", "handleRelease: stop + async destroy");
         try {
@@ -531,10 +536,18 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     @Override
     public void logMessage(String prefix, int level, String text) {
-        if (TextUtils.isEmpty(text) || level > MpvLogLevel.MPV_LOG_LEVEL_WARN) return;
+        if (TextUtils.isEmpty(text)) return;
+        if (level > MpvLogLevel.MPV_LOG_LEVEL_WARN
+                && !MpvVideoPath.isNativeDiagnostics(prefix, text)) return;
         String message = (TextUtils.isEmpty(prefix) ? "" : prefix + ": ") + text.trim();
         if (level <= MpvLogLevel.MPV_LOG_LEVEL_ERROR) MpvLogCollector.logError("MPV", message);
         else MpvLogCollector.log("MPV", message);
+        if ("cplayer".equals(prefix) && text.contains("Audio device underrun detected.")) {
+            runForPlayback(() -> {
+                audioUnderruns++;
+                reportPlaybackDiagnostics("audio-underrun", 2_000);
+            });
+        }
         if (level <= MpvLogLevel.MPV_LOG_LEVEL_ERROR && MpvVideoOutputRecovery.isContextFailure(prefix, text)) {
             long observedGeneration = videoOutputRecovery.generation();
             runForPlayback(() -> {
@@ -544,6 +557,11 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     }
 
     private void initialize() {
+        MpvLogCollector.log("MpvPlayer", "诊断版本: app=" + BuildConfig.VERSION_NAME
+                + " package=" + BuildConfig.APPLICATION_ID + " sdk=" + Build.VERSION.SDK_INT
+                + " manufacturer=" + Build.MANUFACTURER + " model=" + Build.MODEL
+                + " hardware=" + Build.HARDWARE + " board=" + Build.BOARD
+                + " abis=" + String.join(",", Build.SUPPORTED_ABIS));
         MpvLogCollector.log("MpvPlayer", "initialize 开始 decode=" + (decode == PlayerEngine.HARD ? "硬解" : "软解")
                 + " vulkan=" + PlayerSetting.isMpvVulkan()
                 + " hdr=" + PlayerSetting.getMpvHdr());
@@ -562,6 +580,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                     + " vulkan=" + PlayerSetting.isMpvVulkan()
                     + " gpu-next=" + PlayerSetting.isMpvGpuNext());
             MpvOptions.applyPostInit(configDir);
+            MpvLogCollector.log("MpvPlayer", "原生版本: mpv=" + propString("mpv-version", "?")
+                    + " ffmpeg=" + propString("ffmpeg-version", "?"));
             MPVLib.addObserver(this);
             observeProperties();
             initialized = true;
@@ -856,6 +876,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 addInitialSubtitles();
                 applyAudioEffects();
                 updateBufferingState();
+                reportPlaybackDiagnostics("file-loaded", 0);
                 invalidateState();
             }
             case MpvEvent.MPV_EVENT_AUDIO_RECONFIG -> {
@@ -982,6 +1003,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         // Property notifications can be queued before a reload or seek completes.
         // Read the current native clock rather than publishing their stale payload.
         readPosition();
+        reportPlaybackDiagnostics("playing", 5_000);
     }
 
     private void updateBufferingState() {
@@ -1072,6 +1094,13 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void reportVideoPath() {
         String line = videoPath.changed(MpvVideoPath.describe(name -> propString(name, null), selectedVideoDolbyProfile()));
         if (line != null) MpvLogCollector.log("MpvPlayer", "视频链路: " + line);
+    }
+
+    private void reportPlaybackDiagnostics(String reason, long intervalMs) {
+        if (closed || !fileLoaded || (!MpvLogCollector.isEnabled() && !DiagnosticLog.isEnabled())) return;
+        if (!videoPath.takeSample(SystemClock.elapsedRealtime(), intervalMs)) return;
+        MpvLogCollector.log("MpvPlayer", "播放采样: reason=" + reason + " "
+                + MpvVideoPath.performance(name -> propString(name, null), audioUnderruns));
     }
 
     PlaybackSpecs getPlaybackSpecs() {
@@ -1374,6 +1403,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void beginVideoOutputPlayback() {
         videoOutputRecovery.beginPlayback();
         videoPath.reset();
+        audioUnderruns = 0;
         pendingResumeSeekMs = C.TIME_UNSET;
         outputReloadPending = false;
         awaitingOutputStart = false;

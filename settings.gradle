@@ -51,6 +51,16 @@ if (media3SourceDir != null && !media3SourceDir.isBlank()) {
             throw new GradleException("Cannot prepare the required Media3 patch: ${patchError}")
         }
         logger.lifecycle(patchOutput)
+        def runtimeApplication = providers.exec {
+            commandLine 'python3', file('third_party/mpv/sync_media3_runtime.py').absolutePath, media3Dir.absolutePath
+            ignoreExitValue = true
+        }
+        def runtimeOutput = runtimeApplication.standardOutput.asText.get().trim()
+        def runtimeError = runtimeApplication.standardError.asText.get().trim()
+        if (runtimeApplication.result.get().exitValue != 0) {
+            throw new GradleException("Cannot synchronize the shared FFmpeg runtime: ${runtimeError}")
+        }
+        logger.lifecycle(runtimeOutput)
         includeBuild(media3Dir) {
             dependencySubstitution {
                 substitute module("androidx.media3:media3-common") using project(":lib-common")

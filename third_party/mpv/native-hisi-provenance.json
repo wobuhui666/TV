@@ -1,0 +1,126 @@
+{
+  "originalArchiveSha256": "d3f22c64ab90a1476b489c2b4f06de8296672497f2998161efb4d906f9a4a66c",
+  "archiveSha256": "4ac7c853a706851cdbd56363a9f3be481e4c00ebccf8ea7294959d67abb22eee",
+  "nativeBuildRun": "46156228021",
+  "patchSha256": "9585a1745f4a3edc3ccecad84940105b06d3152b0af657c4ad5653639f557638",
+  "originalLibraries": {
+    "arm64-v8a/libavcodec.so": "54c02b9013743ed58b5eff5673e800b3552bf6beab301ef8bee788e067d40f79",
+    "arm64-v8a/libavdevice.so": "d522c475d5d5157d3101946fda17d45fb054fc98da12d792c3778d45b19618f0",
+    "arm64-v8a/libavfilter.so": "c4b47f3fb22ff72ccf03611f26fe9418714886d9023b91475538ca0d811a4e24",
+    "arm64-v8a/libavformat.so": "805443787223a4f6c15876aeb9f505c7bdfb8c754bb22418d7b515bf88077717",
+    "arm64-v8a/libavutil.so": "8b5dd5d6d1cf3a162709630439b39ac8acdc8831a83955345c733c1a6d3f3529",
+    "arm64-v8a/libswresample.so": "aeab0a7a36fbb7ce5a8f341509d35e45a2017cc3b78f49ad3df964303e522059",
+    "arm64-v8a/libswscale.so": "bccbfe95f2b3456410c2931805d370afaa16a3fef2ed43ff6e31b1859065a8ef",
+    "armeabi-v7a/libavcodec.so": "1de6984959ece4fc684bb42356c20c200c7b92f9e8b56bb09dcbde91eb75eb8a",
+    "armeabi-v7a/libavdevice.so": "87512ec224f420d9e9b8530cc05ca7dae45e6803d8cb3228e9a1d1ecaa9397a6",
+    "armeabi-v7a/libavfilter.so": "014a4e78d47ecc1c881c9f274eb9d9640fd5903b46aaea2b74b35966d145ad83",
+    "armeabi-v7a/libavformat.so": "6673cdfd05e0eede63cf9a9e038a8d3271f7937fd0b1e7a10cb76b1c775eba86",
+    "armeabi-v7a/libavutil.so": "01fbcd13ee61c5b6a23a9c4b650f3e08b263f0aa8f6d580d1c6d7d908587695c",
+    "armeabi-v7a/libswresample.so": "7ee3052b57204fbdc7e4500e8c73338c02bfe13be5ead157bfc7e8fe14ab4f3b",
+    "armeabi-v7a/libswscale.so": "89d34e966ae9420e3f7a91a8545ac509aaa1b8b8059df9d055d7e0bcead59ea4"
+  },
+  "builds": {
+    "arm64-v8a": {
+      "ffmpegCommit": "04482c8d13ac27b2a9fe93f5d388929eef8af5f4",
+      "producerCommit": "99a60ad2141d5ace94453590903c2c6b9a0a2443",
+      "ndk": "29.0.14206865",
+      "androidApi": 24,
+      "abi": "arm64-v8a",
+      "patchSha256": "9585a1745f4a3edc3ccecad84940105b06d3152b0af657c4ad5653639f557638",
+      "sources": {
+        "producer": [
+          "https://codeload.github.com/FongMi/mpv-android/tar.gz/99a60ad2141d5ace94453590903c2c6b9a0a2443",
+          "139e0bd58175cc7f5284b694a72f60330a17e93893e3489c6a28f794c556e2a6"
+        ],
+        "ffmpeg": [
+          "https://codeload.github.com/FongMi/FFmpeg/tar.gz/04482c8d13ac27b2a9fe93f5d388929eef8af5f4",
+          "2799c096143c8133eb51c7f7bc6c7f83c76633c2456e7833cae89bd441be8a18"
+        ],
+        "mbedtls": [
+          "https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.7/mbedtls-3.6.7.tar.bz2",
+          "a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6"
+        ],
+        "dav1d": [
+          "https://codeload.github.com/videolan/dav1d/tar.gz/54706fc6bc0cdecab7e9593974a4039cc038fca7",
+          "9edb11a2108b375cc58370354e705feebc93430bb780130363815c1e1ac0c250"
+        ],
+        "libxml2": [
+          "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.3/libxml2-v2.15.3.tar.gz",
+          "0da50c1415f4ec0364569d2119b1436ba837b31df44af28569d234272c23cf1f"
+        ],
+        "libaribcaption": [
+          "https://codeload.github.com/xqq/libaribcaption/tar.gz/refs/tags/v1.1.1",
+          "278d03a0a662d00a46178afc64f32535ede2d78c603842b6fd1c55fa9cd44683"
+        ],
+        "freetype2": [
+          "https://codeload.github.com/freetype/freetype/tar.gz/refs/tags/VER-2-14-3",
+          "dc49de6b01a266eef4876a4dd34d9842c475d3e28ff2eff63bd2fb760ab56261"
+        ],
+        "dlg": [
+          "https://codeload.github.com/nyorain/dlg/tar.gz/395ccad2c1e0daae535c4d20bb0a3f2424648e17",
+          "263a4a3777d9839e34cd41db988310659e0c00eab37beb7aedd30511a460133b"
+        ]
+      },
+      "libraries": {
+        "libavcodec.so": "148038d382d20605ae0add38743977cc567166236b2e7fb742badf7783a21f2e",
+        "libavdevice.so": "947236f1fbb7c9de76c16dbe12af3db12e2228e39f81104378bdb971237b47d5",
+        "libavfilter.so": "597674fa6b0eb2c7edf5840b1437cb487efc37726d6bbdb29f95552385930175",
+        "libavformat.so": "b3a299a9759343d976cff750f2dffe39f818866ed5a96e6c301bb66650c25c7a",
+        "libavutil.so": "b25e7423d793a185977ce43006a26671d9148198eb36c321e449968ebdc2432a",
+        "libswresample.so": "41ca07cd55faa0c2f988ba0e9ea3f29e04448049859802f9cb275dc7ffec1864",
+        "libswscale.so": "d5fdb01ed2cdce180911135fa59e458c5d043d8c5040de603b4ee509b8673c6d"
+      }
+    },
+    "armeabi-v7a": {
+      "ffmpegCommit": "04482c8d13ac27b2a9fe93f5d388929eef8af5f4",
+      "producerCommit": "99a60ad2141d5ace94453590903c2c6b9a0a2443",
+      "ndk": "29.0.14206865",
+      "androidApi": 24,
+      "abi": "armeabi-v7a",
+      "patchSha256": "9585a1745f4a3edc3ccecad84940105b06d3152b0af657c4ad5653639f557638",
+      "sources": {
+        "producer": [
+          "https://codeload.github.com/FongMi/mpv-android/tar.gz/99a60ad2141d5ace94453590903c2c6b9a0a2443",
+          "139e0bd58175cc7f5284b694a72f60330a17e93893e3489c6a28f794c556e2a6"
+        ],
+        "ffmpeg": [
+          "https://codeload.github.com/FongMi/FFmpeg/tar.gz/04482c8d13ac27b2a9fe93f5d388929eef8af5f4",
+          "2799c096143c8133eb51c7f7bc6c7f83c76633c2456e7833cae89bd441be8a18"
+        ],
+        "mbedtls": [
+          "https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.7/mbedtls-3.6.7.tar.bz2",
+          "a7e8bcbec0e6f761b4af24f25677626b35f762f68eef79c08677a363212d11f6"
+        ],
+        "dav1d": [
+          "https://codeload.github.com/videolan/dav1d/tar.gz/54706fc6bc0cdecab7e9593974a4039cc038fca7",
+          "9edb11a2108b375cc58370354e705feebc93430bb780130363815c1e1ac0c250"
+        ],
+        "libxml2": [
+          "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.15.3/libxml2-v2.15.3.tar.gz",
+          "0da50c1415f4ec0364569d2119b1436ba837b31df44af28569d234272c23cf1f"
+        ],
+        "libaribcaption": [
+          "https://codeload.github.com/xqq/libaribcaption/tar.gz/refs/tags/v1.1.1",
+          "278d03a0a662d00a46178afc64f32535ede2d78c603842b6fd1c55fa9cd44683"
+        ],
+        "freetype2": [
+          "https://codeload.github.com/freetype/freetype/tar.gz/refs/tags/VER-2-14-3",
+          "dc49de6b01a266eef4876a4dd34d9842c475d3e28ff2eff63bd2fb760ab56261"
+        ],
+        "dlg": [
+          "https://codeload.github.com/nyorain/dlg/tar.gz/395ccad2c1e0daae535c4d20bb0a3f2424648e17",
+          "263a4a3777d9839e34cd41db988310659e0c00eab37beb7aedd30511a460133b"
+        ]
+      },
+      "libraries": {
+        "libavcodec.so": "5aa184adeefe0bb91ae42135ba9f4500cac2c656f971efa50f1820e9c0dc0c0b",
+        "libavdevice.so": "e027de3e3761ae46fe619a4341d68980157ac20d9e9754944bb51a17c017d521",
+        "libavfilter.so": "1ea79e7a7b9138c78fd7234bc505e56a0ce5cb4dc0654ef48009b6d6971e6b84",
+        "libavformat.so": "1610e5156941233f1af2db5ae89064ab7314b5e2ae13e5e5d26f5bd5ea2acd2a",
+        "libavutil.so": "3d8381d2a1f97df1f9e8ddf9688b5d102a19d53dc841e66072d979d80a85cef7",
+        "libswresample.so": "b2e21f01fbaeef482e84ccc9a7aca4a5017fdfd17eda2e82604d35a58a388e33",
+        "libswscale.so": "149de3310b092191d81dad7e15b99a9d43246d6d25a87bdfd785d4b92a2f482e"
+      }
+    }
+  }
+}

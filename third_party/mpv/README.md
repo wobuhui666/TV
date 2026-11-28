@@ -1,15 +1,19 @@
 # FongMi MPV native bundle
 
-`mpv-android-ffmpeg9-native.zip` comes from the successful
+`mpv-android-ffmpeg9-native.zip` retains MPV and libc++ from
 `FongMi/mpv-android` workflow run `31346106984` at commit `99a60ad214`.
+Its seven FFmpeg libraries were rebuilt for issue #134 in
+[GHA run 46156228021](https://github.com/wobuhui666/TV/actions/runs/46156228021),
+using the original producer recipes and exact FFmpeg commit recorded by Media3.
 
-- FFmpeg ref: `release-9.0-fongmi`
+- FFmpeg commit: `04482c8d13ac27b2a9fe93f5d388929eef8af5f4` (`release-9.0-fongmi`)
 - Architectures: `arm64-v8a`, `armeabi-v7a`
-- Archive SHA-256: `d3f22c64ab90a1476b489c2b4f06de8296672497f2998161efb4d906f9a4a66c`
+- Archive SHA-256: `4ac7c853a706851cdbd56363a9f3be481e4c00ebccf8ea7294959d67abb22eee`
+- Original archive SHA-256: `d3f22c64ab90a1476b489c2b4f06de8296672497f2998161efb4d906f9a4a66c`
 - The app keeps `classes.jar` and assets from
   `app/libs/mpv-android-lib-v0.0.3.aar`.
 - The extended JNI bridge is rebuilt for FFmpeg 9, as described below.
-- All other native libraries are taken from the FFmpeg 9 build.
+- Source archives, patch and per-library hashes: [native-hisi-provenance.json](native-hisi-provenance.json).
 
 The `mpv` Gradle module assembles these inputs without committing another
 large derived AAR.
@@ -63,3 +67,52 @@ exports and the bundled runtime's versioned media symbols. As a regression
 check, the original AAR bridge is rejected with its unresolved FFmpeg 8 imports.
 These ELF checks complement the Android playback and thumbnail smoke tests;
 they do not replace device testing.
+
+## HiSilicon colour-format fix
+
+[patches/ffmpeg-hisi-nv21.patch](patches/ffmpeg-hisi-nv21.patch) targets the
+pinned FFmpeg runtime source above. HiSilicon's public OMX implementation reports
+`0x7fa30c00` for NV21 (VU), whereas FFmpeg maps the shared vendor value to NV12
+(UV). The patch selects NV21 only for `OMX.hisi.video.decoder.*` with that
+specific format and without a Surface. It retains the byte-preserving copy
+and leaves standard NV12, other vendors and Surface decoding unchanged.
+
+The patch is compiled into both bundled ARM ABIs. The codec logs its original
+layout and an explicit `HiSilicon NV21 workaround applied` line when it matches.
+V55i device validation remains pending; the original log lacks the raw format
+value. The correction does not fix direct MediaCodec initialization or promise
+to remove 4K copy-decoding stutter.
+
+`settings.gradle` runs [sync_media3_runtime.py](sync_media3_runtime.py) for the
+pinned Media3 composite. It validates the existing and replacement hashes
+before synchronizing its shared FFmpeg copies, so packaging cannot choose the
+old codec through `pickFirsts`. Unknown local binary edits cause a failure.
+The original metadata is retained with a separate TV overlay and new hashes.
+
+Rebuild the exact FFmpeg revision with NDK r29, Python 3.12, Meson 1.10.1,
+Ninja, CMake and pkg-config (use an empty work directory for each ABI):
+
+```bash
+python3 third_party/mpv/build_hisi_ffmpeg.py --ndk /path/to/android-ndk-r29 \
+  --abi arm64-v8a --work /tmp/mpv-hisi-arm64 --output /tmp/mpv-hisi-output
+```
+
+The [native workflow](../../.github/workflows/mpv-native-hisi.yml) builds both
+ABIs. [verify_hisi_runtime.py](verify_hisi_runtime.py) compares exports with
+the original archive, resolves all versioned media imports and verifies the
+compiled patch marker. The [test APK workflow](../../.github/workflows/mpv-hisi-test.yml)
+also checks hashes of all seven libraries inside each signed coexist APK.
+
+Run the source regression with Python 3, Git and a C compiler with address and
+undefined-behaviour sanitizers:
+
+```bash
+python3 third_party/mpv/verify_hisi_nv21.py
+# Or use an existing, unmodified checkout of the pinned FFmpeg source:
+python3 third_party/mpv/verify_hisi_nv21.py --source-dir /path/to/FFmpeg
+```
+
+The script checks source hashes, extracts the actual mapping and semi-planar
+copy functions, and compares the original and patched results. It is a host
+regression, not a MediaCodec or complete FFmpeg build. Source links, photo
+comparison and device coverage are in the [#134 investigation](../../docs/testing/reports/2026-11-28-mpv-hisi-color/README.md).

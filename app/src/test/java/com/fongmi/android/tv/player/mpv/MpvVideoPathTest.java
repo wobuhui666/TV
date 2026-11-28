@@ -11,6 +11,79 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class MpvVideoPathTest {
+    @Test
+    public void keepsNativeMediaCodecLayoutForColourAndCropDiagnosis() {
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: Output MediaFormat changed to {color-format=21, stride=3840, slice-height=2176}\n"));
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "h264_mediacodec: Output MediaFormat changed to {color-format=19}\n"));
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: Output crop parameters top=0 bottom=2159 left=0 right=3839\n"));
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "h264_mediacodec: Output crop parameters top=0 bottom=719 left=0 right=1279\n"));
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: MediaCodec output layout: codec=OMX.hisi.video.decoder.hevc color-format=0x7fa30c00 surface=no width=3840 height=2160 stride=3840 slice-height=2176\n"));
+        assertTrue(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: HiSilicon NV21 workaround applied: codec=OMX.hisi.video.decoder.hevc color-format=0x7fa30c00 output=nv21\n"));
+    }
+
+    @Test
+    public void excludesFrameTrafficAndUnrelatedVerboseMessages() {
+        assertFalse(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: Frame: width=3840 stride=3840 height=2160"));
+        assertFalse(MpvVideoPath.isDecoderConfiguration("ffmpeg/video",
+                "hevc_mediacodec: No output buffer available, try again later"));
+        assertFalse(MpvVideoPath.isDecoderConfiguration("ffmpeg/audio",
+                "hevc_mediacodec: Output MediaFormat changed to {}"));
+        assertFalse(MpvVideoPath.isDecoderConfiguration("ffmpeg/video", "Opening a private URL"));
+        assertFalse(MpvVideoPath.isDecoderConfiguration(null, "Output MediaFormat changed to {}"));
+        assertFalse(MpvVideoPath.isDecoderConfiguration("ffmpeg/video", null));
+    }
+
+    @Test
+    public void keepsDecoderTransitionsAndAudioBufferCapacityOnly() {
+        assertTrue(MpvVideoPath.isNativeDiagnostics("vd", "Using hardware decoding (mediacodec-copy).\n"));
+        assertTrue(MpvVideoPath.isNativeDiagnostics("vd", "Using software decoding.\n"));
+        assertTrue(MpvVideoPath.isNativeDiagnostics("vd", "Attempting next decoding method after failure of hevc_mediacodec-mediacodec."));
+        assertTrue(MpvVideoPath.isNativeDiagnostics("ao/audiotrack", "Setting bufferSize = 19200 (driver=9600, min=9600, max=38400)"));
+        assertTrue(MpvVideoPath.isNativeDiagnostics("ao/audiotrack", "AudioTrack.getBufferSizeInFrames = 4800"));
+        assertFalse(MpvVideoPath.isNativeDiagnostics("ao/audiotrack", "IEC/playbackHead offset = 42"));
+        assertFalse(MpvVideoPath.isNativeDiagnostics("vd", "Opening decoder from a private path"));
+        assertFalse(MpvVideoPath.isNativeDiagnostics("http", "Using hardware decoding (mediacodec)."));
+    }
+
+    @Test
+    public void throttlesSamplesAndRearmsForTheNextPlayback() {
+        MpvVideoPath path = new MpvVideoPath();
+        assertTrue(path.takeSample(0, 5000));
+        assertFalse(path.takeSample(4999, 5000));
+        assertTrue(path.takeSample(5000, 5000));
+        assertFalse(path.takeSample(5000, 2000));
+        assertTrue(path.takeSample(7000, 2000));
+        assertTrue(path.takeSample(7000, 0));
+        path.reset();
+        assertTrue(path.takeSample(7001, 5000));
+    }
+
+    @Test
+    public void reportsMissingMetricsWithoutReadingMediaUrls() {
+        Map<String, String> values = new HashMap<>();
+        values.put("hwdec-current", "mediacodec-copy");
+        values.put("avsync", "0.25");
+        values.put("demuxer-cache-duration", "10");
+        values.put("frame-drop-count", "8");
+        String sample = MpvVideoPath.performance(name -> {
+            assertFalse(name.contains("path") || name.contains("url") || name.contains("header"));
+            return values.get(name);
+        }, 3);
+        assertTrue(sample.contains("audio-underruns=3"));
+        assertTrue(sample.contains("hwdec-current=mediacodec-copy"));
+        assertTrue(sample.contains("avsync=0.25"));
+        assertTrue(sample.contains("demuxer-cache-duration=10"));
+        assertTrue(sample.contains("frame-drop-count=8"));
+        assertTrue(sample.contains("container-fps=?"));
+    }
+
     private static Map<String, String> direct() {
         Map<String, String> values = new HashMap<>();
         values.put("video-format", "hevc");

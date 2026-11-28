@@ -1,0 +1,135 @@
+name: Build MPV HiSilicon coexist test APKs
+
+on:
+  push:
+    branches: [fix/issue134-mpv-hisi]
+    paths:
+      - .github/workflows/mpv-hisi-test.yml
+      - .github/scripts/verify-mpv-hisi-apks.py
+      - app/src/main/java/com/fongmi/android/tv/player/mpv/**
+      - app/src/main/java/com/fongmi/android/tv/utils/MpvLogCollector.java
+      - third_party/mpv/mpv-android-ffmpeg9-native.zip
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mpv-hisi-test-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      TV_APPLICATION_ID: com.wobuhui666.android.tv.mpv134
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      TRAKT_CLIENT_ID: ${{ vars.TRAKT_CLIENT_ID || secrets.TRAKT_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+      - uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          persist-credentials: false
+      - name: Prepare test identity and SDK
+        run: |
+          python3 tools/ota-release.py version >> "$GITHUB_ENV"
+          echo "TV_VERSION_NAME=5.8.7-mpv134.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/AndroidManifest.xml')
+          text = p.read_text()
+          assert text.count('android:label="@string/app_name"') == 1
+          p.write_text(text.replace('android:label="@string/app_name"', 'android:label="TV MPV 测试"'))
+          PY
+          cat > "$RUNNER_TEMP/mpv134.init.gradle" <<'GRADLE'
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { id ->
+                  p.pluginManager.withPlugin(id) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                      }
+                  }
+              }
+          }
+          GRADLE
+          chmod +x gradlew
+      - name: Configure release signing
+        env:
+          MPV_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 || secrets.SIGNING_KEYSTORE_BASE64 }}
+          MPV_ALIAS: ${{ secrets.KEY_ALIAS || secrets.SIGNING_KEY_ALIAS }}
+          MPV_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.SIGNING_KEYSTORE_PASSWORD }}
+          MPV_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.SIGNING_KEY_PASSWORD || secrets.STORE_PASSWORD || secrets.SIGNING_KEYSTORE_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          for key in ('MPV_KEYSTORE', 'MPV_ALIAS', 'MPV_STORE_PASSWORD', 'MPV_KEY_PASSWORD'):
+              if not os.environ.get(key): raise SystemExit('Missing signing configuration: ' + key)
+          Path('release.jks').write_bytes(base64.b64decode(os.environ['MPV_KEYSTORE']))
+          Path('local.properties').write_text('storeFile=../release.jks\n'
+              + 'keyAlias=' + os.environ['MPV_ALIAS'] + '\n'
+              + 'storePassword=' + os.environ['MPV_STORE_PASSWORD'] + '\n'
+              + 'keyPassword=' + os.environ['MPV_KEY_PASSWORD'] + '\n')
+          PY
+      - name: Verify native runtime and synchronization
+        run: |
+          git fetch --no-tags --depth=1 origin 10d60c80866af4b16c7905d1d61aa477b4167607
+          git show 10d60c80866af4b16c7905d1d61aa477b4167607:third_party/mpv/mpv-android-ffmpeg9-native.zip > "$RUNNER_TEMP/original-native.zip"
+          python3 third_party/mpv/verify_hisi_runtime.py --original "$RUNNER_TEMP/original-native.zip"
+          python3 third_party/mpv/verify_bridge.py
+          python3 -m unittest discover -s third_party/mpv -p 'test_*.py' -v
+      - name: Run MPV unit regression
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/mpv134.init.gradle" :app:testLeanbackArm64_v8aDebugUnitTest \
+            --tests 'com.fongmi.android.tv.player.mpv.*' --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Build both coexist ARM APKs
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/mpv134.init.gradle" \
+            :app:assembleLeanbackArm64_v8aRelease :app:assembleLeanbackArmeabi_v7aRelease \
+            --no-daemon --build-cache --max-workers=2 --console=plain
+      - name: Verify actual packaged libraries and APK signatures
+        run: python3 .github/scripts/verify-mpv-hisi-apks.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mpv134-apks-and-tests
+          path: |
+            dist/
+            app/build/test-results/testLeanbackArm64_v8aDebugUnitTest/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish direct download assets as a test prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > "$RUNNER_TEMP/mpv134-release.md" <<'MD'
+          华为智慧屏 V55i / Issue #134 专项测试版。
+
+          - 内含海思 MediaCodec NV21 格式修复及播放诊断日志。
+          - 桌面名称：TV MPV 测试。独立包名：com.wobuhui666.android.tv.mpv134，与正式版、共存版并存，数据独立。
+          - 提供 ARM64 和 ARMv7 两个 APK；系统不支持 64 位时使用 armeabi-v7a。
+          - 此包等待 V55i 现场验证，不代表偏色或卡顿已通过实机验收。
+          MD
+          printf '\nSource: %s\nBuild: %s/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" >> "$RUNNER_TEMP/mpv134-release.md"
+          gh release create "mpv134-test-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" dist/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "MPV 海思偏色测试版 #134 (${GITHUB_RUN_NUMBER})" --notes-file "$RUNNER_TEMP/mpv134-release.md"

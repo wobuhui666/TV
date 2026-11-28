@@ -58,7 +58,9 @@ final class MpvOptions {
         set("config", "yes");
         set("config-dir", configDir.getAbsolutePath());
         set("sub-fonts-dir", com.fongmi.android.tv.player.subtitle.SubtitleFonts.directory().getAbsolutePath());
-        set("msg-level", "all=warn");
+        // MediaCodec reports its native colour format, stride and crop at FFmpeg INFO,
+        // mapped to mpv's verbose level. Per-frame FFmpeg debug/trace stays disabled.
+        set("msg-level", "all=warn,ffmpeg/video=v,vd=v,ao/audiotrack=v");
         set("gpu-shader-cache-dir", cacheDir.getAbsolutePath());
         set("icc-cache-dir", cacheDir.getAbsolutePath());
         set("profile", "fast");

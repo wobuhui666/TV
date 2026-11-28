@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Environment;
 
 import com.github.catvod.utils.Prefers;
+import com.github.catvod.crawler.diagnostics.DiagnosticRedactor;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -22,6 +23,7 @@ public class MpvLogCollector {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault());
 
     public static void log(String tag, String message) {
+        message = DiagnosticRedactor.redact(message);
         com.github.catvod.crawler.diagnostics.DiagnosticLog.record("mpv", tag + ": " + message);
         if (!isEnabled()) return;
         synchronized (logs) {
@@ -40,6 +42,7 @@ public class MpvLogCollector {
     }
 
     public static void logError(String tag, String message) {
+        message = DiagnosticRedactor.redact(message);
         com.github.catvod.crawler.diagnostics.DiagnosticLog.record("mpv", "error " + tag + ": " + message);
         if (!isEnabled()) return;
         synchronized (logs) {
