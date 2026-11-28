@@ -1,0 +1,20 @@
+{
+  "testedCommit": "98923fcb895a8792f0bcbe69f1816bc36a75ab17",
+  "run": "https://github.com/wobuhui666/TV/actions/runs/46113303458",
+  "variants": {
+    "testLeanbackArm64_v8aDebugUnitTest": {
+      "suites": 2,
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "testLeanbackArm64_v8aPreviewUnitTest": {
+      "suites": 172,
+      "tests": 1373,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  }
+}

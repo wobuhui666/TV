@@ -4,7 +4,7 @@
 
 | 日期 | 报告 | 主要范围与限制 |
 | --- | --- | --- |
-| 2026-11-28 | [网页日志与图标对齐](reports/2026-11-28-web-logs/README.md) | 本地 18 项浏览器回归通过；编译、JVM 与 Android logcat 实测交由 GHA，结果见报告 |
+| 2026-11-28 | [网页日志与图标对齐](reports/2026-11-28-web-logs/README.md) | GHA：18 项网页、10 项专项与 1,373 项完整应用单测、17 项 API34 回归及 Preview 构建通过；含真实 logcat → HTTP |
 | 2026-11-24 | [日历账号、栏目筛选、媒体库提速与按钮居中合并发布](reports/2026-11-24-integrated-release/README.md) | 合并后 1656 项单测、API 24／34 日历与追剧各 23 项、API 34 首页／媒体库 88 项（首次 87，重跑通过）及推送页通过；按钮居中有修复前后截图；未在实体电视安装，海报墙界面回归未重跑 |
 | 2026-11-22 | [媒体库选集与选源性能](reports/2026-11-22-media-library-performance/README.md) | 本机 274 项专项 JVM 与微基准（选源 17.1→3.9 ms、标题匹配 38.2→0.68 ms）；GitHub Actions 单测 1564 项、API 34 模拟器 88/88、lint 无新增错误，对照运行确认修改前每个片源被搜索两次；实体电视与真实片源未测 |
 | 2026-11-22 | [首页栏目完整筛选](reports/2026-11-22-home-wall-filters/README.md) | 25 次真实 TMDB 请求通过；GHA 上 TV 变体 1,352 项单测、Debug／androidTest APK、lint 无新增错误、API 34 模拟器 11 项海报墙界面通过；未在实体设备安装 |
