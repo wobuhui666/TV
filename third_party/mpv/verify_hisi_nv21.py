@@ -119,7 +119,53 @@ static void check_copy(int destination_stride) {
     }
 }
 
-int main(void) {
+static void check_top_crop(void) {
+    // Four source rows, crop away the first two. Chroma starts one row down.
+    uint8_t source[24] = {0};
+    for (int i = 0; i < 16; i++) source[i] = 16 + i;
+    uint8_t vu[] = {240, 90, 34, 54, 110, 140, 160, 180};
+    memcpy(source + 16, vu, sizeof(vu));
+    uint8_t y[8] = {0}, chroma[4] = {0};
+    AVCodecContext ctx = {.width = 4, .height = 2};
+    MediaCodecDecContext codec = {.stride = 4, .slice_height = 4, .crop_top = 2};
+    FFAMediaCodecBufferInfo info = {.offset = 0};
+    AVFrame frame = {.data = {y, chroma, NULL}, .linesize = {4, 4, 0}};
+    ff_mediacodec_sw_buffer_copy_yuv420_semi_planar(&ctx, &codec,
+            source, sizeof(source), &info, &frame);
+    assert(!memcmp(y, source + 8, 8));
+    assert(!memcmp(chroma, vu + 4, 4));
+}
+
+static void check_left_crop(void) {
+    // Source row stride and destination stride match, but copying a full row
+    // after a left crop would read beyond the final chroma row.
+    uint8_t source[18] = {0}, y[12], chroma[6];
+    for (int i = 0; i < 18; i++) source[i] = i + 16;
+    memset(y, 0xa5, sizeof(y));
+    memset(chroma, 0xa5, sizeof(chroma));
+    AVCodecContext ctx = {.width = 4, .height = 2};
+    MediaCodecDecContext codec = {.stride = 6, .slice_height = 2, .crop_left = 2};
+    FFAMediaCodecBufferInfo info = {.offset = 0};
+    AVFrame frame = {.data = {y, chroma, NULL}, .linesize = {6, 6, 0}};
+    ff_mediacodec_sw_buffer_copy_yuv420_semi_planar(&ctx, &codec,
+            source, sizeof(source), &info, &frame);
+    assert(!memcmp(y, source + 2, 4));
+    assert(!memcmp(y + 6, source + 8, 4));
+    assert(!memcmp(chroma, source + 14, 4));
+    assert(y[4] == 0xa5 && y[10] == 0xa5 && chroma[4] == 0xa5);
+}
+
+int main(int argc, char **argv) {
+    if (argc == 2 && !strcmp(argv[1], "left-crop")) {
+        check_left_crop();
+        return 0;
+    }
+    if (argc == 2 && !strcmp(argv[1], "crop")) {
+        check_top_crop();
+        check_left_crop();
+        puts("cropped semi-planar buffers: 2/2 passed; chroma offsets and bounds preserved");
+        return 0;
+    }
     int failures = check_mapping();
     check_copy(4);
     check_copy(6);
@@ -143,7 +189,7 @@ def build_and_run(root, label):
     subprocess.run(["cc", "-std=c11", "-O1", "-g", "-Wall", "-Wextra",
                     "-Wno-unused-parameter", "-fsanitize=address,undefined",
                     str(c_file), "-o", str(binary)], check=True)
-    return subprocess.run([str(binary)], capture_output=True, text=True)
+    return binary
 
 
 def main():
@@ -164,17 +210,28 @@ def main():
             if hashlib.sha256(data).hexdigest() != expected:
                 raise SystemExit(f"Unexpected source checksum: {name}")
             (root / "libavcodec" / name).write_bytes(data)
-        before = build_and_run(root, "before")
+        original_binary = build_and_run(root, "before")
+        before = subprocess.run([str(original_binary)], capture_output=True, text=True)
         print("Before patch:", before.stdout, before.stderr, sep="\n")
         if before.returncode != 1 or "mapping: 9/11 passed" not in before.stdout:
             raise SystemExit("The baseline must fail exactly the two HiSilicon NV21 cases")
+        for case in ("crop", "left-crop"):
+            crop = subprocess.run([str(original_binary), case], capture_output=True, text=True)
+            if crop.returncode == 0 or "stack-buffer-overflow" not in crop.stderr:
+                raise SystemExit("The original copy must reproduce the cropped-buffer read failure: " + case)
+            print(f"Before patch: {case} out-of-bounds read reproduced by AddressSanitizer")
         patch = Path(__file__).resolve().parent / "patches/ffmpeg-hisi-nv21.patch"
         subprocess.run(["git", "apply", "--check", str(patch)], cwd=root, check=True)
         subprocess.run(["git", "apply", str(patch)], cwd=root, check=True)
-        after = build_and_run(root, "after")
+        patched_binary = build_and_run(root, "after")
+        after = subprocess.run([str(patched_binary)], capture_output=True, text=True)
         print("After patch:", after.stdout, after.stderr, sep="\n")
         if after.returncode != 0:
             raise SystemExit("Patched mapping or buffer-copy regression failed")
+        crop = subprocess.run([str(patched_binary), "crop"], capture_output=True, text=True)
+        print(crop.stdout)
+        if crop.returncode != 0:
+            raise SystemExit("Patched cropped-buffer regression failed: " + crop.stderr)
 
 
 if __name__ == "__main__":

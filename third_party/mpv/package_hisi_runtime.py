@@ -18,9 +18,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--original", type=Path, help="Original unpatched archive, when updating an existing fix")
     args = parser.parse_args()
     archive = ROOT / "mpv-android-ffmpeg9-native.zip"
-    if sha256(archive) != ORIGINAL:
+    source_archive = args.original or archive
+    if sha256(source_archive) != ORIGINAL:
         raise SystemExit("Expected the original runtime archive before merging")
     replacements, original, provenance = {}, {}, {}
     patch_hash = sha256(ROOT / "patches/ffmpeg-hisi-nv21.patch")
@@ -44,7 +46,7 @@ def main():
             replacements[f"{abi}/{name}"] = data
     with tempfile.TemporaryDirectory(dir=ROOT) as directory:
         merged = Path(directory) / archive.name
-        with zipfile.ZipFile(archive) as source, zipfile.ZipFile(merged, "w", zipfile.ZIP_DEFLATED) as target:
+        with zipfile.ZipFile(source_archive) as source, zipfile.ZipFile(merged, "w", zipfile.ZIP_DEFLATED) as target:
             for name in source.namelist():
                 data = source.read(name)
                 if name in replacements:

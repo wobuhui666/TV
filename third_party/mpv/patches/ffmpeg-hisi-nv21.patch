@@ -31,3 +31,23 @@
      if (avctx->pix_fmt == AV_PIX_FMT_NONE) {
          av_log(avctx, AV_LOG_ERROR, "Output color format is not supported\n");
          ret = AVERROR(EINVAL);
+--- a/libavcodec/mediacodec_sw_buffer.c
++++ b/libavcodec/mediacodec_sw_buffer.c
+@@ -151,11 +151,15 @@
+             height = avctx->height / 2;
+
+             src += s->slice_height * s->stride;
+-            src += s->crop_top * s->stride;
++            /* 4:2:0 chroma has half as many rows as luma. */
++            src += (s->crop_top / 2) * s->stride;
+             src += s->crop_left;
+         }
+
+-        if (frame->linesize[i] == s->stride) {
++        /* A left crop shifts the last row into the padding or past the buffer.
++         * Copy only visible bytes per row when the origin is shifted.
++         */
++        if (frame->linesize[i] == s->stride && !s->crop_left) {
+             memcpy(frame->data[i], src, height * s->stride);
+         } else {
+             int j, width;
