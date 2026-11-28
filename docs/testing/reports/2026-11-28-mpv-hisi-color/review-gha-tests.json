@@ -1,0 +1,61 @@
+{
+  "run": "46164248943",
+  "sourceCommit": "ed0b9460fe9155c5e646239db6d408fe291cdfc0",
+  "suites": [
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvBufferingTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvDolbyPolicyTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvEndFileTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvLoadFileTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvSeekPrerollTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvVideoOutputRecoveryTest",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.fongmi.android.tv.player.mpv.MpvVideoPathTest",
+      "tests": "10",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "totals": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

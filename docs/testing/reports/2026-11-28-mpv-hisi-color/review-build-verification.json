@@ -1,0 +1,24 @@
+{
+  "sourceCommit": "ed0b9460fe9155c5e646239db6d408fe291cdfc0",
+  "workflowRun": "46164248943",
+  "applicationId": "com.wobuhui666.android.tv.mpv134",
+  "versionName": "5.8.7-mpv134.4",
+  "signingCertificateSha256": "d02c97644246b64be6d3971c7a6604f95b06232d7c33a4333f9b00660a8f7d28",
+  "nativeBuildRun": "46163185605",
+  "nativeArchiveSha256": "1ae1a5e55e3e96e3047cf37d3c464852ee8c0ceb2922e59d063a575b07a47022",
+  "files": [
+    {
+      "file": "TV-MPV134-arm64-v8a-coexist.apk",
+      "sha256": "c7313cff74605b2cded8c75e4ea526dc1296683729b99e8751e3a21dc4c69a2e",
+      "size": 105124453,
+      "abi": "arm64-v8a"
+    },
+    {
+      "file": "TV-MPV134-armeabi-v7a-coexist.apk",
+      "sha256": "001357a5e38abaa0ac253e74f95d5f4a86493ee1cd331ee2332ed4f6da089036",
+      "size": 101442461,
+      "abi": "armeabi-v7a"
+    }
+  ],
+  "v55iTested": false
+}

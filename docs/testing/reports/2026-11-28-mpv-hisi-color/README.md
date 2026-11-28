@@ -186,7 +186,48 @@ ASAN／UBSAN；两 ABI 的原导出符号、23 个 JNI 入口和 47 个媒体导
 六项缓存单测和五项共享库同步测试通过。当前输出见
 [native-mapping-regression.txt](native-mapping-regression.txt)。
 
-以上主机检查不等同于 V55i 的播放验证；新版 APK 的 GHA 结果和交付信息在构建后记录。
+### 新版 APK 与交付
+
+[应用 GHA 46164248943](https://github.com/wobuhui666/TV/actions/runs/46164248943)
+在提交 `ed0b9460fe9155c5e646239db6d408fe291cdfc0` 上成功：
+
+- `:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.player.mpv.*'`：
+  **7 个测试类、39 项通过，0 失败／错误／跳过**，见 [回归清单](review-gha-tests.json)。
+- `:app:assembleLeanbackArm64_v8aRelease :app:assembleLeanbackArmeabi_v7aRelease`
+  成功；版本为 `5.8.7-mpv134.4`，保留独立测试包名和原签名，可覆盖上一版测试包。
+- [新版 ARM64 APK](https://github.com/wobuhui666/TV/releases/download/mpv134-test-46164248943-1/TV-MPV134-arm64-v8a-coexist.apk)、
+  [新版 ARMv7 APK](https://github.com/wobuhui666/TV/releases/download/mpv134-test-46164248943-1/TV-MPV134-armeabi-v7a-coexist.apk)
+  均以无认证请求完整下载，HTTP 200；本地再次核验大小、SHA-256、包名、版本、
+  桌面名称、签名、ABI、七个 FFmpeg 库及 MPV／JNI 二进制。
+  见 [新版构建校验清单](review-build-verification.json)。
+- 已更新 [#134 原测试留言](https://github.com/wobuhui666/TV/issues/134#issuecomment-7241420201)
+  的版本、直链和修复说明。首次版本的构建清单仍保留在上节，供追溯。
+
+### ARM 设备补充验证
+
+X20（Unisoc `ums512`、Android 10／API 29）使用独立原生测试程序，载入本次运行库，
+以 OpenGL／`vo=gpu` 播放合成 HEVC 色条。每种模式约 10 秒，采集 TextureView
+实际画面、解码路径和性能属性；测试程序音量为零。
+
+| 请求模式 | 实际解码 | 首帧采样 | 渲染／解码掉帧 | 音频欠载次数 |
+| --- | --- | --- | --- | --- |
+| 720p copy 硬解 | `mediacodec-copy`／NV12 | 732 ms | 0／0 | 1 |
+| 720p 软解 | `no`／YUV420P | 600 ms | 0／0 | 0 |
+| 720p 直接硬解 | `mediacodec` | 761 ms | 0／0 | 0 |
+| 4K copy 硬解 | 初始化失败，回退软解 | 895 ms | 0／0 | 1 |
+| 4K 软解 | `no`／YUV420P | 816 ms | 0／0 | 1 |
+
+首帧由 500 ms 定时采样判定，仅供本轮参考。720p copy 与软解的完整 RGB 截图逐字节
+一致。直接硬解的图像与软解有差异；重新安装前版运行库进行同场景对照，确认前后两版
+直接硬解截图也逐字节一致，差异并非此次裁剪补丁引入。
+
+![新运行库的软解、copy 与直接硬解对照](device-color-bars.jpg)
+
+[设备摘要](device-smoke-summary.json)记录运行库、测试 APK、源码与片段哈希，以及实际采样。
+这是原生程序验证，未覆盖完整应用的缓存 UI 和停止日志；顶部／左侧裁剪仍只由主机回归覆盖。
+X20 的 4K `OMX.sprd.hevc.decoder` 配置失败，故本轮没有取得 4K copy 硬解性能数据。
+短色条、静音和掉帧计数不能证明真实片源长期流畅，也不能替代音频听感或 V55i 验证。
+V55i 的偏色是否恢复、直接硬解启动失败和卡顿仍待现场反馈。
 
 ## 下一次 V55i 验证
 

@@ -1,0 +1,141 @@
+{
+  "date": "2026-11-28",
+  "sourceCommit": "ed0b9460fe9155c5e646239db6d408fe291cdfc0",
+  "nativeArchiveSha256": "1ae1a5e55e3e96e3047cf37d3c464852ee8c0ceb2922e59d063a575b07a47022",
+  "device": {
+    "model": "X20",
+    "platform": "ums512",
+    "androidApi": 29
+  },
+  "probePackage": "com.fongmi.android.tv.mpv134probe",
+  "probeApkSha256": "5a4ce7177365d8a135274a3b98ece395ef58aa28c6d9606f8bfa00539d8c1f51",
+  "probeSourceSha256": "7694bbdfeb5ce9be4afaadd1ea032cfa73cc4e7616c22f416f412e1ae1285409",
+  "fixtures": {
+    "assets/bars720.mp4": "02ecea9dc8ded6381e9c099416ec3ef697461f3a6c7d5e13547d79b8e47c6da8",
+    "assets/bars2160.mp4": "3f813e3a5bb2e72691fc784167ed48adff73154b424ccaf34eacaa2c924a6751"
+  },
+  "settings": {
+    "vo": "gpu",
+    "gpuApi": "opengl",
+    "profile": "fast",
+    "audioVolume": 0,
+    "sampleDelayMs": 10000
+  },
+  "cases": [
+    {
+      "case": "copy-720",
+      "firstFrameMs": 732,
+      "textureUpdates": 217,
+      "firstHwdec": "mediacodec-copy",
+      "firstPixelFormat": "nv12",
+      "frame-drop-count": "0",
+      "decoder-frame-drop-count": "0",
+      "vo-delayed-frame-count": "0",
+      "avsync": "0.000020",
+      "time-pos": "8.958333",
+      "container-fps": "24.000000",
+      "estimated-vf-fps": "24.000000",
+      "audioUnderruns": 1,
+      "video-dec-params/w": "1280",
+      "video-dec-params/h": "720"
+    },
+    {
+      "case": "soft-720",
+      "firstFrameMs": 600,
+      "textureUpdates": 215,
+      "firstHwdec": "no",
+      "firstPixelFormat": "yuv420p",
+      "frame-drop-count": "0",
+      "decoder-frame-drop-count": "0",
+      "vo-delayed-frame-count": "0",
+      "avsync": "0.000021",
+      "time-pos": "8.958333",
+      "container-fps": "24.000000",
+      "estimated-vf-fps": "24.000000",
+      "audioUnderruns": 0,
+      "video-dec-params/w": "1280",
+      "video-dec-params/h": "720"
+    },
+    {
+      "case": "hard-720",
+      "firstFrameMs": 761,
+      "textureUpdates": 217,
+      "firstHwdec": "mediacodec",
+      "firstPixelFormat": "mediacodec",
+      "frame-drop-count": "0",
+      "decoder-frame-drop-count": "0",
+      "vo-delayed-frame-count": "0",
+      "avsync": "0.000018",
+      "time-pos": "8.958333",
+      "container-fps": "24.000000",
+      "estimated-vf-fps": "24.000000",
+      "audioUnderruns": 0,
+      "video-dec-params/w": "1280",
+      "video-dec-params/h": "720"
+    },
+    {
+      "case": "copy-2160",
+      "firstFrameMs": 895,
+      "textureUpdates": 228,
+      "firstHwdec": "no",
+      "firstPixelFormat": "yuv420p",
+      "frame-drop-count": "0",
+      "decoder-frame-drop-count": "0",
+      "vo-delayed-frame-count": "0",
+      "avsync": "0.000033",
+      "time-pos": "9.458333",
+      "container-fps": "24.000000",
+      "estimated-vf-fps": "24.000000",
+      "audioUnderruns": 1,
+      "video-dec-params/w": "3840",
+      "video-dec-params/h": "2160"
+    },
+    {
+      "case": "soft-2160",
+      "firstFrameMs": 816,
+      "textureUpdates": 216,
+      "firstHwdec": "no",
+      "firstPixelFormat": "yuv420p",
+      "frame-drop-count": "0",
+      "decoder-frame-drop-count": "0",
+      "vo-delayed-frame-count": "0",
+      "avsync": "0.000036",
+      "time-pos": "8.958333",
+      "container-fps": "24.000000",
+      "estimated-vf-fps": "24.000000",
+      "audioUnderruns": 1,
+      "video-dec-params/w": "3840",
+      "video-dec-params/h": "2160"
+    }
+  ],
+  "pixelComparison": {
+    "reference": "soft-720.png",
+    "width": 1920,
+    "height": 1117,
+    "channelScale": 255,
+    "cases": {
+      "copy": {
+        "meanAbsoluteChannelError": 0.0,
+        "p99ChannelError": 0
+      },
+      "hard": {
+        "meanAbsoluteChannelError": 8.746072689744356,
+        "p99ChannelError": 191
+      }
+    }
+  },
+  "previousRuntimeComparison": {
+    "previousNativeArchiveSha256": "4ac7c853a706851cdbd56363a9f3be481e4c00ebccf8ea7294959d67abb22eee",
+    "currentNativeArchiveSha256": "1ae1a5e55e3e96e3047cf37d3c464852ee8c0ceb2922e59d063a575b07a47022",
+    "hard720PixelsIdentical": true,
+    "meanAbsoluteChannelError": 0.0
+  },
+  "limitations": [
+    "Native-only probe, not the production application or its playback controls.",
+    "Non-HiSilicon device; no V55i or vendor-format NV21 coverage.",
+    "4K MediaCodec-copy failed to configure OMX.sprd.hevc.decoder and fell back to software.",
+    "Top/left crop cases were tested on the host, not triggered on this device.",
+    "Short synthetic HEVC clips; muted audio; no long-run performance or listening validation.",
+    "Direct MediaCodec output differs from software on this device, identically in the previous and current runtimes."
+  ]
+}
