@@ -3,6 +3,10 @@
 -keep class com.fongmi.quickjs.method.** { *; }
 -keep class com.fongmi.android.tv.bean.** { *; }
 
+# Bundled Pine references this optional helper only on Android 15 previews with
+# hidden-API bypass enabled. ToastFilter disables that path on every API >= 30.
+-dontwarn org.lsposed.hiddenapibypass.HiddenApiBypass
+
 # sherpa-onnx Java methods are JNI entry points and their names/signatures must remain stable.
 -keep class com.k2fsa.sherpa.onnx.** { *; }
 
