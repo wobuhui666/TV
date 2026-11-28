@@ -1,0 +1,697 @@
+{
+  "testedCommit": "e5bbdbe83671e56e02af1dec6facaaa0daee5fdf",
+  "buildRun": "https://github.com/wobuhui666/TV/actions/runs/46156873521",
+  "device": {
+    "model": "X20",
+    "android": 10,
+    "api": 29,
+    "soc": "UMS512",
+    "abi": "arm64-v8a"
+  },
+  "fixture": {
+    "jarSha256": "de8d0d39fdcb052a22aeadbb07ffb2a6b929dff0ca7c84173c9e440049a57aad",
+    "configSha256": "d4e0c3098afb83356ba42278c0b0691bbe71102575aa88612af25decbbdec5fd",
+    "backupSha256": "40fcdf7a6affb4667ab48bbe93069dbb7cfbc06b0f95046ce29535c203f7ae56",
+    "title": "十万狂花入梦来",
+    "episode": "第15集",
+    "positionMs": 1490321
+  },
+  "method": {
+    "package": "com.fongmi.android.tv.r8test",
+    "compilation": "cmd package compile -m speed -f",
+    "reinstall": "same signature, app data preserved",
+    "measurement": "/proc task CPU ticks, logcat, gfxinfo framestats, atrace, current window and media session",
+    "schedule": [
+      "baseline2",
+      "baseline3",
+      "minified1-invalid-native-abort",
+      "minified_fixed1",
+      "minified_fixed2",
+      "baseline_fixed1",
+      "baseline_fixed2"
+    ]
+  },
+  "packages": [
+    {
+      "applicationCommit": "e5bbdbe83671e56e02af1dec6facaaa0daee5fdf",
+      "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+      "applicationId": "com.fongmi.android.tv.r8test",
+      "versionCode": "2099999999",
+      "versionName": "5.8.7-r8.e5bbdbe836",
+      "abi": "arm64-v8a",
+      "buildType": "release",
+      "profileable": true,
+      "debuggable": false,
+      "minifyEnabled": false,
+      "shrinkResources": false,
+      "signingCertificateSha256": "482534df1ebe6526f3484346e40f8658e8ea244eb26936f9aded31af4e16c463",
+      "file": "baseline-arm64.apk",
+      "bytes": 105120837,
+      "sha256": "3f72c3cf68e54efa520e10c57d006545a8bd60bd6c96deae481831e1caef8525",
+      "videoActivityInstanceFields": [
+        {
+          "name": "fullscreen",
+          "type": "Z"
+        },
+        {
+          "name": "mArrayItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mArtworkTarget",
+          "type": "Lcom/fongmi/android/tv/impl/CustomTarget;"
+        },
+        {
+          "name": "mBinding",
+          "type": "Lcom/fongmi/android/tv/databinding/ActivityVideoBinding;"
+        },
+        {
+          "name": "mClock",
+          "type": "Lcom/fongmi/android/tv/utils/Clock;"
+        },
+        {
+          "name": "mContentRating",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mDetailActor",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailArea",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailContent",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mDetailDirector",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailDoubanRating",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailRemark",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailSite",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailTitle",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailTmdbRating",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailType",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailYear",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mEpisodeItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mEpisodeSelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mFlagItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mFlagSelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mFocus1",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "mFocus2",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "mFrameParams",
+          "type": "Landroid/view/ViewGroup$LayoutParams;"
+        },
+        {
+          "name": "mHistory",
+          "type": "Lcom/fongmi/android/tv/bean/History;"
+        },
+        {
+          "name": "mKeyDown",
+          "type": "Lcom/fongmi/android/tv/ui/custom/CustomKeyDownVod;"
+        },
+        {
+          "name": "mNavigationCallback",
+          "type": "Lcom/fongmi/android/tv/service/PlaybackService$NavigationCallback;"
+        },
+        {
+          "name": "mObserveDetail",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mObservePlayer",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mObserveSearch",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mPartItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mQualityResult",
+          "type": "Lcom/fongmi/android/tv/bean/Result;"
+        },
+        {
+          "name": "mQualitySelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mQuickItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mR1",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR2",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR3",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR4",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mRatingRequest",
+          "type": "I"
+        },
+        {
+          "name": "mSpecs",
+          "type": "Lcom/fongmi/android/tv/ui/custom/PlaybackSpecsController;"
+        },
+        {
+          "name": "mSyncplayObserver",
+          "type": "Ljava/util/function/Consumer;"
+        },
+        {
+          "name": "mTmdbLogoRequest",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mTmdbLogoUrl",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mViewModel",
+          "type": "Lcom/fongmi/android/tv/model/VideoViewModel;"
+        },
+        {
+          "name": "mVod",
+          "type": "Lcom/fongmi/android/tv/playback/vod/VodPlaybackController;"
+        },
+        {
+          "name": "playbackPanelCommand",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "restoreDetailActionFocus",
+          "type": "Z"
+        },
+        {
+          "name": "restorePlaybackPanel",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "temporarySpeed",
+          "type": "Lcom/fongmi/android/tv/playback/TemporaryPlaybackSpeed;"
+        },
+        {
+          "name": "useParse",
+          "type": "Z"
+        }
+      ]
+    },
+    {
+      "applicationCommit": "e5bbdbe83671e56e02af1dec6facaaa0daee5fdf",
+      "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+      "applicationId": "com.fongmi.android.tv.r8test",
+      "versionCode": "2099999999",
+      "versionName": "5.8.7-r8.e5bbdbe836",
+      "abi": "arm64-v8a",
+      "buildType": "release",
+      "profileable": true,
+      "debuggable": false,
+      "minifyEnabled": true,
+      "shrinkResources": false,
+      "signingCertificateSha256": "482534df1ebe6526f3484346e40f8658e8ea244eb26936f9aded31af4e16c463",
+      "file": "minified-arm64.apk",
+      "bytes": 92229863,
+      "sha256": "28f16e8430075aa7bd4a9950a958b7e951c88ba790885ce636c9e9907f89923e",
+      "videoActivityInstanceFields": [
+        {
+          "name": "A0",
+          "type": "I"
+        },
+        {
+          "name": "B0",
+          "type": "Lnb/i;"
+        },
+        {
+          "name": "C0",
+          "type": "Lpc/d;"
+        },
+        {
+          "name": "D0",
+          "type": "Li1/b0;"
+        },
+        {
+          "name": "E0",
+          "type": "Lkb/w;"
+        },
+        {
+          "name": "F0",
+          "type": "Lcom/fongmi/android/tv/bean/History;"
+        },
+        {
+          "name": "G0",
+          "type": "Z"
+        },
+        {
+          "name": "H0",
+          "type": "Z"
+        },
+        {
+          "name": "I0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "J0",
+          "type": "Lkc/x3;"
+        },
+        {
+          "name": "K0",
+          "type": "Lkc/x3;"
+        },
+        {
+          "name": "L0",
+          "type": "Lkc/x3;"
+        },
+        {
+          "name": "M0",
+          "type": "Lkc/x3;"
+        },
+        {
+          "name": "N0",
+          "type": "Lkc/x3;"
+        },
+        {
+          "name": "O0",
+          "type": "La8/i;"
+        },
+        {
+          "name": "P0",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "Q0",
+          "type": "Z"
+        },
+        {
+          "name": "R0",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "S0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "T0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "U0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "V0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "W0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "X0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "Y0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "Z0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "a1",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "b1",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "c1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "d1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "e1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "f1",
+          "type": "I"
+        },
+        {
+          "name": "g1",
+          "type": "Lad/f0;"
+        },
+        {
+          "name": "h1",
+          "type": "Lkc/g2;"
+        },
+        {
+          "name": "i1",
+          "type": "Lkc/f4;"
+        },
+        {
+          "name": "m0",
+          "type": "Lab/c;"
+        },
+        {
+          "name": "n0",
+          "type": "Lpc/c5;"
+        },
+        {
+          "name": "o0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "p0",
+          "type": "Landroid/view/ViewGroup$LayoutParams;"
+        },
+        {
+          "name": "q0",
+          "type": "Lkc/v3;"
+        },
+        {
+          "name": "r0",
+          "type": "Lkc/v3;"
+        },
+        {
+          "name": "s0",
+          "type": "Lkc/v3;"
+        },
+        {
+          "name": "t0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "u0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "v0",
+          "type": "Ljava/util/ArrayList;"
+        },
+        {
+          "name": "w0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "x0",
+          "type": "Ljava/util/ArrayList;"
+        },
+        {
+          "name": "y0",
+          "type": "Lcom/fongmi/android/tv/bean/Result;"
+        },
+        {
+          "name": "z0",
+          "type": "I"
+        }
+      ],
+      "mpvNodeJniNamesVerified": true,
+      "mappingSha256": "95c0d8ac606e1b2de5f5368ab43539d8570239d0e1b832c6ae1b5318e5aa42fd"
+    }
+  ],
+  "samples": [
+    {
+      "label": "baseline2",
+      "windowSeconds": 46.77,
+      "mainCpuSeconds": 7.37,
+      "daveyMs": [
+        6667
+      ],
+      "skippedFrames": [
+        393
+      ],
+      "maxRenderedFrameMs": 6668.26,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": false,
+      "recognizedEpisode": false,
+      "recognitionSource": "",
+      "searchDispatched": false,
+      "resultDispatched": false,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "baseline3",
+      "windowSeconds": 46.85,
+      "mainCpuSeconds": 7.29,
+      "daveyMs": [
+        6686
+      ],
+      "skippedFrames": [
+        394
+      ],
+      "maxRenderedFrameMs": 6686.53,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": false,
+      "recognizedEpisode": false,
+      "recognitionSource": "",
+      "searchDispatched": false,
+      "resultDispatched": false,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "minified1",
+      "windowSeconds": 45.43,
+      "mainCpuSeconds": null,
+      "daveyMs": [],
+      "skippedFrames": [],
+      "maxRenderedFrameMs": null,
+      "autoDanmakuRequests": 0,
+      "recognizedTitle": false,
+      "recognizedEpisode": false,
+      "recognitionSource": null,
+      "searchDispatched": false,
+      "resultDispatched": false,
+      "fatal": true,
+      "mpvNodeMissing": true,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "minified_fixed1",
+      "windowSeconds": 46.96,
+      "mainCpuSeconds": 1.34,
+      "daveyMs": [],
+      "skippedFrames": [
+        36
+      ],
+      "maxRenderedFrameMs": 619.47,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": true,
+      "recognizedEpisode": true,
+      "recognitionSource": "media",
+      "searchDispatched": true,
+      "resultDispatched": true,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "minified_fixed2",
+      "windowSeconds": 46.64,
+      "mainCpuSeconds": 1.33,
+      "daveyMs": [],
+      "skippedFrames": [
+        39
+      ],
+      "maxRenderedFrameMs": 674.32,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": true,
+      "recognizedEpisode": true,
+      "recognitionSource": "media",
+      "searchDispatched": true,
+      "resultDispatched": true,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "baseline_fixed1",
+      "windowSeconds": 47.48,
+      "mainCpuSeconds": 7.36,
+      "daveyMs": [
+        6682
+      ],
+      "skippedFrames": [
+        393
+      ],
+      "maxRenderedFrameMs": 6682.68,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": false,
+      "recognizedEpisode": false,
+      "recognitionSource": "",
+      "searchDispatched": false,
+      "resultDispatched": false,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    },
+    {
+      "label": "baseline_fixed2",
+      "windowSeconds": 47.0,
+      "mainCpuSeconds": 7.31,
+      "daveyMs": [
+        6647
+      ],
+      "skippedFrames": [
+        391
+      ],
+      "maxRenderedFrameMs": 6648.14,
+      "autoDanmakuRequests": 1,
+      "recognizedTitle": false,
+      "recognizedEpisode": false,
+      "recognitionSource": "",
+      "searchDispatched": false,
+      "resultDispatched": false,
+      "fatal": false,
+      "mpvNodeMissing": false,
+      "observedPlaying": false,
+      "playbackPositionAdvanced": false,
+      "autoDanmakuMode": 1
+    }
+  ],
+  "wexHostAbi": {
+    "scope": "Direct method/field references in the sampled WEX payload resolved by baseline host DEX; excludes dynamic reflection and boot classes",
+    "checked": {
+      "fields": 5,
+      "methods": 132
+    },
+    "missing": {
+      "fields": [],
+      "methods": []
+    }
+  },
+  "limits": [
+    "Source media hostname returns NXDOMAIN; no real video playback in automatic-danmaku comparison",
+    "No proof of sustained playback or rendered danmaku",
+    "R8 includes shrinking, optimization and renaming; their contributions were not separated",
+    "Invalid capture attempts and local samples with no confirmed WEX call excluded"
+  ],
+  "localMpvPlayback": {
+    "commit": "e5bbdbe83671e56e02af1dec6facaaa0daee5fdf",
+    "mode": "minified",
+    "scope": "Synthetic local H.264, MPV initialization and playback only",
+    "autoDanmakuMode": 1,
+    "samples": [
+      {
+        "state": 3,
+        "position": 6484,
+        "duration": 90000,
+        "speed": 1.0
+      },
+      {
+        "state": 3,
+        "position": 13763,
+        "duration": 90000,
+        "speed": 1.0
+      },
+      {
+        "state": 3,
+        "position": 18478,
+        "duration": 90000,
+        "speed": 1.0
+      },
+      {
+        "state": 3,
+        "position": 21335,
+        "duration": 90000,
+        "speed": 1.0
+      },
+      {
+        "state": 3,
+        "position": 23533,
+        "duration": 90000,
+        "speed": 1.0
+      },
+      {
+        "state": 3,
+        "position": 25634,
+        "duration": 90000,
+        "speed": 1.0
+      }
+    ],
+    "passed": true
+  },
+  "cleanup": {
+    "testPackageUninstalled": true,
+    "temporaryFilesRemoved": true,
+    "originalBackupHashesVerified": 7,
+    "screenTimeoutRestoredMs": 300000,
+    "originalVolume": 0,
+    "deviceReturnedToSleep": true
+  }
+}
