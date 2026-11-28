@@ -109,7 +109,9 @@ class CalendarAccountPhoneAndroidTest {
     @Test fun shouldKeepManualTokenEntryReachableInLightMode() {
         val code = open(ThemeMode.LIGHT)
         NativeUiEvidence.capture("bangumi-tv-light")
-        device.findObject(By.text(activity!!.getString(R.string.calendar_phone_manual))).click()
+        val manual = device.wait(Until.findObject(By.res("android:id/button3")), 5000)
+        assertNotNull("Manual entry is visible below the QR content", manual)
+        manual!!.click()
         assertNotNull(device.wait(Until.findObject(By.clazz(EditText::class.java)), 5000))
         assertEquals("ended", status(code))
         device.pressBack()
@@ -144,6 +146,8 @@ class CalendarAccountPhoneAndroidTest {
         connect!!.click()
         val qr = device.wait(Until.findObject(By.desc(activity!!.getString(R.string.calendar_phone_connect))), 10000)
         assertNotNull(qr)
+        assertNotNull("Cancel is visible", device.wait(Until.findObject(By.res("android:id/button2")), 5000))
+        assertNotNull("Manual entry is visible", device.wait(Until.findObject(By.res("android:id/button3")), 5000))
         instrumentation.waitForIdleSync()
         SystemClock.sleep(500)
         val bounds = qr!!.visibleBounds

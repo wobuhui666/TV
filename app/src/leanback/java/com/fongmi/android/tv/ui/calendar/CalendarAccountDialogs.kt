@@ -83,7 +83,6 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
         val ticket = generation
         val builder = MaterialAlertDialogBuilder(activity).setTitle("Bangumi")
         val status = TextView(builder.context).apply {
-            gravity = Gravity.CENTER
             setPadding(0, ResUtil.dp2px(12), 0, 0)
             setText(R.string.calendar_phone_waiting)
         }
@@ -99,18 +98,27 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
         }
         pairingCode = code
         val content = LinearLayout(builder.context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             val pad = ResUtil.dp2px(24)
-            setPadding(pad, ResUtil.dp2px(8), pad, 0)
+            setPadding(pad, ResUtil.dp2px(8), pad, ResUtil.dp2px(8))
             addView(ImageView(builder.context).apply {
                 contentDescription = activity.getString(R.string.calendar_phone_connect)
-                setImageBitmap(QRCode.getLightBitmap(Server.get().address + "/account.html#" + code, 200, 4))
-            }, LinearLayout.LayoutParams(ResUtil.dp2px(200), ResUtil.dp2px(200)))
-            addView(status)
+                setImageBitmap(QRCode.getLightBitmap(Server.get().address + "/account.html#" + code, 180, 4))
+            }, LinearLayout.LayoutParams(ResUtil.dp2px(180), ResUtil.dp2px(180)))
+            addView(LinearLayout(builder.context).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(builder.context).apply {
+                    textSize = 16f
+                    setText(R.string.calendar_phone_help)
+                })
+                addView(status)
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = ResUtil.dp2px(20)
+            })
         }
         val dialog = builder
-            .setMessage(R.string.calendar_phone_help).setView(content)
+            .setView(content)
             .setNeutralButton(R.string.calendar_phone_manual) { _, _ -> cancel(); inputBangumi() }
             .setNegativeButton(R.string.dialog_negative, null).show()
         JetStreamDialogDecor.tintButtons(dialog)
