@@ -61,6 +61,7 @@ jobs:
           echo "TV_VERSION_NAME=5.8.7-r8.${GITHUB_SHA::10}" >> "$GITHUB_ENV"
           printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
           cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          python3 .github/scripts/r8-prepare-pine.py
           cat > "$RUNNER_TEMP/tv-r8.init.gradle" <<'GRADLE'
           def minify = System.getenv('R8_MINIFY')
           if (!(minify in ['true', 'false'])) throw new GradleException('R8_MINIFY must be true or false')

@@ -48,10 +48,14 @@ try:
         result['fatalExceptionCount'] = app_log.count('FATAL EXCEPTION:')
         result['nativeFatalSignalCount'] = len(re.findall(r'Fatal signal \d+', app_log))
         result['failureTypes'] = sorted(set(re.findall(r'\b((?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*(?:Exception|Error))\b', app_log)))
+        result['linkageOrReflectionFailures'] = sorted(set(re.findall(
+            r'\b(?:NoSuchMethodException|NoSuchFieldException|ClassNotFoundException|'
+            r'NoClassDefFoundError|NoSuchMethodError|NoSuchFieldError|UnsatisfiedLinkError|'
+            r'IllegalAccessException|InstantiationException|VerifyError)\b', app_log)))
         result['crashActivityVisible'] = any('CrashActivity' in line and 'ResumedActivity' in line for line in activities.splitlines())
         result['exceptionFrames'] = re.findall(r'\bat ([A-Za-z_$][\w$]*(?:\.[\w$<>]+)+\([^\n]*\))', app_log)[-80:]
         (output / (mode + '-startup.png')).write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
-        result['passed'] = all(result[key] for key in ('launchStatusOk', 'processAlive', 'homeResumed')) and not any(result[key] for key in ('fatalExceptionCount', 'nativeFatalSignalCount', 'crashActivityVisible'))
+        result['passed'] = all(result[key] for key in ('launchStatusOk', 'processAlive', 'homeResumed')) and not any(result[key] for key in ('fatalExceptionCount', 'nativeFatalSignalCount', 'crashActivityVisible', 'linkageOrReflectionFailures'))
         assert result['passed'], mode + ' startup failed: ' + json.dumps(result)
         adb('shell', 'am', 'force-stop', package)
     report['passed'] = True

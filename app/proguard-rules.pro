@@ -7,6 +7,15 @@
 # hidden-API bypass enabled. ToastFilter disables that path on every API >= 30.
 -dontwarn org.lsposed.hiddenapibypass.HiddenApiBypass
 
+# Legacy Glide modules are instantiated by name from merged manifest metadata.
+-keep public class * implements com.bumptech.glide.module.GlideModule {
+    public <init>();
+}
+
+# The independently compiled WEX JAR calls this logging API directly.
+-keep class com.orhanobut.logger.Logger { public *; }
+-keep interface com.orhanobut.logger.Printer { public *; }
+
 # sherpa-onnx Java methods are JNI entry points and their names/signatures must remain stable.
 -keep class com.k2fsa.sherpa.onnx.** { *; }
 

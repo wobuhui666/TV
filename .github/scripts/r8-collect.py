@@ -107,6 +107,10 @@ if mode == 'minified':
     current_names = {field['name'] for field in fields}
     assert {'mBinding', 'mViewModel', 'mVod'} <= original_names, 'Unexpected baseline fields'
     assert not ({'mBinding', 'mViewModel', 'mVod'} & current_names), 'Playback fields were not obfuscated'
+    old_types = {'Lcom/fongmi/android/tv/databinding/ActivityVideoBinding;',
+                 'Lcom/fongmi/android/tv/model/VideoViewModel;',
+                 'Lcom/fongmi/android/tv/playback/vod/VodPlaybackController;'}
+    assert not (old_types & {field['type'] for field in fields}), 'Playback class names were kept'
     metadata['mappingSha256'] = hashlib.sha256(mapping.read_bytes()).hexdigest()
 (output / (mode + '.json')).write_text(json.dumps(metadata, indent=2) + '\n')
 print(json.dumps(metadata, indent=2))
