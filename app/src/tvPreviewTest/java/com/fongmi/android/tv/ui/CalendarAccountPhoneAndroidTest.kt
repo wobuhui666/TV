@@ -38,6 +38,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.net.URI
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Real QR pixels, LAN HTTP, account callbacks and Keystore; Bangumi replies are controlled fixtures. */
 @RunWith(AndroidJUnit4::class)
@@ -51,6 +52,9 @@ class CalendarAccountPhoneAndroidTest {
     private var activity: CalendarThemePreviewActivity? = null
     private val prefs get() = instrumentation.targetContext.getSharedPreferences("calendar_accounts", 0)
     private var saved = emptyMap<String, Any?>()
+    private val traktPolls = AtomicInteger()
+    @Volatile private var traktApproved = false
+    @Volatile private var traktExpires = 300
 
     @Before fun setup() {
         assertEquals("Disposable preview only", "com.fongmi.android.tv.preview", instrumentation.targetContext.packageName)
@@ -59,6 +63,21 @@ class CalendarAccountPhoneAndroidTest {
         originalClient = OkHttp.trustedClient()
         val fixture = OkHttpClient.Builder().addInterceptor { chain ->
             val request = chain.request()
+            if (request.url.host == "auth.trakt.tv") {
+                val buffer = okio.Buffer()
+                request.body!!.writeTo(buffer)
+                val data = JsonParser.parseString(buffer.readUtf8()).asJsonObject
+                check(!data.has("client_secret"))
+                val valid = data.get("client_id").asString == "trakt-client-fixture"
+                val polling = request.url.encodedPath == "/oauth/device/token"
+                if (polling) traktPolls.incrementAndGet()
+                val status = if (!valid) 401 else if (polling && !traktApproved) 400 else 200
+                val body = if (!valid || status == 400) "{}" else if (!polling)
+                    """{"device_code":"private-device-fixture","user_code":"TV123456","verification_url":"https://auth.trakt.tv/activate","expires_in":$traktExpires,"interval":1}"""
+                else """{"access_token":"trakt-access-fixture","refresh_token":"trakt-refresh-fixture","token_type":"bearer","created_at":${System.currentTimeMillis()/1000},"expires_in":604800}"""
+                return@addInterceptor Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(status)
+                    .message("Fixture").body(body.toResponseBody("application/json".toMediaType())).build()
+            }
             check(request.url.host == "api.bgm.tv") { "Unexpected account host" }
             val valid = request.header("Authorization") == "Bearer valid-fixture"
             val body = if (!valid) "{}" else if (request.url.encodedPath == "/v0/me")
@@ -74,6 +93,7 @@ class CalendarAccountPhoneAndroidTest {
         instrumentation.runOnMainSync {
             activity?.finish()
             CalendarAccountStore.disconnect(CalendarProvider.BANGUMI)
+            CalendarAccountStore.disconnect(CalendarProvider.TRAKT)
             val editor = prefs.edit().clear()
             saved.forEach { (key, value) ->
                 when (value) {
@@ -135,37 +155,104 @@ class CalendarAccountPhoneAndroidTest {
         assertEquals("valid-fixture", CalendarAccountStore.token(CalendarProvider.BANGUMI)?.accessToken)
     }
 
-    private fun open(mode: ThemeMode): String {
+    @Test fun shouldShowOfficialTraktQrAndSaveAuthorizedTokens() {
+        CalendarAccountStore.traktClientId = "trakt-client-fixture"
+        val url = open(ThemeMode.LIGHT, CalendarProvider.TRAKT, false)
+        assertEquals("https://auth.trakt.tv/activate", url)
+        assertNotNull(device.findObject(By.text("TV123456")))
+        NativeUiEvidence.capture("trakt-tv-light")
+        await { traktPolls.get() > 0 }
+        assertNull(CalendarAccountStore.token(CalendarProvider.TRAKT))
+        traktApproved = true
+        await { CalendarAccountStore.token(CalendarProvider.TRAKT)?.accessToken == "trakt-access-fixture" }
+        assertEquals("trakt-refresh-fixture", CalendarAccountStore.token(CalendarProvider.TRAKT)?.refreshToken)
+        assertFalse(prefs.getString("trakt_token", "")!!.contains("trakt-access-fixture"))
+    }
+
+    @Test fun shouldConfigureTraktFromPhoneWithoutReplacingAccountUntilAuthorized() {
+        CalendarAccountStore.traktClientId = "previous-client"
+        instrumentation.runOnMainSync {
+            CalendarAccountStore.saveToken(CalendarProvider.TRAKT, CalendarAccountToken("previous-token"))
+        }
+        val code = open(ThemeMode.DARK, CalendarProvider.TRAKT, true, true)
+        NativeUiEvidence.capture("trakt-tv-client")
+        submit(code, "bad-client", "clientId")
+        await { status(code) == "failed" }
+        assertEquals("previous-client", CalendarAccountStore.traktClientId)
+        assertEquals("previous-token", CalendarAccountStore.token(CalendarProvider.TRAKT)?.accessToken)
+        submit(code, "trakt-client-fixture", "clientId")
+        await { status(code) == "authorizing" }
+        assertEquals("https://auth.trakt.tv/activate", decodeQr())
+        assertEquals("previous-client", CalendarAccountStore.traktClientId)
+        NativeUiEvidence.capture("trakt-tv-dark")
+        traktApproved = true
+        await { status(code) == "connected" }
+        assertEquals("trakt-client-fixture", CalendarAccountStore.traktClientId)
+        assertEquals("trakt-access-fixture", CalendarAccountStore.token(CalendarProvider.TRAKT)?.accessToken)
+    }
+
+    @Test fun shouldCancelTraktPollingWhenTheAuthorizationDialogCloses() {
+        CalendarAccountStore.traktClientId = "trakt-client-fixture"
+        open(ThemeMode.DARK, CalendarProvider.TRAKT, false)
+        await { traktPolls.get() > 0 }
+        device.pressBack()
+        instrumentation.waitForIdleSync()
+        val polls = traktPolls.get()
+        traktApproved = true
+        SystemClock.sleep(1500)
+        assertEquals(polls, traktPolls.get())
+        assertNull(CalendarAccountStore.token(CalendarProvider.TRAKT))
+    }
+
+    @Test fun shouldExpireTheTraktPhoneSessionBeforeSavingTokens() {
+        CalendarAccountStore.traktClientId = ""
+        val code = open(ThemeMode.DARK, CalendarProvider.TRAKT)
+        traktExpires = 2
+        submit(code, "trakt-client-fixture", "clientId")
+        await { status(code) == "authorizing" }
+        await { status(code) == "ended" }
+        assertNull(CalendarAccountStore.token(CalendarProvider.TRAKT))
+        assertEquals("", CalendarAccountStore.traktClientId)
+    }
+
+    private fun open(mode: ThemeMode, provider: CalendarProvider = CalendarProvider.BANGUMI,
+        manual: Boolean = true, configureClient: Boolean = false): String {
         instrumentation.runOnMainSync { Setting.putThemeMode(mode); JetStreamThemeController.refresh() }
         activity = instrumentation.startActivitySync(Intent(instrumentation.targetContext,
             CalendarThemePreviewActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as CalendarThemePreviewActivity
-        instrumentation.runOnMainSync { activity!!.showAccount(CalendarProvider.BANGUMI) }
-        val label = if (CalendarAccountStore.token(CalendarProvider.BANGUMI) == null) R.string.calendar_connect else R.string.calendar_reconnect
+        instrumentation.runOnMainSync { activity!!.showAccount(provider) }
+        val label = if (configureClient) R.string.calendar_trakt_client_id else
+            if (CalendarAccountStore.token(provider) == null) R.string.calendar_connect else R.string.calendar_reconnect
         val connect = device.wait(Until.findObject(By.text(activity!!.getString(label))), 10000)
         assertNotNull(connect)
         connect!!.click()
-        val qr = device.wait(Until.findObject(By.desc(activity!!.getString(R.string.calendar_phone_connect))), 10000)
-        assertNotNull(qr)
         assertNotNull("Cancel is visible", device.wait(Until.findObject(By.res("android:id/button2")), 5000))
-        assertNotNull("Manual entry is visible", device.wait(Until.findObject(By.res("android:id/button3")), 5000))
-        instrumentation.waitForIdleSync()
-        SystemClock.sleep(500)
-        val bounds = qr!!.visibleBounds
-        val screen = instrumentation.uiAutomation.takeScreenshot()
-        val bitmap = Bitmap.createBitmap(screen, bounds.left, bounds.top, bounds.width(), bounds.height())
-        val url = try {
-            val pixels = IntArray(bitmap.width * bitmap.height)
-            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-            MultiFormatReader().decode(BinaryBitmap(HybridBinarizer(RGBLuminanceSource(bitmap.width, bitmap.height, pixels)))).text
-        } finally { bitmap.recycle(); screen.recycle() }
+        if (manual) assertNotNull("Manual entry is visible", device.wait(Until.findObject(By.res("android:id/button3")), 5000))
+        val url = decodeQr()
+        if (provider == CalendarProvider.TRAKT && !manual) return url
         val uri = URI(url)
         assertEquals("/account.html", uri.path)
         assertTrue(uri.fragment.matches(Regex("[a-f0-9]{48}")))
         return uri.fragment
     }
 
-    private fun submit(code: String, token: String) {
-        val body = "{\"token\":\"$token\"}".toRequestBody("application/json".toMediaType())
+    private fun decodeQr(): String {
+        val qr = device.wait(Until.findObject(By.desc(activity!!.getString(R.string.calendar_phone_connect))), 10000)
+        assertNotNull(qr)
+        instrumentation.waitForIdleSync()
+        SystemClock.sleep(500)
+        val bounds = qr!!.visibleBounds
+        val screen = instrumentation.uiAutomation.takeScreenshot()
+        val bitmap = Bitmap.createBitmap(screen, bounds.left, bounds.top, bounds.width(), bounds.height())
+        return try {
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            MultiFormatReader().decode(BinaryBitmap(HybridBinarizer(RGBLuminanceSource(bitmap.width, bitmap.height, pixels)))).text
+        } finally { bitmap.recycle(); screen.recycle() }
+    }
+
+    private fun submit(code: String, token: String, field: String = "token") {
+        val body = "{\"$field\":\"$token\"}".toRequestBody("application/json".toMediaType())
         http.newCall(Request.Builder().url(Server.get().getAddress(true) + "/account/session")
             .header("X-Calendar-Pairing", code).post(body).build()).execute().use { assertEquals(200, it.code) }
     }

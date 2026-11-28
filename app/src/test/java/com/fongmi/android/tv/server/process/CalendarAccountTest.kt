@@ -1,6 +1,8 @@
 package com.fongmi.android.tv.server.process
 
 import com.fongmi.android.tv.calendar.CalendarAccountPairing
+import com.fongmi.android.tv.calendar.CalendarProvider
+import com.fongmi.android.tv.calendar.CalendarDeviceCode
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoHTTPD.IHTTPSession
 import fi.iki.elonen.NanoHTTPD.Method
@@ -96,6 +98,22 @@ class CalendarAccountTest {
             client.dispatcher.executorService.shutdownNow()
             client.connectionPool.evictAll()
         }
+    }
+
+    @Test fun shouldAcceptClientIdOnlyForTraktAndNeverReturnTheDeviceCredential() {
+        val traktCode = pairing.start(CalendarProvider.TRAKT) { received = it }
+        val headers = mapOf("x-calendar-pairing" to traktCode)
+        assertEquals(Status.BAD_REQUEST, process.doResponse(session(Method.POST, "{\"token\":\"wrong-field\"}", headers), "/account/session", emptyMap()).status)
+        assertEquals(Status.OK, process.doResponse(session(Method.POST, "{\"clientId\":\"trakt-client\"}", headers), "/account/session", emptyMap()).status)
+        assertEquals("trakt-client", received)
+        pairing.authorize(traktCode, CalendarDeviceCode("secret-device-code", "USERCODE", "https://auth.trakt.tv/activate", 300, 5))
+        val response = process.doResponse(session(Method.GET, extra = headers), "/account/session", emptyMap())
+        val body = response.data.readBytes().toString(Charsets.UTF_8)
+        assertTrue(body.contains("authorizing"))
+        assertTrue(body.contains("https://auth.trakt.tv/activate"))
+        assertTrue(body.contains("USERCODE"))
+        assertFalse(body.contains("secret-device-code"))
+        assertFalse(body.contains("trakt-client"))
     }
 
     private fun session(method: Method, body: String = "", extra: Map<String, String> = emptyMap(), remote: String = "192.168.1.2"): IHTTPSession {

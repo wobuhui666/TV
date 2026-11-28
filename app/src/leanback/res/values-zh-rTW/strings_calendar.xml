@@ -45,6 +45,8 @@
     <string name="calendar_phone_failed">連接失敗，請在手機上重試</string>
     <string name="calendar_phone_manual">在電視上輸入</string>
     <string name="calendar_trakt_code">用手機開啟 %1$s，輸入 %2$s</string>
+    <string name="calendar_trakt_scan">掃碼開啟 Trakt 官網，輸入下方驗證碼完成授權。\n%1$s</string>
+    <string name="calendar_trakt_client_help">手機與電視連接同一網路，掃碼後填寫 Trakt Client ID 並授權帳號。請保持此視窗開啟。</string>
     <string name="calendar_auth_failed">帳號授權失敗，請重新連接</string>
     <string name="calendar_auth_expired">授權碼已過期，請重新連接</string>
     <string name="calendar_connected_required">連接帳號後同步追劇</string>

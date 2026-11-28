@@ -60,4 +60,4 @@ WEB_VERIFY_OUTPUT=artifacts/material-web/accounts \
 
 ## 覆盖限制
 
-浏览器使用受控接口；Android 使用生产账号弹窗的预览宿主、真实 HTTP 与 Keystore，官方 API 响应为受控空列表。未验证真实 Bangumi 登录、非空列表同步、个人日历刷新后的真实排期、iOS Safari、API 24 或实体电视扫码，未运行完整 lint。本次不接入 OAuth App ID／Secret，不部署回调服务。既有账号数据导入与操作范围见[使用说明](../../../native-discovery.md#追更日历)，手机接口见[大屏伴侣](../../../web-companion.md#bangumi-账号连接)。
+浏览器使用受控接口；Android 使用生产账号弹窗的预览宿主、真实 HTTP 与 Keystore，官方 API 响应为受控空列表。未验证真实 Bangumi 登录、非空列表同步、个人日历刷新后的真实排期、iOS Safari、API 24 或实体电视扫码，未运行完整 lint。本次不接入 OAuth App ID／Secret，不部署回调服务。既有账号数据导入与操作范围见[使用说明](../../../native-discovery.md#追更日历)，手机接口见[大屏伴侣](../../../web-companion.md#日历账号连接)。

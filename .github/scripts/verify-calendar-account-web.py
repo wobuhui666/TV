@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the bundled Bangumi phone page with controlled account responses."""
+"""Exercise the bundled calendar phone page with controlled account responses."""
 import json
 import mimetypes
 import os
@@ -38,7 +38,8 @@ class Handler(BaseHTTPRequestHandler):
             STATE["gets"].append(self.path)
             if self.headers.get("X-Calendar-Pairing") != CODE:
                 return self.reply(403, {})
-            return self.reply(STATE["status"], {"state": STATE["state"], "remainingMillis": 500000})
+            return self.reply(STATE["status"], {"state": STATE["state"], "remainingMillis": 500000,
+                "provider": STATE["provider"], "verificationUrl": STATE["verificationUrl"], "userCode": "TV123456"})
         target = ASSETS / path.lstrip("/")
         if not target.resolve().is_relative_to(ASSETS) or not target.is_file():
             return self.reply(404, {})
@@ -49,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
         STATE["posts"].append({"path": self.path, "data": data, "code": self.headers.get("X-Calendar-Pairing"),
                                "type": self.headers.get("Content-Type")})
         STATE["state"] = "pending"
-        self.reply(200, {"state": "pending", "remainingMillis": 500000})
+        self.reply(200, {"state": "pending", "remainingMillis": 500000, "provider": STATE["provider"]})
 
 
 class CalendarAccountWebTest(unittest.TestCase):
@@ -70,7 +71,7 @@ class CalendarAccountWebTest(unittest.TestCase):
         cls.server.server_close()
 
     def setUp(self):
-        STATE.update(state="ready", status=200, gets=[], posts=[])
+        STATE.update(state="ready", status=200, gets=[], posts=[], provider="bangumi", verificationUrl="https://auth.trakt.tv/activate")
         self.context = self.browser.new_context(viewport={"width": 375, "height": 812})
         self.page = self.context.new_page()
         self.errors = []
@@ -159,6 +160,63 @@ class CalendarAccountWebTest(unittest.TestCase):
                 if language == "zh-CN":
                     self.page.set_viewport_size({"width": 375, "height": 812})
                     self.page.screenshot(path=str(OUTPUT / f"bangumi-phone-{theme}.png"))
+
+    def test_trakt_client_id_leads_to_official_authorization_then_connected(self):
+        STATE["provider"] = "trakt"
+        self.open()
+        expect(self.page.locator("#account-provider")).to_have_text("Trakt")
+        expect(self.page.locator("#account-input-label")).to_have_text("Trakt Client ID")
+        expect(self.page.locator("a.account-token-link")).to_have_attribute("href", "https://developer.trakt.tv/apps")
+        self.page.locator("#account-token").fill("trakt-client-fixture")
+        self.page.locator("#account-submit").click()
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "pending")
+        self.assertEqual({"clientId": "trakt-client-fixture"}, STATE["posts"][0]["data"])
+        STATE["state"] = "authorizing"
+        expect(self.page.locator("#account-authorization")).to_be_visible()
+        expect(self.page.locator("#account-form")).to_be_hidden()
+        expect(self.page.locator("#account-authorize")).to_have_attribute("href", "https://auth.trakt.tv/activate")
+        expect(self.page.locator("#account-authorize")).to_have_attribute("rel", "noopener noreferrer")
+        expect(self.page.locator("#account-user-code")).to_have_value("TV123456")
+        self.page.screenshot(path=str(OUTPUT / "trakt-phone-authorization.png"))
+        STATE["state"] = "connected"
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "connected")
+        self.assertEqual(0, self.page.evaluate("sessionStorage.length"))
+
+    def test_trakt_rejects_unsafe_authorization_links(self):
+        STATE.update(provider="trakt", state="authorizing", verificationUrl="https://example.invalid/steal")
+        self.page.goto(self.base + "/account.html#" + CODE)
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "offline")
+        expect(self.page.locator("#account-authorization")).to_be_hidden()
+
+    def test_trakt_failed_client_id_can_retry_and_expired_code_cannot_authorize(self):
+        STATE["provider"] = "trakt"
+        self.open()
+        self.page.locator("#account-token").fill("wrong-client")
+        self.page.locator("#account-submit").click()
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "pending")
+        STATE["state"] = "failed"
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "failed")
+        self.page.locator("#account-token").fill("valid-client")
+        self.page.locator("#account-submit").click()
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "pending")
+        STATE["state"] = "authorizing"
+        expect(self.page.locator("#account-authorization")).to_be_visible()
+        STATE["status"] = 410
+        expect(self.page.locator("#account-status")).to_have_attribute("data-state", "ended")
+        expect(self.page.locator("#account-authorization")).to_be_hidden()
+
+    def test_trakt_languages_and_narrow_screens(self):
+        STATE["provider"] = "trakt"
+        for language in ["zh-CN", "zh-TW", "en"]:
+            self.open()
+            self.page.evaluate("language => localStorage.setItem('tv-web-language', language)", language)
+            for phase in ["ready", "authorizing"]:
+                STATE["state"] = phase
+                self.page.set_viewport_size({"width": 320, "height": 812})
+                self.page.reload()
+                expect(self.page.locator("#account-status")).to_have_attribute("data-state", phase)
+                self.assertTrue(self.page.evaluate("document.documentElement.scrollWidth <= innerWidth"))
+            STATE["state"] = "ready"
 
 
 if __name__ == "__main__":

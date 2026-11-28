@@ -198,7 +198,7 @@ keyPassword=填写密钥密码
 
 TMDB 配置是可选项：`tmdbApiKey` / `tmdbLogoSize`，或环境变量 `TMDB_API_KEY` / `TMDB_LOGO_SIZE`；logo 尺寸默认 `w500`。它们不属于签名配置。
 
-Trakt 日历与账号授权需要开发者应用 Client ID，可通过 `local.properties` 的 `traktClientId` 或环境变量 `TRAKT_CLIENT_ID` 预置，也可在电视日历的账号入口配置。开发应用 Redirect URI 设为 `urn:ietf:wg:oauth:2.0:oob`；无需 Client Secret。Bangumi 使用个人访问令牌，可在同一局域网的手机扫码粘贴或在电视输入；不需要 OAuth 应用凭据，也不将账号令牌写入构建配置。接口和操作范围见[追更日历](docs/native-discovery.md#追更日历)。
+Trakt 日历与账号授权需要开发者应用 Client ID，可通过 `local.properties` 的 `traktClientId` 或环境变量 `TRAKT_CLIENT_ID` 预置；两条发布工作流均读取同名 GitHub Actions Variable／Secret。未预置时可从电视账号入口用手机扫码填写，再打开官网授权；开发应用 Redirect URI 设为 `urn:ietf:wg:oauth:2.0:oob`，无需 Client Secret。Bangumi 使用个人访问令牌，可在同一局域网的手机扫码粘贴或在电视输入；不需要 OAuth 应用凭据，也不将账号令牌写入构建配置。注册步骤、接口和操作范围见[追更日历](docs/native-discovery.md#追更日历)。
 
 ```bash
 ./gradlew -I "$TV_SDK_INIT" \

@@ -45,6 +45,8 @@
     <string name="calendar_phone_failed">Connection failed. Try again on your phone.</string>
     <string name="calendar_phone_manual">Enter on TV</string>
     <string name="calendar_trakt_code">On your phone, open %1$s and enter %2$s</string>
+    <string name="calendar_trakt_scan">Scan to open Trakt, then enter the code below.\n%1$s</string>
+    <string name="calendar_trakt_client_help">Scan with a phone on the same network to enter your Trakt Client ID and authorize your account. Keep this window open.</string>
     <string name="calendar_auth_failed">Account authorization failed. Please reconnect.</string>
     <string name="calendar_auth_expired">Authorization code expired. Please reconnect.</string>
     <string name="calendar_connected_required">Connect an account to sync followed titles</string>

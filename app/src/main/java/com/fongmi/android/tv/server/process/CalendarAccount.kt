@@ -45,13 +45,18 @@ class CalendarAccount @JvmOverloads constructor(private val pairing: CalendarAcc
                 }
                 val body = JsonParser.parseString(bytes.toString(Charsets.UTF_8))
                 require(body.isJsonObject)
-                val token = body.asJsonObject.get("token")
+                val token = body.asJsonObject.get(if (current.provider == "trakt") "clientId" else "token")
                 require(token != null && token.isJsonPrimitive && token.asJsonPrimitive.isString)
                 pairing.submit(code, token.asString.trim())
             }
             response(Status.OK, JsonObject().apply {
                 addProperty("state", result.state)
                 addProperty("remainingMillis", result.remainingMillis)
+                addProperty("provider", result.provider)
+                if (result.state == "authorizing") {
+                    addProperty("verificationUrl", result.verificationUrl)
+                    addProperty("userCode", result.userCode)
+                }
             }.toString())
         } catch (_: SecurityException) { response(Status.FORBIDDEN) }
         catch (_: IllegalStateException) { response(Status.GONE) }

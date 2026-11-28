@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
     <meta name="referrer" content="no-referrer">
-    <title>Bangumi · 大屏伴侣</title>
+    <title>日历账号 · 大屏伴侣</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/ui.css">
     <link rel="stylesheet" href="css/account.css">
@@ -14,7 +14,7 @@
 <body>
     <main class="account-app">
         <header class="account-header">
-            <h1>Bangumi</h1>
+            <h1 id="account-provider" data-i18n="accounts">日历账号</h1>
             <a class="button button-tonal" href="/?tab=4" data-i18n="back">返回设置</a>
         </header>
         <section class="account-card" aria-labelledby="account-heading">
@@ -22,11 +22,16 @@
             <p id="account-status" role="status" aria-live="polite" data-state="loading" data-i18n="loading">正在连接电视…</p>
             <form id="account-form" hidden autocomplete="off">
                 <a class="button button-tonal account-token-link" href="https://next.bgm.tv/demo/access-token" target="_blank" rel="noopener noreferrer" data-i18n="create">去 Bangumi 生成令牌 ↗</a>
-                <label class="field-label" for="account-token" data-i18n="token">个人访问令牌</label>
+                <label id="account-input-label" class="field-label" for="account-token" data-i18n="token">个人访问令牌</label>
                 <input id="account-token" class="outlined-input" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="2048" data-i18n-placeholder="placeholder" placeholder="回到这里粘贴令牌">
                 <button id="account-submit" class="button button-filled" type="submit" data-i18n="connect">连接电视</button>
-                <p class="field-help" data-i18n="help">请保持电视上的连接窗口打开。令牌只发送到这台电视。</p>
+                <p id="account-help" class="field-help" data-i18n="help">请保持电视上的连接窗口打开。令牌只发送到这台电视。</p>
             </form>
+            <div id="account-authorization" hidden>
+                <label class="field-label" for="account-user-code" data-i18n="verificationCode">验证码</label>
+                <input id="account-user-code" class="outlined-input" readonly autocomplete="off" spellcheck="false">
+                <a id="account-authorize" class="button button-filled" target="_blank" rel="noopener noreferrer" data-i18n="authorize">前往 Trakt 授权 ↗</a>
+            </div>
             <button id="account-retry" class="button button-tonal" type="button" data-i18n="retry" hidden>重试连接</button>
         </section>
     </main>

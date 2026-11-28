@@ -115,6 +115,7 @@ jobs:
             --tests 'com.fongmi.android.tv.server.process.DiagnosticsTest' \
             --tests 'com.fongmi.android.tv.calendar.CalendarAccountPairingTest' \
             --tests 'com.fongmi.android.tv.server.process.CalendarAccountTest' \
+            --tests 'com.fongmi.android.tv.calendar.TraktAccountApiTest' \
             --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Build isolated preview and run application unit tests
         run: |
@@ -154,7 +155,7 @@ jobs:
           adb shell am force-stop com.google.android.apps.nexuslauncher
           UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
             'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest,com.fongmi.android.tv.server.LogSessionAndroidTest,com.fongmi.android.tv.ui.CalendarAccountPhoneAndroidTest' \
-            artifacts/material-web-android '8,8,1,3'
+            artifacts/material-web-android '8,8,1,7'
           VERIFY
       - name: Verify logs, QR themes and remote keys on Android API 34
         uses: reactivecircus/android-emulator-runner@v2

@@ -48,9 +48,18 @@ TV 包在手机或触屏设备上浏览首页时，手指滑动及惯性滚动�
 
 没有可播放来源也能添加追剧。未关联 TMDB、没有公布日期或该周没有更新的收藏，可通过 **全部收藏** 查看和管理。请求失败提供重试，部分失败保留已加载内容；排期来自 TMDB，不表示片源已经上线。播出状态按日期显示，未知播出小时不补写时间；缺少评分、播出网络或简介时省略。焦点作品可显示透明艺术标题，缺图或加载失败时显示完整文字标题。
 
-切换到 Trakt 或 Bangumi 后，点 **账号 → 连接账号**：Trakt 先配置应用 Client ID，再用手机打开电视显示的授权地址并输入授权码；Bangumi 显示连接二维码，手机与电视连接同一网络后扫码，在网页打开 [官方令牌页面](https://next.bgm.tv/demo/access-token) 生成个人访问令牌，再回网页粘贴并点 **连接电视**。电视验证账号并完整导入列表后自动进入我的追更。二维码有效期 10 分钟，关闭连接窗口或离开日历即取消；失败可在手机上重新粘贴重试，原账号保留。也可点 **在电视上输入** 使用原有输入框。此方式不需要 Bangumi App ID、Secret 或回调服务。
+切换到 Trakt 或 Bangumi 后，点 **账号 → 连接账号**：
+
+- **Trakt**：已有 Client ID 时，电视直接显示官网授权二维码与验证码，手机扫码后在官网输入验证码并同意，电视自动连接。未预置 Client ID 时，先显示局域网配对二维码；同一网络的手机扫码粘贴 Client ID，再在同一网页打开 Trakt 官网授权，无需再次扫码。账号菜单的 **Trakt Client ID** 可重新配置并授权，取消或失败会保留原连接。授权码到期、拒绝授权或关闭电视弹窗后需重新连接。
+- **Bangumi**：手机与电视连接同一网络后扫码，在网页打开 [官方令牌页面](https://next.bgm.tv/demo/access-token) 生成个人访问令牌，再回网页粘贴并点 **连接电视**。电视验证账号并完整导入列表后自动进入我的追更。失败可在手机上重新粘贴重试，原账号保留。此方式不需要 Bangumi App ID、Secret 或回调服务。
+
+局域网配对二维码有效期最多 10 分钟，Trakt 授权阶段还受官网授权码有效期限制。关闭连接窗口或离开日历即取消；手机输入阶段也可点 **在电视上输入** 使用备用输入框。
 
 Trakt 开发应用注册使用 Redirect URI `urn:ietf:wg:oauth:2.0:oob`，不需要 Client Secret；构建时可用 `traktClientId` 或 `TRAKT_CLIENT_ID` 预置 Client ID。Trakt 授权过期时自动刷新；失效或撤销后重新连接。服务拒绝已保存的令牌时，**我的追更** 提示重新连接，本机同步列表保留。
+
+在 [Trakt Developer → My Apps → Create app](https://developer.trakt.tv/apps/new) 填写应用名称、简介，选择 **Development**，Redirect URIs 填上述值，Allowed origins 留空后创建。Development 无需申请 Production 审核，只允许本人和最多 16 个受邀测试用户登录；创建后在应用详情复制 Client ID。若公开发布，申请 Production 时选择 **Signs users in (device code)** 和 **Reads and writes**，因为追剧按钮会修改 watchlist；数据来源填 TMDB、Bangumi，其他同步服务如实填 Bangumi，并说明独立账号、不转移 Trakt 数据。隐私政策链接使用下方独立说明页，免责声明的应用名须与注册名称一致。
+
+两条发布工作流都支持 GitHub **Settings → Secrets and variables → Actions → Variables** 中的 `TRAKT_CLIENT_ID`（也接受同名 Secret）。设置后需重新构建 APK；Development ID 不能代替面向全部用户的 Production ID。
 
 **账号 → 同步追剧** 将 Trakt 电视剧 watchlist、Bangumi 动画「想看／在看」列表导入当前数据源的 **我的追更**。进入个人日历时最多每五分钟刷新列表；手动同步立即刷新。只有完整获取所有分页后才替换本机账号快照，失败保留旧列表，单集请求部分失败保留成功排期。远端列表和本地收藏独立保存，不上传本地全部收藏，也不自动删除远端项目。
 

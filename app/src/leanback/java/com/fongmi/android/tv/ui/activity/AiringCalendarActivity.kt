@@ -134,9 +134,7 @@ class AiringCalendarActivity : BaseActivity(), AiringCalendarView.Listener {
                         load()
                     }
                 }.setNegativeButton(R.string.dialog_negative, null).show())
-            "account" -> if (provider == CalendarProvider.TRAKT && CalendarAccountStore.traktClientId.isBlank()) {
-                accountDialogs.configureTrakt { createRepository(); load(); accountDialogs.show(provider) }
-            } else accountDialogs.show(provider)
+            "account" -> accountDialogs.show(provider)
             "follow" -> selectedEntries().firstOrNull { it.stableKey == previewKey }?.takeIf { it.remoteId > 0 && !accountBusy }?.let { entry ->
                 val existing = CalendarAccountStore.follows(provider).firstOrNull { it.remoteId == entry.remoteId }
                 accountDialogs.setFollowing(existing ?: CalendarFollow(provider, entry.remoteId, entry.media), existing == null)

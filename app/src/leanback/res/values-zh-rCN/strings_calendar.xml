@@ -45,6 +45,8 @@
     <string name="calendar_phone_failed">连接失败，请在手机上重试</string>
     <string name="calendar_phone_manual">在电视上输入</string>
     <string name="calendar_trakt_code">用手机打开 %1$s，输入 %2$s</string>
+    <string name="calendar_trakt_scan">扫码打开 Trakt 官网，输入下方验证码完成授权。\n%1$s</string>
+    <string name="calendar_trakt_client_help">手机与电视连接同一网络，扫码后填写 Trakt Client ID 并授权账号。请保持此窗口打开。</string>
     <string name="calendar_auth_failed">账号授权失败，请重新连接</string>
     <string name="calendar_auth_expired">授权码已过期，请重新连接</string>
     <string name="calendar_connected_required">连接账号后同步追剧</string>

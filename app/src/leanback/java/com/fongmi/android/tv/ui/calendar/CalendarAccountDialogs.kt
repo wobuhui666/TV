@@ -1,6 +1,7 @@
 package com.fongmi.android.tv.ui.calendar
 
 import android.text.InputType
+import android.os.SystemClock
 import android.view.Gravity
 import android.widget.EditText
 import android.widget.ImageView
@@ -53,50 +54,56 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
                 when (actions[index].first) {
                     "connect" -> connect(provider)
                     "sync" -> changed(true)
-                    "client" -> configureTrakt { changed(false) }
+                    "client" -> { cancel(); startPhone(CalendarProvider.TRAKT) }
                     "disconnect" -> { cancel(); CalendarAccountStore.disconnect(provider); changed(false) }
                 }
             }.setNegativeButton(R.string.dialog_negative, null).show())
     }
 
-    fun configureTrakt(next: () -> Unit) {
+    private fun inputTrakt() {
         input(R.string.calendar_trakt_client_id, CalendarAccountStore.traktClientId, false) { value ->
-            if (value.isNotBlank()) {
-                if (value != CalendarAccountStore.traktClientId) CalendarAccountStore.disconnect(CalendarProvider.TRAKT)
-                CalendarAccountStore.traktClientId = value
-                next()
-            }
+            if (value.isNotBlank()) startTrakt(value)
         }
     }
 
     private fun connect(provider: CalendarProvider) {
         cancel()
         if (provider == CalendarProvider.TRAKT) {
-            if (CalendarAccountStore.traktClientId.isBlank()) configureTrakt { startTrakt() }
-            else startTrakt()
-        } else startBangumi()
+            if (CalendarAccountStore.traktClientId.isBlank()) startPhone(provider)
+            else startTrakt(CalendarAccountStore.traktClientId)
+        } else startPhone(provider)
     }
 
-    private fun startBangumi() {
+    private fun startPhone(provider: CalendarProvider) {
+        val manual = { if (provider == CalendarProvider.TRAKT) inputTrakt() else inputBangumi() }
         Server.get().start()
-        if (!Server.get().isRunning) { inputBangumi(); return }
+        if (!Server.get().isRunning) { manual(); return }
         val ticket = generation
-        val builder = MaterialAlertDialogBuilder(activity).setTitle("Bangumi")
+        val builder = MaterialAlertDialogBuilder(activity).setTitle(providerName(provider))
         val status = TextView(builder.context).apply {
             setPadding(0, ResUtil.dp2px(12), 0, 0)
             setText(R.string.calendar_phone_waiting)
         }
         val pairing = CalendarAccountPairing.get()
-        val code = pairing.start { value ->
+        val code = pairing.start(provider) { value ->
             App.post {
                 val activeCode = pairingCode
                 if (activeCode != null && current(ticket) && pairing.isPending(activeCode)) {
                     status.setText(R.string.calendar_phone_checking)
-                    connectBangumi(value, ticket, activeCode, status)
+                    if (provider == CalendarProvider.TRAKT) startTrakt(value, activeCode, status)
+                    else connectBangumi(value, ticket, activeCode, status)
                 }
             }
         }
         pairingCode = code
+        showQr(builder, Server.get().address + "/account.html#" + code,
+            activity.getString(if (provider == CalendarProvider.TRAKT) R.string.calendar_trakt_client_help else R.string.calendar_phone_help),
+            status, manual)
+        pairingTimeout = Runnable { if (current(ticket)) fail(R.string.calendar_auth_expired) }
+            .also { App.post(it, CalendarAccountPairing.DURATION) }
+    }
+
+    private fun showQr(builder: MaterialAlertDialogBuilder, url: String, help: String, status: TextView, manual: (() -> Unit)? = null) {
         val content = LinearLayout(builder.context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -104,27 +111,26 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
             setPadding(pad, ResUtil.dp2px(8), pad, ResUtil.dp2px(8))
             addView(ImageView(builder.context).apply {
                 contentDescription = activity.getString(R.string.calendar_phone_connect)
-                setImageBitmap(QRCode.getLightBitmap(Server.get().address + "/account.html#" + code, 180, 4))
+                setImageBitmap(QRCode.getLightBitmap(url, 180, 4))
             }, LinearLayout.LayoutParams(ResUtil.dp2px(180), ResUtil.dp2px(180)))
             addView(LinearLayout(builder.context).apply {
                 orientation = LinearLayout.VERTICAL
                 addView(TextView(builder.context).apply {
                     textSize = 16f
-                    setText(R.string.calendar_phone_help)
+                    text = help
                 })
                 addView(status)
             }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginStart = ResUtil.dp2px(20)
             })
         }
-        val dialog = builder
-            .setView(content)
-            .setNeutralButton(R.string.calendar_phone_manual) { _, _ -> cancel(); inputBangumi() }
+        manual?.let { builder.setNeutralButton(R.string.calendar_phone_manual) { _, _ -> cancel(); it() } }
+        authDialog?.setOnDismissListener(null)
+        authDialog?.dismiss()
+        val dialog = builder.setView(content)
             .setNegativeButton(R.string.dialog_negative, null).show()
         JetStreamDialogDecor.tintButtons(dialog)
         authDialog = dialog.also { it.setOnDismissListener { cancel() } }
-        pairingTimeout = Runnable { if (current(ticket)) fail(R.string.calendar_auth_expired) }
-            .also { App.post(it, CalendarAccountPairing.DURATION) }
     }
 
     private fun inputBangumi() {
@@ -164,39 +170,52 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
         })
     }
 
-    private fun startTrakt() {
+    private fun startTrakt(clientId: String, phoneCode: String? = null, status: TextView? = null) {
         val ticket = generation
         busy(true)
-        TraktAccountApi.deviceCode(CalendarAccountStore.traktClientId, tag, object : TmdbLibraryApi.Listener<CalendarDeviceCode> {
+        TraktAccountApi.deviceCode(clientId, tag, object : TmdbLibraryApi.Listener<CalendarDeviceCode> {
             override fun onSuccess(value: CalendarDeviceCode) {
                 if (!current(ticket)) return
-                val deadline = System.currentTimeMillis() + value.expiresIn * 1000L
-                val dialog = MaterialAlertDialogBuilder(activity).setTitle("Trakt")
-                    .setMessage(activity.getString(R.string.calendar_trakt_code, value.verificationUrl, value.userCode))
-                    .setNegativeButton(R.string.dialog_negative, null).show()
-                JetStreamDialogDecor.tintButtons(dialog)
-                authDialog = dialog.also { it.setOnDismissListener { cancel() } }
-                poll(value, deadline, value.interval.coerceAtLeast(1), ticket)
+                if (phoneCode != null && !CalendarAccountPairing.get().authorize(phoneCode, value)) return
+                val deadline = SystemClock.elapsedRealtime() + value.expiresIn * 1000L
+                val builder = MaterialAlertDialogBuilder(activity).setTitle("Trakt")
+                val userCode = TextView(builder.context).apply {
+                    text = value.userCode
+                    textSize = 26f
+                    setPadding(0, ResUtil.dp2px(12), 0, 0)
+                }
+                showQr(builder, value.verificationUrl,
+                    activity.getString(R.string.calendar_trakt_scan, value.verificationUrl), userCode)
+                poll(value, deadline, value.interval.coerceAtLeast(1), ticket, clientId, phoneCode)
             }
-            override fun onError(error: Exception) { if (current(ticket)) fail() }
+            override fun onError(error: Exception) {
+                if (!current(ticket)) return
+                if (phoneCode == null) { fail(); return }
+                CalendarAccountPairing.get().failed(phoneCode, false)
+                status?.setText(R.string.calendar_phone_failed)
+                busy(false)
+            }
         })
     }
 
-    private fun poll(code: CalendarDeviceCode, deadline: Long, interval: Int, ticket: Int) {
+    private fun poll(code: CalendarDeviceCode, deadline: Long, interval: Int, ticket: Int, clientId: String, phoneCode: String?) {
         polling = Runnable {
             if (!current(ticket)) return@Runnable
-            if (System.currentTimeMillis() >= deadline) { fail(R.string.calendar_auth_expired); return@Runnable }
-            TraktAccountApi.deviceToken(CalendarAccountStore.traktClientId, code.deviceCode, tag,
+            if (SystemClock.elapsedRealtime() >= deadline) { fail(R.string.calendar_auth_expired); return@Runnable }
+            TraktAccountApi.deviceToken(clientId, code.deviceCode, tag,
                 object : TmdbLibraryApi.Listener<CalendarAccountToken> {
                     override fun onSuccess(value: CalendarAccountToken) {
                         if (!current(ticket)) return
+                        if (SystemClock.elapsedRealtime() >= deadline) { fail(R.string.calendar_auth_expired); return }
                         try {
-                            CalendarAccountStore.saveToken(CalendarProvider.TRAKT, value)
-                            CalendarAccountStore.saveFollows(CalendarProvider.TRAKT, emptyList())
-                            authDialog?.setOnDismissListener(null)
-                            authDialog?.dismiss()
-                            authDialog = null
-                            busy(false)
+                            val save = {
+                                CalendarAccountStore.saveToken(CalendarProvider.TRAKT, value)
+                                CalendarAccountStore.traktClientId = clientId
+                                CalendarAccountStore.saveFollows(CalendarProvider.TRAKT, emptyList())
+                            }
+                            if (phoneCode == null) save()
+                            else if (!CalendarAccountPairing.get().complete(phoneCode, save)) return
+                            cancel()
                             changed(true)
                         } catch (_: Exception) { fail() }
                     }
@@ -204,11 +223,11 @@ internal class CalendarAccountDialogs(private val activity: AppCompatActivity,
                         if (!current(ticket)) return
                         val http = error as? CalendarAccountHttpException
                         when (http?.status) {
-                            400 -> poll(code, deadline, interval, ticket)
+                            400 -> poll(code, deadline, interval, ticket, clientId, phoneCode)
                             429 -> {
                                 val delay = maxOf(interval.toLong() + 5, http.retryAfterSeconds)
-                                if (delay >= (deadline - System.currentTimeMillis() + 999) / 1000) fail(R.string.calendar_auth_expired)
-                                else poll(code, deadline, delay.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), ticket)
+                                if (delay >= (deadline - SystemClock.elapsedRealtime() + 999) / 1000) fail(R.string.calendar_auth_expired)
+                                else poll(code, deadline, delay.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), ticket, clientId, phoneCode)
                             }
                             410 -> fail(R.string.calendar_auth_expired)
                             else -> fail()

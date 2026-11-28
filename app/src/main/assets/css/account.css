@@ -11,5 +11,7 @@
 .account-token-link { margin-bottom: 28px; text-decoration: none; }
 #account-token { font-size: 16px; }
 #account-submit { width: 100%; margin-top: 20px; }
+#account-authorize { display: flex; margin-top: 20px; text-decoration: none; }
+#account-user-code { font-size: 24px; letter-spacing: .12em; text-align: center; }
 .account-card .field-help { margin-top: 16px; }
 @media (max-width: 400px) { .account-card { padding: 22px; } }

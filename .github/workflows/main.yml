@@ -85,6 +85,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.SIGNING_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.SIGNING_KEY_PASSWORD || secrets.STORE_PASSWORD || secrets.SIGNING_KEYSTORE_PASSWORD }}
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TRAKT_CLIENT_ID: ${{ vars.TRAKT_CLIENT_ID || secrets.TRAKT_CLIENT_ID }}
           ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
           TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
         run: |
@@ -100,6 +101,7 @@ jobs:
             echo "storePassword=$STORE_PASSWORD"
           } > local.properties
           if [ -n "$TMDB_API_KEY" ]; then echo "tmdbApiKey=$TMDB_API_KEY" >> local.properties; fi
+          if [ -n "$TRAKT_CLIENT_ID" ]; then echo "traktClientId=$TRAKT_CLIENT_ID" >> local.properties; fi
           if [ -n "$ASSRT_API_TOKEN" ]; then echo "assrtApiToken=$ASSRT_API_TOKEN" >> local.properties; fi
           if [ -n "$TMDB_LOGO_SIZE" ]; then echo "tmdbLogoSize=$TMDB_LOGO_SIZE" >> local.properties; fi
 

@@ -91,4 +91,43 @@ class CalendarAccountPairingTest {
         assertFalse(pairing.isPending(code))
         assertThrows(IllegalStateException::class.java) { pairing.status(code) }
     }
+
+    @Test fun shouldExposeOnlyPublicTraktCodesAndPreventAnotherClientIdDuringAuthorization() {
+        val submitted = mutableListOf<String>()
+        val pairing = CalendarAccountPairing()
+        val code = pairing.start(CalendarProvider.TRAKT) { submitted.add(it) }
+        pairing.submit(code, "trakt-client")
+        assertTrue(pairing.authorize(code, CalendarDeviceCode("private-device-code", "PUBLIC12", "https://auth.trakt.tv/activate", 300, 5)))
+        val snapshot = pairing.status(code)
+        assertEquals("trakt", snapshot.provider)
+        assertEquals("authorizing", snapshot.state)
+        assertEquals("PUBLIC12", snapshot.userCode)
+        assertFalse(snapshot.toString().contains("private-device-code"))
+        pairing.submit(code, "different-client")
+        assertEquals(listOf("trakt-client"), submitted)
+        assertTrue(pairing.complete(code) {})
+        assertEquals("", pairing.status(code).userCode)
+    }
+
+    @Test fun shouldApplyTheEarlierTraktExpiryAndRejectLateAuthorizationResults() {
+        var now = 0L
+        val pairing = CalendarAccountPairing { now }
+        val code = pairing.start(CalendarProvider.TRAKT) {}
+        pairing.submit(code, "client")
+        pairing.authorize(code, CalendarDeviceCode("private", "PUBLIC", "https://auth.trakt.tv/activate", 5, 1))
+        now = 5000
+        assertFalse(pairing.complete(code) { fail("Expired token saved") })
+        assertThrows(IllegalStateException::class.java) { pairing.status(code) }
+    }
+
+    @Test fun shouldRejectCrossProviderStateChangesAndMalformedTraktClientIds() {
+        val pairing = CalendarAccountPairing()
+        val bangumi = pairing.start {}
+        pairing.submit(bangumi, "token")
+        assertFalse(pairing.authorize(bangumi, CalendarDeviceCode("private", "PUBLIC", "https://auth.trakt.tv/activate", 5, 1)))
+        val trakt = pairing.start(CalendarProvider.TRAKT) { fail("Invalid client accepted") }
+        for (value in listOf("https://example.com", "a".repeat(257), "client id")) {
+            assertThrows(IllegalArgumentException::class.java) { pairing.submit(trakt, value) }
+        }
+    }
 }
