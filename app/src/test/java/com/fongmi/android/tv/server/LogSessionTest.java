@@ -11,7 +11,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.net.HttpURLConnection;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -191,17 +194,15 @@ public class LogSessionTest {
     }
 
     private static Reply request(String base, String method, Map<String, String> headers) throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) URI.create(base).toURL().openConnection();
-        connection.setConnectTimeout(3000);
-        connection.setReadTimeout(3000);
-        connection.setRequestMethod(method);
-        headers.forEach(connection::setRequestProperty);
-        try {
-            int status = connection.getResponseCode();
-            InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
-            String body = stream == null ? "" : new String(stream.readAllBytes(), StandardCharsets.UTF_8);
-            return new Reply(status, body, connection.getHeaderField("Cache-Control"));
-        } finally { connection.disconnect(); }
+        // HttpURLConnection silently strips Origin on the host JDK.
+        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
+                .version(HttpClient.Version.HTTP_1_1).build()) {
+            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(base)).timeout(Duration.ofSeconds(3))
+                    .method(method, HttpRequest.BodyPublishers.noBody());
+            headers.forEach(builder::header);
+            HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            return new Reply(response.statusCode(), response.body(), response.headers().firstValue("Cache-Control").orElse(null));
+        }
     }
 
     private record Reply(int status, String body, String cache) {}

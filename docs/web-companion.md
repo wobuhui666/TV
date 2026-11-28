@@ -12,11 +12,11 @@
 
 | 桌面浅色 | 桌面深色 |
 | --- | --- |
-| ![桌面浅色](testing/reports/2026-11-07-material-web/desktop-light.png) | ![桌面深色](testing/reports/2026-11-07-material-web/desktop-dark.png) |
+| ![桌面浅色](testing/reports/2026-11-28-web-logs/icons-after.png) | ![桌面深色](testing/reports/2026-11-28-web-logs/icons-after-dark.png) |
 
 | 手机浅色 | 手机深色 |
 | --- | --- |
-| ![手机浅色](testing/reports/2026-11-07-material-web/mobile-light.png) | ![手机深色](testing/reports/2026-11-07-material-web/mobile-dark.png) |
+| ![手机浅色](testing/reports/2026-11-28-web-logs/mobile-home-light.png) | ![手机深色](testing/reports/2026-11-28-web-logs/mobile-home-dark.png) |
 
 ## 功能
 
