@@ -1232,7 +1232,7 @@ public class LiveActivity extends PlaybackActivity implements GroupAdapter.OnCli
         mBinding.control.jetstream.setTopInfoSubtitleVisible(true);
         mBinding.control.jetstream.setCommandGroup(JetStreamVodControlView.GROUP_PLAYLIST, R.drawable.msr_live_tv, getString(R.string.setting_live), true, "home", "line", "config");
         mBinding.control.jetstream.setCommandGroup(JetStreamVodControlView.GROUP_CAPTIONS, R.drawable.msr_closed_caption, getString(R.string.play_subtitle), true, "subtitle", "text", "audio", "video");
-        mBinding.control.jetstream.setCommandGroup(JetStreamVodControlView.GROUP_SETTINGS, R.drawable.msr_settings, getString(R.string.setting_section_playback), true, "speed", "scale", "player", "decode", "invert", "across", "change");
+        mBinding.control.jetstream.setCommandGroup(JetStreamVodControlView.GROUP_SETTINGS, R.drawable.msr_settings, getString(R.string.setting_section_playback), true, "scale", "player", "decode", "invert", "across", "change");
         syncJetStreamCommands();
         updateActionFocusBoundary(mBinding.control.action.getRoot());
     }

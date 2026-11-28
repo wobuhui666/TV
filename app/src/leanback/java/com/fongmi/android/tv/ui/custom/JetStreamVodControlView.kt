@@ -79,6 +79,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.semantics.semantics
@@ -582,6 +583,18 @@ class JetStreamVodControlView @JvmOverloads constructor(
                         listener?.onRepeat()
                     }
                 }
+                commands["speed"]?.takeIf { it.visible && it.label.isNotBlank() }?.let { speed ->
+                    val speedLabel = "${speed.label}×"
+                    ControlIcon(
+                        icon = R.drawable.msr_speed,
+                        isPlaying = isPlaying,
+                        enabled = true,
+                        selected = false,
+                        contentDescription = "${stringResource(R.string.playback_command_speed)} $speedLabel",
+                        showLabel = true,
+                        label = speedLabel
+                    ) { listener?.onCommand("speed") }
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (episodePickerVisible) {
@@ -908,6 +921,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
         contentDescription: String,
         focusRequester: FocusRequester? = null,
         showLabel: Boolean = false,
+        label: String = contentDescription,
         onClick: () -> Unit
     ) {
         val interactionSource = remember { MutableInteractionSource() }
@@ -919,7 +933,10 @@ class JetStreamVodControlView @JvmOverloads constructor(
                 enabled = enabled,
                 selected = selected,
                 interactionSource = interactionSource,
-                modifier = focusModifier.height(40.dp),
+                modifier = focusModifier.height(40.dp)
+                    .then(if (label != contentDescription) Modifier.semantics {
+                        this.contentDescription = contentDescription
+                    } else Modifier),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Icon(
@@ -928,7 +945,7 @@ class JetStreamVodControlView @JvmOverloads constructor(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(contentDescription, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
             val colors = MaterialTheme.colorScheme
@@ -1190,6 +1207,6 @@ class JetStreamVodControlView @JvmOverloads constructor(
 
         private val PLAYLIST_COMMANDS = listOf("episodes", "line", "quality", "prev", "next", "change", "parse", "replay", "reset")
         private val CAPTION_COMMANDS = listOf("subtitle", "text", "audio", "video", "ai", "ai_language", "danmaku")
-        private val SETTINGS_COMMANDS = listOf("syncplay_toggle", "syncplay", "speed", "scale", "player", "decode", "opening", "ending", "edition", "chapter")
+        private val SETTINGS_COMMANDS = listOf("syncplay_toggle", "syncplay", "scale", "player", "decode", "opening", "ending", "edition", "chapter")
     }
 }

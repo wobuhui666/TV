@@ -169,7 +169,7 @@ The URL and key are stored in local app settings. Use a trusted bridge address, 
 
 Exo / Media3 and MPV use the same browsing and episode controls while retaining their own rendering and audio paths.
 
-- **Common controls:** play/pause, forward/backward seeking, adjustable speed and aspect ratio, previous/next episode, repeat, manual intro/ending offsets, and audio/video/subtitle selection. Chapter and edition controls appear when the media provides them.
+- **Common controls:** play/pause, forward/backward seeking, adjustable speed and aspect ratio, previous/next episode, repeat, manual intro/ending offsets, and audio/video/subtitle selection. The bottom toolbar for TV on-demand, live, and cast playback shows the current speed (for example, `1.00×`); press OK or tap it to cycle through speeds. Chapter and edition controls appear when the media provides them.
 - **Input continuity:** remote key ownership and cancellation prevent a released key or queued seek from jumping newly selected media. Temporary long-press speed restores the speed that was active before the gesture; ordinary per-title speed can still be remembered.
 - **Recovery:** switching engines, decode modes, or audio pipelines preserves relevant position, speed, pitch, and pause state. The available fallback still depends on the media and device.
 - **Exo next-episode preparation:** eligible resolved HTTP(S) VOD can preload up to 10 seconds using a bounded media-cache budget. It yields to active buffering/seeking, owns the next item's headers, and can retain prepared same-episode cache across seeks. DRM, unresolved parser-dependent media, and non-HTTP sources are excluded.
