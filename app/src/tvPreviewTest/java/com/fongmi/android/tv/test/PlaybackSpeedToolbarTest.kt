@@ -89,8 +89,13 @@ class PlaybackSpeedToolbarTest {
                     text(host.getString(R.string.vod_control_group_settings)).click()
                     main { assertTrue(host.controls.isSettingsDrawerOpen()) }
                     assertNull("Speed is no longer a settings item", findText(host.getString(R.string.playback_command_speed)))
-                    device.pressBack()
-                    main { assertFalse(host.controls.isSettingsDrawerOpen()) }
+                    // The preview host's system Back finishes the Activity. Left is
+                    // the production drawer's own remote shortcut for closing it.
+                    device.pressDPadLeft()
+                    main {
+                        assertFalse("Left closes the settings drawer", host.controls.isSettingsDrawerOpen())
+                        assertFalse("The preview remains available for the next mode", host.isFinishing)
+                    }
 
                     main { host.controls.setCommand("speed", "1.50", false, false) }
                     assertNull("Hidden speed command has no toolbar button", findSpeed("1.50"))
