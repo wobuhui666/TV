@@ -55,10 +55,15 @@ jobs:
           cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('app/src/main/AndroidManifest.xml')
-          text = p.read_text()
-          assert text.count('android:label="@string/app_name"') == 1
-          p.write_text(text.replace('android:label="@string/app_name"', 'android:label="TV MPV 测试"'))
+          import re
+          changed = 0
+          for p in Path('app/src').glob('*/res/values*/*.xml'):
+              text, count = re.subn(r'(<string\s+name="app_name"[^>]*>)[^<]*(</string>)',
+                                    r'\g<1>TV MPV 测试\g<2>', p.read_text())
+              if count:
+                  p.write_text(text)
+                  changed += count
+          assert changed > 0
           PY
           cat > "$RUNNER_TEMP/mpv134.init.gradle" <<'GRADLE'
           gradle.beforeProject { p ->
@@ -115,6 +120,7 @@ jobs:
           path: |
             dist/
             app/build/test-results/testLeanbackArm64_v8aDebugUnitTest/
+            app/build/outputs/logs/
           if-no-files-found: error
           retention-days: 14
       - name: Publish direct download assets as a test prerelease
