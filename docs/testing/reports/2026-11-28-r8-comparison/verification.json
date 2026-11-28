@@ -1,0 +1,500 @@
+{
+  "run": "https://github.com/wobuhui666/TV/actions/runs/46126477850",
+  "testedCommit": "837491b31ab780f389f92221481fcc8d375882de",
+  "packages": [
+    {
+      "applicationCommit": "837491b31ab780f389f92221481fcc8d375882de",
+      "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+      "applicationId": "com.fongmi.android.tv.r8test",
+      "versionCode": "2099999999",
+      "versionName": "5.8.7-r8.837491b31a",
+      "abi": "arm64-v8a",
+      "buildType": "release",
+      "profileable": true,
+      "debuggable": false,
+      "minifyEnabled": false,
+      "shrinkResources": false,
+      "signingCertificateSha256": "482534df1ebe6526f3484346e40f8658e8ea244eb26936f9aded31af4e16c463",
+      "file": "baseline-arm64.apk",
+      "bytes": 105121681,
+      "sha256": "76959345055ecf4f727f0947c053df06bd461d072cd65248435566e2f3c458d1",
+      "videoActivityInstanceFields": [
+        {
+          "name": "fullscreen",
+          "type": "Z"
+        },
+        {
+          "name": "mArrayItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mArtworkTarget",
+          "type": "Lcom/fongmi/android/tv/impl/CustomTarget;"
+        },
+        {
+          "name": "mBinding",
+          "type": "Lcom/fongmi/android/tv/databinding/ActivityVideoBinding;"
+        },
+        {
+          "name": "mClock",
+          "type": "Lcom/fongmi/android/tv/utils/Clock;"
+        },
+        {
+          "name": "mContentRating",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mDetailActor",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailArea",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailContent",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mDetailDirector",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailDoubanRating",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailRemark",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailSite",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailTitle",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailTmdbRating",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailType",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mDetailYear",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "mEpisodeItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mEpisodeSelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mFlagItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mFlagSelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mFocus1",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "mFocus2",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "mFrameParams",
+          "type": "Landroid/view/ViewGroup$LayoutParams;"
+        },
+        {
+          "name": "mHistory",
+          "type": "Lcom/fongmi/android/tv/bean/History;"
+        },
+        {
+          "name": "mKeyDown",
+          "type": "Lcom/fongmi/android/tv/ui/custom/CustomKeyDownVod;"
+        },
+        {
+          "name": "mNavigationCallback",
+          "type": "Lcom/fongmi/android/tv/service/PlaybackService$NavigationCallback;"
+        },
+        {
+          "name": "mObserveDetail",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mObservePlayer",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mObserveSearch",
+          "type": "Landroidx/lifecycle/Observer;"
+        },
+        {
+          "name": "mPartItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mQualityResult",
+          "type": "Lcom/fongmi/android/tv/bean/Result;"
+        },
+        {
+          "name": "mQualitySelectedPos",
+          "type": "I"
+        },
+        {
+          "name": "mQuickItems",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "mR1",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR2",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR3",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mR4",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "mRatingRequest",
+          "type": "I"
+        },
+        {
+          "name": "mSpecs",
+          "type": "Lcom/fongmi/android/tv/ui/custom/PlaybackSpecsController;"
+        },
+        {
+          "name": "mSyncplayObserver",
+          "type": "Ljava/util/function/Consumer;"
+        },
+        {
+          "name": "mTmdbLogoRequest",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mTmdbLogoUrl",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "mViewModel",
+          "type": "Lcom/fongmi/android/tv/model/VideoViewModel;"
+        },
+        {
+          "name": "mVod",
+          "type": "Lcom/fongmi/android/tv/playback/vod/VodPlaybackController;"
+        },
+        {
+          "name": "playbackPanelCommand",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "restoreDetailActionFocus",
+          "type": "Z"
+        },
+        {
+          "name": "restorePlaybackPanel",
+          "type": "Ljava/lang/Runnable;"
+        },
+        {
+          "name": "temporarySpeed",
+          "type": "Lcom/fongmi/android/tv/playback/TemporaryPlaybackSpeed;"
+        },
+        {
+          "name": "useParse",
+          "type": "Z"
+        }
+      ]
+    },
+    {
+      "applicationCommit": "837491b31ab780f389f92221481fcc8d375882de",
+      "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+      "applicationId": "com.fongmi.android.tv.r8test",
+      "versionCode": "2099999999",
+      "versionName": "5.8.7-r8.837491b31a",
+      "abi": "arm64-v8a",
+      "buildType": "release",
+      "profileable": true,
+      "debuggable": false,
+      "minifyEnabled": true,
+      "shrinkResources": false,
+      "signingCertificateSha256": "482534df1ebe6526f3484346e40f8658e8ea244eb26936f9aded31af4e16c463",
+      "file": "minified-arm64.apk",
+      "bytes": 92227979,
+      "sha256": "044c8dcef238e0530ae43a0f8d88e7bc587c315ca1bcf530f12c2ade5acccdb0",
+      "videoActivityInstanceFields": [
+        {
+          "name": "A0",
+          "type": "I"
+        },
+        {
+          "name": "B0",
+          "type": "Lnb/i;"
+        },
+        {
+          "name": "C0",
+          "type": "Lpc/d;"
+        },
+        {
+          "name": "D0",
+          "type": "Li1/b0;"
+        },
+        {
+          "name": "E0",
+          "type": "Lkb/w;"
+        },
+        {
+          "name": "F0",
+          "type": "Lcom/fongmi/android/tv/bean/History;"
+        },
+        {
+          "name": "G0",
+          "type": "Z"
+        },
+        {
+          "name": "H0",
+          "type": "Z"
+        },
+        {
+          "name": "I0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "J0",
+          "type": "Lkc/y3;"
+        },
+        {
+          "name": "K0",
+          "type": "Lkc/y3;"
+        },
+        {
+          "name": "L0",
+          "type": "Lkc/y3;"
+        },
+        {
+          "name": "M0",
+          "type": "Lkc/y3;"
+        },
+        {
+          "name": "N0",
+          "type": "Lkc/y3;"
+        },
+        {
+          "name": "O0",
+          "type": "La8/i;"
+        },
+        {
+          "name": "P0",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "Q0",
+          "type": "Z"
+        },
+        {
+          "name": "R0",
+          "type": "Landroid/view/View;"
+        },
+        {
+          "name": "S0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "T0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "U0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "V0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "W0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "X0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "Y0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "Z0",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "a1",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "b1",
+          "type": "Ljava/lang/CharSequence;"
+        },
+        {
+          "name": "c1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "d1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "e1",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "f1",
+          "type": "I"
+        },
+        {
+          "name": "g1",
+          "type": "Lad/f0;"
+        },
+        {
+          "name": "h1",
+          "type": "Lkc/h2;"
+        },
+        {
+          "name": "i1",
+          "type": "Lkc/g4;"
+        },
+        {
+          "name": "m0",
+          "type": "Lab/c;"
+        },
+        {
+          "name": "n0",
+          "type": "Lpc/c5;"
+        },
+        {
+          "name": "o0",
+          "type": "Ljava/lang/String;"
+        },
+        {
+          "name": "p0",
+          "type": "Landroid/view/ViewGroup$LayoutParams;"
+        },
+        {
+          "name": "q0",
+          "type": "Lkc/w3;"
+        },
+        {
+          "name": "r0",
+          "type": "Lkc/w3;"
+        },
+        {
+          "name": "s0",
+          "type": "Lkc/w3;"
+        },
+        {
+          "name": "t0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "u0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "v0",
+          "type": "Ljava/util/ArrayList;"
+        },
+        {
+          "name": "w0",
+          "type": "Ljava/util/List;"
+        },
+        {
+          "name": "x0",
+          "type": "Ljava/util/ArrayList;"
+        },
+        {
+          "name": "y0",
+          "type": "Lcom/fongmi/android/tv/bean/Result;"
+        },
+        {
+          "name": "z0",
+          "type": "I"
+        }
+      ],
+      "mappingSha256": "7d6c05996bb3769d12d7c4f93fbd2da6abda2e5268460b50f6883fb00243d8b9"
+    }
+  ],
+  "startup": {
+    "scope": "API 34 ARM64 native bridge; launcher startup and in-place upgrade only",
+    "runs": [
+      {
+        "mode": "baseline",
+        "passed": true,
+        "launchStatusOk": true,
+        "processAlive": true,
+        "homeResumed": true,
+        "fatalExceptionCount": 0,
+        "nativeFatalSignalCount": 0,
+        "failureTypes": [
+          "java.lang.NullPointerException"
+        ],
+        "linkageOrReflectionFailures": [],
+        "crashActivityVisible": false
+      },
+      {
+        "mode": "minified",
+        "passed": true,
+        "launchStatusOk": true,
+        "processAlive": true,
+        "homeResumed": true,
+        "fatalExceptionCount": 0,
+        "nativeFatalSignalCount": 0,
+        "failureTypes": [
+          "java.lang.NullPointerException"
+        ],
+        "linkageOrReflectionFailures": [],
+        "crashActivityVisible": false
+      }
+    ],
+    "deviceAbis": [
+      "x86_64",
+      "arm64-v8a"
+    ],
+    "nativeBridge": "libndk_translation.so",
+    "passed": true
+  },
+  "wexStaticAbi": {
+    "scope": "Direct method/field references in the sampled WEX payload resolved by baseline host DEX; excludes dynamic reflection and boot classes",
+    "checked": {
+      "fields": 5,
+      "methods": 132
+    },
+    "missing": {
+      "fields": [],
+      "methods": []
+    }
+  },
+  "pineRuleAdjustment": {
+    "inputSha256": "0e9916fd601646273ff71ea64b08fcb658f9005043443d981691c83cfa71ab46",
+    "outputSha256": "506c861718bd91f8e2f61802617e59c9b7e2345ca9162c3a3d1d194dc36eb98c",
+    "changedEntries": [
+      "proguard.txt"
+    ],
+    "originalRule": "-keep class * {\n    native <methods>;\n}",
+    "replacementRule": "-keepclasseswithmembers,includedescriptorclasses class * {\n    native <methods>;\n}"
+  }
+}
