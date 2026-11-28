@@ -1,0 +1,33 @@
+--- a/libavcodec/mediacodecdec_common.c
++++ b/libavcodec/mediacodecdec_common.c
+@@ -381,6 +381,18 @@
+         return AV_PIX_FMT_MEDIACODEC;
+     }
+
++    /* HiSilicon reports NV21 (VU) using the QCOM vendor format number.
++     * The copy preserves byte order, so identify the actual layout here.
++     */
++    if (!strncmp(s->codec_name, "OMX.hisi.video.decoder.",
++                 sizeof("OMX.hisi.video.decoder.") - 1) &&
++        color_format == COLOR_QCOM_FormatYUV420SemiPlanar) {
++        av_log(avctx, AV_LOG_INFO,
++               "HiSilicon NV21 workaround applied: codec=%s color-format=0x%x output=nv21\n",
++               s->codec_name, color_format);
++        return AV_PIX_FMT_NV21;
++    }
++
+     if (!strcmp(s->codec_name, "OMX.k3.video.decoder.avc") && color_format == COLOR_FormatYCbYCr) {
+         s->color_format = color_format = COLOR_TI_FormatYUV420PackedSemiPlanar;
+     }
+@@ -1133,6 +1145,11 @@
+
+     AMEDIAFORMAT_GET_INT32(s->color_format, "color-format", 1);
+     avctx->pix_fmt = mcdec_map_color_format(avctx, s, s->color_format);
++    av_log(avctx, AV_LOG_INFO,
++           "MediaCodec output layout: codec=%s color-format=0x%x surface=%s "
++           "width=%d height=%d stride=%d slice-height=%d\n",
++           s->codec_name, s->color_format, s->surface ? "yes" : "no",
++           s->width, s->height, s->stride, s->slice_height);
+     if (avctx->pix_fmt == AV_PIX_FMT_NONE) {
+         av_log(avctx, AV_LOG_ERROR, "Output color format is not supported\n");
+         ret = AVERROR(EINVAL);
