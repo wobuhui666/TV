@@ -1,0 +1,1337 @@
+{
+  "date": "2026-11-28",
+  "headSha": "920fa3c8c10dc0a5a74d10e08387434c1826e260",
+  "branch": "feat/issue138-playback-speed",
+  "run": {
+    "id": 46121203643,
+    "url": "https://github.com/wobuhui666/TV/actions/runs/46121203643",
+    "conclusion": "success",
+    "workflow": "tv-ui-verify.yml",
+    "inputs": {
+      "playback_speed": true
+    }
+  },
+  "environment": {
+    "runnerImage": "ubuntu-26.04",
+    "java": 21,
+    "python": "3.10",
+    "compileSdk": "37.0",
+    "media3Commit": "342f6590e02ac390e0bd6b4488b8a1bff55747c1",
+    "emulator": {
+      "api": 34,
+      "abi": "x86_64",
+      "target": "google_apis",
+      "width": 1920,
+      "height": 1080,
+      "densityDpi": 320
+    }
+  },
+  "build": {
+    "passed": true,
+    "tasks": [
+      ":app:assembleLeanbackArm64_v8aPreview",
+      ":app:assembleLeanbackArm64_v8aPreviewAndroidTest"
+    ]
+  },
+  "unit": {
+    "passed": true,
+    "suiteCount": 172,
+    "tests": 1373,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "class": "androidx.media3.ui.danmaku.DanmakuRenderPoolTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ai.subtitle.AiAudioTrackBufferSizeProviderTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ai.subtitle.AiSubtitleCueTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ai.subtitle.LanguageRoutingTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ai.subtitle.LatestQueueStressTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ai.subtitle.OpenAiSubtitleTranslatorTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.AssrtApiTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.DanmakuApiTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.DiscoverApiTest",
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.LogvarApiTest",
+        "tests": 32,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.SiteSearchRequestTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.TmdbLibraryApiTest",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.loader.PyLoaderInitializationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.loader.PyLoaderLifecycleTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.loader.SourcePluginRuntimeTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.DoubanBridgeCatalogTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexClientCancellationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexFeedDateTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexGenreDictTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexNowMappingTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexRegionalFeedTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexTmdbQueryTest",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.RexWallQueryTest",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.api.rex.TaggedCallsTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.CastRequestStateTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.CastSnapshotTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.DiscoverMediaKeyTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.DiscoverRequestStateTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.DoubanDiscoverQueryTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.FlagTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.HistoryMediaContextTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.HistoryRequestStateTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.HistorySnapshotTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.TvTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.VodContentRatingTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.bean.VodPlayIdTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.browse.BrowseTreeResolutionCandidateTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.browse.SearchResultCollectorTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.cache.CacheFilesTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.cache.LeasedCacheTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.AccountCalendarLoaderTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.AiringCalendarIndexTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.AiringCalendarRepositoryTest",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.BangumiAccountApiTest",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.BangumiCalendarApiTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.CalendarHttpClientTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.TraktAccountApiTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.calendar.TraktCalendarApiTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.diagnostics.DiagnosticDownloadGrantTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.diagnostics.DiagnosticPeerPolicyTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.diagnostics.DiagnosticShareArchiveTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.dlna.DLNAAvTransportImplTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.drive.DriveLinkCheckerTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.drive.DriveLinkTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.drive.DriveResponseClassifierTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.model.BoundedSearchBatchTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.model.DiscoverSourceSearchTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.PlaybackOrientationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.TemporaryPlaybackSpeedTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.live.LiveLineSelectionTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.live.LivePlaybackLineSelectionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.LibraryPlaybackPrefetchTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.NextEpisodePreloaderTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.VodEndingPolicyTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.VodHistoryPolicyTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.VodPlaybackControllerTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.playback.vod.VodPlaybackStateTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.LiveDanmakuTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.PlaybackSpecsTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.TimeshiftRequestTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.TimeshiftSourceValidatorTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.TimeshiftWindowTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.audio.AudioDspTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.audio.AudioTrackRecoveryTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.AbortableCallFactoryTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.ExoDecodeFallbackTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.ExoPlaybackDiagnosticsTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.ExoTunnelFallbackTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.H5eDataSourceTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.H5eTransformTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.PreCachePolicyTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.exo.PreloadBudgetTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.extractor.StrmTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.media.LocalSubtitleScannerTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.media.MediaUrlGuardTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.media.PlaySpecTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvDolbyPolicyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvEndFileTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvLoadFileTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvSeekPrerollTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvVideoOutputRecoveryTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.mpv.MpvVideoPathTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.CommunitySkipApiTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.CommunitySkipEpisodeOrderTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.CommunitySkipParserTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.EpisodeIdentityResolverTest",
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.PlaybackEpisodeSnapshotTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.skip.SegmentSkipPolicyTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.AssHistoryTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.AssPacketTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.AssTrackingExtractorTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.DvbSeekMapTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.LocalSubtitleOriginTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.SubtitleFontsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.subtitle.SupSeekMapTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.player.util.PlayerHelperTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.server.LogSessionTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.server.process.DiagnosticsTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.server.process.LocalFileMutationTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.server.process.LocalFileResponseTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.service.DlnaSessionLifecycleTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.service.MediaResolutionRequestGateTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.service.NavigationRequestGateTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.setting.BrowseExperienceSettingsTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.setting.ExperienceSettingsTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.setting.PosterSourcePrioritySettingTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.setting.ThemeModeTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.EpisodeLabelParserTest",
+        "tests": 30,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.EpisodeNavigatorTest",
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.EpisodeTargetTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.ExplicitEpisodeSelectionTest",
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.LibraryEpisodeNavigationTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.LibraryEpisodeSelectionTest",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.LibrarySearchIndexTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.LibrarySourceMatcherEpisodeEvidenceTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.LibrarySourceMatcherPreparedTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.MediaMatcherTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.MovieSelectionTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.PosterSourceResultsTest",
+        "tests": 31,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.SearchRelevanceTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.SourceSelectionTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.VarietyEpisodeNavigatorTest",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.VarietyEpisodeTargetTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.health.SourceHealthScopeTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.source.health.SourceHealthStoreTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.sync.SyncCoordinatorTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.sync.SyncMergerTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.sync.WebDavTransportTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.syncplay.SyncplayClientTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.syncplay.SyncplayEchoGuardTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.syncplay.SyncplayMediaNameTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.syncplay.SyncplayProtocolTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.syncplay.SyncplaySynchronizerTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.activity.DiscoverActivityTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.custom.PendingSeekTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.custom.SeekConfirmKeySequenceTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.custom.SeekKeySequenceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.dialog.SubtitleSearchQueryTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.home.HomeSourceStateTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.home.PosterHomeCatalogTest",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.home.PosterKeepShelfStateTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.rex.RexCaptionsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.rex.RexHomeCatalogTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.search.SearchInputParserTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.update.UpdateDownloaderTest",
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.update.UpdateManifestTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.update.UpdatePolicyTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.update.UpdateRepositoryTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.update.UpdateSourcesTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.ContinueWatchingProgressTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.FeaturedPosterCacheTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.HistoryProgressTextTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.HistoryTaskQueueTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.HomeArtworkPolicyTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.ImageRetryPolicyTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.MediaRatingHelperTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.SearchResultFilterTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.SubtitleArchiveTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.SubtitleDownloadTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.TmdbEndpointTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.TmdbNetworkCancellationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "class": "com.fongmi.android.tv.utils.WallColorUtilTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "android": {
+    "headSha": "920fa3c8c10dc0a5a74d10e08387434c1826e260",
+    "passed": true,
+    "suites": [
+      {
+        "class": "com.fongmi.android.tv.test.PlaybackSpeedToolbarTest",
+        "passed": true,
+        "tests": 1,
+        "expectedTests": 1
+      }
+    ],
+    "passedTests": 1
+  },
+  "uiConfigurations": 6,
+  "screenshots": [
+    {
+      "file": "dark-vod-speed.png",
+      "theme": "dark",
+      "mode": "vod",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "6e7d8fd9a5b7b8fc852d215dfb66f8be11055a250c577921555abc01621eed54",
+      "speedBounds": "[432,924][594,1004]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    },
+    {
+      "file": "dark-live-speed.png",
+      "theme": "dark",
+      "mode": "live",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "87e8d89430fad5d88120638615d23e9942cc4a8f61ee93ed7b1f77bc1bcf537b",
+      "speedBounds": "[320,924][482,1004]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    },
+    {
+      "file": "dark-cast-speed.png",
+      "theme": "dark",
+      "mode": "cast",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "5e0bad6a2c1b4852e2fcecec9d8424556b10636c32287886aba977b8cead8ba2",
+      "speedBounds": "[96,928][258,1008]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    },
+    {
+      "file": "light-vod-speed.png",
+      "theme": "light",
+      "mode": "vod",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "1630c6f1b4b34c8c776f2561901d9b41e90d3f2d11d76acab0c4f5abd66239ea",
+      "speedBounds": "[432,924][594,1004]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    },
+    {
+      "file": "light-live-speed.png",
+      "theme": "light",
+      "mode": "live",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "4ee8465b059f28309e4a71c9995990b111bd0e4b9d17600cb3f029a74c1ed642",
+      "speedBounds": "[320,924][482,1004]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    },
+    {
+      "file": "light-cast-speed.png",
+      "theme": "light",
+      "mode": "cast",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "18547a453d1dabc72e5fb1dda25045eb877aa0237463697fbdfc0c3c646206a2",
+      "speedBounds": "[96,928][258,1008]",
+      "settingsTextBounds": "[1750,948][1800,988]",
+      "edited": false
+    }
+  ],
+  "limits": [
+    "UI uses the production control in TvPreviewActivity with a controlled speed listener.",
+    "Actual VOD, live and cast Activity playback and Exo/MPV speed changes were not exercised.",
+    "Physical TV, reopening title speed persistence, lint and signed release builds were not verified."
+  ]
+}

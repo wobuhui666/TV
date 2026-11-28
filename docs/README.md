@@ -30,6 +30,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| TV 播放器倍速工具栏 | [GHA 构建、1,373 项单测、六种布局与主题组合及截图](testing/reports/2026-11-28-playback-speed/README.md) |
 | 网页日志与图标对齐 | [2026-11-28 验证、浏览器截图与覆盖限制](testing/reports/2026-11-28-web-logs/README.md) |
 | 合并发布与按钮居中 | [Release 195 合并后验证、固定尺寸按钮内容居中的前后对照](testing/reports/2026-11-24-integrated-release/README.md) |
 | 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配、搜索复用与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
