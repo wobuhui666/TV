@@ -1,29 +1,29 @@
 {
-  "commit": "7d835a41be6db10d706950774d387df0017b9248",
-  "run": "https://github.com/wobuhui666/TV/actions/runs/46157574933",
+  "commit": "36dcf58d8a899a09d903e49feb2818a1cd95f29d",
+  "run": "https://github.com/wobuhui666/TV/actions/runs/46159738099",
   "passed": true,
   "browser": {
     "existing": 18,
-    "accounts": 6
+    "accounts": 10
   },
   "units": {
     "testLeanbackArm64_v8aDebugUnitTest": {
-      "classes": 4,
-      "tests": 22,
+      "classes": 5,
+      "tests": 40,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     "testLeanbackArm64_v8aPreviewUnitTest": {
       "classes": 174,
-      "tests": 1385,
+      "tests": 1389,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     }
   },
   "android": {
-    "headSha": "7d835a41be6db10d706950774d387df0017b9248",
+    "headSha": "36dcf58d8a899a09d903e49feb2818a1cd95f29d",
     "passed": true,
     "suites": [
       {
@@ -47,16 +47,16 @@
       {
         "class": "com.fongmi.android.tv.ui.CalendarAccountPhoneAndroidTest",
         "passed": true,
-        "tests": 3,
-        "expectedTests": 3
+        "tests": 7,
+        "expectedTests": 7
       }
     ],
-    "passedTests": 20
+    "passedTests": 24
   },
   "coverageLimits": [
-    "Controlled HTTP responses, no real Bangumi account",
+    "Controlled official API responses; no real Trakt or Bangumi account",
     "Android API 34 x86_64 preview host; no physical TV or iOS Safari",
-    "No nonempty collection or real refreshed calendar validation",
-    "Full lint not run"
+    "No nonempty collection, real token refresh or refreshed calendar validation",
+    "Full lint and release builds with a real Client ID not run"
   ]
 }
