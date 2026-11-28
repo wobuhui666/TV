@@ -50,7 +50,7 @@
 | 媒体库详情对齐与原生稳定性 | [详情/TLS 阶段的有限回归与历史失败](testing/reports/2026-11-16-library-alignment-stability/README.md) |
 | Compose TV 媒体库详情 | [详情重做、验证结果与性能限制](testing/reports/2026-11-15-library-detail-redesign/README.md) |
 | MPV 重播、刷新与字幕返回 | [进度与 Surface 生命周期](mpv-hls-seeking.md) · [#119 验证记录](testing/reports/2026-11-16-issue119-mpv/README.md) |
-| MPV 海思偏色与卡顿 | [#134 照片对照、NV21 格式映射及补丁验证边界](testing/reports/2026-11-28-mpv-hisi-color/README.md) |
+| MPV 海思偏色与卡顿 | [#134 NV21 格式、裁剪越界、缓存进度与测试包](testing/reports/2026-11-28-mpv-hisi-color/README.md) |
 | Exo 声音与弹幕停顿 | [解码回退修复与 GHA 验证](testing/reports/2026-11-14-playback-stutter/README.md) |
 | ECH 与 DoH | [当前行为和验证边界](ech-validation.md) |
 | TV 桌面应用卡片 | [本地化横幅、资源回退与验证范围](testing/reports/2026-11-18-launcher-banner/README.md) |

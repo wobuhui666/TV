@@ -120,7 +120,7 @@ EXO 的 Surface 输出不经过 FFmpeg 这条字节缓冲映射，可解释其�
 python3 third_party/mpv/verify_hisi_nv21.py
 ```
 
-## 完整重编与测试包
+## 首次完整重编与测试包
 
 用户随后授权将修复编入 APK 并通过 GHA 发布专项共存测试版。
 
@@ -137,7 +137,7 @@ python3 third_party/mpv/verify_hisi_nv21.py
   APK GHA 校验包名、签名、ABI 及实际打包的七个 FFmpeg 库哈希后才发布预发布附件。
   V55i 本身未连接本次构建环境，不能据此宣布颜色或性能已通过实机验证。
 
-## GHA APK 发布与交付
+## 首次 GHA APK 发布与交付
 
 [应用 GHA 46157742392](https://github.com/wobuhui666/TV/actions/runs/46157742392)
 成功，构建提交 `02aaae3d1818f482723dcac7d541649991aa0ffd`：
@@ -158,6 +158,35 @@ python3 third_party/mpv/verify_hisi_nv21.py
 首次 APK 工作流因测试名称的 Manifest 合并冲突失败，改为资源覆盖后通过。
 随后为兼容本机 SDK 37 的不同证书输出格式补强了校验脚本；它没有改变 APK 源码，
 因此已取消自动触发的重复构建，保留上述通过验证的交付包。
+
+## 追加复查与修复
+
+继续复查同一条播放路径，确认并修复以下问题：
+
+- `mediacodec_sw_buffer.c` 的 4:2:0 半平面复制把顶部裁剪的亮度行数直接用作
+  色度行数，可能读错颜色或越界；另外，左侧裁剪后按完整 stride 连续复制会越过
+  最后一个色度行。固定版本原函数的两个合法裁剪输入分别复现 ASAN
+  `stack-buffer-overflow`，补丁后均通过。裁剪补丁提交为 `0a9989556`。
+  这两处属于已有缺陷，不是 NV21 格式补丁引入；尚不确定 V55i 片源是否触发。
+- `MpvPlayer` 原先把总时长填入已缓存位置，造成缓存条看似已缓存整片。
+  现使用 `demuxer-cache-duration` 估算前向缓存，拖动／新播放／属性不可用时清除旧值，
+  已知片长时限制上界。新增六项单测覆盖有限／无效缓存、直播、跳转和溢出。
+- 正常退出先 `stop()` 清除状态，随后 `release()` 无法记录最后一份性能快照。
+  现于 stop、清空列表及 END_FILE 重置前采样，并记录进入／退出缓存等待。
+  不依赖播放时钟继续前进才能发现缓存停顿。
+- Media3 库同步允许从清单里已验证的上一版补丁升级，避免本地增量构建把旧补丁
+  当成未知修改；仍在写入前拒绝未知库。同步回归现为五项。
+
+[原生 GHA 46163185605](https://github.com/wobuhui666/TV/actions/runs/46163185605)
+在 `0a9989556c0cae05bfb727661830f9fecfbe4dcd` 上重编两个 ABI，均成功。
+新运行库 SHA-256 为
+`1ae1a5e55e3e96e3047cf37d3c464852ee8c0ceb2922e59d063a575b07a47022`。
+主机复核：11/11 格式映射、3/3 原有复制场景及 2/2 新裁剪场景通过
+ASAN／UBSAN；两 ABI 的原导出符号、23 个 JNI 入口和 47 个媒体导入检查通过；
+六项缓存单测和五项共享库同步测试通过。当前输出见
+[native-mapping-regression.txt](native-mapping-regression.txt)。
+
+以上主机检查不等同于 V55i 的播放验证；新版 APK 的 GHA 结果和交付信息在构建后记录。
 
 ## 下一次 V55i 验证
 

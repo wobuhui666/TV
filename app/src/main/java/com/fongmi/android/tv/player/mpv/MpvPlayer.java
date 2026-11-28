@@ -118,7 +118,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private boolean newlyRenderedFirstFrame;
     private long positionMs;
     private long durationMs;
-    private long bufferedPositionMs;
+    private double cachedDurationSeconds = Double.NaN;
     private long pendingStartPositionMs;
     private long pendingSeekAfterLoadMs;
     private long pendingResumeSeekMs = C.TIME_UNSET;
@@ -145,7 +145,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         this.tracks = Tracks.EMPTY;
         this.positionMs = 0;
         this.durationMs = C.TIME_UNSET;
-        this.bufferedPositionMs = C.TIME_UNSET;
         this.pendingStartPositionMs = C.TIME_UNSET;
         this.pendingSeekAfterLoadMs = C.TIME_UNSET;
         this.volume = 1f;
@@ -275,10 +274,13 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 .setTextOffsetMs(textOffsetMs);
         newlyRenderedFirstFrame = false;
         if (mediaItem == null) return builder.build();
+        long bufferedPositionMs = getBufferedPositionMs();
         builder.setPlaylist(ImmutableList.of(buildMediaItemData()))
                 .setCurrentMediaItemIndex(0)
                 .setContentPositionMs(Math.max(0, positionMs))
-                .setContentBufferedPositionMs(PositionSupplier.getConstant(getBufferedPositionMs()));
+                .setContentBufferedPositionMs(PositionSupplier.getConstant(bufferedPositionMs))
+                .setTotalBufferedDurationMs(PositionSupplier.getConstant(
+                        Math.max(0, bufferedPositionMs - Math.max(0, positionMs))));
         return builder.build();
     }
 
@@ -298,6 +300,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
 
     @Override
     protected ListenableFuture<?> handleStop() {
+        reportPlaybackDiagnostics("stop", 0);
         beginVideoOutputPlayback();
         command("stop");
         pendingUrl = null;
@@ -428,6 +431,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         long targetMs = positionMs == C.TIME_UNSET ? 0 : Math.max(0, positionMs);
         if (durationMs > 0) targetMs = Math.min(targetMs, durationMs);
         this.positionMs = targetMs;
+        cachedDurationSeconds = Double.NaN;
         if (playbackState == Player.STATE_ENDED && mediaItem != null && mediaItem.localConfiguration != null) {
             // At EOF libmpv has closed the file. Reopen it to make replay seekable.
             beginVideoOutputPlayback();
@@ -452,6 +456,11 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     @Override
     public void eventProperty(String property) {
         if ("track-list".equals(property)) refreshTracksOnApplicationThread();
+        else if ("demuxer-cache-duration".equals(property)) runForPlayback(() -> {
+            if (outputReloadPending) return;
+            readBufferedDuration();
+            invalidateState();
+        });
     }
 
     @Override
@@ -476,6 +485,9 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
                 }
                 case "paused-for-cache", "seeking" -> {
                     if (fileLoaded) updateBufferingState();
+                    if ("paused-for-cache".equals(property)) {
+                        reportPlaybackDiagnostics(value ? "cache-paused" : "cache-resumed", 0);
+                    }
                 }
             }
             invalidateState();
@@ -736,7 +748,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         this.mediaItem = MediaItemFactory.from(spec);
         this.positionMs = startPositionMs == C.TIME_UNSET ? 0 : Math.max(0, startPositionMs);
         this.durationMs = C.TIME_UNSET;
-        this.bufferedPositionMs = C.TIME_UNSET;
         this.videoSize = VideoSize.UNKNOWN;
         this.tracks = Tracks.EMPTY;
         this.trackIdsByGroupId.clear();
@@ -771,7 +782,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         this.mediaItem = item;
         this.positionMs = startPositionMs == C.TIME_UNSET ? 0 : Math.max(0, startPositionMs);
         this.durationMs = C.TIME_UNSET;
-        this.bufferedPositionMs = C.TIME_UNSET;
         this.tracks = Tracks.EMPTY;
         this.trackIdsByGroupId.clear();
         this.pendingUrl = null;
@@ -790,6 +800,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     }
 
     private void clearPlaylist() {
+        reportPlaybackDiagnostics("clear-playlist", 0);
         beginVideoOutputPlayback();
         command("stop");
         restoreSeekPreroll();
@@ -797,7 +808,6 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         spec = null;
         positionMs = 0;
         durationMs = C.TIME_UNSET;
-        bufferedPositionMs = C.TIME_UNSET;
         tracks = Tracks.EMPTY;
         trackIdsByGroupId.clear();
         pendingUrl = null;
@@ -922,6 +932,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void handleEndFile(int reason, int error, @Nullable String errorString) {
         if (closed || awaitingOutputStart) return;
         if (recoverVideoOutputIfNeeded()) return;
+        reportPlaybackDiagnostics("end-file-" + reason, 0);
         loading = false;
         fileLoaded = false;
         boolean isError = reason == MpvEndFile.REASON_ERROR || error != 0
@@ -1039,6 +1050,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     private void readRuntimeState() {
         readPosition();
         readDuration();
+        readBufferedDuration();
         readVideoSize();
         readTracks();
         if (!canReadPosition()) return;
@@ -1067,7 +1079,11 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         Double value = MPVLib.INSTANCE.getPropertyDouble("duration/full");
         if (value == null) value = MPVLib.INSTANCE.getPropertyDouble("duration");
         durationMs = value == null ? C.TIME_UNSET : secondsToMs(value, C.TIME_UNSET);
-        bufferedPositionMs = durationMs;
+    }
+
+    private void readBufferedDuration() {
+        cachedDurationSeconds = canReadPosition() && !propBoolean("seeking")
+                ? propDouble("demuxer-cache-duration", Double.NaN) : Double.NaN;
     }
 
     private void readVideoSize() {
@@ -1347,6 +1363,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         MPVLib.INSTANCE.observeProperty("duration", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("pause", MpvFormat.MPV_FORMAT_FLAG);
         MPVLib.INSTANCE.observeProperty("paused-for-cache", MpvFormat.MPV_FORMAT_FLAG);
+        // NONE also reports unavailable values, clearing an earlier buffer estimate.
+        MPVLib.INSTANCE.observeProperty("demuxer-cache-duration", MpvFormat.MPV_FORMAT_NONE);
         MPVLib.INSTANCE.observeProperty("speed", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("audio-delay", MpvFormat.MPV_FORMAT_DOUBLE);
         MPVLib.INSTANCE.observeProperty("sub-delay", MpvFormat.MPV_FORMAT_DOUBLE);
@@ -1404,6 +1422,7 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
         videoOutputRecovery.beginPlayback();
         videoPath.reset();
         audioUnderruns = 0;
+        cachedDurationSeconds = Double.NaN;
         pendingResumeSeekMs = C.TIME_UNSET;
         outputReloadPending = false;
         awaitingOutputStart = false;
@@ -1789,9 +1808,8 @@ final class MpvPlayer extends SimpleBasePlayer implements MPVLib.EventObserver, 
     }
 
     private long getBufferedPositionMs() {
-        if (bufferedPositionMs != C.TIME_UNSET) return bufferedPositionMs;
-        if (durationMs != C.TIME_UNSET) return durationMs;
-        return Math.max(0, positionMs);
+        double cache = canReadPosition() && !outputReloadPending ? cachedDurationSeconds : Double.NaN;
+        return MpvBuffering.bufferedPositionMs(positionMs, durationMs, cache);
     }
 
     private int getInt(String property, int fallback) {

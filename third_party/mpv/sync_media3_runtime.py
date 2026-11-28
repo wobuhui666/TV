@@ -40,7 +40,8 @@ def synchronize(media3, runtime_root=ROOT):
             if target.is_symlink() or not target.is_file():
                 raise RuntimeError(f"Invalid Media3 library target: {name}")
             actual = digest(target.read_bytes())
-            if actual not in (original_hash, expected):
+            known = {original_hash, expected, *manifest.get("previousLibraries", {}).get(name, [])}
+            if actual not in known:
                 raise RuntimeError(f"Unknown local Media3 binary changes: {name}")
             if actual != expected:
                 pending.append((target, data))

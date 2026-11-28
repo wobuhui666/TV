@@ -21,6 +21,20 @@ def main():
     parser.add_argument("--original", type=Path, help="Original unpatched archive, when updating an existing fix")
     args = parser.parse_args()
     archive = ROOT / "mpv-android-ffmpeg9-native.zip"
+    manifest_path = ROOT / "native-hisi-provenance.json"
+    previous_libraries = {}
+    if manifest_path.exists():
+        previous = json.loads(manifest_path.read_text())
+        if sha256(archive) != previous["archiveSha256"] or previous["originalArchiveSha256"] != ORIGINAL:
+            raise SystemExit("Existing runtime differs from its recorded provenance")
+        previous_libraries = previous.get("previousLibraries", {})
+        with zipfile.ZipFile(archive) as current:
+            for abi, build in previous["builds"].items():
+                for library, checksum in build["libraries"].items():
+                    name = f"{abi}/{library}"
+                    if hashlib.sha256(current.read(name)).hexdigest() != checksum:
+                        raise SystemExit(f"Existing runtime library checksum mismatch: {name}")
+                    previous_libraries[name] = sorted(set(previous_libraries.get(name, []) + [checksum]))
     source_archive = args.original or archive
     if sha256(source_archive) != ORIGINAL:
         raise SystemExit("Expected the original runtime archive before merging")
@@ -58,8 +72,9 @@ def main():
         merged.replace(archive)
     result = {"originalArchiveSha256": ORIGINAL, "archiveSha256": sha256(archive),
               "nativeBuildRun": args.run_id, "patchSha256": patch_hash,
-              "originalLibraries": original, "builds": provenance}
-    (ROOT / "native-hisi-provenance.json").write_text(json.dumps(result, indent=2) + "\n")
+              "originalLibraries": original, "previousLibraries": previous_libraries,
+              "builds": provenance}
+    manifest_path.write_text(json.dumps(result, indent=2) + "\n")
     print(f"Updated {archive.name}: {result['archiveSha256']}")
 
 

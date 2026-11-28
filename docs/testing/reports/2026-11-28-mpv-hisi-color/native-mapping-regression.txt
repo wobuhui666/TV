@@ -5,6 +5,11 @@ semi-planar buffer copy: 3/3 passed; VU bytes preserved
 case 0: OMX.hisi.video.decoder.hevc format=7fa30c00 expected=2 got=1
 case 1: OMX.hisi.video.decoder.avc format=7fa30c00 expected=2 got=1
 
+Before patch: crop out-of-bounds read reproduced by AddressSanitizer
+Before patch: left-crop out-of-bounds read reproduced by AddressSanitizer
 After patch:
 mapping: 11/11 passed
 semi-planar buffer copy: 3/3 passed; VU bytes preserved
+
+
+cropped semi-planar buffers: 2/2 passed; chroma offsets and bounds preserved

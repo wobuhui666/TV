@@ -54,6 +54,25 @@ class SharedRuntimeTest(unittest.TestCase):
             synchronize(self.media, self.runtime)
         self.assertEqual(b"arm64-v8a-old", (self.base / "jniLibs/arm64-v8a/libavcodec.so").read_bytes())
 
+    def test_upgrades_a_recorded_previous_patch_and_keeps_unknown_edits(self):
+        previous = {}
+        for abi in self.manifest["builds"]:
+            name = f"{abi}/libavcodec.so"
+            data = (abi + "-previous-patch").encode()
+            (self.base / "jniLibs" / name).write_bytes(data)
+            previous[name] = [digest(data)]
+        self.manifest["previousLibraries"] = previous
+        (self.runtime / "native-hisi-provenance.json").write_text(json.dumps(self.manifest))
+        second = self.base / "jniLibs/armeabi-v7a/libavcodec.so"
+        second.write_bytes(b"user-change")
+        with self.assertRaisesRegex(RuntimeError, "Unknown local"):
+            synchronize(self.media, self.runtime)
+        self.assertEqual(b"arm64-v8a-previous-patch",
+                         (self.base / "jniLibs/arm64-v8a/libavcodec.so").read_bytes())
+        second.write_bytes(b"armeabi-v7a-previous-patch")
+        self.assertEqual(3, synchronize(self.media, self.runtime))
+        self.assertEqual(0, synchronize(self.media, self.runtime))
+
     def test_rejects_a_different_patch_without_touching_binaries(self):
         (self.runtime / "patches/ffmpeg-hisi-nv21.patch").write_bytes(b"different")
         with self.assertRaisesRegex(RuntimeError, "different patch"):

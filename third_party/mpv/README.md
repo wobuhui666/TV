@@ -3,12 +3,12 @@
 `mpv-android-ffmpeg9-native.zip` retains MPV and libc++ from
 `FongMi/mpv-android` workflow run `31346106984` at commit `99a60ad214`.
 Its seven FFmpeg libraries were rebuilt for issue #134 in
-[GHA run 46156228021](https://github.com/wobuhui666/TV/actions/runs/46156228021),
+[GHA run 46163185605](https://github.com/wobuhui666/TV/actions/runs/46163185605),
 using the original producer recipes and exact FFmpeg commit recorded by Media3.
 
 - FFmpeg commit: `04482c8d13ac27b2a9fe93f5d388929eef8af5f4` (`release-9.0-fongmi`)
 - Architectures: `arm64-v8a`, `armeabi-v7a`
-- Archive SHA-256: `4ac7c853a706851cdbd56363a9f3be481e4c00ebccf8ea7294959d67abb22eee`
+- Archive SHA-256: `1ae1a5e55e3e96e3047cf37d3c464852ee8c0ceb2922e59d063a575b07a47022`
 - Original archive SHA-256: `d3f22c64ab90a1476b489c2b4f06de8296672497f2998161efb4d906f9a4a66c`
 - The app keeps `classes.jar` and assets from
   `app/libs/mpv-android-lib-v0.0.3.aar`.
@@ -75,7 +75,12 @@ pinned FFmpeg runtime source above. HiSilicon's public OMX implementation report
 `0x7fa30c00` for NV21 (VU), whereas FFmpeg maps the shared vendor value to NV12
 (UV). The patch selects NV21 only for `OMX.hisi.video.decoder.*` with that
 specific format and without a Surface. It retains the byte-preserving copy
-and leaves standard NV12, other vendors and Surface decoding unchanged.
+and leaves format selection for standard NV12, other vendors and Surface decoding unchanged.
+
+The semi-planar copy also fixes the vertical chroma crop offset (half the luma
+row count for 4:2:0) and avoids full-stride copies after a left crop. Both
+original cases reproduce out-of-bounds reads under AddressSanitizer; the
+patched source passes the two crop cases and the existing mapping/copy tests.
 
 The patch is compiled into both bundled ARM ABIs. The codec logs its original
 layout and an explicit `HiSilicon NV21 workaround applied` line when it matches.
@@ -86,7 +91,8 @@ to remove 4K copy-decoding stutter.
 `settings.gradle` runs [sync_media3_runtime.py](sync_media3_runtime.py) for the
 pinned Media3 composite. It validates the existing and replacement hashes
 before synchronizing its shared FFmpeg copies, so packaging cannot choose the
-old codec through `pickFirsts`. Unknown local binary edits cause a failure.
+old codec through `pickFirsts`. Recorded earlier patch hashes can be upgraded;
+unknown local binary edits cause a failure before any library is replaced.
 The original metadata is retained with a separate TV overlay and new hashes.
 
 Rebuild the exact FFmpeg revision with NDK r29, Python 3.12, Meson 1.10.1,
@@ -102,6 +108,11 @@ ABIs. [verify_hisi_runtime.py](verify_hisi_runtime.py) compares exports with
 the original archive, resolves all versioned media imports and verifies the
 compiled patch marker. The [test APK workflow](../../.github/workflows/mpv-hisi-test.yml)
 also checks hashes of all seven libraries inside each signed coexist APK.
+
+Merge downloaded native artifacts with `package_hisi_runtime.py INPUT --run-id ID`.
+When replacing an already patched runtime, also provide `--original PATH` to
+the archive matching the original SHA-256 listed above. The script verifies the existing
+archive before carrying forward its hashes for Media3 upgrade compatibility.
 
 Run the source regression with Python 3, Git and a C compiler with address and
 undefined-behaviour sanitizers:
