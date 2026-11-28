@@ -11,11 +11,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -26,10 +21,16 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 import fi.iki.elonen.NanoHTTPD;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
 public class LogSessionTest {
+    private final OkHttpClient client = new OkHttpClient.Builder().callTimeout(3, TimeUnit.SECONDS).build();
     private final AtomicLong clock = new AtomicLong();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ArrayDeque<Runnable> tasks = new ArrayDeque<>();
@@ -43,6 +44,8 @@ public class LogSessionTest {
 
     @After public void cleanup() throws Exception {
         logs.stop();
+        client.dispatcher().executorService().shutdownNow();
+        client.connectionPool().evictAll();
         scheduler.shutdownNow();
         for (Thread thread : readers) thread.join(3000);
         for (Thread thread : readers) assertFalse("Leaked log reader", thread.isAlive());
@@ -193,15 +196,14 @@ public class LogSessionTest {
         throw new AssertionError("Reader did not reach " + sequence);
     }
 
-    private static Reply request(String base, String method, Map<String, String> headers) throws Exception {
-        // HttpURLConnection silently strips Origin on the host JDK.
-        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
-                .version(HttpClient.Version.HTTP_1_1).build()) {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(base)).timeout(Duration.ofSeconds(3))
-                    .method(method, HttpRequest.BodyPublishers.noBody());
-            headers.forEach(builder::header);
-            HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return new Reply(response.statusCode(), response.body(), response.headers().firstValue("Cache-Control").orElse(null));
+    private Reply request(String base, String method, Map<String, String> headers) throws Exception {
+        // OkHttp preserves Origin; HttpURLConnection silently strips it on the host JDK.
+        RequestBody body = method.equals("POST") || method.equals("PUT")
+                ? RequestBody.create((okhttp3.MediaType) null, new byte[0]) : null;
+        Request.Builder builder = new Request.Builder().url(base).method(method, body);
+        headers.forEach(builder::header);
+        try (Response response = client.newCall(builder.build()).execute()) {
+            return new Reply(response.code(), response.body().string(), response.header("Cache-Control"));
         }
     }
 
