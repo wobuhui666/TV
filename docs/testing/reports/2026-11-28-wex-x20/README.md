@@ -1,6 +1,6 @@
 # WEX 自建源迁移与 X20 实测
 
-2026-11-28，检查指定 WEX 配置中引用 `wobuhui666`、`zhhshss` 的 **16 个点播源和 3 个电视直播源**。游戏直播按斗鱼、虎牙、YY 分别抽样，共 21 条结果。迁移、9 处解析器地址替换及修复版配置更新已完成。抽样确认 **14 个源出现实际视频，另 5 个仍受登录、验证码或上游媒体故障影响**；源文件能下载不等于站点能播放。
+2026-11-28，检查指定 WEX 配置中引用 `wobuhui666`、`zhhshss` 的 **16 个点播源和 3 个电视直播源**。游戏直播按斗鱼、虎牙、YY 分别抽样，共 21 条结果。迁移、9 处解析器地址替换及修复版配置更新已完成。同步上游规则后，抽样确认 **16 个源出现实际视频（mgnacg 缓冲明显），另 3 个仍未出画面**；源文件能下载不等于站点能播放。
 
 ## 迁移结果
 
@@ -27,10 +27,12 @@
 | 青空 Sorani | 已修复官方站误用镜像路径造成的 404；X20 返回 5 个分类、8 条搜索结果及 14 集列表。播放接口要求登录；后续密集分类复测还遇到 HTTP 403。支持在私有 `ext.accessToken` 配置有效访问令牌，未验证登录后的播放。 |
 | Kazumi：7sefun、akianime、DM84、MXdm、xfdmnext | Android 10 编码调用已修复，搜索、详情和视频解码通过。 |
 | Kazumi：baimao | 更新官方重定向域名与剧集 XPath，活跃《航海王》详情返回 6 条线路并实际播放；原站部分搜索条目没有资源。 |
-| Kazumi：moonci | 识别 MacCMS 内嵌稀饭 Next 播放页，并按原片目／剧集／线路调用公开取址 API；《暴力宇宙海贼》1080p 实播通过。 |
-| Kazumi：AGE | 新增公开播放器取址；《葬送的芙莉莲 第二季》第 2 条线路在最终发布版实播 1080p、98 帧，约 4.0 秒自然推进。部分剧集仍限制原站 App 播放。 |
+| Kazumi：moonci | 识别 MacCMS 内嵌稀饭 Next 播放页，并按原片目／剧集／线路调用公开取址 API；初轮《暴力宇宙海贼》1080p 实播通过；同步上游 1.1 搜索接口后，《海贼王女》发布版复测 1080p、105 帧、推进 4.28 秒。 |
+| Kazumi：AGE | 新增公开播放器取址；《葬送的芙莉莲 第二季》第 2 条线路在 R4 发布版实播 1080p、98 帧；同步 1.6 规则后的 R5 本地同字节 JAR 复测 103 帧、推进 4.23 秒。部分剧集仍限制原站 App 播放。 |
 | Kazumi：ezdmw | 已修复 iframe 取址和 `.webp` 入口的 HLS 识别，清单返回成功；媒体分片请求超时／HTTP 502，另一线路返回空媒体地址，X20 仍未确认播放。 |
-| Kazumi：dalvdm、mgnacg、mutefun | 编码错误已消除，当前请求被站点验证码或 HTTP 403 阻断；需原站验证，未报告为可播放。 |
+| Kazumi：dalvdm | 同步上游 1.2 规则并补齐 API 9：搜索 20 条、详情 7 条线路；最终发布版 X20 实播 1080p、103 帧、自然推进 4.22 秒。 |
+| Kazumi：mgnacg | 同步上游 1.2 规则后恢复搜索、详情及出画面。发布版首线 1080p、77 帧，约 21.6 秒仅推进 3.18 秒，缓冲明显；第 2 条线路播放解析报 `bad base-64`，具体字段尚未定位。不能认定流畅或全线路可用。 |
+| Kazumi：mutefun | 同步上游 1.6 新域名及页面规则，X20 搜索仍返回 HTTP 403，主机页面包含站点验证表单。 |
 | 哔哩｜4K(JX) | 10 个分类、3 条搜索结果，详情与剧集可读。换用指定新解析服务器后，解析约 2.4 秒成功；《航海王：红发歌姬》显示 3840×2160 视频，21 个渲染帧，约 4.6 秒观察内自然推进 4.15 秒。短时播放通过。 |
 | 游戏直播：斗鱼 | 改为原生播放器直连 FLV，保留头部与回看。相同房间对照：原 Python 转发约 27.1 秒推进 22.3 秒、16 个缓冲采样；直连约 28.9 秒推进 28.5 秒、855 个渲染帧、零缓冲采样，1080p 连续播放。 |
 | 游戏直播：虎牙 | 120 个房间；详情、取址成功。1080p、62 个渲染帧，约 8.9 秒观察内推进 4.2 秒；短时播放成立，持续流畅性未验证。 |
@@ -43,17 +45,36 @@
 
 ## 后续源修复
 
-修复版已于 `2026-11-28T07:56:24Z` 写入坚果云：更新 14 个 JAR 引用、baimao／moonci 规则及游戏 Python API，共 15 个源。使用 ETag 条件 PUT 返回 204，最终 GET 与候选字节完全一致，配置 SHA-256 为 `73583006b97b3f2de04432b7b2ff4d7e3daa343f01fac22ea6e501b4739e8182`。104 个点播源、6 个直播配置保留；9 处新解析地址、原路径与参数保留，旧解析地址及 wobuhui666 引用均为 0。
+首轮 R4 修复版已于 `2026-11-28T07:56:24Z` 写入坚果云：更新 14 个 JAR 引用、baimao／moonci 规则及游戏 Python API，共 15 个源。使用 ETag 条件 PUT 返回 204，最终 GET 与候选字节完全一致，配置 SHA-256 为 `73583006b97b3f2de04432b7b2ff4d7e3daa343f01fac22ea6e501b4739e8182`。104 个点播源、6 个直播配置保留；9 处新解析地址、原路径与参数保留，旧解析地址及 wobuhui666 引用均为 0。
 
 修复源码与 JAR 位于 [CatVodSpider 固定提交](https://github.com/zhhshss/CatVodSpider/commit/1b871364547dba1d0f2776a2901accd19ac1d013)，游戏源位于 [Python 固定提交](https://github.com/zhhshss/tv-python-sources/commit/6a4cac899912733ce536dcc05196f9ee94235654)。Linux JDK21 / SDK37.0 执行 `spiderJar` 完成 Release 编译、R8、lintVital、JAR 类引用及 MD5 检查；同时修正 PowerShell 检查脚本对 Linux 临时目录尾斜杠的处理。新 JAR SHA-256：`47ee3fbe04f1a33844e6863607b578a2b120600c35085a6fe31f4e07d7a93ce8`。
 
-修复包含 Girigiri 新 API、Sorani 官方／镜像地址区分及可选访问令牌、Kazumi Android 10 编码与 moonci 嵌套播放、baimao 域名与章节规则、AGE／E站公开 iframe 播放器适配、斗鱼直连。Sorani 仍需有效账号令牌，dalvdm、mgnacg、mutefun 受站点验证阻断，E站后续媒体不可用；这 5 个源没有确认恢复播放。
+修复包含 Girigiri 新 API、Sorani 官方／镜像地址区分及可选访问令牌、Kazumi Android 10 编码与 moonci 嵌套播放、baimao 域名与章节规则、AGE／E站公开 iframe 播放器适配、斗鱼直连。首轮 R4 时，Sorani 仍需有效账号令牌，dalvdm、mgnacg、mutefun 受站点验证阻断，E站后续媒体不可用。dalvdm、mgnacg 后续经上游规则同步改善，见下文。
 
-最终 R4 发布 JAR 在 X20 上复测 AGE 和 E站；此前其余 8 个修复成功的 CatVod 源使用 R3 发布地址实播通过。R4 新增分支只匹配 AGE／E站域名，其余源未在 R4 重复播放。JSON 为每项记录实际测试的 JAR 哈希／提交；本地候选验证与发布地址验证分别标注。斗鱼最终发布版另外观察约 28.9 秒，渲染 853 帧、自然推进 28.4 秒。
+首轮 R4 发布 JAR 在 X20 上复测 AGE 和 E站；此前其余 8 个修复成功的 CatVod 源使用 R3 发布地址实播通过。R4 新增分支只匹配 AGE／E站域名，其余源未在 R4 重复播放。JSON 为每项记录实际测试的 JAR 哈希／提交；本地候选验证与发布地址验证分别标注。斗鱼最终发布版另外观察约 28.9 秒，渲染 853 帧、自然推进 28.4 秒。
 
 哔哩初测的旧解析服务器约 15 秒连接失败，已由上述新地址复测替代。旧结果保留在 JSON 的 `supersededObservations`；最新地址的条件更新、路径／参数保留检查及回读记录见 `parserOriginUpdate`。
 
 电视直播的 HLS 窗口会移动，`currentPosition` 多次回退甚至暂时为负。因此不能用观察末尾位置减起始位置判断直播是否停播；最终结论使用连续帧计数、`isPlaying` 和帧间隙。JSON 保留探针原始 `status`，最终结论以每项 `assessment` 及 `continuousFrameEvidence` 为准。
+
+## Kazumi 上游复查与同步
+
+2026-11-28 复查 [Predidit/KazumiRules](https://github.com/Predidit/KazumiRules/commit/64ea35976c383a3a760eb23d744fcada076317ee)：最新规则提交为 **2026-11-13**，当天没有新提交。原来导入的是 **2026-10-03** 快照，落后 28 次提交；首轮排查没有先核对上游，漏掉了其中的搜索修复。Kazumi 应用另于 **2026-11-26** 发布 [2.4.7](https://github.com/Predidit/Kazumi/releases/tag/2.4.7)，应用版本与规则版本分别核对。
+
+| 规则 | 原快照 → 最新 | 实际变化 |
+| --- | --- | --- |
+| AGE | 1.5 → 1.6 | API 标记与广告选项；原 App 限制仍存在 |
+| dalvdm | 1.1 → 1.2 | 改用公开 suggest 搜索、详情地址模板及相对章节 XPath |
+| mgnacg | 1.0 → 1.2 | 改用公开 suggest 搜索、修正详情根路径及章节 XPath |
+| mutefun | 1.2 → 1.6 | 新域名 `www.mutedm.com`、新搜索／章节及验证页面规则 |
+| moonci | 1.0 → 1.1 | 改用公开 suggest 搜索和详情地址模板 |
+| giriGiriLove | 2.4 → 2.7 | 同步参考规则；现用独立 Girigiri 源已经适配该公开 API |
+
+适配器新增 API 9 的 `sourceTemplate` 支持，保留裸 ID 与旧 API 行为。真实 Java 解析器的 13 项主机检查、Release／R8／lintVital／JAR 检查通过；X20 复测五个实际变更规则，另从发布地址复验 dalvdm、moonci、mgnacg。mgnacg 的缓冲和失败线路保留在报告，不能以其搜索恢复推断播放完全恢复。LMM、TvTFun 虽已在上游恢复启用，本次没有扩大原有源数量。
+
+最终 R5 源提交为 [25094a57004001e7a4206d8c3fdbf691436ca34b](https://github.com/zhhshss/CatVodSpider/commit/25094a57004001e7a4206d8c3fdbf691436ca34b)，JAR SHA-256 为 `0b55e3edc02f0d7e5e28d030847e0cccd84c21f7f1ec9495b06fb81d30a04262`。于 `2026-11-28T08:16:07Z` 条件更新坚果云并完成精确回读：14 个 JAR 引用和 5 个内嵌规则已更新；白猫本地规则、moonci 嵌套播放器、斗鱼脚本、104 个点播源／6 个直播配置及 9 处解析器替换均保留。最终配置 SHA-256 为 `b7e188a4cfe694f9eaba3a7eaea7056640cdeec4e32c1c35ece52fcdfce62ab0`。
+
+未改动的源不重复播放；JSON 逐项记录实际测试版本，并保留前轮结果于 `preUpstreamRuleObservations`，完整上游差异、主机检查、X20 数值与部署证据见 `upstreamRuleUpdate`。
 
 ## 环境与覆盖限制
 
