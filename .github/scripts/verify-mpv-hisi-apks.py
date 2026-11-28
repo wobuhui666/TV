@@ -30,7 +30,7 @@ with zipfile.ZipFile(root / "third_party/mpv/mpv-android-ffmpeg9-native.zip") as
         if actual is None or actual.group(1) != package:
             raise SystemExit("The test package must coexist with both production packages")
         signed = subprocess.check_output([str(tools / "apksigner"), "verify", "--print-certs", str(apk)], text=True)
-        certificate = re.search(r"(?:Signer #[0-9]+|V[0-9]+ Signer): certificate SHA-256 digest: (\S+)", signed)
+        certificate = re.search(r"(?:Signer #[0-9]+:?|V[0-9]+(?:\.[0-9]+)? Signer:) certificate SHA-256 digest: (\S+)", signed)
         if certificate is None:
             raise SystemExit("No verified APK signing certificate")
         certificates.add(certificate.group(1))
