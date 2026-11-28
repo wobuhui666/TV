@@ -137,6 +137,28 @@ python3 third_party/mpv/verify_hisi_nv21.py
   APK GHA 校验包名、签名、ABI 及实际打包的七个 FFmpeg 库哈希后才发布预发布附件。
   V55i 本身未连接本次构建环境，不能据此宣布颜色或性能已通过实机验证。
 
+## GHA APK 发布与交付
+
+[应用 GHA 46157742392](https://github.com/wobuhui666/TV/actions/runs/46157742392)
+成功，构建提交 `02aaae3d1818f482723dcac7d541649991aa0ffd`：
+
+- `:app:testLeanbackArm64_v8aDebugUnitTest --tests 'com.fongmi.android.tv.player.mpv.*'`：
+  **6 个测试类、33 项通过，0 失败／错误／跳过**，见 [gha-tests.json](gha-tests.json)。
+- `:app:assembleLeanbackArm64_v8aRelease :app:assembleLeanbackArmeabi_v7aRelease` 成功。
+- 版本 `5.8.7-mpv134.2`，两个 APK 的独立包名、桌面名称、正式签名、ABI 和
+  七个共享 FFmpeg 库哈希全部检查通过；MPV 与扩展 JNI 二进制未被替换。
+- [预发布页面](https://github.com/wobuhui666/TV/releases/tag/mpv134-test-46157742392-1)，
+  [ARM64 APK](https://github.com/wobuhui666/TV/releases/download/mpv134-test-46157742392-1/TV-MPV134-arm64-v8a-coexist.apk)，
+  [ARMv7 APK](https://github.com/wobuhui666/TV/releases/download/mpv134-test-46157742392-1/TV-MPV134-armeabi-v7a-coexist.apk)。
+  已用不带 GitHub 认证的 curl 完整下载两个 APK，复核 SHA-256、签名、包名与库哈希。
+- [构建校验清单](build-verification.json)记录文件大小、SHA-256、签名证书和源码提交。
+- 已按用户授权在 [#134 留言](https://github.com/wobuhui666/TV/issues/134#issuecomment-7241420201)，
+  包含直接下载地址、同片 MPV／EXO 颜色对照和日志导出步骤。等待 V55i 现场反馈。
+
+首次 APK 工作流因测试名称的 Manifest 合并冲突失败，改为资源覆盖后通过。
+随后为兼容本机 SDK 37 的不同证书输出格式补强了校验脚本；它没有改变 APK 源码，
+因此已取消自动触发的重复构建，保留上述通过验证的交付包。
+
 ## 下一次 V55i 验证
 
 2026-11-28 补查现成实现：FFmpeg master
