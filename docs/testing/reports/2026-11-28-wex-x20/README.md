@@ -117,9 +117,38 @@ X20／Android 10 用生产 BaseLoader 从官方地址加载主 JAR，94 个条�
 
 坚果云于 `2026-11-28T13:22:40Z` 使用 ETag 条件 PUT 返回 204，最终 GET 与候选字节一致。配置 SHA-256：`f640044cff4b597fdec8ffd40ceda1e801c67eaf5ab6a5dca0089a0c420f70f2`。更新前后配置和 ETag 仅保存在仓库外私有目录；删除／新增清单、类覆盖、设备数值与回读证据见 `verification.json` 的 `wexOfficialConfigurationUpdate`。旧 key 对应的历史记录／收藏可能需要重新选择新版入口。
 
+## jsdmirror 分发地址更新
+
+按用户最终要求，**Wex 主 JAR 与 niuma 原地址、MD5 及对应配置保持不变**。仅替换可验证的资源分发地址：共 23 处配置引用、10 个不同 URL；保留 124 个点播源、6 个直播配置、全部 API／规则／参数及 9 处新解析地址。
+
+| 改动 | 范围 |
+| --- | --- |
+| 自建 JAR | Girigiri、Sorani、12 个 Kazumi 源共 14 处 `jar`，迁到固定提交的 `jar/cdn/custom_spider.txt` |
+| 游戏直播 Python | `game_live.py` 改用 jsdmirror；3 个相对路径辅助模块一并验证 |
+| 电视直播 Python | `yangshipin.py`、`cctv.py`、`gdtv.py`，以及前两者的 JSON 快照，共 5 处 |
+| 仓库直播列表 | Kimentanm 的 `iptv.m3u`、develop202 的 `interface.txt`，共 2 处，继续跟随原分支 |
+| 节目单 | 央视频配置的 `litiande03/epg@master/pl.xml.gz`，继续跟随原分支 |
+
+现有哔哩 JS、壁纸及 Logo 已使用 jsdmirror，本轮核对字节后保留。所有可替换的 GitHub／旧代理配置 URL 均已迁移；第三方服务接口仍使用各自原站。
+
+自建 `.jar` 原后缀在 jsdmirror 返回 403；发布同字节 `.txt` 副本后返回 200。副本位于 [CatVodSpider 固定提交](https://github.com/zhhshss/CatVodSpider/commit/61913bc26cbac8ccd632f0bb4d2112278758e563)，完整地址与来源见 `verification.json` 和该提交的 `jar/cdn/manifest.json`。原 JAR 与 CDN 副本均为 174,478 字节，MD5 `5a60ca9c5bd95d98ac26acea0982f368`，SHA-256 `cbd0c123b9df13f56fb8b3d5d2a0ffea8860ecc04d4c839f30196903516feb96`。仅改变交付地址与后缀，没有重编译或修改 JAR 内容。
+
+主机对 16 项现有资源及依赖进行字节核对，其中 Python 对照固定提交 Git blob，动态列表／EPG 对照当时 GitHub 原文件；另核对 JAR 副本。JSON、Python 语法、M3U 及 gzip XML 格式检查通过。`cctv.json` 首次收到 Fastly TLS 路由 421，后续一次请求返回 200 且字节一致，未隐去该失败。
+
+X20／Android 10 通过生产 BaseLoader 从新地址进行 5 项检查，均通过：
+
+- 自建 JAR 首次下载前无该 URL 缓存，加载约 3.52 秒；设备下载文件 SHA-256 一致，Kazumi／Girigiri／Sorani 三个入口类存在，Kazumi 首页可解析。
+- 游戏 Python 加载约 3.80 秒，3 个辅助模块初始化成功，返回斗鱼／虎牙／YY 三类。
+- 央视频、央视、广东 Python 均能调用实际直播目录，分别返回 64、20、104 个频道。
+- 设备网络记录有 8 次 jsdmirror HTTP 200，没有该域名的请求失败。测试只验证下载、加载、依赖与目录；本轮没有重新逐源播放，不据此宣称缓冲速度提升。
+
+develop202 的 `interface.txt` 当时在上游和 CDN 都只有 M3U 文件头、0 个频道，分发地址更换不能修复上游空列表；没有把这一路标为可播放。分支地址仍会受 CDN 缓存影响，未进行成对吞吐量测速。
+
+坚果云于 `2026-11-28T13:50:08Z` 条件 PUT 返回 204，最终 GET 与候选字节完全一致。配置 SHA-256：`d999ec01d1c873548ab64e2abba5e7059b4d3b5ce68255835b0c453760d6c7f1`。Wex 主 JAR、4 个 niuma 源对象、源顺序及其余字段的不变性已逐字段检查。原配置、认证信息及原始日志只保存在仓库外私有目录；公开数值见 `verification.json` 的 `jsdmirrorDeliveryUpdate`。本轮沿用已安装独立测试包，未重新确认 APK SHA-256，未构建或修改正式 TV 应用。
+
 ## 环境与覆盖限制
 
-- 实体 X20，Android 10 / API29，ARM64；已安装的独立 `com.fongmi.android.tv.sourceprobe` 5.8.7。APK SHA-256 为 `ac27e95fa99398d93e4a34f0a79563f587ea02574726842ffffc36ad46635699`。该旧 APK 的精确构建提交未能确认，不能将结果标成当前工作区 HEAD 的验证。
+- 实体 X20，Android 10 / API29，ARM64；已安装的独立 `com.fongmi.android.tv.sourceprobe` 5.8.7。首次实测记录的 APK SHA-256 为 `ac27e95fa99398d93e4a34f0a79563f587ea02574726842ffffc36ad46635699`；后续 Wex 入口／CDN 轮未重新确认该哈希。该旧 APK 的精确构建提交未能确认，不能将结果标成当前工作区 HEAD 的验证。
 - 使用应用真实 JarLoader、QuickJS、Chaquopy、ParseJob 和 ExoPlayerEngine，通过现有已签名 instrumentation 调用私有诊断 JAR。按配置 URL 加载迁移后的源；配置只注入测试进程内存。网络请求由 X20 发出，探针使用阿里 DoH 和 ECH。
 - 现有测试入口的 `OK (1 test)` 只说明采集器完成；源成功与否按独立阶段结果判断。测试页面启动、多清晰度地址归一化、`jx=1` 和本地代理等早期探针问题已纠正后复测；排除校验失败和测试器异常，避免算成源故障。
 - 逐源抽取首页／搜索和有效详情、剧集或频道；资源失败时有针对性地更换作品和线路，AGE／E站以第 2 条线路复测。Girigiri 另验分类、搜索分页与空结果，斗鱼包含 30 秒观察。未逐个播放所有房间、频道、线路和清晰度，也未验证登录、账号 Cookie、长时间稳定性、MPV 或声音输出。播放时静音。

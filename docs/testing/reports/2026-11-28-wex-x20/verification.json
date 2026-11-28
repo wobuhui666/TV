@@ -47546,5 +47546,596 @@
       "The former WexAiV6DaShiXiong entry now uses the official AppV7 | 大师兄 key and matching ext. Favorites or history referring to removed keys may need reselection.",
       "Old ShortHG had no class in the current main JAR and was absent from the official configuration; that obsolete entry was removed with the other main-JAR entries."
     ]
+  },
+  "jsdmirrorDeliveryUpdate": {
+    "schema": "tv.wex-cdn-migration.v1",
+    "timestamp": "2026-11-28T13:50:08Z",
+    "beforeSha256": "f640044cff4b597fdec8ffd40ceda1e801c67eaf5ab6a5dca0089a0c420f70f2",
+    "afterSha256": "d999ec01d1c873548ab64e2abba5e7059b4d3b5ce68255835b0c453760d6c7f1",
+    "changedReferences": 23,
+    "uniqueUrlChanges": 10,
+    "paths": [
+      [
+        "sites",
+        106,
+        "jar"
+      ],
+      [
+        "sites",
+        107,
+        "jar"
+      ],
+      [
+        "sites",
+        108,
+        "jar"
+      ],
+      [
+        "sites",
+        109,
+        "jar"
+      ],
+      [
+        "sites",
+        110,
+        "jar"
+      ],
+      [
+        "sites",
+        111,
+        "jar"
+      ],
+      [
+        "sites",
+        112,
+        "jar"
+      ],
+      [
+        "sites",
+        113,
+        "jar"
+      ],
+      [
+        "sites",
+        114,
+        "jar"
+      ],
+      [
+        "sites",
+        115,
+        "jar"
+      ],
+      [
+        "sites",
+        116,
+        "jar"
+      ],
+      [
+        "sites",
+        117,
+        "jar"
+      ],
+      [
+        "sites",
+        118,
+        "jar"
+      ],
+      [
+        "sites",
+        119,
+        "jar"
+      ],
+      [
+        "sites",
+        120,
+        "api"
+      ],
+      [
+        "lives",
+        1,
+        "url"
+      ],
+      [
+        "lives",
+        2,
+        "url"
+      ],
+      [
+        "lives",
+        3,
+        "api"
+      ],
+      [
+        "lives",
+        3,
+        "ext"
+      ],
+      [
+        "lives",
+        3,
+        "epg"
+      ],
+      [
+        "lives",
+        4,
+        "api"
+      ],
+      [
+        "lives",
+        4,
+        "ext"
+      ],
+      [
+        "lives",
+        5,
+        "api"
+      ]
+    ],
+    "putStatus": 204,
+    "readBackVerified": true,
+    "conditionalPut": true,
+    "mainJarUnchanged": true,
+    "niumaSourcesUnchanged": true,
+    "siteCount": 124,
+    "liveConfigCount": 6,
+    "newParserReferences": 9,
+    "oldParserReferences": 0,
+    "device": {
+      "schema": "tv.cdn-load-validation.v1",
+      "device": "X20",
+      "sdk": 29,
+      "startedAt": 1795873734083,
+      "status": "passed",
+      "normalAppModified": false,
+      "cases": [
+        {
+          "key": "Kazumi_AGE",
+          "kind": "site",
+          "jarCachedBefore": false,
+          "sourceClass": "com.github.catvod.spider.Kazumi",
+          "loadMs": 3517,
+          "downloadedJarSha256": "cbd0c123b9df13f56fb8b3d5d2a0ffea8860ecc04d4c839f30196903516feb96",
+          "downloadedJarHashPassed": true,
+          "entryClassCount": 3,
+          "homeParsed": true,
+          "categoryCount": 0,
+          "status": "passed",
+          "elapsedMs": 3530
+        },
+        {
+          "key": "py_game_live_20261107",
+          "kind": "site",
+          "sourceClass": "com.fongmi.chaquo.Spider",
+          "loadMs": 3804,
+          "homeParsed": true,
+          "categoryCount": 3,
+          "threeHelpersInitialized": true,
+          "status": "passed",
+          "elapsedMs": 3818
+        },
+        {
+          "key": "cdn-live-3",
+          "kind": "live",
+          "sourceClass": "com.fongmi.chaquo.Spider",
+          "loadMs": 1805,
+          "groups": 2,
+          "channels": 64,
+          "status": "passed",
+          "elapsedMs": 2912
+        },
+        {
+          "key": "cdn-live-4",
+          "kind": "live",
+          "sourceClass": "com.fongmi.chaquo.Spider",
+          "loadMs": 261,
+          "groups": 1,
+          "channels": 20,
+          "status": "passed",
+          "elapsedMs": 840
+        },
+        {
+          "key": "cdn-live-5",
+          "kind": "live",
+          "sourceClass": "com.fongmi.chaquo.Spider",
+          "loadMs": 243,
+          "groups": 4,
+          "channels": 104,
+          "status": "passed",
+          "elapsedMs": 790
+        }
+      ],
+      "finishedAt": 1795873746025
+    },
+    "sourceCommits": {
+      "customJava": "53ca701458d54f8092e4b3b6595cde57e96e5434",
+      "customCdnAlias": "61913bc26cbac8ccd632f0bb4d2112278758e563",
+      "gamePython": "6a4cac899912733ce536dcc05196f9ee94235654",
+      "livePython": "25ff7031e94b14c94ce7e8894394f04f3c1a0907"
+    },
+    "reportBaseCommit": "4044b4c6bf2ae35922fb4f82d48e633582a95abe",
+    "customJarAffectedSources": [
+      "ciallo_girigiri",
+      "ciallo_sorani",
+      "Kazumi_7sefun",
+      "Kazumi_AGE",
+      "Kazumi_akianime",
+      "Kazumi_baimao",
+      "Kazumi_dalvdm",
+      "Kazumi_DM84",
+      "Kazumi_ezdmw",
+      "Kazumi_mgnacg",
+      "Kazumi_moonci",
+      "Kazumi_mutefun",
+      "Kazumi_MXdm",
+      "Kazumi_xfdmnext"
+    ],
+    "jarSuffixCheck": {
+      "originalJarHttpStatus": 403,
+      "txtAlias": {
+        "url": "https://cdn.jsdmirror.com/gh/zhhshss/CatVodSpider@61913bc26cbac8ccd632f0bb4d2112278758e563/jar/cdn/custom_spider.txt",
+        "commit": "61913bc26cbac8ccd632f0bb4d2112278758e563",
+        "httpStatus": 200,
+        "bytes": 174478,
+        "mime": "text/plain; charset=utf-8",
+        "sha256": "cbd0c123b9df13f56fb8b3d5d2a0ffea8860ecc04d4c839f30196903516feb96",
+        "md5": "5a60ca9c5bd95d98ac26acea0982f368",
+        "exactBytes": true,
+        "elapsedMs": 2766
+      },
+      "byteTransformation": false
+    },
+    "assetChecks": [
+      {
+        "name": "bg.jpg",
+        "old": "https://cdn.jsdmirror.com/gh/zhhshss/js@888c1e0b85729c6c596d5c7166f56cd8c0702da3/res/bg.jpg",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/js@888c1e0b85729c6c596d5c7166f56cd8c0702da3/res/bg.jpg",
+        "paths": [
+          [
+            "wallpaper"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 172536,
+        "sha256": "b9fda08993c697b461c284e0477e83627e8e74b44c3112760b4f518c45c82667",
+        "referenceSha256": "b9fda08993c697b461c284e0477e83627e8e74b44c3112760b4f518c45c82667",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1746
+      },
+      {
+        "name": "MIKU.jpg",
+        "old": "https://cdn.jsdmirror.com/gh/zhhshss/js@888c1e0b85729c6c596d5c7166f56cd8c0702da3/res/MIKU.jpg",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/js@888c1e0b85729c6c596d5c7166f56cd8c0702da3/res/MIKU.jpg",
+        "paths": [
+          [
+            "logo"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 1102877,
+        "sha256": "e549bc4694fd620dcc97ab77ae4728a0cca986ecff20d95a5d3e3cfc977c42fe",
+        "referenceSha256": "e549bc4694fd620dcc97ab77ae4728a0cca986ecff20d95a5d3e3cfc977c42fe",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1435
+      },
+      {
+        "name": "drpy2.min.js",
+        "old": "https://cdn.jsdmirror.com/gh/zhhshss/js@92ff75f478eb55381b02aba8f34b1c6497a65da1/drpy2.min.js",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/js@92ff75f478eb55381b02aba8f34b1c6497a65da1/drpy2.min.js",
+        "paths": [
+          [
+            "sites",
+            7,
+            "api"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 111826,
+        "sha256": "67f4f6b460db1ec7ef50585953ce826c5263ca91d72958490ef4702b4e154fe1",
+        "referenceSha256": "67f4f6b460db1ec7ef50585953ce826c5263ca91d72958490ef4702b4e154fe1",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1632
+      },
+      {
+        "name": "哔哩视频.js",
+        "old": "https://cdn.jsdmirror.com/gh/zhhshss/js@92ff75f478eb55381b02aba8f34b1c6497a65da1/哔哩视频.js",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/js@92ff75f478eb55381b02aba8f34b1c6497a65da1/哔哩视频.js",
+        "paths": [
+          [
+            "sites",
+            7,
+            "ext"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 17199,
+        "sha256": "c7e65d4c19bb45faacc700993a6c585e38484965e968cc31743bfd9459aa8652",
+        "referenceSha256": "c7e65d4c19bb45faacc700993a6c585e38484965e968cc31743bfd9459aa8652",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1755
+      },
+      {
+        "name": "game_live.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live.py",
+        "paths": [
+          [
+            "sites",
+            120,
+            "api"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 35726,
+        "sha256": "c9244de1ee789823cfb377c5b08c1d8473b49a5c52239aeec4930424a3d5e54e",
+        "referenceSha256": "c9244de1ee789823cfb377c5b08c1d8473b49a5c52239aeec4930424a3d5e54e",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 961
+      },
+      {
+        "name": "iptv.m3u",
+        "old": "https://ghfast.top/https://raw.githubusercontent.com/Kimentanm/aptv/master/m3u/iptv.m3u",
+        "new": "https://cdn.jsdmirror.com/gh/Kimentanm/aptv@master/m3u/iptv.m3u",
+        "paths": [
+          [
+            "lives",
+            1,
+            "url"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 21971,
+        "sha256": "2b6be167344530db445d20ef6e4717d6ba98c1da610794ef63731cf22b9221d8",
+        "referenceSha256": "2b6be167344530db445d20ef6e4717d6ba98c1da610794ef63731cf22b9221d8",
+        "exactBytes": true,
+        "fixedRevision": false,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1012,
+        "channels": 120
+      },
+      {
+        "name": "interface.txt",
+        "old": "https://ghfast.top/https://raw.githubusercontent.com/develop202/migu_video/refs/heads/main/interface.txt",
+        "new": "https://cdn.jsdmirror.com/gh/develop202/migu_video@main/interface.txt",
+        "paths": [
+          [
+            "lives",
+            2,
+            "url"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 469,
+        "sha256": "17ec8494fa49cdf6037f9b971c56221ddbb83def8e7fa7ed91921c0833deedfc",
+        "referenceSha256": "17ec8494fa49cdf6037f9b971c56221ddbb83def8e7fa7ed91921c0833deedfc",
+        "exactBytes": true,
+        "fixedRevision": false,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1772,
+        "channels": 0,
+        "emptyUpstreamPlaylist": true
+      },
+      {
+        "name": "yangshipin.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/yangshipin.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/yangshipin.py",
+        "paths": [
+          [
+            "lives",
+            3,
+            "api"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 103533,
+        "sha256": "bb9b146178d2af52d26b5c2d70c46a6f440ee5b1e9e7e4056c5750d39f188863",
+        "referenceSha256": "bb9b146178d2af52d26b5c2d70c46a6f440ee5b1e9e7e4056c5750d39f188863",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 3307
+      },
+      {
+        "name": "yangshipin.json",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/yangshipin.json",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/yangshipin.json",
+        "paths": [
+          [
+            "lives",
+            3,
+            "ext"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 23079,
+        "sha256": "69877e4c2e07211cbc72441a640339bfd14ffe3b08d0be400f1c066f3036d4bf",
+        "referenceSha256": "69877e4c2e07211cbc72441a640339bfd14ffe3b08d0be400f1c066f3036d4bf",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 2929
+      },
+      {
+        "name": "pl.xml.gz",
+        "old": "https://github.com/litiande03/epg/raw/refs/heads/master/pl.xml.gz",
+        "new": "https://cdn.jsdmirror.com/gh/litiande03/epg@master/pl.xml.gz",
+        "paths": [
+          [
+            "lives",
+            3,
+            "epg"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 2100040,
+        "sha256": "fc757e082f78ffba66ca0f7941de7310b769bb294e292afdf0e05c0a5b1a8985",
+        "referenceSha256": "fc757e082f78ffba66ca0f7941de7310b769bb294e292afdf0e05c0a5b1a8985",
+        "exactBytes": true,
+        "fixedRevision": false,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 503,
+        "programmes": 148638
+      },
+      {
+        "name": "cctv.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/cctv.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/cctv.py",
+        "paths": [
+          [
+            "lives",
+            4,
+            "api"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 9356,
+        "sha256": "b02e617bd8d0fa6014f04723d84804773084f915a45927c38f5ef7833c3848d9",
+        "referenceSha256": "b02e617bd8d0fa6014f04723d84804773084f915a45927c38f5ef7833c3848d9",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 143
+      },
+      {
+        "name": "cctv.json",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/cctv.json",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/cctv.json",
+        "paths": [
+          [
+            "lives",
+            4,
+            "ext"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 1083,
+        "sha256": "346633dd25090c02189cb245813e723788c53f8a6c20d4fc0590774a902389e3",
+        "referenceSha256": "346633dd25090c02189cb245813e723788c53f8a6c20d4fc0590774a902389e3",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 2191,
+        "initialFailure": {
+          "httpStatus": 421,
+          "errorType": "HTTPError"
+        }
+      },
+      {
+        "name": "gdtv.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/gdtv.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@25ff7031e94b14c94ce7e8894394f04f3c1a0907/packs/live-python-20261107-a09dd575/live/gdtv.py",
+        "paths": [
+          [
+            "lives",
+            5,
+            "api"
+          ]
+        ],
+        "httpStatus": 200,
+        "bytes": 8695,
+        "sha256": "2c0474fcb731d940a078b19a3b54ecebb25c4dc57ef85b83a475786160d68bdf",
+        "referenceSha256": "2c0474fcb731d940a078b19a3b54ecebb25c4dc57ef85b83a475786160d68bdf",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 2596
+      },
+      {
+        "name": "game_live_protocol.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_protocol.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_protocol.py",
+        "paths": [],
+        "httpStatus": 200,
+        "bytes": 20299,
+        "sha256": "12a46f570061ff527006ada963f3336c6d5e1827c5a2d8ecda851ca86144f703",
+        "referenceSha256": "12a46f570061ff527006ada963f3336c6d5e1827c5a2d8ecda851ca86144f703",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1278
+      },
+      {
+        "name": "game_live_stream.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_stream.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_stream.py",
+        "paths": [],
+        "httpStatus": 200,
+        "bytes": 5355,
+        "sha256": "c0c7d79843da944af884f4394c968a9d422c50f7087ea64d0c042fb1758c2b72",
+        "referenceSha256": "c0c7d79843da944af884f4394c968a9d422c50f7087ea64d0c042fb1758c2b72",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 1305
+      },
+      {
+        "name": "game_live_yy.py",
+        "old": "https://gh-proxy.com/https://raw.githubusercontent.com/zhhshss/tv-python-sources/6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_yy.py",
+        "new": "https://cdn.jsdmirror.com/gh/zhhshss/tv-python-sources@6a4cac899912733ce536dcc05196f9ee94235654/packs/live-python-20261107-a09dd575/vod/game_live_yy.py",
+        "paths": [],
+        "httpStatus": 200,
+        "bytes": 3262,
+        "sha256": "fedc90a304daa36f7235a01d60e5a72344a997c754f7665c197012c4c2444ea0",
+        "referenceSha256": "fedc90a304daa36f7235a01d60e5a72344a997c754f7665c197012c4c2444ea0",
+        "exactBytes": true,
+        "fixedRevision": true,
+        "formatValid": true,
+        "verified": true,
+        "elapsedMs": 2564
+      }
+    ],
+    "deviceEvidence": {
+      "package": "com.fongmi.android.tv.sourceprobe",
+      "android": "10",
+      "sdk": 29,
+      "apkSha256ReconfirmedThisRound": false,
+      "probeJarSha256": "40dcd9a8bc9441b70bfa007ec7fa104b5dd5479d3e00ab71223b8a23b4777cad",
+      "diagnosticSourceSha256": "1735f6855bcd607a3df6b8fb3fbecb0d499830f7a9b4d479d50a4e31074bb87c",
+      "cdnHttpStatuses": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "cdnHttpFailureCount": 0
+    },
+    "limits": [
+      "This round verifies CDN delivery and production loader/catalog behavior, not playback of every source or channel.",
+      "The original JAR and .txt alias have identical bytes; no Java/Python behavior or parser parameters changed.",
+      "Migu interface.txt is a valid M3U header with zero channels at the upstream and CDN; changing delivery URLs does not repair upstream content.",
+      "A cctv.json host request initially returned a Fastly TLS routing 421; one later request returned 200 and matched the Git blob.",
+      "Moving playlist and EPG branch URLs retain upstream update behavior and CDN caching; equality is an observation at validation time.",
+      "No paired throughput benchmark was performed; successful CDN use is not a claimed playback speed multiplier.",
+      "The installed sourceprobe APK hash was not re-established in this round.",
+      "Wex global JAR and all four niuma-backed site objects remain byte-for-byte equivalent as configuration values."
+    ]
   }
 }
