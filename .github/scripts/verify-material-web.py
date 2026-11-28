@@ -358,6 +358,146 @@ class MaterialWebTest(unittest.TestCase):
         self.assertGreater(requests[0]["bytes"], 30)
 
 
+    def open_logs(self):
+        state = {"running": False, "postStatus": 200, "getStatus": 200, "deleteStatus": 200, "gets": 0,
+                 "lines": [{"seq": 1, "text": "11-28 10:00:00.000 123 124 I Player: ready"},
+                           {"seq": 2, "text": "11-28 10:00:01.000 123 124 E Player: <img src=x onerror=window.__injected=1>"}]}
+
+        def route_log(route):
+            method = route.request.method
+            status = state[{"POST": "postStatus", "GET": "getStatus", "DELETE": "deleteStatus"}[method]]
+            if status != 200:
+                return route.fulfill(status=status, body="Fixture failure")
+            if method == "POST":
+                self.assertEqual("application/json", route.request.headers.get("content-type"))
+                state["running"] = True
+                body = {"code": "ABCDEFGH"}
+            else:
+                self.assertEqual("ABCDEFGH", route.request.headers.get("x-log-code"))
+                if not state["running"]:
+                    return route.fulfill(status=410, body="Ended")
+                if method == "DELETE":
+                    state["running"] = False
+                    body = {}
+                else:
+                    state["gets"] += 1
+                    after = int(parse_qs(urlsplit(route.request.url).query).get("after", ["0"])[0])
+                    entries = [line for line in state["lines"] if line["seq"] > after][:200]
+                    next_cursor = entries[-1]["seq"] if entries else after
+                    body = {"lines": entries, "next": next_cursor, "backlog": False, "gap": False, "remainingMillis": 3599000}
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+
+        self.page.route("**/log?*", route_log)
+        self.page.route("**/log", route_log)
+        self.panel(4)
+        self.page.locator("#logs-link").click()
+        expect(self.page.locator("#log-text")).to_contain_text("Player: ready")
+        return state
+
+    def test_logs_filter_pause_export_clear_and_stop(self):
+        state = self.open_logs()
+        self.assertIsNone(self.page.evaluate("window.__injected"))
+        self.page.locator("#log-level").select_option("E")
+        expect(self.page.locator("#log-text")).not_to_contain_text("Player: ready")
+        with self.page.expect_download() as download:
+            self.page.locator("#log-download").click()
+        content = Path(download.value.path()).read_text()
+        self.assertIn("Player: ready", content, "Download includes retained logs outside the filter")
+        self.assertIn("<img", content)
+        self.page.locator("#log-level").select_option("")
+        self.page.locator("#log-pause").click()
+        state["lines"].append({"seq": 3, "text": "11-28 10:00:02.000 123 124 W Player: buffering"})
+        expect(self.page.locator("#log-count")).to_have_text("保留 3 条")
+        expect(self.page.locator("#log-text")).not_to_contain_text("buffering")
+        self.page.locator("#log-pause").click()
+        expect(self.page.locator("#log-text")).to_contain_text("buffering")
+        self.page.locator("#log-search").fill("BUFFERING")
+        expect(self.page.locator("#log-text")).not_to_contain_text("Player: ready")
+        self.page.locator("#log-clear").click()
+        expect(self.page.locator("#log-count")).to_have_text("保留 0 条")
+        self.page.wait_for_timeout(1200)
+        expect(self.page.locator("#log-text")).to_have_text("暂无日志")
+        expect(self.page.locator("#log-download")).to_be_disabled()
+        self.page.locator("#log-stop").click()
+        expect(self.page.locator("#log-status")).to_have_text("已停止采集")
+        self.assertFalse(state["running"])
+        self.page.locator("#log-retry").click()
+        expect(self.page.locator("#log-status")).to_have_text("正在接收")
+
+    def test_logs_retry_disconnect_expiry_and_failed_stop(self):
+        state = self.open_logs()
+        state["getStatus"] = 503
+        expect(self.page.locator("#log-status")).to_contain_text("正在重试")
+        state["getStatus"] = 200
+        expect(self.page.locator("#log-status")).to_have_text("正在接收")
+        state["deleteStatus"] = 503
+        self.page.locator("#log-stop").click()
+        expect(self.page.locator("#log-status")).to_have_text("停止失败，请重试")
+        self.assertTrue(state["running"])
+        state["deleteStatus"] = 200
+        self.page.locator("#log-stop").click()
+        expect(self.page.locator("#log-status")).to_have_text("已停止采集")
+        state["postStatus"] = 503
+        self.page.locator("#log-retry").click()
+        expect(self.page.locator("#log-status")).to_have_text("连接失败，请重试")
+        state["postStatus"] = 200
+        self.page.locator("#log-retry").click()
+        expect(self.page.locator("#log-status")).to_have_text("正在接收")
+        state["getStatus"] = 410
+        expect(self.page.locator("#log-status")).to_have_text("采集已结束")
+        expect(self.page.locator("#log-download")).to_be_enabled()
+        expect(self.page.locator("#log-retry")).to_be_visible()
+
+    def test_logs_suspend_hidden_page_and_keep_cursor(self):
+        state = self.open_logs()
+        self.page.evaluate("Object.defineProperty(document, 'hidden', {value:true, configurable:true}); document.dispatchEvent(new Event('visibilitychange'))")
+        expect(self.page.locator("#log-status")).to_have_text("已暂停接收")
+        count = state["gets"]
+        self.page.wait_for_timeout(1300)
+        self.assertEqual(count, state["gets"])
+        state["lines"].append({"seq": 3, "text": "11-28 10:00:02.000 123 124 I Player: resumed"})
+        self.page.evaluate("Object.defineProperty(document, 'hidden', {value:false, configurable:true}); document.dispatchEvent(new Event('visibilitychange'))")
+        expect(self.page.locator("#log-count")).to_have_text("保留 3 条")
+        expect(self.page.locator("#log-text")).to_contain_text("resumed")
+
+    def test_logs_bound_buffer_and_reject_invalid_pages(self):
+        self.open_logs()
+        result = self.page.evaluate("""() => {
+            const buffer = new LogBuffer();
+            buffer.append(Array.from({length:6000}, (_, i) => ({seq:i+1, text:'😀'.repeat(100)})));
+            const invalid = [
+                {lines:[{seq:2,text:'x'},{seq:1,text:'y'}], next:1, backlog:false,gap:false,remainingMillis:1},
+                {lines:[],next:2,backlog:true,gap:false,remainingMillis:1},
+                {lines:[{seq:1,text:'x'.repeat(17000)}],next:1,backlog:false,gap:false,remainingMillis:1}
+            ];
+            return {length:buffer.lines.length, bytes:buffer.bytes, trimmed:buffer.trimmed,
+                rejected:invalid.every(page => {try {readLogPage(page); return false;} catch (_) {return true;}})};
+        }""")
+        self.assertLessEqual(result["length"], 5000)
+        self.assertLessEqual(result["bytes"], 512 * 1024)
+        self.assertTrue(result["trimmed"])
+        self.assertTrue(result["rejected"])
+
+    def test_logs_mobile_themes_languages_and_return(self):
+        state = self.open_logs()
+        state["lines"][1]["text"] = "11-28 10:00:01.000 123 124 W Player: waiting for buffer"
+        for language, title in (("zh-CN", "应用日志"), ("zh-TW", "應用日誌"), ("en", "App logs")):
+            for theme in ("light", "dark"):
+                self.page.evaluate("([language,theme]) => {localStorage.setItem('tv-web-language',language); localStorage.setItem('tv-web-theme',theme)}", [language, theme])
+                self.page.reload()
+                expect(self.page.locator("h1")).to_have_text(title)
+                expect(self.page.locator("html")).to_have_attribute("data-theme", theme)
+                expect(self.page.locator("#log-text")).to_contain_text("Player: ready")
+                for width in (320, 375, 768, 1440):
+                    self.page.set_viewport_size({"width": width, "height": 900})
+                    self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), width + 1)
+                    if language == "zh-CN" and width in (375, 1440):
+                        self.page.screenshot(path=str(OUTPUT / ("logs-" + str(width) + "-" + theme + ".png")), full_page=True)
+        self.page.locator(".logs-header a").click()
+        expect(self.page.locator("#panel4")).to_be_visible()
+        expect(self.page.locator("#logs-link")).to_have_text("App logs")
+
+
 def main():
     global OUTPUT
     parser = argparse.ArgumentParser()

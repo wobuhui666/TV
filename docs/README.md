@@ -14,6 +14,7 @@
 | 直播与节目单 | [LIVE](LIVE.md) |
 | 直播时移与回看 | [源配置、播放与控制](live-timeshift.md) |
 | 本地服务与接口 | [LOCAL](LOCAL.md) |
+| 手机网页、遥控与应用日志 | [大屏伴侣网页](web-companion.md) |
 | 爬虫接口 | [SPIDER](SPIDER.md) · [新旧接口兼容](spider-api-compatibility.md) |
 | WASM 来源 | [模块调用、内存、导入函数及资源生命周期](spider-wasm.md) |
 | 源登录与交互表单 | [弹窗接口与任务生命周期](spider-dialogs.md) |
@@ -29,6 +30,7 @@
 
 | 主题 | 从这里开始 |
 | --- | --- |
+| 网页日志与图标对齐 | [2026-11-28 验证、浏览器截图与覆盖限制](testing/reports/2026-11-28-web-logs/README.md) |
 | 合并发布与按钮居中 | [Release 195 合并后验证、固定尺寸按钮内容居中的前后对照](testing/reports/2026-11-24-integrated-release/README.md) |
 | 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配、搜索复用与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
 | 首页栏目完整筛选 | [完整片库、综艺／节目性质与 TMDB 真实内容验证](testing/reports/2026-11-22-home-wall-filters/README.md) |
@@ -68,7 +70,7 @@
 - [历史记录与来源清单](archive/local-notes-20261006/README.md)：旧 UI 方案、接续记录、调查与重复文档的去向。
 - [归档索引](archive/README.md)：旧 AISkip 实现、已完成开发计划及历史源码参考。
 - [FongMi 5.8.5 历史评估](upstream-5.8.5-review.md)：保留当时建议，并补充实际合入状态；不是待办清单。
-- [FongMi 5.8.7 稳定性适配](upstream-5.8.7-review.md)：2026-11-06 的播放、投屏、选集和目录筛选同步范围及验证入口。
+- [FongMi 5.8.7 稳定性适配](upstream-5.8.7-review.md)：2026-11-06 的稳定性适配及 2026-11-28 对 5.9.0 的复查范围。
 - [完整备份分支](https://github.com/wobuhui666/TV/tree/docs/local-notes-backup-20261006)：保留早先未整理快照，供追溯原路径。
 
 本次归档覆盖已有备份、五个本机导出实测目录的更新，以及 `/data` 下五个 TV 相关目录。仅收录文档、公开验证摘要和经过查看的说明图片；APK、私有配置、凭据及原始私有日志不放入文档目录。来源、读取时间、脱敏记录、校验值和未收录链接见 [IMPORTS.json](archive/local-notes-20261006/IMPORTS.json)。

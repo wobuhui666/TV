@@ -130,16 +130,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .orbit { position: absolute; border-radius: 50%; background: var(--hero-strong); }
 .orbit-one { width: 190px; height: 190px; top: 10px; left: 20px; opacity: .55; }
 .orbit-two { width: 148px; height: 148px; right: 7px; bottom: 5px; border: 1px solid var(--primary); opacity: .16; background: transparent; }
-.illustration-screen { position: absolute; top: 47px; left: 10px; width: 174px; height: 122px; transform: rotate(-8deg); border-radius: 20px; background: #514064; border: 7px solid #8c759c; box-shadow: 12px 17px 0 rgb(90 65 118 / 10%); overflow: hidden; }
+.illustration-screen { position: absolute; top: 47px; left: 10px; width: 174px; height: 122px; border-radius: 20px; background: #514064; border: 7px solid #8c759c; box-shadow: 12px 17px 0 rgb(90 65 118 / 10%); overflow: hidden; }
 .screen-shine { position: absolute; width: 145px; height: 180px; border-radius: 50%; transform: rotate(25deg); left: -30px; top: -60px; background: rgb(219 186 242 / 9%); }
 .screen-play { position: absolute; display: grid; place-items: center; width: 41px; height: 41px; border-radius: 15px; top: 20px; left: 60px; background: #e9d9f3; color: #514064; }
 .screen-play .icon { width: 19px; height: 19px; fill: currentColor; stroke-width: 0; margin-left: 2px; }
 .screen-lines { position: absolute; left: 15px; right: 15px; bottom: 14px; display: grid; gap: 5px; }
 .screen-lines span { background: rgb(255 255 255 / 18%); height: 4px; width: 62px; border-radius: 8px; }
 .screen-lines span:last-child { width: 39px; opacity: .5; }
-.illustration-sparkle { position: absolute; top: 13px; right: 18px; color: var(--primary); transform: rotate(12deg); }
+.illustration-sparkle { position: absolute; top: 13px; right: 18px; color: var(--primary); }
 .illustration-sparkle .icon { width: 28px; height: 28px; }
-.illustration-chip { display: grid; place-items: center; position: absolute; bottom: 18px; right: 23px; background: var(--surface); color: var(--primary); width: 49px; height: 49px; border-radius: 18px; transform: rotate(8deg); box-shadow: var(--shadow); }
+.illustration-chip { display: grid; place-items: center; position: absolute; bottom: 18px; right: 23px; background: var(--surface); color: var(--primary); width: 49px; height: 49px; border-radius: 18px; box-shadow: var(--shadow); }
 .hero-form { position: relative; z-index: 2; margin-top: 31px; }
 .search-field { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 21px; min-height: 65px; padding: 7px 8px 7px 20px; box-shadow: 0 4px 20px rgb(40 25 60 / 3%); }
 .search-field > .icon { width: 21px; height: 21px; color: var(--muted); }
@@ -206,9 +206,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .player-artwork { position: relative; aspect-ratio: 1.55; border-radius: 21px; background: var(--hero); overflow: hidden; }
 .player-artwork > img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .player-placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: var(--primary); position: relative; overflow: hidden; }
-.player-placeholder > .icon { width: 51px; height: 51px; stroke-width: 1.15; position: relative; z-index: 1; transform: rotate(-6deg); }
+.player-placeholder > .icon { width: 51px; height: 51px; stroke-width: 1.15; position: relative; z-index: 1; }
 .player-orbit { position: absolute; background: var(--hero-strong); width: 128px; height: 128px; border-radius: 36% 64% 60% 40% / 58% 36% 64% 42%; transform: rotate(25deg); opacity: .65; }
-.player-star { position: absolute; left: 47px; top: 29px; opacity: .6; transform: rotate(16deg); }
+.player-star { position: absolute; left: 47px; top: 29px; opacity: .6; }
 .player-star .icon { width: 17px; height: 17px; }
 .speed-chip { position: absolute; bottom: 10px; right: 10px; background: rgb(42 30 53 / 75%); color: #fff; padding: 2px 7px; border-radius: 8px; font-size: 10px; }
 .player-description { margin: 20px 0 17px; }
@@ -426,3 +426,8 @@ progress::-moz-progress-bar { background: var(--primary); border-radius: 8px; }
 :root[lang="en"] .hero-description { max-width: 330px; }
 :root[lang="en"] .form-title { font-size: 35px; }
 @media (max-width: 720px) { .preferences { gap: 7px; } .remote-launch { width: 31px; height: 32px; } .remote-launch .icon { width: 17px; height: 17px; } .preference-select select { max-width: 74px; } :root[lang="en"] .hero-title { font-size: 34px; } :root[lang="en"] .hero-copy { width: 83%; } :root[lang="en"] .hero-description { max-width: 245px; } :root[lang="en"] .hero-card { min-height: 365px; } :root[lang="en"] .form-title { font-size: 31px; } }
+
+/* Fixed-size icon controls must not inherit platform button padding. */
+.icon-button, .play-button, .remote-key { padding: 0; line-height: 1; }
+.settings-tools { margin-top: 18px; }
+.settings-tools a { text-decoration: none; }
