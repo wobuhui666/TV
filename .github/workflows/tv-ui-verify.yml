@@ -5,6 +5,10 @@ on:
     branches: ['feat/tv-touch-light-theme', 'feat/tv-touch-light-theme-issue77', 'fix/home-history-order-touch']
   workflow_dispatch:
     inputs:
+      playback_speed:
+        description: Verify the TV speed toolbar with touch, remote input and screenshots
+        type: boolean
+        default: false
       launcher_banner:
         description: Verify localized launcher cards through PackageManager on API 24 and 34
         type: boolean
@@ -391,6 +395,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Prepare emulator checks
         env:
+          TV_PLAYBACK_SPEED: ${{ inputs.playback_speed }}
           TV_LIBRARY_DETAIL_HANDOFF: ${{ inputs.library_detail_handoff }}
           TV_AIRING_CALENDAR: ${{ inputs.airing_calendar }}
           TV_LAUNCHER_BANNER: ${{ inputs.launcher_banner }}
@@ -409,7 +414,22 @@ jobs:
         run: |
           cat > "$RUNNER_TEMP/verify-tv-home.sh" <<'VERIFY'
           set -euo pipefail
-          if [ "$TV_LIBRARY_DETAIL_HANDOFF" = 'true' ]; then
+          if [ "$TV_PLAYBACK_SPEED" = 'true' ]; then
+            python3 - <<'PYINSTALL'
+          import json, pathlib, subprocess
+          for root in ('app/build/outputs/apk/leanbackArm64_v8a/preview',
+                       'app/build/outputs/apk/androidTest/leanbackArm64_v8a/preview'):
+              directory = pathlib.Path(root)
+              data = json.loads((directory / 'output-metadata.json').read_text())
+              assert len(data['elements']) == 1
+              subprocess.run(['adb', 'install', '-r', str(directory / data['elements'][0]['outputFile'])], check=True)
+          PYINSTALL
+            adb shell wm size 1920x1080
+            adb shell wm density 320
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
+              com.fongmi.android.tv.test.PlaybackSpeedToolbarTest artifacts/playback-speed '1'
+          elif [ "$TV_LIBRARY_DETAIL_HANDOFF" = 'true' ]; then
             bash .github/scripts/verify-library-detail-handoff.sh
           elif [ "$TV_AIRING_CALENDAR" = 'true' ]; then
             bash .github/scripts/verify-airing-calendar.sh "$TV_EMULATOR_API"
@@ -769,6 +789,7 @@ jobs:
       - name: Verify themes and touch on emulator
         timeout-minutes: ${{ inputs.airing_calendar && 25 || inputs.home_background && 20 || 40 }}
         env:
+          TV_PLAYBACK_SPEED: ${{ inputs.playback_speed }}
           TV_LIBRARY_DETAIL_HANDOFF: ${{ inputs.library_detail_handoff }}
           TV_AIRING_CALENDAR: ${{ inputs.airing_calendar }}
           TV_LAUNCHER_BANNER: ${{ inputs.launcher_banner }}
@@ -848,6 +869,7 @@ jobs:
             artifacts/upstream-features/
             artifacts/playback-specs/
             artifacts/playback-clock/
+            artifacts/playback-speed/
             artifacts/compact-home/
             artifacts/library-native-probe/
             artifacts/library-detail-handoff/
