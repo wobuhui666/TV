@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="referrer" content="no-referrer">
+    <title>应用日志</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/ui.css">
+    <link rel="stylesheet" href="css/logs.css">
+    <script src="js/logs.js" defer></script>
+</head>
+<body>
+    <main class="logs-app">
+        <header class="logs-header">
+            <h1 data-i18n="logTitle">应用日志</h1>
+            <a class="button button-tonal" href="/?tab=4" data-i18n="logBack">返回设置</a>
+        </header>
+        <section class="logs-card logs-status-bar" aria-label="采集状态" data-i18n-aria="logStatus">
+            <p id="log-status" role="status" aria-live="polite"></p>
+            <span id="log-remaining"></span>
+            <button id="log-stop" class="button button-tonal" type="button" data-i18n="logStop" hidden>停止采集</button>
+            <button id="log-retry" class="button button-filled" type="button" data-i18n="logRestart" hidden>重新采集</button>
+        </section>
+        <section class="logs-card logs-viewer" aria-labelledby="log-content-heading">
+            <div class="logs-heading">
+                <h2 id="log-content-heading" data-i18n="logContent">日志内容</h2>
+                <label class="logs-follow"><input id="log-follow" type="checkbox" checked><span data-i18n="logFollow">跟随最新</span></label>
+            </div>
+            <div class="logs-filters">
+                <label><span class="field-label" data-i18n="logSearch">搜索文字</span><input id="log-search" class="outlined-input" type="search" autocomplete="off" spellcheck="false"></label>
+                <label><span class="field-label" data-i18n="logLevel">级别</span><select id="log-level" class="outlined-input"><option value="" data-i18n="logAll">全部</option><option>V</option><option>D</option><option>I</option><option>W</option><option>E</option><option>F</option></select></label>
+            </div>
+            <div class="logs-toolbar">
+                <button id="log-pause" class="button button-tonal" type="button" aria-pressed="false" data-i18n="logPause">暂停显示</button>
+                <button id="log-clear" class="button button-tonal" type="button" data-i18n="logClear">清空本页</button>
+                <button id="log-download" class="button button-filled" type="button" data-i18n="logDownload" disabled>下载日志</button>
+                <button id="log-share" class="button button-tonal" type="button" data-i18n="logShare" disabled>分享日志</button>
+            </div>
+            <p id="log-gap" class="logs-hint" data-i18n="logGap" hidden>部分较早的日志已移除。</p>
+            <p id="log-export-status" class="logs-hint" role="status" hidden></p>
+            <pre id="log-text" class="logs-text" tabindex="0" aria-labelledby="log-content-heading"></pre>
+            <p id="log-count" class="logs-hint"></p>
+        </section>
+        <p class="logs-hint" data-i18n="logHint">仅采集当前应用进程的日志，最长一小时。暂停显示或离开网页不会停止采集，请使用“停止采集”。下载和分享包含本页保留的全部日志。</p>
+    </main>
+</body>
+</html>

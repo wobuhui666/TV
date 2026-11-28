@@ -226,6 +226,8 @@ The TV app can act as a DLNA renderer for compatible senders, with discovery, pl
 
 Local files and media push share the existing playback flow. Local and HTTP STRM pointers can resolve a media URL, including the bounded no-filename-header HTTP path; failed or non-pointer responses keep the original source fallback. The local-network service also accepts media, subtitle, and danmaku input and exposes documented playback commands. See [LOCAL.md](docs/LOCAL.md).
 
+The bundled [web companion](docs/web-companion.md) supports search, push, playback controls, remote keys and file management. Open **Settings → App logs** for live logs, text/level filters, pause display, download and sharing. Capture lasts up to one hour; use **Stop capture** to end it. The page follows the companion’s light/dark theme and Simplified Chinese, Traditional Chinese or English preference.
+
 The mobile player additionally offers gesture seeking and temporary speed, rotation/orientation locking, and Android picture-in-picture where the OS permits it.
 
 ## Watch together, backup, and sync

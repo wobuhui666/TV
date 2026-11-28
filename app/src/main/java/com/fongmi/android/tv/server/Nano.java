@@ -7,6 +7,7 @@ import com.fongmi.android.tv.server.process.Action;
 import com.fongmi.android.tv.server.process.Cache;
 import com.fongmi.android.tv.server.process.Diagnostics;
 import com.fongmi.android.tv.server.process.Local;
+import com.fongmi.android.tv.server.process.Log;
 import com.fongmi.android.tv.server.process.Media;
 import com.fongmi.android.tv.server.process.Parse;
 import com.fongmi.android.tv.server.process.Proxy;
@@ -40,6 +41,7 @@ public class Nano extends NanoHTTPD {
         process.add(new RemoteKey());
         process.add(new Cache());
         process.add(new Local());
+        process.add(new Log());
         process.add(new Media());
         process.add(new Parse());
         process.add(new Proxy());
@@ -71,6 +73,12 @@ public class Nano extends NanoHTTPD {
         if (url.startsWith("/device")) return ok(Device.get().toString());
         for (Process process : process) if (process.isRequest(session, url)) return process.doResponse(session, url, files);
         return getAssets(url.substring(1));
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        LogSession.get().stop();
     }
 
     private void parse(IHTTPSession session, Map<String, String> files) {

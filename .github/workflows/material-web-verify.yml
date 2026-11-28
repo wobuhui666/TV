@@ -46,7 +46,7 @@ jobs:
           retention-days: 14
 
   android:
-    name: Android API 34 QR and remote verification
+    name: Android API 34 logs, QR and remote verification
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -106,6 +106,13 @@ jobs:
           }
           GRADLE
           chmod +x gradlew
+      - name: Run focused server unit tests
+        run: |
+          ./gradlew -I "$RUNNER_TEMP/material-web-sdk.init.gradle" \
+            :app:testLeanbackArm64_v8aDebugUnitTest \
+            --tests 'com.fongmi.android.tv.server.LogSessionTest' \
+            --tests 'com.fongmi.android.tv.server.process.DiagnosticsTest' \
+            --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Build isolated preview and run application unit tests
         run: |
           ./gradlew -I "$RUNNER_TEMP/material-web-sdk.init.gradle" \
@@ -143,10 +150,10 @@ jobs:
           # The disposable Pixel launcher can retain a boot-time ANR dialog and steal app focus.
           adb shell am force-stop com.google.android.apps.nexuslauncher
           UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
-            'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest' \
-            artifacts/material-web-android '8,8'
+            'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest,com.fongmi.android.tv.server.LogSessionAndroidTest' \
+            artifacts/material-web-android '8,8,1'
           VERIFY
-      - name: Verify QR themes and remote keys on Android API 34
+      - name: Verify logs, QR themes and remote keys on Android API 34
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
