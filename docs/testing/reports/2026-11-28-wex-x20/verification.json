@@ -9,7 +9,10 @@
       "huya",
       "yy"
     ],
-    "configSitesTotal": 104
+    "configSitesTotal": 124,
+    "currentOfficialWexSources": 94,
+    "currentIndependentSources": 30,
+    "playbackObservationScopeUnchanged": true
   },
   "device": {
     "model": "X20",
@@ -47,6 +50,12 @@
     "pythonGame": {
       "repository": "zhhshss/tv-python-sources",
       "commit": "6a4cac899912733ce536dcc05196f9ee94235654"
+    },
+    "wexMain": {
+      "url": "http://oss4liview.moji.com/thd_file/2026/11/27/0213f017ffc1b0ffc289883771ca2c5a.jpg",
+      "md5": "231915407140da7d4319728bf4266174",
+      "sha256": "1688386d2e21a75f3f086b3680df7cbd7e838714804f3182b8bfd64e9fbb4531",
+      "bytes": 1049718
     }
   },
   "migration": {
@@ -12875,7 +12884,9 @@
     "latestConcurrencyEnabledSources": [
       "Kazumi_mgnacg"
     ],
-    "latestJarFullSourceSweep": false
+    "latestJarFullSourceSweep": false,
+    "latestWexConfigurationClassCheckCount": 94,
+    "latestWexPlaybackSweep": false
   },
   "sourceTestsAreObservations": true,
   "harnessCorrections": [
@@ -46865,5 +46876,675 @@
         "ruleCommit": "64ea35976c383a3a760eb23d744fcada076317ee"
       }
     }
-  ]
+  ],
+  "wexOfficialConfigurationUpdate": {
+    "schema": "tv.wex-upstream-migration.v1",
+    "upstreamUrl": "https://9280.kstore.vip/aiwex.json",
+    "upstreamSha256": "61cd2afded0c2d87d0e1635cdb4939cc502c25b64caa2064e82f5d457fa55972",
+    "beforeSha256": "a8b1f4185cd713c5b3af53b033f3011b44d17f992b4efe6645682c4129b040d8",
+    "afterSha256": "f640044cff4b597fdec8ffd40ceda1e801c67eaf5ab6a5dca0089a0c420f70f2",
+    "beforeSites": 104,
+    "afterSites": 124,
+    "oldWexCount": 74,
+    "latestWexCount": 94,
+    "preservedCustomSources": [
+      "mgtv",
+      "iqiyi",
+      "tencent",
+      "youku",
+      "哔哩视频",
+      "rr",
+      "PPTV",
+      "fx",
+      "冠军",
+      "gz",
+      "cbh",
+      "feifan",
+      "ciallo_girigiri",
+      "ciallo_sorani",
+      "Kazumi_7sefun",
+      "Kazumi_AGE",
+      "Kazumi_akianime",
+      "Kazumi_baimao",
+      "Kazumi_dalvdm",
+      "Kazumi_DM84",
+      "Kazumi_ezdmw",
+      "Kazumi_mgnacg",
+      "Kazumi_moonci",
+      "Kazumi_mutefun",
+      "Kazumi_MXdm",
+      "Kazumi_xfdmnext",
+      "py_game_live_20261107",
+      "migu_tv",
+      "薯片",
+      "acfun"
+    ],
+    "removed": [
+      {
+        "key": "Wexokconfig",
+        "name": "影视专用｜配置中心",
+        "api": "csp_WexokconfigGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "二小",
+        "name": "指南｜4K",
+        "api": "csp_AiNewXiaoPanGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "NewZhiZhen",
+        "name": "至臻｜4K",
+        "api": "csp_AiNewZhiZhenGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "AiNewPanLian",
+        "name": "盘链｜4K",
+        "api": "csp_AiNewPanLianGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "Wexnullname",
+        "name": "无名｜4K",
+        "api": "csp_WexnullnameGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "WexshuangzixingGuard",
+        "name": "双星｜4K",
+        "api": "csp_WexshuangzixingGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "Wexpan123ziyuanGuard",
+        "name": "123｜4K",
+        "api": "csp_Wexpan123ziyuanGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "WexAiV6DaShiXiong",
+        "name": "师兄｜秒播",
+        "api": "csp_WexAppV7Guard",
+        "reason": "Renamed to AppV7 | 大师兄"
+      },
+      {
+        "key": "WexAiV6TeGou",
+        "name": "太狗｜秒播",
+        "api": "csp_WexAiV6TeGouGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "AnimeAiMiaoWu",
+        "name": "喵呜｜动漫",
+        "api": "csp_AnimeAiMiaoWuGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "AnimeAiHuazi",
+        "name": "花海｜动漫",
+        "api": "csp_AnimeAiHuaziGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "SoAiQuPanShe",
+        "name": "趣搜｜百度",
+        "api": "csp_SoAiQuPanSheGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "SoHaoSo",
+        "name": "好盘｜综合",
+        "api": "csp_SoHaoSoGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "hongguo",
+        "name": "红果｜短剧",
+        "api": "csp_ShortHG",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "WexkuihuatvGuard",
+        "name": "葵花｜影视",
+        "api": "csp_WexkuihuatvGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "WexbttwoGuard",
+        "name": "大鼻涕｜秒播",
+        "api": "csp_WexbttwoGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "新6V",
+        "name": "新6V｜P2P",
+        "api": "csp_WexXb6vGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "自定义",
+        "name": "全能｜DIY",
+        "api": "csp_WexdiyGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "Wextyso",
+        "name": "给力｜天逸",
+        "api": "csp_WextysoGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "WexbaidusoGuard",
+        "name": "给力｜百度",
+        "api": "csp_WexbaidusoGuard",
+        "reason": "Old Wex main-JAR entry absent from current official configuration"
+      },
+      {
+        "key": "115",
+        "name": "我的｜115",
+        "api": "csp_Wex115shareGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "tianyi",
+        "name": "我的｜天逸",
+        "api": "csp_WexWo189Guard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "夸克",
+        "name": "我的｜夸克",
+        "api": "csp_WexWoquarkpanGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "优熙",
+        "name": "我的｜优熙",
+        "api": "csp_WexWoucpanGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "异动",
+        "name": "我的｜异动",
+        "api": "csp_WexWoydpanGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "WexWo123panGuard",
+        "name": "我的｜123",
+        "api": "csp_WexWo123panGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "xunlei",
+        "name": "我的｜讯蕾",
+        "api": "csp_WexWoXunLeiPanGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      },
+      {
+        "key": "baidu",
+        "name": "我的｜百度",
+        "api": "csp_WexWoBaiduPanGuard",
+        "reason": "Old personal/share drive entry; current upstream uses MyPan and FakeAi115Share"
+      }
+    ],
+    "added": [
+      {
+        "key": "MyPan",
+        "name": "我的｜网盘",
+        "api": "csp_MyPanGuard"
+      },
+      {
+        "key": "花卷",
+        "name": "花卷｜4K",
+        "api": "csp_AiNewHuaJuanGuard"
+      },
+      {
+        "key": "AiNewKuaiYing",
+        "name": "快影｜4K",
+        "api": "csp_AiNewKuaiYingGuard"
+      },
+      {
+        "key": "AiNewLaBi",
+        "name": "蜡笔｜4K",
+        "api": "csp_AiNewLaBiGuard"
+      },
+      {
+        "key": "WexFengYe4K",
+        "name": "小枫｜秒播",
+        "api": "csp_WexFengYe4KGuard"
+      },
+      {
+        "key": "下饭",
+        "name": "下饭｜秒播",
+        "api": "csp_WexAiJuXiaFanGuard"
+      },
+      {
+        "key": "AppV7 | 大师兄",
+        "name": "师兄｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "AppV7 | 粉猪追剧",
+        "name": "粉猪｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "AppV7 | 追剧达人",
+        "name": "追剧｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "AppV7 | 小柚子",
+        "name": "柚子｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "AppV7 | 蒙太奇",
+        "name": "太奇｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "AppV7 | 小黄人",
+        "name": "黄人｜秒播",
+        "api": "csp_WexAppV7Guard"
+      },
+      {
+        "key": "LiveAiHuYa",
+        "name": "虎牙｜直播",
+        "api": "csp_LiveAiHuYaGuard"
+      },
+      {
+        "key": "LiveAiDouYu",
+        "name": "斗鱼｜直播",
+        "api": "csp_LiveAiDouYuGuard"
+      },
+      {
+        "key": "LiveAiBiLi",
+        "name": "哔哩｜直播",
+        "api": "csp_LiveAiBiLiGuard"
+      },
+      {
+        "key": "AnimeAiGongHeGuo",
+        "name": "共和｜动漫",
+        "api": "csp_AnimeAiGongHeGuoGuard"
+      },
+      {
+        "key": "BookHongGuo",
+        "name": "小红｜听书",
+        "api": "csp_BookHongGuoGuard"
+      },
+      {
+        "key": "BookHeMa",
+        "name": "小马｜听书",
+        "api": "csp_BookHeMaGuard"
+      },
+      {
+        "key": "BookAiYueTing",
+        "name": "悦庭｜听书",
+        "api": "csp_BookAiYueTingGuard"
+      },
+      {
+        "key": "BookAi23TingShu",
+        "name": "爱上｜听书",
+        "api": "csp_BookAi23TingShuGuard"
+      },
+      {
+        "key": "ChildrenAiBaoBao",
+        "name": "宝宝｜儿歌",
+        "api": "csp_ChildrenAiBaoBaoGuard"
+      },
+      {
+        "key": "ChildrenAiBeiWa",
+        "name": "贝贝｜儿歌",
+        "api": "csp_ChildrenAiBeiWaGuard"
+      },
+      {
+        "key": "ChildrenAiTuTu",
+        "name": "兔兔｜儿歌",
+        "api": "csp_ChildrenAiTuTuGuard"
+      },
+      {
+        "key": "MusicAiTangDou",
+        "name": "跳舞｜教学",
+        "api": "csp_MusicAiTangDouGuard"
+      },
+      {
+        "key": "MusicAiLiYuan",
+        "name": "戏曲｜秒播",
+        "api": "csp_MusicAiLiYuanGuard"
+      },
+      {
+        "key": "MusicAiQingTing",
+        "name": "蜻蜓｜电台",
+        "api": "csp_MusicAiQingTingGuard"
+      },
+      {
+        "key": "MusicAiIKtv",
+        "name": "KTV｜音乐",
+        "api": "csp_MusicAiIKtvGuard"
+      },
+      {
+        "key": "MusicAiKuWoa",
+        "name": "小酷｜音乐",
+        "api": "csp_MusicAiKuWoaGuard"
+      },
+      {
+        "key": "MusicAi163",
+        "name": "易听｜音乐",
+        "api": "csp_MusicAi163Guard"
+      },
+      {
+        "key": "MusicAiKuWo",
+        "name": "酷听｜音乐",
+        "api": "csp_MusicAiKuWoGuard"
+      },
+      {
+        "key": "MusicAiLunHui",
+        "name": "轮回｜舞曲",
+        "api": "csp_MusicAiLunHuiGuard"
+      },
+      {
+        "key": "SportAiFeiQiu",
+        "name": "飞球｜体育",
+        "api": "csp_SportAiFeiQiuGuard"
+      },
+      {
+        "key": "SportAiGuaZi",
+        "name": "瓜子｜体育",
+        "api": "csp_SportAiGuaZiGuard"
+      },
+      {
+        "key": "SportAiKanQiuTong",
+        "name": "球通｜体育",
+        "api": "csp_SportAiKanQiuTongGuard"
+      },
+      {
+        "key": "SportAiKanqiu",
+        "name": "八八｜体育",
+        "api": "csp_SportAiKanqiuGuard"
+      },
+      {
+        "key": "SportAiKaFei",
+        "name": "咖啡｜体育",
+        "api": "csp_SportAiKaFeiGuard"
+      },
+      {
+        "key": "SportAiWwe",
+        "name": "WWE｜体育",
+        "api": "csp_SportAiWweGuard"
+      },
+      {
+        "key": "FakeAi115Share",
+        "name": "115｜分享",
+        "api": "csp_FakeAi115ShareGuard"
+      },
+      {
+        "key": "DiyVod",
+        "name": "Vod｜DIY",
+        "api": "csp_DiyVodGuard"
+      },
+      {
+        "key": "bilibili",
+        "name": "哔哩｜合集",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "bilixiqu",
+        "name": "哔哩｜戏曲",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "biliych",
+        "name": "哔哩｜歌曲",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "少儿教育",
+        "name": "少儿｜教育",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "小学课堂",
+        "name": "小学｜课堂",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "初中课堂",
+        "name": "初中｜课堂",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "高中教育",
+        "name": "高中｜课堂",
+        "api": "csp_BiliGuard"
+      },
+      {
+        "key": "SoKaKa",
+        "name": "卡卡｜综合",
+        "api": "csp_SoKaKaGuard"
+      },
+      {
+        "key": "SoAiQuanPanGuard",
+        "name": "全盘｜综合",
+        "api": "csp_SoAiQuanPanGuard"
+      }
+    ],
+    "updated": [
+      {
+        "key": "ManJuAiHongGuo",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "ManJuAiHuoLong",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "ManJuAiQiMao",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "ManJuAiXiFan",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "ManJuAiHeMa",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "DuanJuAiHaoKan",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "DuanJuAiQiMiao",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "DuanJuAiXingYa",
+        "fields": [
+          "类型"
+        ]
+      },
+      {
+        "key": "DuanJuAiWeiGuan",
+        "fields": [
+          "类型"
+        ]
+      }
+    ],
+    "keyMigration": {
+      "AppV7 | 大师兄": "WexAiV6DaShiXiong"
+    },
+    "oldJarReferencesBefore": 14,
+    "oldJarReferencesAfter": 0,
+    "globalJarChanged": false,
+    "latestWexUsesGlobalJar": true,
+    "upstreamFieldsMatchExceptDisplayNames": true,
+    "newParserReferences": 9,
+    "oldParserReferences": 0,
+    "livesPreserved": true,
+    "liveConfigCount": 6,
+    "otherTopLevelFieldsPreserved": true,
+    "upstreamBannerExcluded": [
+      "Doubanaaaa"
+    ],
+    "checks": {
+      "mainJarEntryClassCoverage": 94,
+      "missingEntryClasses": []
+    },
+    "timestamp": "2026-11-28T13:22:40Z",
+    "putStatus": 204,
+    "readBackVerified": true,
+    "device": {
+      "schema": "tv.wex-config-migration-device.v1",
+      "device": "X20",
+      "sdk": 29,
+      "startedAt": 1795872095024,
+      "status": "passed",
+      "normalAppModified": false,
+      "accountDataRead": false,
+      "loadMs": 1135,
+      "sourceClass": "com.github.catvod.spider.MyPanGuard",
+      "myPanCategories": [
+        {
+          "type_id": "mine:quark",
+          "type_name": "夸克",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:uc",
+          "type_name": "UC",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:baidu",
+          "type_name": "百度",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:pan115",
+          "type_name": "115",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:pan123",
+          "type_name": "123",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:guangya",
+          "type_name": "光鸭",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:thunder",
+          "type_name": "迅雷",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:pan189",
+          "type_name": "天翼",
+          "type_flag": "1"
+        },
+        {
+          "type_id": "mine:pan139",
+          "type_name": "移动",
+          "type_flag": "1"
+        }
+      ],
+      "myPanCategoriesPassed": true,
+      "checkedEntryCount": 94,
+      "missingClasses": [],
+      "mainClassCoveragePassed": true,
+      "configSourceClass": "com.github.catvod.spider.PanConfigGuard",
+      "configCategories": [
+        {
+          "type_id": "settings",
+          "type_name": "综合设置"
+        },
+        {
+          "type_id": "quark",
+          "type_name": "夸克网盘"
+        },
+        {
+          "type_id": "uc",
+          "type_name": "UC网盘"
+        },
+        {
+          "type_id": "baidu",
+          "type_name": "百度网盘"
+        },
+        {
+          "type_id": "pan139",
+          "type_name": "移动网盘"
+        },
+        {
+          "type_id": "thunder",
+          "type_name": "迅雷网盘"
+        },
+        {
+          "type_id": "guangya",
+          "type_name": "光鸭网盘"
+        },
+        {
+          "type_id": "pan123",
+          "type_name": "123网盘"
+        },
+        {
+          "type_id": "pan115",
+          "type_name": "115网盘"
+        },
+        {
+          "type_id": "pan189",
+          "type_name": "天翼网盘"
+        },
+        {
+          "type_id": "bili",
+          "type_name": "哔哩设置"
+        },
+        {
+          "type_id": "diy",
+          "type_name": "DIY服务"
+        }
+      ],
+      "finishedAt": 1795872096351,
+      "package": "com.fongmi.android.tv.sourceprobe",
+      "versionName": "5.8.7",
+      "apkSha256": null,
+      "appSourceCommit": null,
+      "apkHashVerification": "Installed APK hash request exceeded 30 seconds; exact application build is not claimed. Prior playback reports retain their recorded APK provenance.",
+      "mainJarLoading": "Official public URL with configured MD5 via production BaseLoader",
+      "probeSha256": "81dab169c52236b7090ca91d3e28c123d4bf9f999616c1c65eaf8ace7977822e"
+    },
+    "mainJar": {
+      "url": "http://oss4liview.moji.com/thd_file/2026/11/27/0213f017ffc1b0ffc289883771ca2c5a.jpg",
+      "md5": "231915407140da7d4319728bf4266174",
+      "sha256": "1688386d2e21a75f3f086b3680df7cbd7e838714804f3182b8bfd64e9fbb4531",
+      "bytes": 1049718
+    },
+    "officialDistinctEntryClasses": 83,
+    "limits": [
+      "Configuration migration and class compatibility were verified. This is not a playback sweep of all 94 official sources.",
+      "MyPan category enumeration does not require account login. Account folders, credentials, playback permissions and personal media were not queried.",
+      "The original 30 independent parser/JavaScript/Python/custom-JAR sources and six live configurations were preserved byte-for-value.",
+      "Official display labels were normalized to the existing plain style; the duplicate update-date Douban banner was omitted.",
+      "The former WexAiV6DaShiXiong entry now uses the official AppV7 | 大师兄 key and matching ext. Favorites or history referring to removed keys may need reselection.",
+      "Old ShortHG had no class in the current main JAR and was absent from the official configuration; that obsolete entry was removed with the other main-JAR entries."
+    ]
+  }
 }
