@@ -1,0 +1,62 @@
+{
+  "commit": "7d835a41be6db10d706950774d387df0017b9248",
+  "run": "https://github.com/wobuhui666/TV/actions/runs/46157574933",
+  "passed": true,
+  "browser": {
+    "existing": 18,
+    "accounts": 6
+  },
+  "units": {
+    "testLeanbackArm64_v8aDebugUnitTest": {
+      "classes": 4,
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "testLeanbackArm64_v8aPreviewUnitTest": {
+      "classes": 174,
+      "tests": 1385,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "android": {
+    "headSha": "7d835a41be6db10d706950774d387df0017b9248",
+    "passed": true,
+    "suites": [
+      {
+        "class": "com.fongmi.android.tv.ui.QrThemeAndroidTest",
+        "passed": true,
+        "tests": 8,
+        "expectedTests": 8
+      },
+      {
+        "class": "com.fongmi.android.tv.server.RemoteKeyAndroidTest",
+        "passed": true,
+        "tests": 8,
+        "expectedTests": 8
+      },
+      {
+        "class": "com.fongmi.android.tv.server.LogSessionAndroidTest",
+        "passed": true,
+        "tests": 1,
+        "expectedTests": 1
+      },
+      {
+        "class": "com.fongmi.android.tv.ui.CalendarAccountPhoneAndroidTest",
+        "passed": true,
+        "tests": 3,
+        "expectedTests": 3
+      }
+    ],
+    "passedTests": 20
+  },
+  "coverageLimits": [
+    "Controlled HTTP responses, no real Bangumi account",
+    "Android API 34 x86_64 preview host; no physical TV or iOS Safari",
+    "No nonempty collection or real refreshed calendar validation",
+    "Full lint not run"
+  ]
+}
