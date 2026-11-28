@@ -12,7 +12,7 @@ import sys
 import zipfile
 
 
-def activity_fields(data):
+def activity_fields(data, target='Lcom/fongmi/android/tv/ui/activity/VideoActivity;'):
     def u32(offset):
         return struct.unpack_from('<I', data, offset)[0]
 
@@ -35,7 +35,7 @@ def activity_fields(data):
     field_ids = [struct.unpack_from('<HHI', data, u32(84) + 8 * i) for i in range(u32(80))]
     for i in range(u32(96)):
         values = struct.unpack_from('<8I', data, u32(100) + i * 32)
-        if types[values[0]] != 'Lcom/fongmi/android/tv/ui/activity/VideoActivity;':
+        if types[values[0]] != target:
             continue
         offset = values[6]
         counts = []
@@ -111,6 +111,23 @@ if mode == 'minified':
                  'Lcom/fongmi/android/tv/model/VideoViewModel;',
                  'Lcom/fongmi/android/tv/playback/vod/VodPlaybackController;'}
     assert not (old_types & {field['type'] for field in fields}), 'Playback class names were kept'
+    # The native bridge uses FindClass for these names; Java reachability alone
+    # does not protect them. The X20 MPV startup exposed this missing JNI ABI.
+    nodes = ('', '$None', '$StringNode', '$BooleanNode', '$IntNode', '$DoubleNode', '$ArrayNode', '$MapNode')
+    mapping_classes = set()
+    for line in mapping.open():
+        if line.startswith('is.xyz.mpv.MPVNode') and ' -> ' in line:
+            original, renamed = line.strip().removesuffix(':').split(' -> ')
+            if original == renamed:
+                mapping_classes.add(original)
+    assert all('is.xyz.mpv.MPVNode' + node in mapping_classes for node in nodes), 'MPV JNI node class renamed or removed'
+    with zipfile.ZipFile(source) as archive:
+        dex_files = [archive.read(name) for name in archive.namelist() if re.fullmatch(r'classes\d*\.dex', name)]
+    for node in nodes[2:]:
+        target = 'Lis/xyz/mpv/MPVNode' + node + ';'
+        node_fields = next((found for dex in dex_files if (found := activity_fields(dex, target)) is not None), None)
+        assert node_fields is not None and any(field['name'] == 'value' for field in node_fields), 'MPV JNI value field missing: ' + node
+    metadata['mpvNodeJniNamesVerified'] = True
     metadata['mappingSha256'] = hashlib.sha256(mapping.read_bytes()).hexdigest()
 (output / (mode + '.json')).write_text(json.dumps(metadata, indent=2) + '\n')
 print(json.dumps(metadata, indent=2))

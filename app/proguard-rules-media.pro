@@ -33,6 +33,11 @@
 
 -keep class is.xyz.mpv.MPVLib { *; }
 
+# The MPV JNI bridge resolves node subclasses, constructors, value fields and
+# None.INSTANCE by their literal names (third_party/mpv/bridge/jni_utils.cpp).
+-keep class is.xyz.mpv.MPVNode { *; }
+-keep class is.xyz.mpv.MPVNode$* { *; }
+
 -keep class androidx.media3.decoder.VideoDecoderOutputBuffer { *; }
 -keep class androidx.media3.decoder.DecoderInputBuffer { *; }
 -keep class androidx.media3.decoder.av1.Dav1dDecoder { *; }
