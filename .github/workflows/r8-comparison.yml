@@ -1,0 +1,157 @@
+name: Build and smoke test R8 comparison APKs
+
+# Temporary experiment: both APKs use the same source, package, signing key and resources.
+on:
+  push:
+    branches: ['verify/r8-x20-20261128']
+    paths:
+      - app/**
+      - .github/workflows/r8-comparison.yml
+      - .github/scripts/r8-*.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r8-comparison-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      MEDIA3_SOURCE_DIR: ${{ github.workspace }}/.media3
+      R8_APPLICATION_ID: com.fongmi.android.tv.r8test
+      TV_VERSION_CODE: '2099999999'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Free space for both release builds and the emulator
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/swift /opt/hostedtoolcache/CodeQL
+          df -h "$GITHUB_WORKSPACE"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: 'platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;29.0.14206865 cmake;3.22.1'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - uses: actions/checkout@v4
+        with:
+          repository: wobuhui666/media
+          ref: 342f6590e02ac390e0bd6b4488b8a1bff55747c1
+          path: .media3
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare identical release configurations
+        run: |
+          echo "TV_VERSION_NAME=5.8.7-r8.${GITHUB_SHA::10}" >> "$GITHUB_ENV"
+          printf 'toolchainVersion=21\n' > gradle/gradle-daemon-jvm.properties
+          cp .github/media3-composite-settings.gradle.kts .media3/settings.gradle.kts
+          cat > "$RUNNER_TEMP/tv-r8.init.gradle" <<'GRADLE'
+          def minify = System.getenv('R8_MINIFY')
+          if (!(minify in ['true', 'false'])) throw new GradleException('R8_MINIFY must be true or false')
+          gradle.beforeProject { p ->
+              ['com.android.application', 'com.android.library'].each { pluginId ->
+                  p.pluginManager.withPlugin(pluginId) {
+                      p.extensions.getByName('androidComponents').finalizeDsl { dsl ->
+                          if (dsl.compileSdk == 37) dsl.compileSdkMinor = 0
+                          if (p.path == ':app' && pluginId == 'com.android.application') {
+                              dsl.buildTypes.getByName('release').minifyEnabled = minify.toBoolean()
+                              dsl.buildTypes.getByName('release').shrinkResources = false
+                          }
+                      }
+                  }
+              }
+          }
+          GRADLE
+          test ! -e app/src/release/AndroidManifest.xml
+          mkdir -p app/src/release
+          cat > app/src/release/AndroidManifest.xml <<'XML'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              <application>
+                  <profileable android:shell="true" tools:targetApi="q" />
+              </application>
+          </manifest>
+          XML
+          chmod +x gradlew
+
+      - name: Restore comparison signing key
+        id: signing
+        uses: actions/cache@v4
+        with:
+          path: .r8-signing
+          key: r8-comparison-signing-v1
+      - name: Create comparison signing key
+        if: steps.signing.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .r8-signing
+          keytool -genkeypair -keystore .r8-signing/test.jks -storetype PKCS12 \
+            -storepass android -keypass android -alias test \
+            -dname 'CN=TV R8 comparison,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 3650
+      - name: Configure test signing
+        run: |
+          test ! -f local.properties
+          cat > local.properties <<PROPERTIES
+          storeFile=$GITHUB_WORKSPACE/.r8-signing/test.jks
+          keyAlias=test
+          keyPassword=android
+          storePassword=android
+          PROPERTIES
+
+      - name: Build baseline and minified ARM64 release APKs
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          TRAKT_CLIENT_ID: ${{ vars.TRAKT_CLIENT_ID || secrets.TRAKT_CLIENT_ID }}
+          ASSRT_API_TOKEN: ${{ secrets.ASSRT_API_TOKEN }}
+          TMDB_LOGO_SIZE: ${{ vars.TMDB_LOGO_SIZE }}
+        run: |
+          mkdir -p artifacts/r8-comparison
+          for mode in baseline minified; do
+            if [ "$mode" = minified ]; then export R8_MINIFY=true; else export R8_MINIFY=false; fi
+            ./gradlew -I "$RUNNER_TEMP/tv-r8.init.gradle" -PtvApplicationId="$R8_APPLICATION_ID" \
+              :app:assembleLeanbackArm64_v8aRelease --no-daemon --build-cache --max-workers=2 --console=plain
+            python3 .github/scripts/r8-collect.py "$mode"
+          done
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify cold startup and in-place R8 upgrade
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: false
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: python3 .github/scripts/r8-smoke.py
+      - name: Upload APKs, mapping and verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-comparison-${{ github.run_id }}
+          path: |
+            artifacts/r8-comparison/
+            app/build/outputs/mapping/leanbackArm64_v8aRelease/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0

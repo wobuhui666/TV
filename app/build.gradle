@@ -138,7 +138,7 @@ android {
             matchingFallbacks = ['debug']
         }
         release {
-            minifyEnabled = false
+            minifyEnabled = true
             shrinkResources = false
             signingConfig = signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-media.pro'
