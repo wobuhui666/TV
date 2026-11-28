@@ -20,7 +20,7 @@ The tour uses emulator recordings and a demonstration library. The displayed tit
 | Home and discovery | Featured artwork, continued viewing, favorites, optional poster-wall home and personal shelf, TMDB/Douban recommendations, and configurable hero rotation. |
 | Poster walls and filters | Source category and folder filters; media type, genre, year, region, and sorting where the page supplies them; consistent poster metadata and filter-panel state. |
 | Search and source selection | Cross-source search, relevance levels, grouped results, optional Smart source selection, per-configuration preferred sources, and episode-aware fallback. |
-| Airing calendar | TMDB, Trakt and Bangumi schedules and title artwork; local follows, Trakt watchlist sync, and Bangumi wish/doing sync. |
+| Airing calendar | TMDB, Trakt and Bangumi schedules and title artwork; local follows, Trakt watchlist sync, and Bangumi wish/doing sync. Scan the TV QR code to connect Bangumi by pasting a token on your phone. |
 | Media-library details | Compose TV immersive backgrounds, shared theme and fonts, playback/episode/source actions, lazy card lists, and stable focus restoration. |
 | Playback | ExoPlayer/Media3 and MPV; hardware/software options, playback speed, seek acceleration, repeat, aspect ratio, track selection, chapters, and editions when provided. |
 | Playback information | A TV specification capsule showing available input resolution, video/audio codec, dynamic range, bit depth, channel information, and explicit content ratings. |

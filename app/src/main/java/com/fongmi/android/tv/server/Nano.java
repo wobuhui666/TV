@@ -2,9 +2,11 @@ package com.fongmi.android.tv.server;
 
 import com.fongmi.android.tv.api.config.LiveConfig;
 import com.fongmi.android.tv.bean.Device;
+import com.fongmi.android.tv.calendar.CalendarAccountPairing;
 import com.fongmi.android.tv.server.impl.Process;
 import com.fongmi.android.tv.server.process.Action;
 import com.fongmi.android.tv.server.process.Cache;
+import com.fongmi.android.tv.server.process.CalendarAccount;
 import com.fongmi.android.tv.server.process.Diagnostics;
 import com.fongmi.android.tv.server.process.Local;
 import com.fongmi.android.tv.server.process.Log;
@@ -26,6 +28,7 @@ public class Nano extends NanoHTTPD {
 
     private static final String INDEX = "index.html";
     private final Diagnostics diagnostics = new Diagnostics();
+    private final CalendarAccount accounts = new CalendarAccount();
 
     private List<Process> process;
 
@@ -68,6 +71,7 @@ public class Nano extends NanoHTTPD {
         String url = session.getUri().trim();
         Map<String, String> files = new HashMap<>();
         if (diagnostics.isRequest(session, url)) return diagnostics.doResponse(session, url, files);
+        if (accounts.isRequest(session, url)) return accounts.doResponse(session, url, files);
         if (session.getMethod() == Method.POST) parse(session, files);
         if (url.startsWith("/tvbus")) return ok(LiveConfig.getResp());
         if (url.startsWith("/device")) return ok(Device.get().toString());
@@ -79,6 +83,7 @@ public class Nano extends NanoHTTPD {
     public void stop() {
         super.stop();
         LogSession.get().stop();
+        CalendarAccountPairing.get().clear();
     }
 
     private void parse(IHTTPSession session, Map<String, String> files) {

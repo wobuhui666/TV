@@ -8,6 +8,7 @@
 | --- | --- |
 | 配置字段与示例 | [CONFIG](CONFIG.md) |
 | 原生海报墙、追更日历、搜索过滤与海报选源 | [使用说明](native-discovery.md) |
+| Trakt / Bangumi 账号数据与断开连接 | [账号隐私说明](calendar-account-privacy.md) |
 | TV 媒体库详情与遥控器操作 | [使用说明](media-library.md) |
 | 诊断、缓存与播放工具 | [使用说明](practical-improvements.md) |
 | OTA 更新与云控 | [使用说明](ota-updates.md) |
@@ -32,6 +33,7 @@
 | --- | --- |
 | WEX 自建源迁移与 X20 实测 | [19 个源、Wex 入口与 CDN 迁移、自建 JAR 改后缀及 X20 验证](testing/reports/2026-11-28-wex-x20/README.md) |
 | 网页日志与图标对齐 | [2026-11-28 验证、浏览器截图与覆盖限制](testing/reports/2026-11-28-web-logs/README.md) |
+| Bangumi 手机扫码连接 | [临时配对、令牌提交与浏览器验证](testing/reports/2026-11-28-bangumi-phone/README.md) |
 | 合并发布与按钮居中 | [Release 195 合并后验证、固定尺寸按钮内容居中的前后对照](testing/reports/2026-11-24-integrated-release/README.md) |
 | 媒体库选集与选源性能 | [焦点重绘、按需列表、后台匹配、搜索复用与计算基准](testing/reports/2026-11-22-media-library-performance/README.md) |
 | 首页栏目完整筛选 | [完整片库、综艺／节目性质与 TMDB 真实内容验证](testing/reports/2026-11-22-home-wall-filters/README.md) |

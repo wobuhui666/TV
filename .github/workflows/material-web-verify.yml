@@ -36,6 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/verify-material-web.py --output artifacts/material-web 2>&1 | tee artifacts/material-web/browser.log
+          WEB_VERIFY_OUTPUT=artifacts/material-web/accounts python3 .github/scripts/verify-calendar-account-web.py -v 2>&1 | tee artifacts/material-web/accounts.log
       - name: Upload browser screenshots, summary and logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -112,6 +113,8 @@ jobs:
             :app:testLeanbackArm64_v8aDebugUnitTest \
             --tests 'com.fongmi.android.tv.server.LogSessionTest' \
             --tests 'com.fongmi.android.tv.server.process.DiagnosticsTest' \
+            --tests 'com.fongmi.android.tv.calendar.CalendarAccountPairingTest' \
+            --tests 'com.fongmi.android.tv.server.process.CalendarAccountTest' \
             --no-daemon --build-cache --max-workers=2 --console=plain
       - name: Build isolated preview and run application unit tests
         run: |
@@ -150,8 +153,8 @@ jobs:
           # The disposable Pixel launcher can retain a boot-time ANR dialog and steal app focus.
           adb shell am force-stop com.google.android.apps.nexuslauncher
           UPSTREAM_NATIVE_UI_EVIDENCE=true bash .github/scripts/verify-upstream-features.sh \
-            'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest,com.fongmi.android.tv.server.LogSessionAndroidTest' \
-            artifacts/material-web-android '8,8,1'
+            'com.fongmi.android.tv.ui.QrThemeAndroidTest,com.fongmi.android.tv.server.RemoteKeyAndroidTest,com.fongmi.android.tv.server.LogSessionAndroidTest,com.fongmi.android.tv.ui.CalendarAccountPhoneAndroidTest' \
+            artifacts/material-web-android '8,8,1,3'
           VERIFY
       - name: Verify logs, QR themes and remote keys on Android API 34
         uses: reactivecircus/android-emulator-runner@v2

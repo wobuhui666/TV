@@ -38,6 +38,12 @@
     <string name="calendar_client_id_required">請在帳號入口設定 Trakt Client ID</string>
     <string name="calendar_bangumi_token">Bangumi 存取權杖</string>
     <string name="calendar_bangumi_token_help">在 https://next.bgm.tv/demo/access-token 建立個人存取權杖</string>
+    <string name="calendar_phone_connect">用手機連接</string>
+    <string name="calendar_phone_help">手機與電視連接同一網路，掃碼後在網頁貼上 Bangumi 個人存取權杖。QR Code 10 分鐘內有效。</string>
+    <string name="calendar_phone_waiting">等待手機連接</string>
+    <string name="calendar_phone_checking">正在連接帳號…</string>
+    <string name="calendar_phone_failed">連接失敗，請在手機上重試</string>
+    <string name="calendar_phone_manual">在電視上輸入</string>
     <string name="calendar_trakt_code">用手機開啟 %1$s，輸入 %2$s</string>
     <string name="calendar_auth_failed">帳號授權失敗，請重新連接</string>
     <string name="calendar_auth_expired">授權碼已過期，請重新連接</string>

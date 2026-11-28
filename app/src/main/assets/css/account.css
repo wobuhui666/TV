@@ -1,0 +1,15 @@
+.account-app { max-width: 580px; margin: auto; padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+.account-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.account-app .button { max-width: 100%; white-space: normal; text-align: center; }
+.account-header h1 { font-size: 26px; font-weight: 650; }
+.account-header a { text-decoration: none; }
+.account-card { padding: 28px; border-radius: 26px; background: var(--surface); box-shadow: var(--shadow); }
+.account-card h2 { font-size: 22px; margin-bottom: 12px; }
+#account-status { margin: 0 0 24px; color: var(--muted); overflow-wrap: anywhere; }
+#account-status[data-state="connected"] { color: var(--success); }
+#account-status[data-state="invalid_token"], #account-status[data-state="failed"], #account-status[data-state="offline"] { color: var(--error); }
+.account-token-link { margin-bottom: 28px; text-decoration: none; }
+#account-token { font-size: 16px; }
+#account-submit { width: 100%; margin-top: 20px; }
+.account-card .field-help { margin-top: 16px; }
+@media (max-width: 400px) { .account-card { padding: 22px; } }

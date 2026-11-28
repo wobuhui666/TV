@@ -38,6 +38,12 @@
     <string name="calendar_client_id_required">请在账号入口配置 Trakt Client ID</string>
     <string name="calendar_bangumi_token">Bangumi 访问令牌</string>
     <string name="calendar_bangumi_token_help">在 https://next.bgm.tv/demo/access-token 创建个人访问令牌</string>
+    <string name="calendar_phone_connect">用手机连接</string>
+    <string name="calendar_phone_help">手机与电视连接同一网络，扫码后在网页粘贴 Bangumi 个人访问令牌。二维码 10 分钟内有效。</string>
+    <string name="calendar_phone_waiting">等待手机连接</string>
+    <string name="calendar_phone_checking">正在连接账号…</string>
+    <string name="calendar_phone_failed">连接失败，请在手机上重试</string>
+    <string name="calendar_phone_manual">在电视上输入</string>
     <string name="calendar_trakt_code">用手机打开 %1$s，输入 %2$s</string>
     <string name="calendar_auth_failed">账号授权失败，请重新连接</string>
     <string name="calendar_auth_expired">授权码已过期，请重新连接</string>

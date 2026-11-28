@@ -38,6 +38,12 @@
     <string name="calendar_client_id_required">Set a Trakt Client ID through Account</string>
     <string name="calendar_bangumi_token">Bangumi access token</string>
     <string name="calendar_bangumi_token_help">Create a personal access token at https://next.bgm.tv/demo/access-token</string>
+    <string name="calendar_phone_connect">Connect with your phone</string>
+    <string name="calendar_phone_help">Scan with a phone on the same network. Paste your Bangumi personal access token on the page. This code expires in 10 minutes.</string>
+    <string name="calendar_phone_waiting">Waiting for your phone</string>
+    <string name="calendar_phone_checking">Connecting account…</string>
+    <string name="calendar_phone_failed">Connection failed. Try again on your phone.</string>
+    <string name="calendar_phone_manual">Enter on TV</string>
     <string name="calendar_trakt_code">On your phone, open %1$s and enter %2$s</string>
     <string name="calendar_auth_failed">Account authorization failed. Please reconnect.</string>
     <string name="calendar_auth_expired">Authorization code expired. Please reconnect.</string>
